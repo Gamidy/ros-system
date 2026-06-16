@@ -1,0 +1,268 @@
+"""采购订单 API: 订单管理 + 供应商管理 + 仪表盘"""
+from datetime import date, datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.core.security import get_current_user
+from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
+from app.schemas import (
+    SupplierCreate, SupplierOut, SupplierUpdate,
+    PurchaseOrderCreate, PurchaseOrderOut, PurchaseOrderDetailOut,
+    PurchaseOrderStatusUpdate,
+    PurchaseOrderItemCreate, PurchaseOrderItemOut, PurchaseOrderItemUpdate,
+    PurchaseDashboardOut,
+)
+
+router = APIRouter(prefix="/purchases", tags=["采购订单管理"])
+
+
+# ══════════════════════════════════════════════════
+# Suppliers
+# ══════════════════════════════════════════════════
+
+@router.get("/suppliers", response_model=list[SupplierOut])
+def list_suppliers(
+    keyword: str = "",
+    status: str = "",
+    db: Session = Depends(get_db),
+):
+    """列出所有供应商，支持关键词/状态筛选"""
+    q = db.query(Supplier)
+    if keyword:
+        q = q.filter(
+            Supplier.name.like(f"%{keyword}%") |
+            Supplier.code.like(f"%{keyword}%")
+        )
+    if status:
+        q = q.filter(Supplier.status == status)
+    return q.all()
+
+
+@router.post("/suppliers", response_model=SupplierOut)
+def create_supplier(data: SupplierCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """创建供应商 — code全局唯一"""
+    if db.query(Supplier).filter(Supplier.code == data.code).first():
+        raise HTTPException(status_code=400, detail="供应商编码已存在")
+    s = Supplier(**data.model_dump())
+    db.add(s); db.commit(); db.refresh(s)
+    return s
+
+
+# ══════════════════════════════════════════════════
+# Purchase Orders
+# ══════════════════════════════════════════════════
+
+@router.get("/orders", response_model=list[PurchaseOrderOut])
+def list_orders(
+    status: str = "",
+    supplier: str = "",
+    requester: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    db: Session = Depends(get_db),
+):
+    """列出采购订单，支持按status/supplier/requester/日期范围筛选"""
+    q = db.query(PurchaseOrder)
+    if status:
+        q = q.filter(PurchaseOrder.status == status)
+    if supplier:
+        q = q.filter(
+            PurchaseOrder.supplier_name.like(f"%{supplier}%") |
+            PurchaseOrder.supplier_code.like(f"%{supplier}%")
+        )
+    if requester:
+        q = q.filter(PurchaseOrder.requester.like(f"%{requester}%"))
+    if date_from:
+        q = q.filter(PurchaseOrder.created_at >= date_from)
+    if date_to:
+        q = q.filter(PurchaseOrder.created_at <= f"{date_to} 23:59:59")
+    return q.order_by(PurchaseOrder.created_at.desc()).all()
+
+
+@router.post("/orders", response_model=PurchaseOrderOut)
+def create_order(data: PurchaseOrderCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """创建采购订单 — 自动生成单号"""
+    # 自动生成 order_no: PO-YYYYMMDD-XXXX
+    today_str = date.today().strftime("%Y%m%d")
+    prefix = f"PO-{today_str}-"
+    last = db.query(PurchaseOrder).filter(
+        PurchaseOrder.order_no.like(f"{prefix}%")
+    ).order_by(PurchaseOrder.id.desc()).first()
+
+    if last and last.order_no.startswith(prefix):
+        try:
+            seq = int(last.order_no.split("-")[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    else:
+        seq = 1
+
+    order_no = f"{prefix}{seq:04d}"
+
+    order = PurchaseOrder(
+        order_no=order_no,
+        **data.model_dump(exclude={"items"}),
+    )
+    db.add(order); db.flush()
+
+    # 添加订单项
+    items_data = data.items or []
+    for item_data in items_data:
+        item = PurchaseOrderItem(
+            order_id=order.id,
+            **item_data.model_dump(),
+        )
+        db.add(item)
+
+    # 计算 total_amount
+    db.flush()
+    total = db.query(func.coalesce(func.sum(PurchaseOrderItem.total_price), 0)).filter(
+        PurchaseOrderItem.order_id == order.id
+    ).scalar()
+    order.total_amount = float(total)
+
+    db.commit(); db.refresh(order)
+    return order
+
+
+@router.get("/orders/{order_id}", response_model=PurchaseOrderDetailOut)
+def get_order(order_id: int, db: Session = Depends(get_db)):
+    """查看订单详情（含items）"""
+    order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="采购订单不存在")
+    return order
+
+
+@router.patch("/orders/{order_id}", response_model=PurchaseOrderOut)
+def update_order_status(order_id: int, data: PurchaseOrderStatusUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """更新订单状态"""
+    order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="采购订单不存在")
+
+    # 状态流转检查
+    valid_transitions = {
+        "draft": ["pending_approval", "cancelled"],
+        "pending_approval": ["approved", "cancelled", "draft"],
+        "approved": ["ordered", "cancelled"],
+        "ordered": ["received", "cancelled"],
+        "received": [],
+        "cancelled": [],
+    }
+    allowed = valid_transitions.get(order.status, [])
+    if data.status not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"状态 {order.status} 不允许变更到 {data.status}，允许目标: {', '.join(allowed) if allowed else '无'}",
+        )
+
+    order.status = data.status
+    db.commit(); db.refresh(order)
+    return order
+
+
+# ══════════════════════════════════════════════════
+# Purchase Order Items
+# ══════════════════════════════════════════════════
+
+@router.post("/orders/{order_id}/items", response_model=PurchaseOrderItemOut)
+def add_order_item(order_id: int, data: PurchaseOrderItemCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """添加订单项"""
+    order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="采购订单不存在")
+    if order.status not in ("draft", "pending_approval"):
+        raise HTTPException(status_code=400, detail="仅草稿或待审批状态可添加订单项")
+
+    item = PurchaseOrderItem(order_id=order_id, **data.model_dump())
+    db.add(item)
+
+    # 重新计算总额
+    db.flush()
+    total = db.query(func.coalesce(func.sum(PurchaseOrderItem.total_price), 0)).filter(
+        PurchaseOrderItem.order_id == order.id
+    ).scalar()
+    order.total_amount = float(total)
+
+    db.commit(); db.refresh(item)
+    return item
+
+
+@router.patch("/orders/{order_id}/items/{item_id}", response_model=PurchaseOrderItemOut)
+def update_order_item(order_id: int, item_id: int, data: PurchaseOrderItemUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """更新订单项"""
+    item = db.query(PurchaseOrderItem).filter(
+        PurchaseOrderItem.id == item_id,
+        PurchaseOrderItem.order_id == order_id,
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="订单项不存在")
+
+    update_dict = data.model_dump(exclude_unset=True)
+    for k, v in update_dict.items():
+        setattr(item, k, v)
+
+    # 重新计算小计
+    if "quantity" in update_dict or "unit_price" in update_dict:
+        item.total_price = item.quantity * item.unit_price
+
+    db.flush()
+
+    # 重新计算订单总额
+    order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
+    total = db.query(func.coalesce(func.sum(PurchaseOrderItem.total_price), 0)).filter(
+        PurchaseOrderItem.order_id == order.id
+    ).scalar()
+    order.total_amount = float(total)
+
+    db.commit(); db.refresh(item)
+    return item
+
+
+# ══════════════════════════════════════════════════
+# Dashboard
+# ══════════════════════════════════════════════════
+
+@router.get("/dashboard", response_model=PurchaseDashboardOut)
+def purchase_dashboard(db: Session = Depends(get_db)):
+    """采购仪表盘数据（待审批数、本月采购额等）"""
+    # 待审批订单数
+    pending_count = db.query(PurchaseOrder).filter(
+        PurchaseOrder.status == "pending_approval"
+    ).count()
+
+    # 本月采购额（已下单的订单）
+    first_of_month = date.today().replace(day=1)
+    month_total = db.query(func.coalesce(func.sum(PurchaseOrder.total_amount), 0)).filter(
+        PurchaseOrder.status.in_(["ordered", "received"]),
+        PurchaseOrder.updated_at >= first_of_month,
+    ).scalar()
+
+    # 本月订单数
+    month_order_count = db.query(PurchaseOrder).filter(
+        PurchaseOrder.created_at >= first_of_month,
+    ).count()
+
+    # 待收货订单数
+    received_pending = db.query(PurchaseOrder).filter(
+        PurchaseOrder.status == "ordered"
+    ).count()
+
+    # 各状态订单数
+    status_breakdown = {}
+    for s in ["draft", "pending_approval", "approved", "ordered", "received", "cancelled"]:
+        cnt = db.query(PurchaseOrder).filter(PurchaseOrder.status == s).count()
+        if cnt > 0:
+            status_breakdown[s] = cnt
+
+    return PurchaseDashboardOut(
+        pending_approval=pending_count,
+        month_total_amount=float(month_total),
+        month_order_count=month_order_count,
+        pending_received=received_pending,
+        total_orders=db.query(PurchaseOrder).count(),
+        total_suppliers=db.query(Supplier).count(),
+        status_breakdown=status_breakdown,
+    )

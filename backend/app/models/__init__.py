@@ -1,0 +1,20 @@
+"""模型初始化"""
+from app.models.user import User
+from app.models.product import Platform, Product, Version, Market, ManufacturingVariant
+from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem
+from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
+from app.models.test import TestRequest, TestResult, MQVerification, Certification, Prototype, QualityIssue, ECR, ECN
+from app.models.alert import AlertRule, Alert, Notification
+from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalRecord
+from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
+
+__all__ = [
+    "User",
+    "Platform", "Product", "Version", "Market", "ManufacturingVariant",
+    "PartCategory", "Part", "PartAVL", "BOM", "BOMItem",
+    "Program", "Project", "ProjectGate", "Milestone", "Task", "Risk",
+    "TestRequest", "TestResult", "MQVerification", "Certification", "Prototype", "QualityIssue", "ECR", "ECN",
+    "AlertRule", "Alert", "Notification",
+    "ApprovalChain", "ApprovalStep", "ApprovalRequest", "ApprovalRecord",
+    "PurchaseOrder", "PurchaseOrderItem", "Supplier",
+]

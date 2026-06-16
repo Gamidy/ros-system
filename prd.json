@@ -1,0 +1,156 @@
+{
+  "project": {
+    "name": "ROS (R&D Operations System)",
+    "description": "海外分体机研发全生命周期管理平台",
+    "tech_stack": {
+      "frontend": "Vue3 + Element Plus + TypeScript",
+      "backend": "FastAPI (Python 3.14)",
+      "database": "MySQL",
+      "cache": "Redis",
+      "webserver": "Nginx",
+      "auth": "JWT + RBAC"
+    }
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "项目骨架与数据库配置",
+      "description": "创建ROS系统项目结构，配置FastAPI应用入口、MySQL数据库连接、Redis缓存连接",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "FastAPI app启动正常，/health 返回200",
+        "MySQL连接池配置完成",
+        "Redis连接配置完成",
+        "SQLAlchemy ORM配置完成",
+        "项目目录结构规范"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "用户认证与RBAC权限",
+      "description": "JWT用户认证 + 角色权限管理。用户表、角色表、权限表，JWT token颁发与验证",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "用户注册/登录API可用",
+        "JWT token生成与验证",
+        "RBAC角色权限校验中间件",
+        "Token刷新机制",
+        "密码bcrypt加密"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "产品主线(Platform→Product→Version)",
+      "description": "产品核心资产主线：Platform(平台)→Product(产品)→Version(版本)三级数据模型与CRUD",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "Platform CRUD API",
+        "Product CRUD API（关联Platform）",
+        "Version CRUD API（关联Product）",
+        "Version生命周期状态机（Draft→Dev→Released→Production→Obsolete→Retired）",
+        "Version产生规则校验（什么升/不升Version）"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "BOM物料管理(6层体系)",
+      "description": "物料主数据 + 6层BOM体系：整机→内外机→总成→组件→子件→零部件",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "Part主数据CRUD",
+        "四级分类体系",
+        "6层BOM结构CRUD",
+        "BOM树形查询API",
+        "MBOM（生产BOM）管理",
+        "Part No全局唯一约束"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "项目管理(M1-M9 Gates)",
+      "description": "项目管理框架：M1需求评审→M9量产，B/C类项目差异化流程",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "项目CRUD API",
+        "M1-M9 Gate定义与状态管理",
+        "B/C类项目差异化Gate流程",
+        "Milestone点亮条件",
+        "Gate决策记录"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "测试申请与实验管理",
+      "description": "测试申请单流转：研发→实验室→测试→报告，支持3种触发模式",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "Test Request CRUD",
+        "测试申请流转状态机（提交→审核→测试中→完成）",
+        "3种触发模式（工程师/系统自动/项目经理）",
+        "NG三次升级链",
+        "测试报告上传"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Vue3+Element Plus前端框架",
+      "description": "前端项目基础框架，路由、布局、登录页面、全局状态管理",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "Vue3项目初始化",
+        "Element Plus集成",
+        "登录页面",
+        "主布局（侧边栏+顶栏+内容区）",
+        "路由配置（登录/首页/各模块）",
+        "Axios封装与JWT拦截"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "仪表盘驾驶舱",
+      "description": "三层架构驾驶舱：体系健康度→项目运营→穿透趋势",
+      "priority": "medium",
+      "completed": false,
+      "acceptance": [
+        "体系健康度总览",
+        "项目运营看板",
+        "风险穿透视图",
+        "改善建议入口"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "预警体系(EWS)",
+      "description": "超期自动预警系统，双轨升级体系（时间轨+次数轨）",
+      "priority": "medium",
+      "completed": false,
+      "acceptance": [
+        "预警规则配置",
+        "时间轨升级（超期1/3/5天）",
+        "次数轨升级（重复1/2/3次）",
+        "钉钉通知集成"
+      ]
+    },
+    {
+      "id": "US-010",
+      "title": "系统测试与验证",
+      "description": "10轮自动化测试：单元测试+集成测试+API测试",
+      "priority": "high",
+      "completed": false,
+      "acceptance": [
+        "所有API端点有测试覆盖",
+        "边界条件测试",
+        "错误路径测试",
+        "权限校验测试",
+        "10轮测试全部通过"
+      ]
+    }
+  ]
+}
