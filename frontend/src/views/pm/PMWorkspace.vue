@@ -1430,8 +1430,8 @@ function resetForm() {
   devCostTable.forEach(r => { r.budget = 0; r.remark = '' })
   moldCostTable.forEach(r => { r.qty = 0 })
   protoCostTable.forEach(r => { r.qty = r.stage === 'P2' ? 20 : r.stage === 'P1-1' || r.stage === 'P1-2' ? 10 : 5 })
-  laborCostTable.forEach(r => { r.people_count = 1; r.monthly_salary = 1.5; r.months = 6 })
-  testCostTable.forEach(r => { r.days = 10; r.unit_price = 0.5 })
+  laborCostTable.forEach(r => { r.people_count = 1; r.monthly_salary = 1.5; r.months = 6; r.occupancy_rate = 100 })
+  testCostTable.forEach(r => { r.days = 10; r.unit_price = 0.11 })
 }
 
 function populateFormFromDraft(draft: ProjectItem) {
