@@ -571,9 +571,10 @@
                 {{ devCostGrandTotal > 0 ? ((row.budget / devCostGrandTotal) * 100).toFixed(1) : '0.0' }}%
               </template>
             </el-table-column>
-            <el-table-column prop="remark" label="说明" min-width="160">
-              <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" placeholder="说明" />
+            <el-table-column prop="remark" label="说明" min-width="280">
+              <template #default="{ row, $index }">
+                <span v-if="$index === 0" class="linked-val">{{ devCostRemark }}</span>
+                <span v-else class="linked-val">{{ row.remark }}</span>
               </template>
             </el-table-column>
           </el-table>
@@ -640,7 +641,7 @@
             </el-table-column>
             <el-table-column label="合计(W)" width="120">
               <template #default="{ row }">
-                {{ (row.qty * row.unit_cost).toFixed(1) }}
+                <el-input-number v-model="row.total" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
               </template>
             </el-table-column>
           </el-table>
@@ -687,9 +688,14 @@
                 <el-input-number v-model="row.months" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </template>
             </el-table-column>
+            <el-table-column label="占用度%" width="100">
+              <template #default="{ row }">
+                <el-input-number v-model="row.occupancy_rate" :min="0" :max="100" :step="10" size="small" controls-position="right" style="width:100%" />
+              </template>
+            </el-table-column>
             <el-table-column label="费用(W)" width="120">
               <template #default="{ row }">
-                {{ (row.people_count * row.monthly_salary * row.months).toFixed(1) }}
+                {{ (row.people_count * row.monthly_salary * row.months * (row.occupancy_rate || 100) / 100).toFixed(1) }}
               </template>
             </el-table-column>
           </el-table>
@@ -705,8 +711,8 @@
               </template>
             </el-table-column>
             <el-table-column label="单价(W)" width="120">
-              <template #default="{ row }">
-                <el-input-number v-model="row.unit_price" :min="0" :step="0.01" size="small" controls-position="right" style="width:100%" />
+              <template>
+                <span>0.110</span>
               </template>
             </el-table-column>
             <el-table-column label="合计(W)" width="120">
@@ -818,9 +824,9 @@ interface CorePerfRow { param_name: string; target_value: string; aux_competitor
 interface SafetyComplianceRow { standard: string; applicable_market: string; key_requirement: string; verification_method: string; involved_parts: string; cert_cycle: string; remark: string }
 interface ConfigRow { name: string; selection: string }
 interface DevCostRow { item: string; budget: number; remark: string; linked: boolean }
-interface MoldCostRow { unit_type: string; category: string; qty: number; unit_cost: number }
+interface MoldCostRow { unit_type: string; category: string; qty: number; total: number }
 interface ProtoCostRow { stage: string; qty: number; unit_cost: number }
-interface LaborCostRow { module: string; people_count: number; monthly_salary: number; months: number }
+interface LaborCostRow { module: string; people_count: number; monthly_salary: number; months: number; occupancy_rate: number }
 interface TestCostRow { stage: string; days: number; unit_price: number }
 interface TeamMemberRow { role: string; user_id: number | null; department: string; responsibility: string }
 interface TeamRole { label: string; value: string; sys_role: string }
@@ -969,19 +975,19 @@ const devCostTable = reactive<DevCostRow[]>([
   { item: '研发人工费用', budget: 0, remark: '', linked: true },
   { item: '样机试制费用', budget: 0, remark: '', linked: true },
   { item: '测试费用耗材', budget: 0, remark: '', linked: true },
-  { item: '委外开发费用', budget: 0, remark: '', linked: false },
+  { item: '委外开发费用', budget: 0, remark: '无', linked: true },
   { item: '客户样机费用', budget: 0, remark: '', linked: true },
   { item: '开发费用合计', budget: 0, remark: '', linked: true },
 ])
 
 // Tab 4 表格: 模具/工装费用 (6行)
 const moldCostTable = reactive<MoldCostRow[]>([
-  { unit_type: '内机', category: '钣金', qty: 0, unit_cost: 15 },
-  { unit_type: '内机', category: '注塑', qty: 0, unit_cost: 20 },
-  { unit_type: '外机', category: '钣金', qty: 0, unit_cost: 18 },
-  { unit_type: '外机', category: '注塑', qty: 0, unit_cost: 22 },
-  { unit_type: '其他', category: '翅片', qty: 0, unit_cost: 5 },
-  { unit_type: '工装', category: '工装', qty: 0, unit_cost: 8 },
+  { unit_type: '内机', category: '钣金', qty: 0, total: 0 },
+  { unit_type: '内机', category: '注塑', qty: 0, total: 0 },
+  { unit_type: '外机', category: '钣金', qty: 0, total: 0 },
+  { unit_type: '外机', category: '注塑', qty: 0, total: 0 },
+  { unit_type: '其他', category: '翅片', qty: 0, total: 0 },
+  { unit_type: '工装', category: '工装', qty: 0, total: 0 },
 ])
 
 // Tab 4 表格: 试制样机费用 (5行)
@@ -995,20 +1001,20 @@ const protoCostTable = reactive<ProtoCostRow[]>([
 
 // Tab 4 表格: 人工费用 (6行)
 const laborCostTable = reactive<LaborCostRow[]>([
-  { module: '结构', people_count: 3, monthly_salary: 1.5, months: 8 },
-  { module: '系统', people_count: 2, monthly_salary: 1.5, months: 8 },
-  { module: '电控', people_count: 2, monthly_salary: 1.8, months: 8 },
-  { module: '电气', people_count: 2, monthly_salary: 1.5, months: 6 },
-  { module: '工艺', people_count: 1, monthly_salary: 1.2, months: 6 },
-  { module: '质量', people_count: 1, monthly_salary: 1.2, months: 6 },
+  { module: '结构', people_count: 3, monthly_salary: 1.5, months: 8, occupancy_rate: 100 },
+  { module: '系统', people_count: 2, monthly_salary: 1.5, months: 8, occupancy_rate: 100 },
+  { module: '电控', people_count: 2, monthly_salary: 1.8, months: 8, occupancy_rate: 100 },
+  { module: '电气', people_count: 2, monthly_salary: 1.5, months: 6, occupancy_rate: 50 },
+  { module: '工艺', people_count: 1, monthly_salary: 1.2, months: 6, occupancy_rate: 50 },
+  { module: '质量', people_count: 1, monthly_salary: 1.2, months: 6, occupancy_rate: 50 },
 ])
 
 // Tab 4 表格: 测试费用 (4行)
 const testCostTable = reactive<TestCostRow[]>([
-  { stage: 'P0', days: 10, unit_price: 0.5 },
-  { stage: 'P1-1', days: 20, unit_price: 0.5 },
-  { stage: 'P1-2', days: 15, unit_price: 0.5 },
-  { stage: 'P2', days: 30, unit_price: 0.5 },
+  { stage: 'P0', days: 10, unit_price: 0.11 },
+  { stage: 'P1-1', days: 20, unit_price: 0.11 },
+  { stage: 'P1-2', days: 15, unit_price: 0.11 },
+  { stage: 'P2', days: 30, unit_price: 0.11 },
 ])
 
 // ═══════════════════════════════════════════════
@@ -1040,8 +1046,8 @@ const prototypeUnitCost = computed(() => {
   const cr = projectForm.capacity_range
   if (!cr) return 0
   const map: Record<string, number> = {
-    '7K': 0.09, '9K': 0.095, '12K': 0.105, '18K': 0.135, '24K': 0.17,
-    '7k': 0.09, '9k': 0.095, '12k': 0.105, '18k': 0.135, '24k': 0.17,
+    '7K': 0.075, '9K': 0.095, '12K': 0.105, '18K': 0.142, '24K': 0.178,
+    '7k': 0.075, '9k': 0.095, '12k': 0.105, '18k': 0.142, '24k': 0.178,
   }
   // Try to match any key contained in capacity_range
   for (const [key, val] of Object.entries(map)) {
@@ -1061,7 +1067,7 @@ const manufacturingCost = computed(() => {
 
 // 模具费用合计
 const moldCostTotal = computed(() =>
-  moldCostTable.reduce((sum, r) => sum + (r.qty || 0) * (r.unit_cost || 0), 0)
+  moldCostTable.reduce((sum, r) => sum + (r.total || 0), 0)
 )
 
 // 样机费用 (P0~P2, 不含客户样机)
@@ -1082,7 +1088,7 @@ const protoCostTotal = computed(() =>
 
 // 人工费用合计
 const laborCostTotal = computed(() =>
-  laborCostTable.reduce((sum, r) => sum + (r.people_count || 0) * (r.monthly_salary || 0) * (r.months || 0), 0)
+  laborCostTable.reduce((sum, r) => sum + (r.people_count || 0) * (r.monthly_salary || 0) * (r.months || 0) * ((r.occupancy_rate || 100) / 100), 0)
 )
 
 // 测试费用合计
@@ -1090,7 +1096,44 @@ const testCostTotal = computed(() =>
   testCostTable.reduce((sum, r) => sum + (r.days || 0) * (r.unit_price || 0), 0)
 )
 
-// 开发费用总计 (第8行 = 前7行之和)
+const certCost = computed(() => {
+  const cert = (projectForm.cert_requirements || '').toUpperCase()
+  let cost = 0
+  if (cert.includes('UL')) cost += 20
+  if (cert.includes('CE')) cost += 3
+  if (!cert.includes('UL') && !cert.includes('CE') && cert.trim()) cost = 3 // 其他认证默认3W
+  return cost
+})
+
+// 说明自动生成
+const devCostRemark = computed(() => {
+  const parts: string[] = []
+  // 模具
+  const moldModules = moldCostTable.filter(r => r.total > 0)
+  if (moldModules.length > 0) {
+    const desc = moldModules.map(r => `${r.category}${r.qty}套${r.total.toFixed(1)}W`).join('/')
+    parts.push(`模具：${desc}`)
+  }
+  // 人工
+  const laborRows = laborCostTable.filter(r => r.people_count > 0)
+  if (laborRows.length > 0) {
+    const totalPeople = laborRows.reduce((s, r) => s + r.people_count, 0)
+    parts.push(`人工：${totalPeople}人 ${laborCostTotal.value.toFixed(1)}W`)
+  }
+  // 测试
+  if (testCostTotal.value > 0) parts.push(`测试：${testCostTotal.value.toFixed(1)}W`)
+  // 客户样机
+  const clientRow = protoCostTable.find(r => r.stage === '客户样机')
+  if (clientRow && clientRow.qty > 0) {
+    parts.push(`客户样机费用：${clientRow.qty}套 ${clientSampleCost.value.toFixed(1)}W`)
+  }
+  // 委外
+  parts.push('委外开发费用：无')
+  // 认证
+  const cert = projectForm.cert_requirements || ''
+  if (cert && certCost.value > 0) parts.push(`认证费用：${cert} ${certCost.value}W`)
+  return parts.join(' / ')
+})
 const devCostGrandTotal = computed(() => {
   const sumFirst7 = devCostTable.slice(0, 7).reduce((s, r) => s + (Number(r.budget) || 0), 0)
   return sumFirst7
@@ -1193,12 +1236,10 @@ watch(() => projectForm.voltage_freq, (val) => {
   }
 })
 
-// budget/fob_price联动 → 认证费用联动 (devCostTable[1] = cert)
-watch(() => projectForm.fob_price, (val) => {
-  const numVal = Number(val) || 0
-  if (numVal > 0 && devCostTable.length > 1 && devCostTable[1].linked) {
-    // 认证费用按FOB的1%估算
-    devCostTable[1].budget = Math.round(numVal * 0.01 * 10) / 10
+// budget/fob_price联动 → 认证费用联动 (certCost)
+watch(certCost, (val) => {
+  if (devCostTable.length > 1 && devCostTable[1].linked) {
+    devCostTable[1].budget = val
   }
 })
 
@@ -1520,9 +1561,9 @@ function buildProjectPayload(): Record<string, any> {
     accessory_config: JSON.stringify(accessoryConfigTable),
     feature_config: JSON.stringify(featureConfigTable),
     dev_cost_items: JSON.stringify(devCostTable.map(r => ({ item: r.item, budget: r.budget, remark: r.remark, linked: r.linked }))),
-    mold_costs: JSON.stringify(moldCostTable.map(r => ({ unit_type: r.unit_type, category: r.category, qty: r.qty, unit_cost: r.unit_cost }))),
+    mold_costs: JSON.stringify(moldCostTable.map(r => ({ unit_type: r.unit_type, category: r.category, qty: r.qty, total: r.total }))),
     prototype_costs_detail: JSON.stringify(protoCostTable.map(r => ({ stage: r.stage, qty: r.qty, unit_cost: r.unit_cost }))),
-    labor_costs: JSON.stringify(laborCostTable.map(r => ({ module: r.module, people_count: r.people_count, monthly_salary: r.monthly_salary, months: r.months }))),
+    labor_costs: JSON.stringify(laborCostTable.map(r => ({ module: r.module, people_count: r.people_count, monthly_salary: r.monthly_salary, months: r.months, occupancy_rate: r.occupancy_rate }))),
     test_costs: JSON.stringify(testCostTable.map(r => ({ stage: r.stage, days: r.days, unit_price: r.unit_price }))),
     team_members: JSON.stringify(teamTable.filter(t => t.user_id != null).map(t => ({
       role: t.role, user_id: t.user_id, department: t.department, responsibility: t.responsibility
