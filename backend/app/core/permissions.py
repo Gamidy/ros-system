@@ -44,6 +44,7 @@ ALL_MENUS = [
     "purchases",        # 采购
     "rd_dashboard",     # 研发总监
     "mm",               # 模块管理
+    "admin-config",     # 系统设置（仅admin）
 ]
 
 # 角色 → 菜单 映射表
@@ -169,6 +170,7 @@ MENU_PATH_MAP: dict[str, str] = {
     "rd_dashboard": "/rd-dashboard",
     "mm": "/mm",
     "pm-workspace": "/pm-workspace",
+    "admin-config": "/admin-config",
 }
 
 

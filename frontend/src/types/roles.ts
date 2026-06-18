@@ -2,7 +2,7 @@ import type { Component } from 'vue'
 import {
   Monitor, Goods, List, Folder, Document, WarningFilled,
   Stamp, Cpu, WarnTriangleFilled, Refresh, Select,
-  ShoppingCart, DataAnalysis,
+  ShoppingCart, DataAnalysis, Setting,
 } from '@element-plus/icons-vue'
 
 /** 系统支持的全部角色（与后端 permissions.py ALL_ROLES 对齐） */
@@ -78,6 +78,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/mm',            title: '模块管理',       icon: DataAnalysis },
   { path: '/pm-workspace',   title: '工作台',         icon: Monitor },
   { path: '/rd-dashboard',   title: '研发总监',       icon: DataAnalysis },
+  { path: '/admin-config',   title: '系统设置',       icon: Setting },
 ]
 
 /**

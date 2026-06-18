@@ -116,6 +116,12 @@ const router = createRouter({
           component: () => import('../views/pm/PMWorkspace.vue'),
           meta: { title: '工作台', menu: 'pm-workspace' },
         },
+        {
+          path: 'admin-config',
+          name: 'AdminConfig',
+          component: () => import('../views/admin/AdminConfig.vue'),
+          meta: { title: '系统设置', menu: 'admin-config' },
+        },
       ],
     },
   ],

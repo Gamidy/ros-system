@@ -1056,17 +1056,26 @@ const teamTable = reactive<TeamMemberRow[]>([
 // 计算属性
 // ═══════════════════════════════════════════════
 
+// 系统配置（从API加载，admin可修改）
+const systemConfig = ref<Record<string, any>>({})
+
+const protoUnitCostFromConfig = computed(() => {
+  const raw = systemConfig.value.proto_unit_cost
+  if (raw) {
+    try { return JSON.parse(raw) as Record<string, number> } catch {}
+  }
+  // fallback
+  return { '7K': 0.075, '9K': 0.095, '12K': 0.105, '18K': 0.142, '24K': 0.178 }
+})
+
 // 样机单套费用 - 按冷量段查表 (万元)
 const prototypeUnitCost = computed(() => {
   const cr = projectForm.capacity_range
   if (!cr) return 0
-  const map: Record<string, number> = {
-    '7K': 0.075, '9K': 0.095, '12K': 0.105, '18K': 0.142, '24K': 0.178,
-    '7k': 0.075, '9k': 0.095, '12k': 0.105, '18k': 0.142, '24k': 0.178,
-  }
+  const map = protoUnitCostFromConfig.value
   // Try to match any key contained in capacity_range
   for (const [key, val] of Object.entries(map)) {
-    if (cr.toUpperCase().includes(key.toUpperCase())) return val
+    if (cr.toUpperCase().includes(key.toUpperCase())) return Number(val)
   }
   return 0.1 // default
 })
@@ -1113,10 +1122,17 @@ const testCostTotal = computed(() =>
 
 const certCost = computed(() => {
   const cert = (projectForm.cert_requirements || '').toUpperCase()
+  const costMap = (() => {
+    const raw = systemConfig.value.cert_cost
+    if (raw) {
+      try { return JSON.parse(raw) as Record<string, number> } catch {}
+    }
+    return { 'UL': 20, 'CE': 3, 'default': 3 }
+  })()
   let cost = 0
-  if (cert.includes('UL')) cost += 20
-  if (cert.includes('CE')) cost += 3
-  if (!cert.includes('UL') && !cert.includes('CE') && cert.trim()) cost = 3 // 其他认证默认3W
+  if (cert.includes('UL')) cost += (costMap['UL'] || 20)
+  if (cert.includes('CE')) cost += (costMap['CE'] || 3)
+  if (!cert.includes('UL') && !cert.includes('CE') && cert.trim()) cost = (costMap['default'] || 3)
   return cost
 })
 
@@ -1758,6 +1774,15 @@ async function fetchExchangeRate() {
   } catch { /* use fallback */ }
 }
 
+async function fetchSystemConfig() {
+  try {
+    const res = await api.get('/admin/config')
+    if (res.data?.data) {
+      systemConfig.value = res.data.data
+    }
+  } catch { /* use defaults */ }
+}
+
 // ═══════════════════════════════════════════════
 // 生命周期
 // ═══════════════════════════════════════════════
@@ -1769,6 +1794,7 @@ onMounted(async () => {
     await fetchTeamRoles()
     await fetchAllTeamUsers()
     await fetchExchangeRate()
+    await fetchSystemConfig()
   } catch (e) {
     console.error('PMWorkspace init error:', e)
   }
