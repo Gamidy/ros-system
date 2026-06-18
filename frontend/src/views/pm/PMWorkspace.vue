@@ -206,6 +206,15 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
+                <el-form-item label="系列名称">
+                  <el-select v-model="projectForm.series_name" placeholder="选择系列" clearable style="width:100%">
+                    <el-option v-for="o in kbOptions.series" :key="o.code" :label="o.name" :value="o.code" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :span="12">
                 <el-form-item label="温带">
                   <el-input v-model="projectForm.climate_zone" placeholder="温带（如 T1/T2/T3）" />
                 </el-form-item>
@@ -219,13 +228,6 @@
                     <el-option label="R410A" value="R410A" />
                     <el-option label="R290" value="R290" />
                     <el-option label="R454B" value="R454B" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :span="8">
-                <el-form-item label="系列名称">
-                  <el-select v-model="projectForm.series_name" placeholder="选择系列" clearable style="width:100%">
-                    <el-option v-for="o in kbOptions.series" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -1709,37 +1711,45 @@ const autoProjectName = computed(() => {
   const hasAny = f.target_market || f.series_name || f.capacity_range || f.refrigerant || f.energy_rating || f.product_type
   if (!hasAny) return '（自动生成：请填写相关字段）'
 
+  // code→name 查找（KB下拉存的是code，显示需用name）
+  const lookup = (cat: string, code: string) => {
+    const opts = (kbOptions as any)[cat] as Array<{code:string;name:string}> | undefined
+    const found = opts?.find(o => o.code === code)
+    return found ? found.name : code
+  }
+
   const parts: string[] = ['出口']
 
-  if (f.target_market) parts.push(f.target_market)
-  if (f.series_name) parts.push(f.series_name + '款')
+  // 市场: code "VN" → name "越南"
+  if (f.target_market) parts.push(lookup('market', f.target_market))
 
-  // 冷量：提取K值
-  const cr = (f.capacity_range || '').toUpperCase().trim()
-  let capK = ''
-  if (cr) {
-    let m = cr.match(/(\d+(?:\.\d+)?)\s*K/)
-    if (m) {
-      capK = parseInt(m[1]) + 'K'
-    } else {
-      m = cr.match(/(\d+(?:\.\d+)?)\s*BTU/)
-      if (m) {
-        capK = Math.round(parseFloat(m[1]) / 1000) + 'K'
-      } else {
-        m = cr.match(/(\d+)/)
-        if (m) capK = Math.round(parseFloat(m[1]) / 1000) + 'K'
-      }
-    }
+  // 系列: code "J" → name "J系列" → 去掉"系列" → "J款"
+  if (f.series_name) {
+    const seriesLabel = lookup('series', f.series_name).replace(/系列$/, '')
+    parts.push(seriesLabel + '款')
+  }
+
+  // 冷量: code "7K" → name "7K" 直接使用
+  const cr = (f.capacity_range || '').trim()
+  let capK = lookup('capacity', f.capacity_range) || cr
+  // 如果没有匹配到KB，尝试解析数字
+  if (capK === cr) {
+    const m = cr.match(/(\d+)/)
+    if (m) capK = m[1] + 'K'
   }
   if (capK) parts.push(capK)
-  else if (f.capacity_range) parts.push(f.capacity_range)
 
+  // 制冷剂: KB存的就是"R32"这种，直接用
   if (f.refrigerant) parts.push('/' + f.refrigerant)
-  if (f.energy_rating) parts.push('/' + f.energy_rating)
 
+  // 能效等级: code "5star" → name "5星"
+  if (f.energy_rating) parts.push('/' + lookup('energy_rating', f.energy_rating))
+
+  // 产品类型: code "WALL" → name "分体式壁挂机" → shortNames["分体式壁挂机"] → "挂机"
   if (f.product_type) {
+    const fullName = lookup('product_type', f.product_type)
     const shorts = productShortNames.value
-    const short = shorts[f.product_type] || f.product_type
+    const short = shorts[fullName] || fullName
     parts.push(short)
   }
 
