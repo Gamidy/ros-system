@@ -1,7 +1,7 @@
 """系统配置模型"""
 from sqlalchemy import Column, Integer, String, DateTime, Text
 from datetime import datetime
-from app.database import Base
+from app.core.database import Base
 
 
 class SystemConfig(Base):
