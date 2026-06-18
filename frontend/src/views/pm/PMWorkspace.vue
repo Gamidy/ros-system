@@ -582,9 +582,8 @@
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="说明" min-width="280">
-              <template #default="{ row, $index }">
-                <span v-if="$index === 0" class="linked-val">{{ devCostRemark }}</span>
-                <span v-else class="linked-val">{{ row.remark }}</span>
+              <template #default="{ row }">
+                <span class="linked-val">{{ row.remark }}</span>
               </template>
             </el-table-column>
           </el-table>
@@ -1083,10 +1082,20 @@ const prototypeUnitCost = computed(() => {
 // 制造费用+人工 - 按冷量
 const manufacturingCost = computed(() => {
   const cr = projectForm.capacity_range
-  if (!cr) return 60
+  const thresholds: Array<{max_kw: number; cost: number}> = (() => {
+    const raw = systemConfig.value.mfg_cost_threshold
+    if (raw) { try { return JSON.parse(raw) } catch {} }
+    return [{max_kw: 12, cost: 50}, {max_kw: 999, cost: 60}]
+  })()
+  if (!cr) return thresholds[0]?.cost || 50
   const upper = cr.toUpperCase()
-  if (upper.includes('7K') || upper.includes('9K') || upper.includes('12K')) return 50
-  return 60
+  const kwMatch = upper.match(/(\d+)K/)
+  if (!kwMatch) return thresholds[0]?.cost || 50
+  const kw = parseInt(kwMatch[1])
+  for (const t of thresholds) {
+    if (kw <= t.max_kw) return t.cost
+  }
+  return thresholds[thresholds.length - 1]?.cost || 60
 })
 
 // 模具费用合计
@@ -1137,38 +1146,67 @@ const certCost = computed(() => {
 })
 
 // 说明自动生成
-const devCostRemark = computed(() => {
-  const parts: string[] = []
-  // 模具
+// 每行说明独立刷新
+function refreshDevCostRemarks() {
+  // [0] 工装及模具费用
   const moldModules = moldCostTable.filter(r => r.total > 0)
   if (moldModules.length > 0) {
-    const desc = moldModules.map(r => `${r.category}${r.qty}套${r.total.toFixed(1)}W`).join('/')
-    parts.push(`模具：${desc}`)
+    devCostTable[0].remark = '模具：' + moldModules.map(r => `${r.category}${r.qty}套${r.total.toFixed(1)}W`).join(' / ')
+  } else {
+    devCostTable[0].remark = ''
   }
-  // 人工
+  // [1] 认证费用
+  const cert = (projectForm.cert_requirements || '').toUpperCase()
+  const cost = certCost.value
+  if (cert && cost > 0) {
+    const certParts: string[] = []
+    if (cert.includes('UL')) certParts.push(`UL ${cost}W`)
+    else if (cert.includes('CE')) certParts.push(`CE ${cost}W`)
+    else certParts.push(`${projectForm.cert_requirements} ${cost}W`)
+    devCostTable[1].remark = certParts.join(' + ')
+  } else {
+    devCostTable[1].remark = ''
+  }
+  // [2] 研发人工费用
   const laborRows = laborCostTable.filter(r => r.people_count > 0)
   if (laborRows.length > 0) {
     const totalPeople = laborRows.reduce((s, r) => s + r.people_count, 0)
-    parts.push(`人工：${totalPeople}人 ${laborCostTotal.value.toFixed(1)}W`)
+    devCostTable[2].remark = `${totalPeople}人 ${laborCostTotal.value.toFixed(1)}W`
+  } else {
+    devCostTable[2].remark = ''
   }
-  // 测试
-  if (testCostTotal.value > 0) parts.push(`测试：${testCostTotal.value.toFixed(1)}W`)
-  // 客户样机
+  // [3] 样机试制费用（仅P0~P2）
+  const devStages = protoCostTable.filter(r => r.stage !== '客户样机')
+  const totalDevQty = devStages.reduce((s, r) => s + (r.qty || 0), 0)
+  if (protoDevTotal.value > 0) {
+    devCostTable[3].remark = `P0~P2 共${totalDevQty}套 ${protoDevTotal.value.toFixed(1)}W`
+  } else {
+    devCostTable[3].remark = ''
+  }
+  // [4] 测试费用耗材
+  const testRows = testCostTable.filter(r => r.days > 0)
+  if (testRows.length > 0) {
+    const totalDays = testRows.reduce((s, r) => s + (r.days || 0), 0)
+    devCostTable[4].remark = `${totalDays}天 ${testCostTotal.value.toFixed(1)}W`
+  } else {
+    devCostTable[4].remark = ''
+  }
+  // [5] 委外开发费用
+  if (projectForm.has_outsourcing && devCostTable[5].budget > 0) {
+    devCostTable[5].remark = `${devCostTable[5].budget.toFixed(1)}W`
+  } else {
+    devCostTable[5].remark = '无'
+  }
+  // [6] 客户样机费用
   const clientRow = protoCostTable.find(r => r.stage === '客户样机')
   if (clientRow && clientRow.qty > 0) {
-    parts.push(`客户样机费用：${clientRow.qty}套 ${clientSampleCost.value.toFixed(1)}W`)
-  }
-  // 委外
-  if (projectForm.has_outsourcing && devCostTable[5].budget > 0) {
-    parts.push(`委外开发费用：${devCostTable[5].budget.toFixed(1)}W`)
+    devCostTable[6].remark = `${clientRow.qty}套 ${clientSampleCost.value.toFixed(1)}W`
   } else {
-    parts.push('委外开发费用：无')
+    devCostTable[6].remark = ''
   }
-  // 认证
-  const cert = projectForm.cert_requirements || ''
-  if (cert && certCost.value > 0) parts.push(`认证费用：${cert} ${certCost.value}W`)
-  return parts.join(' / ')
-})
+  // [7] 开发费用合计 — 不使用说明
+  devCostTable[7].remark = ''
+}
 const devCostGrandTotal = computed(() => {
   const sumFirst7 = devCostTable.slice(0, 7).reduce((s, r) => s + (Number(r.budget) || 0), 0)
   return sumFirst7
@@ -1292,7 +1330,7 @@ watch(prototypeUnitCost, (val) => {
   }
 }, { immediate: true })
 
-// 联动行: 模具→devCostTable[0], 人工→devCostTable[2], 样机→devCostTable[3], 测试→devCostTable[4]
+// 联动行: 模具→devCostTable[0], 样机(P0~P2)→devCostTable[3], 测试→devCostTable[4]
 watch(moldCostTotal, (val) => {
   if (devCostTable.length > 0 && devCostTable[0].linked) {
     devCostTable[0].budget = val
@@ -1305,7 +1343,7 @@ watch(laborCostTotal, (val) => {
   }
 })
 
-watch(protoCostTotal, (val) => {
+watch(protoDevTotal, (val) => {
   if (devCostTable.length > 3 && devCostTable[3].linked) {
     devCostTable[3].budget = val
   }
@@ -1324,11 +1362,12 @@ watch(clientSampleCost, (val) => {
   }
 })
 
-// 开发费用合计联动(第8行 = 前7之和)
+// 开发费用合计联动(第8行 = 前7之和) + 刷新每行说明
 watch(devCostGrandTotal, (val) => {
   if (devCostTable.length > 7 && devCostTable[7].linked) {
     devCostTable[7].budget = val
   }
+  refreshDevCostRemarks()
 })
 
 // 委外开发: has_outsourcing=false → budget=0
