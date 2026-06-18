@@ -21,6 +21,8 @@ class UserOut(BaseModel):
     role: str
     is_active: bool = True
     created_at: datetime
+    allowed_menus: list[str] = []
+    allowed_paths: list[str] = []  # 前端路由路径（如 /dashboard），由服务端动态下发
     class Config: from_attributes = True
 
 class LoginRequest(BaseModel):
@@ -41,6 +43,7 @@ class AccountApplicationCreate(BaseModel):
     position: Optional[str] = None
     phone: Optional[str] = None
     reason: Optional[str] = Field(default=None, max_length=500)
+    role: str = "engineer"  # 申请注册角色，仅允许非特权角色
 
 class AccountApplicationOut(BaseModel):
     id: int
@@ -59,6 +62,10 @@ class AccountApplicationOut(BaseModel):
 
 class AccountApplicationReview(BaseModel):
     action: str  # approve | reject
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=6)
 
 # ═══════════════ 产品主线 (Product) ═══════════════
 
@@ -92,6 +99,8 @@ class ProductCreate(BaseModel):
     capacity: Optional[str] = None
     indoor_platform_id: Optional[int] = None
     outdoor_platform_id: Optional[int] = None
+    indoor_product_code: Optional[str] = None
+    outdoor_product_code: Optional[str] = None
     description: Optional[str] = None
 
 class ProductUpdate(BaseModel):
@@ -407,11 +416,11 @@ class ProgramOut(ProgramCreate):
 
 
 class ProjectCreate(BaseModel):
-    code: str = Field(min_length=1, max_length=50)
-    name: str = Field(min_length=1, max_length=200)
+    code: Optional[str] = None
+    name: str = Field(max_length=200)
     program_id: Optional[int] = None
     product_code: Optional[str] = None
-    project_class: str = Field(pattern="^(T|A|B|C)$")
+    project_class: Optional[str] = Field(default='C', pattern="^(T|A|B|C)$")
     source: Optional[str] = None
     source_category: Optional[str] = None
     dev_modules: Optional[str] = None
@@ -421,6 +430,56 @@ class ProjectCreate(BaseModel):
     owner: Optional[str] = None
     description: Optional[str] = None
     critical_path: Optional[str] = None
+    market_policy: Optional[str] = None
+    annual_planning_ref: Optional[str] = None
+    budget: Optional[int] = None
+    # Sheet 1 - 项目概述
+    product_type: Optional[str] = None
+    target_market: Optional[str] = None
+    climate_zone: Optional[str] = None
+    refrigerant: Optional[str] = None
+    capacity_range: Optional[str] = None
+    voltage_freq: Optional[str] = None
+    ip_ownership: Optional[str] = None
+    project_duration: Optional[str] = None
+    dev_category: Optional[str] = None
+    project_origin: Optional[str] = None
+    background_basis: Optional[str] = None
+    overall_goal: Optional[str] = None
+    tech_goal: Optional[str] = None
+    cost_goal: Optional[str] = None
+    sales_goal: Optional[str] = None
+    cert_goal: Optional[str] = None
+    schedule_goal: Optional[str] = None
+    patent_goal: Optional[str] = None
+    other_goals: Optional[str] = None
+    deliverables: Optional[str] = None
+    sample_qty: Optional[int] = None
+    required_date: Optional[date] = None
+    # Sheet 2 - 市场与客户需求
+    main_capacity: Optional[str] = None
+    energy_efficiency_req: Optional[str] = None
+    cert_requirements: Optional[str] = None
+    target_price: Optional[str] = None
+    customer_requirements: Optional[str] = None
+    # Sheet 3 - 技术要求
+    core_performance: Optional[str] = None
+    safety_compliance: Optional[str] = None
+    optional_config: Optional[str] = None
+    # Sheet 4 - 成本核算
+    dev_cost_items: Optional[str] = None
+    economic_indicators: Optional[str] = None
+    mold_costs: Optional[str] = None
+    prototype_costs_detail: Optional[str] = None
+    # Sheet 5 - 团队与职责
+    team_members: Optional[str] = None
+    # Draft 机制
+    is_draft: Optional[bool] = True
+
+
+class ProjectDraftSave(ProjectCreate):
+    """草稿保存专用 Schema — 字段与 ProjectCreate 完全相同，语义区分"""
+    pass
 
 
 class ProjectOut(ProjectCreate):
@@ -644,6 +703,16 @@ class QualityIssueOut(QualityIssueCreate):
     class Config: from_attributes = True
 
 
+class ForgotPasswordRequest(BaseModel):
+    phone: str
+    full_name: str
+
+class IssueUpdate(BaseModel):
+    root_cause: str | None = None
+    solution: str | None = None
+    status: str | None = None
+
+
 # ═══════════════ ECR/ECN ═══════════════
 
 class ECRCreate(BaseModel):
@@ -730,6 +799,50 @@ class NotificationOut(BaseModel):
     is_sent: bool = False
     is_read: bool = False
     sent_at: Optional[datetime] = None
+    created_at: datetime
+    class Config: from_attributes = True
+
+
+# ═══════════════ 预警 Schema ═══════════════
+
+class AlertOut(BaseModel):
+    id: int
+    rule_id: Optional[int] = None
+    target_type: str
+    target_id: int
+    title: str
+    level: int
+    alert_type: str
+    message: str
+    is_read: bool = False
+    is_resolved: bool = False
+    resolved_by: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    created_at: datetime
+    class Config: from_attributes = True
+
+
+class AlertRuleCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    target_type: str = Field(min_length=1, max_length=50)
+    rule_type: str = Field(min_length=1, max_length=50)
+    condition: str
+    level: int = 2
+    is_enabled: bool = True
+    notify_channels: Optional[str] = None
+    notify_users: Optional[str] = None
+
+
+class AlertRuleOut(BaseModel):
+    id: int
+    name: str
+    target_type: str
+    rule_type: str
+    condition: str
+    level: int
+    is_enabled: bool = True
+    notify_channels: Optional[str] = None
+    notify_users: Optional[str] = None
     created_at: datetime
     class Config: from_attributes = True
 
@@ -858,3 +971,30 @@ class PurchaseDashboardOut(BaseModel):
     total_orders: int = 0
     total_suppliers: int = 0
     status_breakdown: dict[str, int] = {}
+
+
+# ═══════════════ 外协送样 Schema ═══════════════
+
+class OutsourceRequestCreate(BaseModel):
+    product_code: str = Field(min_length=1, max_length=50)
+    part_name: str = Field(min_length=1, max_length=100)
+    quantity: int = Field(ge=1)
+    target_factory: str = Field(min_length=1, max_length=100)
+    required_date: Optional[date] = None
+    description: Optional[str] = None
+
+
+class OutsourceRequestUpdate(BaseModel):
+    status: Optional[str] = None
+    required_date: Optional[date] = None
+    description: Optional[str] = None
+
+
+class OutsourceRequestOut(OutsourceRequestCreate):
+    id: int
+    request_no: str
+    status: str
+    created_by: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    class Config: from_attributes = True

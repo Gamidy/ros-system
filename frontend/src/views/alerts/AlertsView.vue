@@ -12,8 +12,8 @@
 
           <el-table :data="alerts" stripe border>
             <el-table-column prop="title" label="预警内容" min-width="250" />
-            <el-table-column prop="alert_level" label="级别" width="80">
-              <template #default="{ row }"><el-tag :type="levelType(row.alert_level)" size="small">{{ row.alert_level }}</el-tag></template>
+            <el-table-column prop="level" label="级别" width="80">
+              <template #default="{ row }"><el-tag :type="levelType(row.level)" size="small">{{ row.level }}</el-tag></template>
             </el-table-column>
             <el-table-column prop="alert_type" label="类型" width="100" />
             <el-table-column prop="is_read" label="已读" width="60">
@@ -28,8 +28,8 @@
           <template #header><span>预警规则</span></template>
           <el-table :data="rules" stripe border>
             <el-table-column prop="name" label="规则名称" min-width="150" />
-            <el-table-column prop="is_active" label="启用" width="60">
-              <template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'" size="small">{{ row.is_active ? '是' : '否' }}</el-tag></template>
+            <el-table-column prop="is_enabled" label="启用" width="60">
+              <template #default="{ row }"><el-tag :type="row.is_enabled ? 'success' : 'info'" size="small">{{ row.is_enabled ? '是' : '否' }}</el-tag></template>
             </el-table-column>
           </el-table>
         </el-card>

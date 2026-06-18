@@ -60,3 +60,21 @@ class PurchaseOrderItem(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     order = relationship("PurchaseOrder", back_populates="items")
+
+
+class OutsourceRequest(Base):
+    """外协送样申请 — 研发→外协工厂 送样流程"""
+    __tablename__ = "outsource_requests"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    request_no = Column(String(30), unique=True, index=True, nullable=False, comment="请求编号 OS-YYYYMMDD-XXXX")
+    product_code = Column(String(50), nullable=False, comment="产品编码")
+    part_name = Column(String(100), nullable=False, comment="物料名称")
+    quantity = Column(Integer, nullable=False, comment="数量")
+    target_factory = Column(String(100), nullable=False, comment="目标外协工厂")
+    required_date = Column(Date, nullable=True, comment="要求交期")
+    description = Column(Text, nullable=True, comment="送样说明")
+    status = Column(String(20), default="pending", comment="pending/approved/rejected/completed")
+    created_by = Column(String(50), nullable=False, comment="申请人")
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

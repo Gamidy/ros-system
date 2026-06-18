@@ -67,6 +67,8 @@ class Product(Base):
     capacity = Column(String(20), nullable=True, comment="容量: 09K/12K/18K/24K")
     indoor_platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=True, comment="室内平台引用")
     outdoor_platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=True, comment="室外平台引用")
+    indoor_product_code = Column(String(50), nullable=True, comment="内机成品码")
+    outdoor_product_code = Column(String(50), nullable=True, comment="外机成品码")
     status = Column(String(20), default=ProductStatus.ACTIVE.value, comment="active/obsolete")
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())

@@ -58,8 +58,8 @@
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="editingId ? '处理问题' : '新建问题'" width="600">
-      <el-form :model="form" label-width="100">
-        <el-form-item label="问题标题" required>
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="100">
+        <el-form-item label="问题标题" prop="title" required>
           <el-input v-model="form.title" placeholder="简要描述问题" />
         </el-form-item>
         <el-form-item label="产品编码">
@@ -76,14 +76,14 @@
             <el-option label="审核" value="审核" />
           </el-select>
         </el-form-item>
-        <el-form-item label="严重度">
+        <el-form-item label="严重度" prop="severity">
           <el-radio-group v-model="form.severity">
             <el-radio-button value="A">A级·致命</el-radio-button>
             <el-radio-button value="B">B级·严重</el-radio-button>
             <el-radio-button value="C">C级·轻微</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="类别">
+        <el-form-item label="类别" prop="category">
           <el-select v-model="form.category" style="width: 100%" clearable>
             <el-option label="结构" value="结构" />
             <el-option label="系统" value="系统" />
@@ -126,6 +126,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
@@ -143,6 +144,17 @@ const form = ref<any>({
   assigned_to: '', target_date: null, status: '',
   root_cause: '', solution: ''
 })
+
+const formRef = ref<FormInstance>()
+
+const rules: FormRules = {
+  title: [
+    { required: true, message: '请输入问题标题', trigger: 'blur' },
+    { min: 2, message: '标题至少2个字符', trigger: 'blur' },
+  ],
+  severity: [{ required: true, message: '请选择严重度', trigger: 'change' }],
+  category: [{ required: true, message: '请选择类别', trigger: 'change' }],
+}
 
 const statusMap: Record<string, string> = {
   open: '未处理', analyzing: '分析中', fixing: '修复中',
@@ -183,6 +195,8 @@ function openDialog(row?: any) {
 }
 
 async function save() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   saving.value = true
   try {
     const payload: any = { ...form.value }

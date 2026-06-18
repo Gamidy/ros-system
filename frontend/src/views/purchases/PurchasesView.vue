@@ -95,6 +95,7 @@ const suppliers = ref<any[]>([])
 const page = ref(1)
 const total = ref(0)
 const showCreateDialog = ref(false)
+const showSupplierDialog = ref(false)
 
 const newOrder = ref<any>({ supplier_code: '', remark: '', items: [{ part_no: '', part_name: '', quantity: 1, unit_price: 0 }] })
 
@@ -123,6 +124,11 @@ async function fetchSuppliers() {
 }
 
 async function createOrder() {
+  // 校验：至少有一个物料单价 > 0
+  if (!newOrder.value.items.some((it: any) => it.unit_price > 0)) {
+    ElMessage.warning('请至少为一行明细填写大于 0 的单价')
+    return
+  }
   saving.value = true
   try {
     await api.post('/purchases/orders', newOrder.value)

@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_menu, require_role
 from app.models.product import Product
 from app.models.project import Project, ProjectGate
 from app.models.bom import Part
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/dashboard", tags=["驾驶舱"])
 # ═══════════════ 驾驶舱汇总 ═══════════════
 
 @router.get("/summary", response_model=DashboardSummary)
-def dashboard_summary(db: Session = Depends(get_db)):
+def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("dashboard"))):
     today = date.today()
     ninety_days = today + __import__("datetime").timedelta(days=90)
 
@@ -92,6 +92,7 @@ def list_alerts(
     is_resolved: bool = Query(None, description="是否已解决"),
     alert_type: str = Query("", description="预警类型"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("alerts")),
 ):
     q = db.query(Alert)
     if level is not None:
@@ -107,7 +108,7 @@ def list_alerts(
 def resolve_alert(
     aid: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "project_admin", "product_manager", "quality_engineer")),
 ):
     alert = db.query(Alert).filter(Alert.id == aid).first()
     if not alert:
@@ -125,6 +126,7 @@ def list_alert_rules(
     target_type: str = Query("", description="监控对象类型"),
     is_enabled: bool = Query(None, description="是否启用"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("alerts")),
 ):
     q = db.query(AlertRule)
     if target_type:

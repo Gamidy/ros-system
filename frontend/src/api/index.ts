@@ -26,4 +26,12 @@ api.interceptors.response.use(
   }
 )
 
+export async function changePassword(oldPassword: string, newPassword: string) {
+  const res = await api.put('/auth/password', {
+    old_password: oldPassword,
+    new_password: newPassword,
+  })
+  return res.data
+}
+
 export default api

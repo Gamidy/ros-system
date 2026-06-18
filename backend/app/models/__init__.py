@@ -7,6 +7,7 @@ from app.models.test import TestRequest, TestResult, MQVerification, Certificati
 from app.models.alert import AlertRule, Alert, Notification
 from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalRecord
 from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
+from app.models.audit import AuditLog
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "AlertRule", "Alert", "Notification",
     "ApprovalChain", "ApprovalStep", "ApprovalRequest", "ApprovalRecord",
     "PurchaseOrder", "PurchaseOrderItem", "Supplier",
+    "AuditLog",
 ]

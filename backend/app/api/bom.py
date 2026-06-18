@@ -3,7 +3,9 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role, sanitize_dict
+from app.core.permissions import require_menu
+from app.models.user import User
 from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem, part_alternative_table
 from app.schemas import (
     PartCreate, PartOut, PartUpdate, PartDetailOut,
@@ -20,7 +22,7 @@ router = APIRouter(prefix="/bom", tags=["BOM物料管理"])
 # ══════════════════════════════════════════════════
 
 @router.get("/categories")
-def list_categories(db: Session = Depends(get_db)):
+def list_categories(db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
     return db.query(PartCategory).all()
 
 
@@ -35,6 +37,7 @@ def list_parts(
     is_cdf_item: bool = None,
     category_id: int = None,
     db: Session = Depends(get_db),
+    _=Depends(require_menu("bom")),
 ):
     """列出所有物料，支持关键词/生命周期/CDF标记/分类筛选"""
     q = db.query(Part)
@@ -50,11 +53,11 @@ def list_parts(
 
 
 @router.post("/parts", response_model=PartDetailOut)
-def create_part(data: PartCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def create_part(data: PartCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """创建物料 — part_no全局唯一"""
     if db.query(Part).filter(Part.part_no == data.part_no).first():
         raise HTTPException(status_code=400, detail="物料编码已存在")
-    p = Part(**data.model_dump())
+    p = Part(**sanitize_dict(data.model_dump()))
     db.add(p); db.commit(); db.refresh(p)
     return p
 
@@ -64,7 +67,7 @@ def create_part(data: PartCreate, db: Session = Depends(get_db), _=Depends(get_c
 # ══════════════════════════════════════════════════
 
 @router.get("/parts/cdf-expiring", response_model=list[PartDetailOut])
-def cdf_expiring(days: int = Query(90, ge=1), db: Session = Depends(get_db)):
+def cdf_expiring(days: int = Query(90, ge=1), db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
     """CDF证书即将到期的物料 — 按有效期过滤"""
     today = date.today()
     cutoff = today + timedelta(days=days)
@@ -78,7 +81,7 @@ def cdf_expiring(days: int = Query(90, ge=1), db: Session = Depends(get_db)):
 
 
 @router.get("/parts/{part_id}", response_model=PartDetailOut)
-def get_part(part_id: int, db: Session = Depends(get_db)):
+def get_part(part_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
     """获取物料详情 — 含AVL供应商清单"""
     p = db.query(Part).filter(Part.id == part_id).first()
     if not p:
@@ -87,14 +90,14 @@ def get_part(part_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/parts/{part_id}", response_model=PartDetailOut)
-def update_part(part_id: int, data: PartUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def update_part(part_id: int, data: PartUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """更新物料 — 生命周期/CDF/MQ/MRC字段"""
     p = db.query(Part).filter(Part.id == part_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="物料不存在")
 
     # CDF规则校验: 如果标记为CDF物料，cert_no和expiry_date必须有值
-    update_dict = data.model_dump(exclude_unset=True)
+    update_dict = sanitize_dict(data.model_dump(exclude_unset=True))
     is_cdf = update_dict.get("is_cdf_item", p.is_cdf_item)
     cert_no = update_dict.get("cdf_cert_no", p.cdf_cert_no)
     expiry = update_dict.get("cdf_expiry_date", p.cdf_expiry_date)
@@ -112,7 +115,7 @@ def update_part(part_id: int, data: PartUpdate, db: Session = Depends(get_db), _
 # ══════════════════════════════════════════════════
 
 @router.get("/parts/{part_id}/avl", response_model=list[PartAVLOut])
-def list_avl(part_id: int, db: Session = Depends(get_db)):
+def list_avl(part_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
     """列出物料的所有批准供应商"""
     part = db.query(Part).filter(Part.id == part_id).first()
     if not part:
@@ -121,7 +124,7 @@ def list_avl(part_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/parts/{part_id}/avl", response_model=PartAVLOut)
-def add_avl(part_id: int, data: PartAVLCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def add_avl(part_id: int, data: PartAVLCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """添加物料批准供应商 — 同一物料可有多家供应商"""
     part = db.query(Part).filter(Part.id == part_id).first()
     if not part:
@@ -131,13 +134,13 @@ def add_avl(part_id: int, data: PartAVLCreate, db: Session = Depends(get_db), _=
     ).first():
         raise HTTPException(status_code=400, detail="该供应商已存在于此物料的AVL中")
 
-    avl = PartAVL(part_id=part_id, **data.model_dump())
+    avl = PartAVL(part_id=part_id, **sanitize_dict(data.model_dump()))
     db.add(avl); db.commit(); db.refresh(avl)
     return avl
 
 
 @router.delete("/parts/{part_id}/avl/{avl_id}")
-def remove_avl(part_id: int, avl_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def remove_avl(part_id: int, avl_id: int, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """从AVL中移除供应商"""
     avl = db.query(PartAVL).filter(PartAVL.id == avl_id, PartAVL.part_id == part_id).first()
     if not avl:
@@ -151,7 +154,7 @@ def remove_avl(part_id: int, avl_id: int, db: Session = Depends(get_db), _=Depen
 # ══════════════════════════════════════════════════
 
 @router.get("/parts/{part_id}/alternatives", response_model=list[PartOut])
-def list_alternatives(part_id: int, db: Session = Depends(get_db)):
+def list_alternatives(part_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
     """列出物料的替代料 — 不同part_no，功能可替代"""
     part = db.query(Part).filter(Part.id == part_id).first()
     if not part:
@@ -160,7 +163,7 @@ def list_alternatives(part_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/parts/{part_id}/alternatives")
-def set_alternatives(part_id: int, data: AlternativeAssign, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def set_alternatives(part_id: int, data: AlternativeAssign, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """设置替代料关系 — 替换全部替代料列表"""
     part = db.query(Part).filter(Part.id == part_id).first()
     if not part:
@@ -201,6 +204,7 @@ def list_boms(
     factory_code: str = "",
     status: str = "",
     db: Session = Depends(get_db),
+    _=Depends(require_menu("bom")),
 ):
     """列出BOM，可按产品编码/工厂/状态筛选"""
     q = db.query(BOM)
@@ -214,23 +218,23 @@ def list_boms(
 
 
 @router.post("", response_model=BOMOut)
-def create_bom(data: BOMCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def create_bom(data: BOMCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """创建BOM — bom_no全局唯一"""
     if db.query(BOM).filter(BOM.bom_no == data.bom_no).first():
         raise HTTPException(status_code=400, detail="BOM编号已存在")
-    b = BOM(**data.model_dump())
+    b = BOM(**sanitize_dict(data.model_dump()))
     db.add(b); db.commit(); db.refresh(b)
     return b
 
 
 @router.patch("/{bom_id}", response_model=BOMOut)
-def update_bom(bom_id: int, data: BOMUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def update_bom(bom_id: int, data: BOMUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """更新BOM状态/版本 — MBOM变更需产生新版本(Rule #2)"""
     b = db.query(BOM).filter(BOM.id == bom_id).first()
     if not b:
         raise HTTPException(status_code=404, detail="BOM不存在")
 
-    update_dict = data.model_dump(exclude_unset=True)
+    update_dict = sanitize_dict(data.model_dump(exclude_unset=True))
     # Rule #2: MBOM changes must produce new BOM version
     for k, v in update_dict.items():
         setattr(b, k, v)
@@ -243,7 +247,7 @@ def update_bom(bom_id: int, data: BOMUpdate, db: Session = Depends(get_db), _=De
 # ══════════════════════════════════════════════════
 
 @router.post("/{bom_id}/items", response_model=BOMItemOut)
-def add_bom_item(bom_id: int, data: BOMItemCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def add_bom_item(bom_id: int, data: BOMItemCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer"))):
     """向BOM添加条目 — 支持6层体系和item_type标记"""
     bom = db.query(BOM).filter(BOM.id == bom_id).first()
     if not bom:
@@ -264,13 +268,13 @@ def add_bom_item(bom_id: int, data: BOMItemCreate, db: Session = Depends(get_db)
                 detail=f"子件层级应为 {expected_level}（父件层级 {parent.level} + 1）",
             )
 
-    item = BOMItem(**data.model_dump(exclude={"bom_id"}), bom_id=bom_id)
+    item = BOMItem(**sanitize_dict(data.model_dump(exclude={"bom_id"})), bom_id=bom_id)
     db.add(item); db.commit(); db.refresh(item)
     return item
 
 
 @router.get("/{bom_id}/items", response_model=list[BOMItemOut])
-def list_bom_items(bom_id: int, db: Session = Depends(get_db)):
+def list_bom_items(bom_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
     """列出BOM所有条目（平铺）"""
     bom = db.query(BOM).filter(BOM.id == bom_id).first()
     if not bom:
@@ -279,7 +283,7 @@ def list_bom_items(bom_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{bom_id}/tree")
-def get_bom_tree(bom_id: int, db: Session = Depends(get_db)):
+def get_bom_tree(bom_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
     """获取BOM树形结构 — 含item_type字段"""
     bom = db.query(BOM).filter(BOM.id == bom_id).first()
     if not bom:

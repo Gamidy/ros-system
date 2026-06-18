@@ -1,0 +1,76 @@
+{
+  "title": "ROS产品经理10轮×20步浏览器审计",
+  "time": "2026-06-18T10:05:28.968104",
+  "total_issues": 9,
+  "severity_count": {
+    "critical": 0,
+    "high": 0,
+    "medium": 4,
+    "low": 5
+  },
+  "issues": [
+    {
+      "severity": "medium",
+      "round": 1,
+      "step": "S7",
+      "msg": "菜单 '品质' 不可访问",
+      "time": "2026-06-18T10:05:08.179582"
+    },
+    {
+      "severity": "medium",
+      "round": 1,
+      "step": "S8",
+      "msg": "菜单 '采购' 不可访问",
+      "time": "2026-06-18T10:05:08.183752"
+    },
+    {
+      "severity": "medium",
+      "round": 1,
+      "step": "S9",
+      "msg": "菜单 '告警' 不可访问",
+      "time": "2026-06-18T10:05:08.187529"
+    },
+    {
+      "severity": "medium",
+      "round": 4,
+      "step": "S2",
+      "msg": "空名称无前端校验提示",
+      "time": "2026-06-18T10:05:13.880329"
+    },
+    {
+      "severity": "low",
+      "round": 6,
+      "step": "S/admin",
+      "msg": "访问/admin: ROS 系统\n驾驶舱\n产品主线\nBOM物料管理\n项目管理\n实验与测试\n预警体系\n认证管理\n样机管理\n首页\n/\n驾驶舱\npm\n产品经理\n第1层 · 体系健康度\n-",
+      "time": "2026-06-18T10:05:20.232283"
+    },
+    {
+      "severity": "low",
+      "round": 6,
+      "step": "S/users",
+      "msg": "访问/users: ROS 系统\n驾驶舱\n产品主线\nBOM物料管理\n项目管理\n实验与测试\n预警体系\n认证管理\n样机管理\n首页\n/\n驾驶舱\npm\n产品经理\n第1层 · 体系健康度\n-",
+      "time": "2026-06-18T10:05:20.769519"
+    },
+    {
+      "severity": "low",
+      "round": 6,
+      "step": "S/settings",
+      "msg": "访问/settings: ROS 系统\n驾驶舱\n产品主线\nBOM物料管理\n项目管理\n实验与测试\n预警体系\n认证管理\n样机管理\n首页\n/\n驾驶舱\npm\n产品经理\n第1层 · 体系健康度\n-",
+      "time": "2026-06-18T10:05:21.310986"
+    },
+    {
+      "severity": "low",
+      "round": 6,
+      "step": "S/audit",
+      "msg": "访问/audit: ROS 系统\n驾驶舱\n产品主线\nBOM物料管理\n项目管理\n实验与测试\n预警体系\n认证管理\n样机管理\n首页\n/\n驾驶舱\npm\n产品经理\n第1层 · 体系健康度\n-",
+      "time": "2026-06-18T10:05:21.849476"
+    },
+    {
+      "severity": "low",
+      "round": 6,
+      "step": "S/security",
+      "msg": "访问/security: ROS 系统\n驾驶舱\n产品主线\nBOM物料管理\n项目管理\n实验与测试\n预警体系\n认证管理\n样机管理\n首页\n/\n驾驶舱\npm\n产品经理\n第1层 · 体系健康度\n-",
+      "time": "2026-06-18T10:05:22.391093"
+    }
+  ]
+}

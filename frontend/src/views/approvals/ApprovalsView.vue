@@ -5,6 +5,9 @@
         <!-- ═══ 我的审批 ═══ -->
         <el-tab-pane label="我的审批" name="pending">
           <el-table :data="items" stripe border max-height="420" v-loading="loading">
+            <template #empty>
+              <el-empty description="暂无待审批事项" :image-size="80" />
+            </template>
             <el-table-column prop="id" label="审批编号" width="140" />
             <el-table-column prop="type" label="类型" width="110">
               <template #default="{ row }">
@@ -347,8 +350,8 @@ function addStep() {
 }
 
 /* ── 删除步骤 ── */
-function removeStep(index: number) {
-  selectedChain.value.steps.splice(index, 1)
+function removeStep(index: number | string) {
+  selectedChain.value.steps.splice(Number(index), 1)
 }
 
 /* ── 保存审批链 ── */

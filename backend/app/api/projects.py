@@ -1,12 +1,15 @@
 """项目管理API: Program群 → Project(T/A/B/C) → M1~M9 Gate → Task + 里程碑 + 风险"""
-from datetime import date
+from datetime import date, datetime
+import random
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role
+from app.core.permissions import require_menu
+from app.models.user import User
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
 from app.schemas import (
-    ProgramCreate, ProjectCreate, TaskCreate, RiskCreate,
+    ProgramCreate, ProjectCreate, ProjectOut, TaskCreate, RiskCreate,
     MilestoneCreate, GateStatusUpdate,
 )
 
@@ -127,6 +130,7 @@ def _validate_gate_transition(project_id: int, target_code: str, new_status: str
 def list_programs(
     status: str | None = Query(None),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("projects")),
 ):
     q = db.query(Program)
     if status:
@@ -138,7 +142,7 @@ def list_programs(
 def create_program(
     req: ProgramCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     if db.query(Program).filter(Program.code == req.code).first():
         raise HTTPException(status_code=400, detail="项目群编号已存在")
@@ -151,7 +155,7 @@ def create_program(
 
 
 @program_router.get("/{pid}")
-def get_program(pid: int, db: Session = Depends(get_db)):
+def get_program(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
     p = db.query(Program).filter(Program.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目群不存在")
@@ -185,7 +189,7 @@ def get_program(pid: int, db: Session = Depends(get_db)):
 # Project Endpoints
 # ══════════════════════════════════════════════════════════════
 
-@project_router.get("")
+@project_router.get("", response_model=list[ProjectOut])
 def list_projects(
     program_id: int | None = Query(None),
     project_class: str | None = Query(None, pattern="^(T|A|B|C)$"),
@@ -194,6 +198,7 @@ def list_projects(
     source: str | None = Query(None),
     source_category: str | None = Query(None),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("projects")),
 ):
     q = db.query(Project)
     if program_id is not None:
@@ -211,14 +216,26 @@ def list_projects(
     return q.order_by(Project.created_at.desc()).all()
 
 
-@project_router.post("")
+@project_router.post("", response_model=ProjectOut)
 def create_project(
     req: ProjectCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
-    if db.query(Project).filter(Project.code == req.code).first():
+    # 手动校验项目名称
+    if not req.name or not req.name.strip():
+        raise HTTPException(status_code=400, detail="项目名称不能为空")
+
+    # 自动生成项目编号（如果未填写）
+    code = req.code
+    if not code:
+        code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
+
+    if db.query(Project).filter(Project.code == code).first():
         raise HTTPException(status_code=400, detail="项目编号已存在")
+
+    # 默认项目等级
+    project_class = req.project_class if req.project_class else 'C'
 
     # 验证program存在
     if req.program_id and not db.query(Program).filter(Program.id == req.program_id).first():
@@ -228,31 +245,36 @@ def create_project(
     source_category = _auto_source_category(req.source)
 
     p = Project(
-        code=req.code, name=req.name, project_class=req.project_class,
+        code=code, name=req.name, project_class=project_class,
         program_id=req.program_id, product_code=req.product_code,
         source=req.source, source_category=source_category,
         dev_modules=req.dev_modules, change_impacts=req.change_impacts,
         start_date=req.start_date, target_end_date=req.target_end_date,
         owner=req.owner, description=req.description, critical_path=req.critical_path,
+        market_policy=req.market_policy, annual_planning_ref=req.annual_planning_ref, budget=req.budget,
     )
     db.add(p)
     db.flush()
 
-    # 根据项目等级自动生成Gate模板
-    template = _get_gate_template(req.project_class)
-    for gate_def in template:
-        db.add(ProjectGate(
-            project_id=p.id,
-            gate_code=gate_def["code"],
-            gate_name=gate_def["name"],
-            seq=gate_def["seq"],
-            decision_level=gate_def["decision_level"],
-            is_high_risk_zone=gate_def["is_high_risk_zone"],
-            is_hidden=gate_def["is_hidden"],
-        ))
+    try:
+        # 根据项目等级自动生成Gate模板
+        template = _get_gate_template(project_class)
+        for gate_def in template:
+            db.add(ProjectGate(
+                project_id=p.id,
+                gate_code=gate_def["code"],
+                gate_name=gate_def["name"],
+                seq=gate_def["seq"],
+                decision_level=gate_def["decision_level"],
+                is_high_risk_zone=gate_def["is_high_risk_zone"],
+                is_hidden=gate_def["is_hidden"],
+            ))
 
-    db.commit()
-    db.refresh(p)
+        db.commit()
+        db.refresh(p)
+    except Exception:
+        db.rollback()
+        raise
     return {
         "id": p.id, "code": p.code, "name": p.name,
         "program_id": p.program_id, "product_code": p.product_code,
@@ -264,12 +286,13 @@ def create_project(
         "actual_end_date": p.actual_end_date,
         "critical_path": p.critical_path,
         "owner": p.owner, "description": p.description,
+        "market_policy": p.market_policy, "annual_planning_ref": p.annual_planning_ref, "budget": p.budget,
         "created_at": p.created_at, "updated_at": p.updated_at,
     }
 
 
-@project_router.get("/{pid}")
-def get_project_detail(pid: int, db: Session = Depends(get_db)):
+@project_router.get("/{pid}", response_model=ProjectOut)
+def get_project_detail(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -329,7 +352,7 @@ def update_project(
     actual_end_date: date | None = None,
     description: str | None = None,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
@@ -358,7 +381,7 @@ def update_project(
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/gates")
-def list_gates(pid: int, db: Session = Depends(get_db)):
+def list_gates(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -378,7 +401,7 @@ def create_gate(
     pass_conditions: str | None = None,
     planned_date: date | None = None,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
@@ -403,7 +426,7 @@ def create_gate(
 def bulk_create_gates(
     pid: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     """根据项目等级自动生成全部M1~M9 Gate，或覆盖不全的"""
     p = db.query(Project).filter(Project.id == pid).first()
@@ -447,7 +470,7 @@ def update_gate_status(
     decision: str | None = None,
     reviewer: str | None = None,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     gate = db.query(ProjectGate).filter(
         ProjectGate.project_id == pid,
@@ -479,7 +502,7 @@ def update_gate_status(
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/tasks")
-def list_tasks(pid: int, db: Session = Depends(get_db)):
+def list_tasks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -491,7 +514,7 @@ def create_task(
     pid: int,
     req: TaskCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
@@ -525,7 +548,7 @@ def update_task(
     due_date: date | None = None,
     description: str | None = None,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     t = db.query(Task).filter(Task.id == tid, Task.project_id == pid).first()
     if not t:
@@ -556,7 +579,7 @@ def update_task(
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/milestones")
-def list_milestones(pid: int, db: Session = Depends(get_db)):
+def list_milestones(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -568,7 +591,7 @@ def create_milestone(
     pid: int,
     req: MilestoneCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
@@ -590,7 +613,7 @@ def achieve_milestone(
     status: str = "achieved",
     actual_date: date | None = None,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     m = db.query(Milestone).filter(
         Milestone.id == mid, Milestone.project_id == pid
@@ -622,11 +645,139 @@ def achieve_milestone(
 
 
 # ══════════════════════════════════════════════════════════════
+# Delay Chain Warning (延期传导链预警)
+# ══════════════════════════════════════════════════════════════
+
+@project_router.get("/{pid}/delay-chain")
+def get_delay_chain(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+    """延期传导链预警: 计算里程碑依赖链的延期放大效应
+    
+    示例输出:
+    [
+      {
+        "milestone": "设计评审",
+        "delay_days": 5,
+        "impacts": [
+          {"downstream_milestone": "样机制作", "amplification": 1.6, "estimated_impact_days": 8},
+          {"downstream_milestone": "实验验证", "amplification": 3.0, "estimated_impact_days": 15},
+          ...
+        ]
+      }
+    ]
+    """
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    milestones = db.query(Milestone).filter(Milestone.project_id == pid).all()
+    if not milestones:
+        return {"project_id": pid, "project_name": p.name, "chains": [], "overall_amplification": None}
+
+    # Build dependency map
+    milestone_map: dict[int, Milestone] = {m.id: m for m in milestones}
+    
+    # Compute delay for each milestone that has actual_date
+    delays: dict[int, int] = {}  # milestone_id → delay_days
+    for m in milestones:
+        if m.actual_date and m.planned_date:
+            d = (m.actual_date - m.planned_date).days
+            if d > 0:
+                delays[m.id] = d
+
+    # Build downstream index: which milestones depend on each
+    downstream_map: dict[int, list[int]] = {}  # upstream_id → [downstream_ids]
+    for m in milestones:
+        if m.depends_on_milestone_id and m.depends_on_milestone_id in milestone_map:
+            upstream_id = m.depends_on_milestone_id
+            if upstream_id not in downstream_map:
+                downstream_map[upstream_id] = []
+            downstream_map[upstream_id].append(m.id)
+
+    # Default amplification factor per dependency level
+    DEFAULT_AMPLIFICATION = 1.5
+
+    def walk_chain(upstream_id: int, accumulated_amplification: float, visited: set) -> list[dict]:
+        """Recursively walk downstream to compute impact chains"""
+        impacts = []
+        if upstream_id not in downstream_map:
+            return impacts
+        
+        for down_id in downstream_map[upstream_id]:
+            if down_id in visited:
+                continue
+            down_m = milestone_map[down_id]
+            
+            # Compute amplification for this edge
+            # If both upstream and downstream have actual delay data, use real ratio
+            if upstream_id in delays and down_id in delays:
+                edge_amp = delays[down_id] / max(delays[upstream_id], 1)
+            else:
+                edge_amp = DEFAULT_AMPLIFICATION
+            
+            total_amp = round(accumulated_amplification * edge_amp, 2)
+            estimated_impact = round(delays.get(upstream_id, 0) * total_amp)
+            
+            new_visited = visited | {down_id}
+            
+            impact_entry = {
+                "downstream_milestone": down_m.name,
+                "downstream_milestone_id": down_m.id,
+                "amplification": total_amp,
+                "estimated_impact_days": estimated_impact,
+                "downstream_delay_days": delays.get(down_id, None),  # actual delay if known
+                "downstream_status": down_m.status,
+            }
+            
+            # Recursively walk further downstream
+            sub_impacts = walk_chain(down_id, total_amp, new_visited)
+            if sub_impacts:
+                impact_entry["further_impacts"] = sub_impacts
+            
+            impacts.append(impact_entry)
+        
+        return impacts
+
+    chains = []
+    for m in milestones:
+        if m.id in delays:
+            impact_list = walk_chain(m.id, 1.0, {m.id})
+            if impact_list:
+                chains.append({
+                    "milestone": m.name,
+                    "milestone_id": m.id,
+                    "delay_days": delays[m.id],
+                    "planned_date": str(m.planned_date) if m.planned_date else None,
+                    "actual_date": str(m.actual_date) if m.actual_date else None,
+                    "impacts": impact_list,
+                })
+
+    # Compute overall amplification: max downstream estimated impact / root delay
+    overall_amplification = None
+    if chains:
+        all_impacts = []
+        for chain in chains:
+            for imp in chain["impacts"]:
+                all_impacts.append(imp["amplification"])
+        if all_impacts:
+            overall_amplification = round(max(all_impacts), 2)
+
+    return {
+        "project_id": pid,
+        "project_name": p.name,
+        "project_class": p.project_class,
+        "total_milestones": len(milestones),
+        "delayed_milestones": len(delays),
+        "chains": chains,
+        "overall_amplification": overall_amplification,
+    }
+
+
+# ══════════════════════════════════════════════════════════════
 # Risk Management
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/risks")
-def list_risks(pid: int, db: Session = Depends(get_db)):
+def list_risks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -638,7 +789,7 @@ def create_risk(
     pid: int,
     req: RiskCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
@@ -669,7 +820,7 @@ def update_risk(
     mitigation: str | None = None,
     risk_level: str | None = None,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     r = db.query(Risk).filter(Risk.id == rid, Risk.project_id == pid).first()
     if not r:

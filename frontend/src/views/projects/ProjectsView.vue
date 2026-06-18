@@ -80,9 +80,9 @@
 
     <!-- Project Dialog -->
     <el-dialog v-model="showProjectDialog" title="新建项目" width="600">
-      <el-form :model="pjForm" label-width="90" size="small">
-        <el-form-item label="项目编号"><el-input v-model="pjForm.code" /></el-form-item>
-        <el-form-item label="项目名称"><el-input v-model="pjForm.name" /></el-form-item>
+      <el-form ref="pjFormRef" :model="pjForm" :rules="pjRules" label-width="90" size="small">
+        <el-form-item label="项目编号" prop="code"><el-input v-model="pjForm.code" /></el-form-item>
+        <el-form-item label="项目名称" prop="name"><el-input v-model="pjForm.name" /></el-form-item>
         <el-form-item label="项目等级">
           <el-select v-model="pjForm.project_class">
             <el-option v-for="c in ['T','A','B','C']" :key="c" :label="`${c}级`" :value="c" />
@@ -98,6 +98,9 @@
         <el-form-item label="变更影响"><el-input v-model="pjForm.change_impacts" placeholder='JSON: ["性能","认证"]' /></el-form-item>
         <el-form-item label="项目经理"><el-input v-model="pjForm.owner" /></el-form-item>
         <el-form-item label="目标日期"><el-date-picker v-model="pjForm.target_end_date" type="date" /></el-form-item>
+        <el-form-item label="市场政策背景"><el-input v-model="pjForm.market_policy" placeholder="产品经理填写" /></el-form-item>
+        <el-form-item label="年度规划关联"><el-input v-model="pjForm.annual_planning_ref" placeholder="如: 2026年度规划-新品线" /></el-form-item>
+        <el-form-item label="项目预算(元)"><el-input-number v-model="pjForm.budget" :min="0" :step="10000" placeholder="预算金额" style="width:100%" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="showProjectDialog=false">取消</el-button><el-button type="primary" @click="saveProject">保存并生成M1~M9</el-button></template>
     </el-dialog>
@@ -198,6 +201,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import api from '../../api'
 
 const tab = ref('projects')
@@ -214,8 +218,10 @@ const showDetailDialog = ref(false)
 const showTaskDialog = ref(false)
 const showRiskDialog = ref(false)
 
+const pjFormRef = ref<FormInstance>()
+
 const pgForm = ref({ code: '', name: '', description: '', start_date: null, end_date: null })
-const pjForm = ref({ code: '', name: '', project_class: 'B', source: '', product_code: '', dev_modules: '', change_impacts: '', owner: '', target_end_date: null })
+const pjForm = ref({ code: '', name: '', project_class: 'B', source: '', product_code: '', dev_modules: '', change_impacts: '', owner: '', target_end_date: null, market_policy: '', annual_planning_ref: '', budget: null as number | null })
 const taskForm = ref({ title: '', assignee: '', priority: 'medium', due_date: null })
 const riskForm = ref({ title: '', risk_level: 'B', risk_source: '', probability: 'medium', impact: 'medium', mitigation: '' })
 
@@ -225,6 +231,11 @@ const detailTasks = ref<any[]>([])
 const detailRisks = ref<any[]>([])
 
 const sources = ['年度规划', '客户需求', '品质整改', '研发降本', '供应链二供', '工艺提效', '法规升级']
+
+const pjRules: FormRules = {
+  code: [{ required: true, message: '请输入项目编号', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
+}
 
 const filteredProjects = computed(() => {
   let list = projects.value
@@ -239,7 +250,7 @@ function gateStatusColor(s: string) { return { pending: 'info', passed: 'success
 
 async function fetchAll() {
   try {
-    const [pg, pj] = await Promise.all([api.get('/projects/programs'), api.get('/projects')])
+    const [pg, pj] = await Promise.all([api.get('/programs'), api.get('/projects')])
     programs.value = pg.data
     projects.value = pj.data
   } catch {}
@@ -255,10 +266,12 @@ async function onTabChange(name: string) {
 }
 
 async function saveProgram() {
-  try { await api.post('/projects/programs', pgForm.value); ElMessage.success('成功'); showProgramDialog.value = false; await fetchAll() } catch {}
+  try { await api.post('/programs', pgForm.value); ElMessage.success('成功'); showProgramDialog.value = false; await fetchAll() } catch {}
 }
 
 async function saveProject() {
+  const valid = await pjFormRef.value?.validate().catch(() => false)
+  if (!valid) return
   try { await api.post('/projects', pjForm.value); ElMessage.success('项目创建成功，M1~M9已自动生成'); showProjectDialog.value = false; pjForm.value = { ...pjForm.value, code: '', name: '' }; await fetchAll() } catch {}
 }
 

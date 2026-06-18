@@ -1,17 +1,98 @@
-"""JWT认证 + RBAC权限"""
+"""JWT认证 + RBAC权限 + XSS/CSRF防护"""
+import html
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.permissions import is_super_role, require_menu, MENU_PATH_MAP, ALL_ROLES
 from app.models.user import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+# ── XSS 防护 ──────────────────────────────────────────────────────────
+
+def sanitize_html(value: str) -> str:
+    """转义 HTML 特殊字符，防御存储型 XSS（纵深防御）
+
+    使用 Python 标准库 html.escape() 将 <>'"& 转为 HTML 实体。
+    对不含特殊字符的普通文本是 idempotent 的。
+
+    示例:
+        sanitize_html('<img src=x onerror=alert(1)>')
+        → '&lt;img src=x onerror=alert(1)&gt;'
+    """
+    return html.escape(value, quote=True)
+
+
+def sanitize_dict(d: dict) -> dict:
+    """递归清洗 dict 中所有字符串值的 HTML 特殊字符"""
+    for k, v in d.items():
+        if isinstance(v, str):
+            d[k] = sanitize_html(v)
+        elif isinstance(v, dict):
+            sanitize_dict(v)
+    return d
+
+
+# ── CSRF 防护 ─────────────────────────────────────────────────────────
+
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "X-CSRF-Token"
+
+
+def generate_csrf_token() -> str:
+    """生成随机 CSRF token"""
+    return secrets.token_hex(32)
+
+
+def set_csrf_cookie(response: Response) -> str:
+    """在响应中设置 SameSite=Strict 的 CSRF cookie
+
+    JWT 使用 Bearer token（非 cookie 认证），天然免疫传统 CSRF。
+    此 cookie 作为纵深防护，前端需在 state-changing 请求中将
+    cookie 值写入 X-CSRF-Token 请求头（双提交模式）。
+    """
+    token = generate_csrf_token()
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=token,
+        httponly=False,        # 前端 JS 需要读取此 cookie
+        samesite="strict",
+        secure=True,            # 生产 HTTPS 时生效
+        max_age=86400,          # 24 小时
+    )
+    return token
+
+
+async def csrf_middleware(request: Request, call_next):
+    """CSRF 检查中间件 — 对 state-changing 请求校验 X-CSRF-Token 头
+
+    安全方法 (GET/HEAD/OPTIONS) 直接放行。
+    POST/PUT/PATCH/DELETE 需要 X-CSRF-Token 头与 csrf_token cookie 一致。
+    """
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return await call_next(request)
+
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    header_token = request.headers.get(CSRF_HEADER_NAME)
+
+    # 如果没有设置 cookie，跳过检查（向后兼容 / 开发环境）
+    if cookie_token is None:
+        return await call_next(request)
+
+    if not header_token or not secrets.compare_digest(cookie_token, header_token):
+        raise HTTPException(status_code=403, detail="CSRF token 校验失败")
+
+    return await call_next(request)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -46,12 +127,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 
 def require_role(*roles: str):
-    """RBAC权限校验"""
+    """RBAC权限校验 — admin 和 general_manager 为超级角色，自动放行"""
     def checker(current_user: User = Depends(get_current_user)):
-        if current_user.role not in roles and "admin" not in current_user.role:
+        # 超级角色（admin / general_manager）自动获得所有权限
+        if is_super_role(current_user.role):
+            return current_user
+        if current_user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"需要角色: {', '.join(roles)}",
+                detail="权限不足",
             )
         return current_user
     return checker

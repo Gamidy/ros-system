@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role
+from app.core.permissions import require_menu
+from app.models.user import User
 from app.models.test import TestRequest, TestResult, MQVerification
 from app.schemas import (
     TestRequestCreate, TestRequestOut,
@@ -36,6 +38,7 @@ def list_tests(
     test_type: str = Query("", description="测试类型"),
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("tests")),
 ):
     q = db.query(TestRequest)
     if product_code:
@@ -53,7 +56,7 @@ def list_tests(
 def create_test(
     data: TestRequestCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
 ):
     req = TestRequest(**data.model_dump(), request_no=_gen_request_no())
     db.add(req)
@@ -63,7 +66,7 @@ def create_test(
 
 
 @router.get("/{rid}", response_model=TestRequestOut)
-def get_test(rid: int, db: Session = Depends(get_db)):
+def get_test(rid: int, db: Session = Depends(get_db), _=Depends(require_menu("tests"))):
     r = db.query(TestRequest).filter(TestRequest.id == rid).first()
     if not r:
         raise HTTPException(status_code=404, detail="测试申请不存在")
@@ -77,7 +80,7 @@ def update_test(
     result_summary: str = Query("", description="结果摘要"),
     ng_count: int = Query(None, description="不合格项数"),
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
 ):
     r = db.query(TestRequest).filter(TestRequest.id == rid).first()
     if not r:
@@ -101,7 +104,7 @@ def add_test_result(
     rid: int,
     data: TestResultCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
 ):
     tr = db.query(TestRequest).filter(TestRequest.id == rid).first()
     if not tr:
@@ -125,6 +128,7 @@ def list_mq(
     product_code: str = Query("", description="产品编码"),
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("tests")),
 ):
     q = db.query(MQVerification)
     if product_code:
@@ -138,7 +142,7 @@ def list_mq(
 def create_mq(
     data: MQVerificationCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
 ):
     mq = MQVerification(**data.model_dump())
     db.add(mq)
@@ -155,7 +159,7 @@ def update_mq(
     fail_items: int = Query(None, description="失败项数"),
     result_report: str = Query("", description="结果报告"),
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
 ):
     mq = db.query(MQVerification).filter(MQVerification.id == mid).first()
     if not mq:

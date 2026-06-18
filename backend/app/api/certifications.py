@@ -6,12 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role
+from app.core.permissions import require_menu
+from app.models.user import User
 from app.models.test import Certification, Prototype, QualityIssue, ECR, ECN
 from app.schemas import (
     CertificationCreate, CertificationOut,
     PrototypeCreate, PrototypeOut,
-    QualityIssueCreate, QualityIssueOut,
+    QualityIssueCreate, QualityIssueOut, IssueUpdate,
     ECRCreate, ECROut,
     ECNCreate, ECNOut,
 )
@@ -50,6 +52,7 @@ def list_certs(
     target_market: str = Query("", description="目标市场"),
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("certifications")),
 ):
     q = db.query(Certification)
     if product_code:
@@ -67,7 +70,7 @@ def list_certs(
 def create_cert(
     data: CertificationCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
     cert = Certification(**data.model_dump(), cert_no=_gen_cert_no())
     db.add(cert)
@@ -84,6 +87,7 @@ def list_protos(
     proto_type: str = Query("", description="样机类型"),
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("prototypes")),
 ):
     q = db.query(Prototype)
     if product_code:
@@ -99,8 +103,10 @@ def list_protos(
 def create_proto(
     data: PrototypeCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
+    if data.quantity < 1:
+        raise HTTPException(status_code=400, detail="样机数量必须≥1")
     proto = Prototype(**data.model_dump(), proto_no=_gen_proto_no())
     db.add(proto)
     db.commit()
@@ -109,7 +115,7 @@ def create_proto(
 
 
 @router.get("/prototypes/{pid}", response_model=PrototypeOut)
-def get_proto(pid: int, db: Session = Depends(get_db)):
+def get_proto(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("prototypes"))):
     p = db.query(Prototype).filter(Prototype.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="样机记录不存在")
@@ -124,6 +130,7 @@ def list_issues(
     severity: str = Query("", description="严重度"),
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("quality")),
 ):
     q = db.query(QualityIssue)
     if product_code:
@@ -139,7 +146,7 @@ def list_issues(
 def create_issue(
     data: QualityIssueCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
     issue = QualityIssue(**data.model_dump(), issue_no=_gen_issue_no())
     db.add(issue)
@@ -151,22 +158,23 @@ def create_issue(
 @router.patch("/quality-issues/{iid}")
 def update_issue(
     iid: int,
-    root_cause: str = Query("", description="根本原因"),
-    solution: str = Query("", description="解决方案"),
-    status: str = Query("", description="状态"),
+    data: IssueUpdate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
     issue = db.query(QualityIssue).filter(QualityIssue.id == iid).first()
     if not issue:
         raise HTTPException(status_code=404, detail="品质问题不存在")
-    if root_cause:
-        issue.root_cause = root_cause
-    if solution:
-        issue.solution = solution
-    if status:
-        issue.status = status
-        if status == "closed":
+    VALID_STATUSES = {"open", "analyzing", "fixing", "verified", "closed"}
+    if data.root_cause is not None:
+        issue.root_cause = data.root_cause
+    if data.solution is not None:
+        issue.solution = data.solution
+    if data.status is not None:
+        if data.status not in VALID_STATUSES:
+            raise HTTPException(status_code=400, detail=f"无效状态: {data.status}")
+        issue.status = data.status
+        if data.status == "closed":
             issue.closed_date = date.today()
     issue.updated_at = datetime.now(timezone.utc)
     db.commit()
@@ -181,6 +189,7 @@ def list_ecrs(
     change_type: str = Query("", description="变更类型"),
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("changes")),
 ):
     q = db.query(ECR)
     if change_type:
@@ -194,7 +203,7 @@ def list_ecrs(
 def create_ecr(
     data: ECRCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
     ecr = ECR(**data.model_dump(), ecr_no=_gen_ecr_no())
     db.add(ecr)
@@ -208,7 +217,7 @@ def process_ecr(
     eid: int,
     action: str = Query(..., description="approve 或 reject"),
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
     ecr = db.query(ECR).filter(ECR.id == eid).first()
     if not ecr:
@@ -230,6 +239,7 @@ def process_ecr(
 def list_ecns(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
+    _=Depends(require_menu("changes")),
 ):
     q = db.query(ECN)
     if status:
@@ -241,7 +251,7 @@ def list_ecns(
 def create_ecn(
     data: ECNCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
     if data.ecr_id:
         ecr = db.query(ECR).filter(ECR.id == data.ecr_id).first()
@@ -258,7 +268,7 @@ def create_ecn(
 # NOTE: 必须在所有具体路径之后声明，避免 /{cid} 捕获 /prototypes 等
 
 @router.get("/{cid}", response_model=CertificationOut)
-def get_cert(cid: int, db: Session = Depends(get_db)):
+def get_cert(cid: int, db: Session = Depends(get_db), _=Depends(require_menu("certifications"))):
     c = db.query(Certification).filter(Certification.id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="认证记录不存在")
@@ -276,7 +286,7 @@ def update_cert(
     result: str = Query("", description="结果: pass/fail"),
     remark: str = Query("", description="备注"),
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
 ):
     c = db.query(Certification).filter(Certification.id == cid).first()
     if not c:

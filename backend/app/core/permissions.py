@@ -1,0 +1,215 @@
+"""角色-菜单权限映射模块"""
+
+# 全部有效角色（13种正式角色 + engineer 为向后兼容的默认角色）
+ALL_ROLES = [
+    "admin",
+    "general_manager",
+    "rd_director",
+    "product_manager",
+    "systems_engineer",
+    "structural_engineer",
+    "electrical_control_engineer",
+    "electrical_engineer",
+    "procurement",
+    "quality_engineer",
+    "process_engineer",
+    "project_admin",
+    "production",
+    "module_manager",          # 模块经理（通用）
+    "module_manager_struct",   # 结构模块经理
+    "module_manager_sys",      # 系统模块经理
+    "finance_manager",         # 财务经理
+    "process_manager",         # 工艺经理
+    "procurement_director",    # 采购总监
+    "security_officer",        # IT安全员
+    "engineer",                # 向后兼容：原系统默认角色
+]
+
+# 超级角色 — 拥有全部菜单权限
+SUPER_ROLES = ["admin", "general_manager"]
+
+# 全部菜单列表
+ALL_MENUS = [
+    "dashboard",        # 驾驶舱
+    "products",         # 产品主线
+    "bom",              # BOM物料
+    "projects",         # 项目
+    "tests",            # 实验测试
+    "alerts",           # 预警
+    "certifications",   # 认证
+    "prototypes",       # 样机
+    "quality",          # 质量
+    "changes",          # 变更
+    "approvals",        # 审批
+    "purchases",        # 采购
+    "rd_dashboard",     # 研发总监
+    "mm",               # 模块管理
+]
+
+# 角色 → 菜单 映射表
+ROLE_MENU_MAP: dict[str, list[str]] = {
+    "admin": ALL_MENUS,
+    "general_manager": ALL_MENUS,
+    "rd_director": [
+        "dashboard", "products", "bom", "projects", "tests",
+        "certifications", "prototypes", "quality", "changes",
+        "alerts", "approvals", "rd_dashboard", "purchases",
+    ],
+    "product_manager": [
+        "dashboard", "products", "bom", "projects",
+        "certifications", "alerts", "pm-workspace",
+    ],
+    "systems_engineer": [
+        "dashboard", "products", "bom", "projects",
+        "tests", "prototypes", "changes",
+    ],
+    "structural_engineer": [
+        "dashboard", "products", "bom", "projects",
+        "tests", "prototypes", "changes",
+    ],
+    "electrical_control_engineer": [
+        "dashboard", "products", "bom", "projects",
+        "tests", "prototypes", "changes",
+    ],
+    "electrical_engineer": [
+        "dashboard", "products", "bom", "projects",
+        "tests", "prototypes", "changes", "certifications",
+    ],
+    "procurement": [
+        "dashboard", "bom", "purchases", "alerts", "projects",
+        "products", "certifications",
+    ],
+    "quality_engineer": [
+        "dashboard", "products", "bom", "projects",
+        "tests", "quality", "alerts", "certifications",
+        "prototypes", "changes",
+    ],
+    "process_engineer": [
+        "dashboard", "products", "bom", "projects",
+        "tests", "prototypes", "certifications", "alerts",
+    ],
+    "project_admin": [
+        "dashboard", "projects", "alerts", "changes",
+        "products", "bom", "tests", "prototypes", "approvals",
+    ],
+    "production": [
+        "dashboard", "bom", "quality", "alerts", "projects",
+        "products", "prototypes",
+    ],
+    "module_manager": [  # 模块经理（通用）— BOM + 样机 + 质量 + 预警 + 审批
+        "dashboard", "products", "bom", "projects",
+        "prototypes", "quality", "alerts", "approvals",
+        "tests", "certifications", "changes", "mm",
+    ],
+    "module_manager_struct": [  # 结构模块经理 — 侧重结构
+        "dashboard", "products", "bom", "projects",
+        "prototypes", "quality", "alerts", "approvals",
+        "tests", "certifications", "changes",
+    ],
+    "module_manager_sys": [  # 系统模块经理 — 侧重系统性能
+        "dashboard", "products", "bom", "projects", "tests",
+        "prototypes", "quality", "alerts", "approvals",
+        "certifications", "changes",
+    ],
+    "finance_manager": [  # 财务经理 — 成本核算
+        "dashboard", "products", "bom",
+        "projects", "purchases", "alerts", "approvals",
+    ],
+    "process_manager": [  # 工艺经理 — 管理工艺+审批
+        "dashboard", "products", "bom", "projects",
+        "tests", "prototypes", "approvals",
+    ],
+    "procurement_director": [  # 采购总监 — 管理采购+审批
+        "dashboard", "bom", "purchases", "alerts", "approvals", "projects",
+        "products", "prototypes", "tests",
+    ],
+    "security_officer": [
+        "dashboard", "alerts", "approvals",
+        "products", "bom", "projects", "tests",
+        "certifications", "prototypes", "quality", "changes",
+    ],  # IT安全员 — 裁剪权限（去掉 purchases, rd_dashboard, mm）
+    "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
+        "dashboard", "products", "bom", "projects",
+        "tests", "prototypes", "changes",
+    ],
+}
+
+
+def get_allowed_menus(role: str) -> list[str]:
+    """根据角色返回允许访问的菜单列表；超级角色返回全部菜单"""
+    if role in SUPER_ROLES:
+        return list(ALL_MENUS)
+    return ROLE_MENU_MAP.get(role, [])
+
+
+def is_valid_role(role: str) -> bool:
+    """检查角色是否在合法角色列表中"""
+    return role in ALL_ROLES
+
+
+def is_super_role(role: str) -> bool:
+    """检查是否为超级角色（admin 或 general_manager）"""
+    return role in SUPER_ROLES
+
+
+# 菜单名 → 前端路由路径映射（用于 /auth/me 返回 allowed_paths）
+MENU_PATH_MAP: dict[str, str] = {
+    "dashboard": "/dashboard",
+    "products": "/products",
+    "bom": "/bom",
+    "projects": "/projects",
+    "tests": "/tests",
+    "alerts": "/alerts",
+    "certifications": "/certifications",
+    "prototypes": "/prototypes",
+    "quality": "/quality",
+    "changes": "/changes",
+    "approvals": "/approvals",
+    "purchases": "/purchases",
+    "rd_dashboard": "/rd-dashboard",
+    "mm": "/mm",
+    "pm-workspace": "/pm-workspace",
+}
+
+
+def get_allowed_paths(role: str) -> list[str]:
+    """根据角色返回允许访问的前端路由路径列表，用于动态下发权限"""
+    menus = get_allowed_menus(role)
+    return [MENU_PATH_MAP[m] for m in menus if m in MENU_PATH_MAP]
+
+
+# API路径 → 菜单名映射（用于 require_menu 权限校验）
+API_MENU_MAP: dict[str, str] = {
+    "products": "products",
+    "bom": "bom",
+    "projects": "projects",
+    "tests": "tests",
+    "alerts": "alerts",
+    "certifications": "certifications",
+    "certifications/prototypes": "prototypes",
+    "certifications/quality-issues": "quality",
+    "certifications/ecrs": "changes",
+    "certifications/ecns": "changes",
+    "approval": "approvals",
+    "purchases": "purchases",
+    "dashboard": "dashboard",
+}
+
+def require_menu(menu_name: str):
+    """
+    FastAPI 依赖：检查当前用户角色是否有权限访问指定菜单。
+    用法: @router.get("/path", dependencies=[Depends(require_menu("menu_name"))])
+    """
+    from fastapi import Depends, HTTPException
+    from app.core.security import get_current_user
+    
+    def _check(user = Depends(get_current_user)):
+        role = user.role if hasattr(user, 'role') else getattr(user, 'role', 'engineer')
+        # 超级角色直接放行
+        if role in SUPER_ROLES:
+            return user
+        allowed = ROLE_MENU_MAP.get(role, [])
+        if menu_name not in allowed:
+            raise HTTPException(status_code=403, detail="权限不足，无法访问该资源")
+        return user
+    return _check
