@@ -60,6 +60,7 @@ def _project_to_dict(p: Project) -> dict:
         "annual_planning_ref": p.annual_planning_ref,
         "budget": p.budget,
         "program_id": p.program_id,
+        "leader_id": p.leader_id,
         "dev_modules": p.dev_modules,
         "change_impacts": p.change_impacts,
         # Sheet 1 - 项目概述
@@ -123,6 +124,20 @@ def _project_to_dict(p: Project) -> dict:
         "created_at": str(p.created_at) if p.created_at else None,
         "updated_at": str(p.updated_at) if p.updated_at else None,
     }
+
+
+# ══════════════════════════════════════════════════════════════
+# GET /api/pm/programs — 项目群列表 (供立项选择)
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/programs")
+def list_active_programs(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_pm),
+):
+    """返回所有活跃项目群，供立项时选择"""
+    programs = db.query(Program).filter(Program.status == "active").all()
+    return [{"id": p.id, "name": p.name, "code": p.code} for p in programs]
 
 
 # ══════════════════════════════════════════════════════════════
@@ -215,6 +230,8 @@ def _apply_project_fields(
     source: str | None = None,
     target_end_date: date | None = None,
     start_date: date | None = None,
+    program_id: int | None = None,
+    leader_id: int | None = None,
     # Sheet 1
     product_type: str | None = None,
     target_market: str | None = None,
@@ -293,6 +310,10 @@ def _apply_project_fields(
         p.target_end_date = target_end_date
     if start_date is not None:
         p.start_date = start_date
+    if program_id is not None:
+        p.program_id = program_id
+    if leader_id is not None:
+        p.leader_id = leader_id
     # Sheet 1
     if product_type is not None:
         p.product_type = product_type
@@ -416,6 +437,8 @@ def pm_create_project(
     project_class: str = Body("B", pattern="^(T|A|B|C)$"),
     source: str | None = Body(None, max_length=50),
     target_end_date: date | None = Body(None),
+    program_id: int | None = Body(None),
+    leader_id: int | None = Body(None),
     # Sheet 1 - 项目概述
     product_type: str | None = Body(None, max_length=50),
     target_market: str | None = Body(None, max_length=100),
@@ -477,6 +500,8 @@ def pm_create_project(
         owner=current_user.username,
         status="planning",
         is_draft=False,
+        program_id=program_id,
+        leader_id=leader_id,
     )
     # 应用所有可选字段
     _apply_project_fields(
@@ -491,6 +516,8 @@ def pm_create_project(
         source=source,
         target_end_date=target_end_date,
         start_date=start_date,
+        program_id=program_id,
+        leader_id=leader_id,
         product_type=product_type,
         target_market=target_market,
         climate_zone=climate_zone,
@@ -572,6 +599,8 @@ def pm_create_draft(
     source: str | None = Body(None, max_length=50),
     target_end_date: date | None = Body(None),
     start_date: date | None = Body(None),
+    program_id: int | None = Body(None),
+    leader_id: int | None = Body(None),
     # Sheet 1 - 项目概述
     product_type: str | None = Body(None, max_length=50),
     target_market: str | None = Body(None, max_length=100),
@@ -625,6 +654,8 @@ def pm_create_draft(
         owner=current_user.username,
         status="draft",
         is_draft=True,
+        program_id=program_id,
+        leader_id=leader_id,
     )
     # 应用所有可选字段
     _apply_project_fields(
@@ -639,6 +670,8 @@ def pm_create_draft(
         source=source,
         target_end_date=target_end_date,
         start_date=start_date,
+        program_id=program_id,
+        leader_id=leader_id,
         product_type=product_type,
         target_market=target_market,
         climate_zone=climate_zone,
@@ -703,6 +736,8 @@ def pm_update_draft(
     project_class: str | None = Body(None, pattern="^(T|A|B|C)$"),
     source: str | None = Body(None, max_length=50),
     target_end_date: date | None = Body(None),
+    program_id: int | None = Body(None),
+    leader_id: int | None = Body(None),
     # Sheet 1 - 项目概述
     product_type: str | None = Body(None, max_length=50),
     target_market: str | None = Body(None, max_length=100),
@@ -768,6 +803,8 @@ def pm_update_draft(
             project_class=project_class,
             source=source,
             target_end_date=target_end_date,
+            program_id=program_id,
+            leader_id=leader_id,
             product_type=product_type,
             target_market=target_market,
             climate_zone=climate_zone,

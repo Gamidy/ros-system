@@ -69,6 +69,7 @@ def _project_to_snapshot(p: Project) -> dict:
         "annual_planning_ref": p.annual_planning_ref,
         "budget": p.budget,
         "program_id": p.program_id,
+        "leader_id": p.leader_id,
         "dev_modules": p.dev_modules,
         "change_impacts": p.change_impacts,
         # Sheet 1

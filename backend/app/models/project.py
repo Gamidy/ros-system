@@ -49,6 +49,7 @@ class Project(Base):
     critical_path = Column(String(200), nullable=True, comment="T项目关键路径: 结构优先")
     # 管理信息
     owner = Column(String(50), nullable=True, comment="项目经理")
+    leader_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="项目负责人(用户ID)")
     description = Column(Text, nullable=True)
     # 产品经理业务字段
     market_policy = Column(String(200), nullable=True, comment="市场政策背景")

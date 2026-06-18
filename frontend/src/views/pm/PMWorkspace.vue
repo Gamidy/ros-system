@@ -184,6 +184,17 @@
           <el-form :model="projectForm" label-width="120px" size="small">
             <!-- 一、项目基本信息 -->
             <el-divider content-position="left">一、项目基本信息</el-divider>
+            <!-- 新增：项目群选择 + 项目负责人 -->
+            <el-form-item label="所属项目群" label-width="120px" size="small">
+              <el-select v-model="projectForm.program_id" placeholder="选择项目群" clearable filterable style="width:100%">
+                <el-option v-for="p in programOptions" :key="p.id" :label="p.name" :value="p.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="项目负责人" label-width="120px" size="small">
+              <el-select v-model="projectForm.leader_id" placeholder="从团队成员中选择" clearable filterable style="width:100%">
+                <el-option v-for="u in allTeamUsers" :key="u.id" :label="`${u.full_name || u.username} (${u.role})`" :value="u.id" />
+              </el-select>
+            </el-form-item>
             <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="项目名称">
@@ -859,6 +870,7 @@ interface ProjectItem {
   has_outsourcing?: boolean
   customer_name?: string; cert_requirements?: string; energy_efficiency_req?: string
   target_price?: string; customer_requirements?: string; other_requirements?: string
+  program_id?: number | null; leader_id?: number | null
   overall_goal?: string; background_basis_raw?: string; tech_goal?: string
   cost_goal?: string; sales_goal?: string; cert_goal?: string
   schedule_goal?: string; patent_goal?: string; other_goals?: string
@@ -943,6 +955,8 @@ const tabStatus = reactive<Record<string, { valid: boolean; errors: string[] }>>
 // 项目表单 - budget和sample_qty初始值为undefined
 const projectForm = reactive<Record<string, any>>({
   name: '',
+  program_id: null as number | null,
+  leader_id: null as number | null,
   product_type: '', target_market: '', climate_zone: '', refrigerant: '',
   customer_name: '', capacity_range: '', voltage_freq: '',
   start_date: null, target_end_date: null,
@@ -967,6 +981,9 @@ const kbOptions = reactive<Record<string, KbOption[]>>({
   market: [], product_type: [], capacity: [], voltage: [],
   ip_ownership: [], main_capacity: [], cert: [],
 })
+
+// 项目群选项
+const programOptions = ref<{ id: number; name: string; code: string }[]>([])
 
 // 团队
 const teamRoles = ref<TeamRole[]>([])
@@ -1452,6 +1469,8 @@ watch(activeTab, () => {
 function validateOverview(): void {
   const errs: string[] = []
   const f = projectForm
+  if (!f.program_id) errs.push('所属项目群')
+  if (!f.leader_id) errs.push('项目负责人')
   if (!f.product_type) errs.push('产品类型')
   if (!f.target_market) errs.push('目标市场')
   if (!f.capacity_range) errs.push('能力段')
@@ -1653,6 +1672,7 @@ function openDrawer(draft?: ProjectItem | null) {
 function resetForm() {
   draftId.value = null
   const empty: Record<string, any> = {
+    program_id: null, leader_id: null,
     product_type: '', target_market: '', climate_zone: '', refrigerant: '',
     customer_name: '', capacity_range: '', voltage_freq: '',
     start_date: null, target_end_date: null,
@@ -1686,6 +1706,8 @@ function resetForm() {
 }
 
 function populateFormFromDraft(draft: ProjectItem) {
+  projectForm.program_id = draft.program_id ?? null
+  projectForm.leader_id = draft.leader_id ?? null
   projectForm.product_type = draft.product_type || ''
   projectForm.target_market = draft.target_market || ''
   projectForm.climate_zone = (draft as any).climate_zone || ''
@@ -1865,6 +1887,8 @@ function buildProjectPayload(): Record<string, any> {
   const f = projectForm
   return {
     name: autoProjectName.value,
+    program_id: f.program_id ?? undefined,
+    leader_id: f.leader_id ?? undefined,
     product_type: f.product_type || undefined,
     target_market: f.target_market || undefined,
     climate_zone: f.climate_zone || undefined,
@@ -2115,6 +2139,13 @@ async function fetchAllTeamUsers() {
   } catch { /* non-critical */ }
 }
 
+async function fetchPrograms() {
+  try {
+    const res = await api.get('/pm/programs')
+    programOptions.value = res.data || []
+  } catch { /* non-critical */ }
+}
+
 async function fetchExchangeRate() {
   try {
     const res = await api.get('/kb/exchange-rate')
@@ -2141,6 +2172,7 @@ onMounted(async () => {
     await fetchKbOptions()
     await fetchTeamRoles()
     await fetchAllTeamUsers()
+    await fetchPrograms()
     await fetchExchangeRate()
     await fetchSystemConfig()
     // 如果已有默认值（如从草稿加载），自动加载相关联数据
