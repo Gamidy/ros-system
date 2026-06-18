@@ -100,6 +100,8 @@ class Project(Base):
     economic_indicators = Column(Text, nullable=True, comment="经济指标JSON")
     mold_costs = Column(Text, nullable=True, comment="模具费用JSON")
     prototype_costs_detail = Column(Text, nullable=True, comment="样机费用JSON")
+    test_costs = Column(Text, nullable=True, comment="测试费用JSON")
+    labor_costs = Column(Text, nullable=True, comment="人工费用JSON")
     # ══════════════════════════════════════════
     # Sheet 5 - 团队与职责
     # ══════════════════════════════════════════

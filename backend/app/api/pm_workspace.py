@@ -100,6 +100,8 @@ def _project_to_dict(p: Project) -> dict:
         "economic_indicators": p.economic_indicators,
         "mold_costs": p.mold_costs,
         "prototype_costs_detail": p.prototype_costs_detail,
+        "test_costs": p.test_costs,
+        "labor_costs": p.labor_costs,
         # Sheet 5 - 团队与职责
         "team_members": p.team_members,
         # New fields (Excel alignment)
@@ -251,6 +253,8 @@ def _apply_project_fields(
     economic_indicators: str | None = None,
     mold_costs: str | None = None,
     prototype_costs_detail: str | None = None,
+    test_costs: str | None = None,
+    labor_costs: str | None = None,
     # New fields (Excel alignment)
     customer_name: str | None = None,
     other_requirements: str | None = None,
@@ -361,6 +365,11 @@ def _apply_project_fields(
         p.mold_costs = mold_costs
     if prototype_costs_detail is not None:
         p.prototype_costs_detail = prototype_costs_detail
+    if test_costs is not None:
+        p.test_costs = test_costs
+    if labor_costs is not None:
+        p.labor_costs = labor_costs
+    # Sheet 5
     if customer_name is not None:
         p.customer_name = customer_name
     if other_requirements is not None:

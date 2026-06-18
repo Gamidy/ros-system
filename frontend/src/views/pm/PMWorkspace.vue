@@ -824,6 +824,9 @@ interface ProjectItem {
   deliverables?: string; fob_price?: number; bom_cost_target?: number
   annual_sales_forecast?: number; product_lifecycle?: string
   dev_cost_items?: string; mold_costs?: string; prototype_costs_detail?: string
+  test_costs?: string; labor_costs?: string
+  core_performance?: string; safety_compliance?: string
+  accessory_config?: string; feature_config?: string
   team_members?: string
 }
 interface CustomerReqRow { category: string; description: string; source: string; tech_impact: string; market_impact: string }
@@ -1602,6 +1605,100 @@ function populateFormFromDraft(draft: ProjectItem) {
       if (Array.isArray(parsed)) {
         teamTable.length = 0
         parsed.forEach((item: TeamMemberRow) => teamTable.push({ ...item }))
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复测试费用
+  if (draft.test_costs) {
+    try {
+      const parsed = JSON.parse(draft.test_costs)
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item: any, i: number) => {
+          if (testCostTable[i]) {
+            testCostTable[i].days = item.days ?? testCostTable[i].days
+            testCostTable[i].unit_price = item.unit_price ?? testCostTable[i].unit_price
+          }
+        })
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复人工费用
+  if (draft.labor_costs) {
+    try {
+      const parsed = JSON.parse(draft.labor_costs)
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item: any) => {
+          const row = laborCostTable.find(r => r.module === item.module)
+          if (row) {
+            row.people_count = item.people_count ?? row.people_count
+            row.monthly_salary = item.monthly_salary ?? row.monthly_salary
+            row.months = item.months ?? row.months
+            row.occupancy_rate = item.occupancy_rate ?? row.occupancy_rate
+          }
+        })
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复客户需求
+  if (draft.customer_requirements) {
+    try {
+      const parsed = JSON.parse(draft.customer_requirements)
+      if (Array.isArray(parsed)) {
+        customerReqTable.length = 0
+        parsed.forEach((item: any) => customerReqTable.push({ ...item }))
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复核心性能参数（仅当草稿中有数据时；否则保持API加载的值）
+  if (draft.core_performance) {
+    try {
+      const parsed = JSON.parse(draft.core_performance)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        corePerfTable.length = 0
+        parsed.forEach((item: any) => corePerfTable.push({
+          param_name: item.param_name || '',
+          target_value: item.target_value || '',
+          aux_competitor: item.aux_competitor || '',
+          tcl_competitor: item.tcl_competitor || ''
+        }))
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复安全合规（仅当草稿中有数据时）
+  if (draft.safety_compliance) {
+    try {
+      const parsed = JSON.parse(draft.safety_compliance)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        safetyComplianceTable.length = 0
+        parsed.forEach((item: any) => safetyComplianceTable.push({
+          standard: item.standard || '',
+          applicable_market: item.applicable_market || '',
+          key_requirement: item.key_requirement || '',
+          verification_method: item.verification_method || '',
+          involved_parts: item.involved_parts || '',
+          cert_cycle: item.cert_cycle || '',
+          remark: item.remark || ''
+        }))
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复配件选配
+  if (draft.accessory_config) {
+    try {
+      const parsed = JSON.parse(draft.accessory_config)
+      if (Array.isArray(parsed)) {
+        accessoryConfigTable.length = 0
+        parsed.forEach((item: any) => accessoryConfigTable.push({ name: item.name || '', selection: item.selection || '' }))
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复功能选配
+  if (draft.feature_config) {
+    try {
+      const parsed = JSON.parse(draft.feature_config)
+      if (Array.isArray(parsed)) {
+        featureConfigTable.length = 0
+        parsed.forEach((item: any) => featureConfigTable.push({ name: item.name || '', selection: item.selection || '' }))
       }
     } catch { /* ignore */ }
   }
