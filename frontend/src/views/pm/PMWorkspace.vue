@@ -183,45 +183,43 @@
           <el-form :model="projectForm" label-width="120px" size="small">
             <!-- 一、项目基本信息区 -->
             <el-divider content-position="left">一、项目基本信息区</el-divider>
+            <!-- Row1: 项目名称 | 产品类型 | 目标市场 -->
             <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="项目名称">
                   <el-input :model-value="autoProjectName" disabled placeholder="自动生成" />
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="产品类型">
                   <el-select v-model="projectForm.product_type" placeholder="选择产品类型" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.product_type" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
                 </el-form-item>
               </el-col>
-            </el-row>
-            <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="目标市场">
                   <el-select v-model="projectForm.target_market" placeholder="选择目标市场" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.market" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+            </el-row>
+            <!-- Row2: 系列名称 | 温带 | 制冷剂 | 能效等级 -->
+            <el-row :gutter="16">
+              <el-col :span="6">
                 <el-form-item label="系列名称">
                   <el-select v-model="projectForm.series_name" placeholder="选择系列" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.series" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
                 </el-form-item>
               </el-col>
-            </el-row>
-            <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="6">
                 <el-form-item label="温带">
                   <el-input v-model="projectForm.climate_zone" placeholder="温带（如 T1/T2/T3）" />
                 </el-form-item>
               </el-col>
-            </el-row>
-            <el-row :gutter="16">
-              <el-col :span="8">
+              <el-col :span="6">
                 <el-form-item label="制冷剂">
                   <el-select v-model="projectForm.refrigerant" placeholder="选择制冷剂" clearable style="width:100%">
                     <el-option label="R32" value="R32" />
@@ -231,7 +229,7 @@
                   </el-select>
                 </el-form-item>
               </el-col>
-              <el-col :span="8">
+              <el-col :span="6">
                 <el-form-item label="能效等级">
                   <el-select v-model="projectForm.energy_rating" placeholder="能效星级" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.energy_rating" :key="o.code" :label="o.name" :value="o.code" />
@@ -239,57 +237,56 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <!-- Row3: 能力段 | 电压频率 | 客户名称 -->
             <el-row :gutter="16">
-              <el-col :span="12">
-                <el-form-item label="客户名称">
-                  <el-input v-model="projectForm.customer_name" placeholder="客户名称" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="能力段">
                   <el-select v-model="projectForm.capacity_range" placeholder="选择能力段" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.capacity" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="电压频率">
                   <el-select v-model="projectForm.voltage_freq" placeholder="选择电压频率" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.voltage" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
                 </el-form-item>
               </el-col>
+              <el-col :span="8">
+                <el-form-item label="客户名称">
+                  <el-input v-model="projectForm.customer_name" placeholder="客户名称" />
+                </el-form-item>
+              </el-col>
             </el-row>
+            <!-- Row4: 立项日期 | 计划完成 | 项目周期 -->
             <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="立项日期">
                   <el-date-picker v-model="projectForm.start_date" type="date" placeholder="立项日期" style="width:100%" value-format="YYYY-MM-DD" />
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="计划完成">
                   <el-date-picker v-model="projectForm.target_end_date" type="date" placeholder="计划完成日期" style="width:100%" value-format="YYYY-MM-DD" />
                 </el-form-item>
               </el-col>
+              <el-col :span="8">
+                <el-form-item label="项目周期">
+                  <el-input :model-value="autoProjectDuration" disabled placeholder="自动计算" />
+                </el-form-item>
+              </el-col>
             </el-row>
+            <!-- Row5: 知识产权归属 | 开发类别 | 项目来源 -->
             <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="知识产权归属">
                   <el-select v-model="projectForm.ip_ownership" placeholder="选择IP归属" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.ip_ownership" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
-                <el-form-item label="项目周期">
-                  <el-input :model-value="autoProjectDuration" disabled placeholder="自动计算" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="开发类别">
                   <el-select v-model="projectForm.dev_category" placeholder="选择开发类别" clearable style="width:100%">
                     <el-option label="全新开发" value="全新开发" />
@@ -298,7 +295,7 @@
                   </el-select>
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="项目来源">
                   <el-select v-model="projectForm.project_origin" placeholder="选择项目来源" clearable style="width:100%">
                     <el-option label="产品年度规划" value="产品年度规划" />
@@ -327,65 +324,29 @@
             <el-form-item label="立项背景与依据">
               <el-input v-model="projectForm.background_basis" type="textarea" :rows="3" placeholder="项目立项背景、市场依据等" />
             </el-form-item>
-            <el-form-item label="总体目标">
-              <el-input v-model="projectForm.overall_goal" type="textarea" :rows="2" placeholder="项目总体目标" />
-            </el-form-item>
             <el-row :gutter="16">
               <el-col :span="12">
-                <el-form-item label="技术目标">
-                  <el-input v-model="projectForm.tech_goal" type="textarea" :rows="2" placeholder="技术指标目标" />
+                <el-form-item label="目标BOM成本">
+                  <el-input :model-value="projectForm.bom_cost_target || '暂无数据'" disabled placeholder="← 成本核算Tab同步">
+                    <template #suffix>
+                      <span style="color:#909399;font-size:12px">← 成本核算Tab同步</span>
+                    </template>
+                  </el-input>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="成本目标">
-                  <el-input v-model="projectForm.cost_goal" type="textarea" :rows="2" placeholder="成本控制目标" />
+                <el-form-item label="年销量预测">
+                  <el-input :model-value="projectForm.annual_sales_forecast || '暂无数据'" disabled placeholder="← 成本核算Tab同步">
+                    <template #suffix>
+                      <span style="color:#909399;font-size:12px">← 成本核算Tab同步</span>
+                    </template>
+                  </el-input>
                 </el-form-item>
               </el-col>
             </el-row>
-            <el-row :gutter="16">
-              <el-col :span="12">
-                <el-form-item label="销售目标">
-                  <el-input v-model="projectForm.sales_goal" type="textarea" :rows="2" placeholder="销售数量/金额目标" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="认证目标">
-                  <el-input v-model="projectForm.cert_goal" type="textarea" :rows="2" placeholder="认证取得目标" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="16">
-              <el-col :span="12">
-                <el-form-item label="进度目标">
-                  <el-input v-model="projectForm.schedule_goal" type="textarea" :rows="2" placeholder="进度节点目标" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="专利目标">
-                  <el-input v-model="projectForm.patent_goal" type="textarea" :rows="2" placeholder="专利申请目标" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-form-item label="其他目标">
-              <el-input v-model="projectForm.other_goals" type="textarea" :rows="2" placeholder="其他目标" />
-            </el-form-item>
 
             <!-- 三、市场分析 -->
             <el-divider content-position="left">三、市场分析</el-divider>
-            <el-row :gutter="16">
-              <el-col :span="12">
-                <el-form-item label="主销容量段">
-                  <el-select v-model="projectForm.main_capacity" placeholder="选择主销容量段" clearable style="width:100%">
-                    <el-option v-for="o in kbOptions.main_capacity" :key="o.code" :label="o.name" :value="o.code" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="目标价格区间">
-                  <el-input v-model="projectForm.target_price" placeholder="如: $200-$300" />
-                </el-form-item>
-              </el-col>
-            </el-row>
             <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="能效要求">
@@ -394,7 +355,11 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item label="认证要求">
-                  <el-input v-model="projectForm.cert_requirements" placeholder="如: CE, CB, SASO" />
+                  <el-input :model-value="certRequirementsText" disabled placeholder="自动生成">
+                    <template #suffix>
+                      <span style="color:#67c23a;font-size:12px">自动</span>
+                    </template>
+                  </el-input>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -402,15 +367,6 @@
               <el-select v-model="projectForm.annual_planning_ref" placeholder="选择年度规划引用" clearable filterable style="width:100%">
                 <el-option v-for="item in planningItems" :key="item.id" :label="item.name" :value="item.name" />
               </el-select>
-            </el-form-item>
-            <el-form-item label="市场需求概述">
-              <el-input v-model="projectForm.market_demand_overview" type="textarea" :rows="2" placeholder="市场需求总体概述" />
-            </el-form-item>
-            <el-form-item label="竞品对标分析">
-              <el-input v-model="projectForm.competitor_analysis" type="textarea" :rows="2" placeholder="竞品对标分析" />
-            </el-form-item>
-            <el-form-item label="客户特殊要求">
-              <el-input v-model="projectForm.customer_special_req" type="textarea" :rows="2" placeholder="客户特殊要求" />
             </el-form-item>
 
             <!-- 客户关键需求表格 -->
@@ -1315,7 +1271,7 @@ const allTeamUsers = ref<UserInfo[]>([])
 const roleMappings = ref<RoleMapping[]>([])          // 新增：项目角色→系统岗位多映射
 const userWorkloads = ref<UserWorkload[]>([])         // 新增：人员负载数据
 const selectedProjectType = ref('')                   // 新增：选中的项目类型（与Tab1 dev_category同步）
-const teamRoleTemplate = ref<TeamRoleTemplateItem[]>([]) // 新增：从API加载的角色模板
+
 
 // 汇率
 const exchangeRate = ref(7.20)
@@ -1363,6 +1319,11 @@ const safetyComplianceTable = reactive<SafetyComplianceRow[]>([
   { standard: 'CE EMC Directive', applicable_market: '欧盟', key_requirement: '电磁兼容', verification_method: 'EMC测试', involved_parts: 'PCB/电机', cert_cycle: '2个月', remark: '' },
   { standard: 'SASO 2663', applicable_market: '沙特', key_requirement: '能效+安全', verification_method: '第三方测试', involved_parts: '整机', cert_cycle: '4个月', remark: '' },
 ])
+
+// Tab1 认证要求自动拼装（从安全合规表格提取标准名）
+const certRequirementsText = computed(() => {
+  return safetyComplianceTable.map(s => s.standard).join('、') || ''
+})
 
 // Tab 3 表格: 配件选配 (6行)
 const accessoryConfigTable = reactive<ConfigRow[]>([
@@ -1592,22 +1553,6 @@ const testCostTotal = computed(() =>
 const certCostTotal = computed(() =>
   certCostTable.reduce((sum, r) => sum + (Number(r.cost_wan) || 0), 0)
 )
-
-const certCost = computed(() => {
-  const cert = (projectForm.cert_requirements || '').toUpperCase()
-  const costMap = (() => {
-    const raw = systemConfig.value.cert_cost
-    if (raw) {
-      try { return JSON.parse(raw) as Record<string, number> } catch {}
-    }
-    return { 'UL': 20, 'CE': 3, 'default': 3 }
-  })()
-  let cost = 0
-  if (cert.includes('UL')) cost += (costMap['UL'] || 20)
-  if (cert.includes('CE')) cost += (costMap['CE'] || 3)
-  if (!cert.includes('UL') && !cert.includes('CE') && cert.trim()) cost = (costMap['default'] || 3)
-  return cost
-})
 
 // 说明自动生成
 // 每行说明独立刷新
@@ -2179,21 +2124,6 @@ const teamSummary = computed(() => {
     unfilled: totalSlots - filled,
     roleSummaries,
   }
-})
-
-// 审批人候选：所有已选团队成员ID
-const teamMemberIds = computed(() => {
-  const ids: number[] = []
-  for (const row of teamTable) {
-    if (row.headcount <= 1) {
-      if (row.user_id != null) ids.push(row.user_id)
-    } else {
-      for (const slot of row.slots) {
-        if (slot.user_id != null) ids.push(slot.user_id)
-      }
-    }
-  }
-  return [...new Set(ids)]
 })
 
 // ═══════════════════════════════════════════════
@@ -2886,7 +2816,7 @@ function onHeadcountChange(index: number) {
   }
 }
 
-function onTeamUserChange(index: number, slotIndex: number = 0) {
+function onTeamUserChange(index: number, _slotIndex: number = 0) {
   const row = teamTable[index]
   if (!row) return
   
