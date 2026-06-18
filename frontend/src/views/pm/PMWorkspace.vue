@@ -466,22 +466,22 @@
           <el-table :data="safetyComplianceTable" border size="small" class="section-table">
             <el-table-column prop="standard" label="法规标准" width="140">
               <template #default="{ row }">
-                <el-input v-model="row.standard" size="small" />
+                <span class="linked-val">{{ row.standard }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="applicable_market" label="适用市场" width="120">
               <template #default="{ row }">
-                <el-input v-model="row.applicable_market" size="small" />
+                <span class="linked-val">{{ row.applicable_market }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="key_requirement" label="关键要求" min-width="140">
               <template #default="{ row }">
-                <el-input v-model="row.key_requirement" size="small" />
+                <span class="linked-val">{{ row.key_requirement }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="verification_method" label="验证方式" width="120">
               <template #default="{ row }">
-                <el-input v-model="row.verification_method" size="small" />
+                <span class="linked-val">{{ row.verification_method }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="involved_parts" label="涉及零部件" width="120">
@@ -499,13 +499,7 @@
                 <el-input v-model="row.remark" size="small" />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="70">
-              <template #default="{ $index }">
-                <el-button link type="danger" size="small" @click="removeSafetyRow($index)">删除</el-button>
-              </template>
-            </el-table-column>
           </el-table>
-          <el-button size="small" style="margin-top:8px" @click="addSafetyRow">+ 添加行</el-button>
 
           <!-- 三、配件选配 -->
           <el-divider content-position="left">三、配件选配</el-divider>
@@ -1378,6 +1372,20 @@ watch(() => projectForm.has_outsourcing, (val) => {
   }
 })
 
+// 目标市场变化 → 加载安全合规标准
+watch(() => projectForm.target_market, (market) => {
+  if (market) {
+    fetchCertStandards(market)
+  }
+})
+
+// 目标市场或冷量段变化 → 加载核心性能参数
+watch([() => projectForm.target_market, () => projectForm.capacity_range], ([market, capacity]) => {
+  if (market && capacity) {
+    fetchPerfDefaults(market, capacity)
+  }
+})
+
 // ═══════════════════════════════════════════════
 // 工具函数
 // ═══════════════════════════════════════════════
@@ -1716,11 +1724,6 @@ function addCorePerfRow() {
 }
 function removeCorePerfRow(index: number) { corePerfTable.splice(index, 1) }
 
-function addSafetyRow() {
-  safetyComplianceTable.push({ standard: '', applicable_market: '', key_requirement: '', verification_method: '', involved_parts: '', cert_cycle: '', remark: '' })
-}
-function removeSafetyRow(index: number) { safetyComplianceTable.splice(index, 1) }
-
 function addAccessoryRow() {
   accessoryConfigTable.push({ name: '', selection: '' })
 }
@@ -1757,6 +1760,45 @@ function onTeamUserChange(index: number) {
 // ═══════════════════════════════════════════════
 
 const ALL_KB_CATEGORIES = ['market', 'product_type', 'capacity', 'voltage', 'ip_ownership', 'main_capacity', 'cert']
+
+async function fetchCertStandards(market: string) {
+  try {
+    const res = await api.get('/pm/cert-standards', { params: { market } })
+    const items = res.data?.items || []
+    safetyComplianceTable.length = 0
+    items.forEach((item: any) => {
+      safetyComplianceTable.push({
+        standard: item.standard,
+        applicable_market: item.market || market,
+        key_requirement: item.key_requirement || '',
+        verification_method: item.verification_method || '',
+        involved_parts: '',
+        cert_cycle: item.cert_cycle || '',
+        remark: ''
+      })
+    })
+  } catch {
+    // API not available yet, keep existing data
+  }
+}
+
+async function fetchPerfDefaults(market: string, capacity: string) {
+  try {
+    const res = await api.get('/pm/perf-defaults', { params: { market, capacity } })
+    const items = res.data?.items || []
+    corePerfTable.length = 0
+    items.forEach((item: any) => {
+      corePerfTable.push({
+        param_name: item.param_name,
+        target_value: item.target_value || '',
+        aux_competitor: item.aux_competitor || '',
+        tcl_competitor: item.tcl_competitor || ''
+      })
+    })
+  } catch {
+    // API not available yet, keep existing data
+  }
+}
 
 async function fetchWorkspaceData() {
   try {
@@ -1834,6 +1876,13 @@ onMounted(async () => {
     await fetchAllTeamUsers()
     await fetchExchangeRate()
     await fetchSystemConfig()
+    // 如果已有默认值（如从草稿加载），自动加载相关联数据
+    if (projectForm.target_market) {
+      fetchCertStandards(projectForm.target_market)
+    }
+    if (projectForm.target_market && projectForm.capacity_range) {
+      fetchPerfDefaults(projectForm.target_market, projectForm.capacity_range)
+    }
   } catch (e) {
     console.error('PMWorkspace init error:', e)
   }

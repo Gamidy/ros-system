@@ -8,6 +8,7 @@ from app.models.alert import AlertRule, Alert, Notification
 from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalRecord
 from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.audit import AuditLog
+from app.models.pm_config import CertStandard, PerfDefault
 
 __all__ = [
     "User",
@@ -19,4 +20,5 @@ __all__ = [
     "ApprovalChain", "ApprovalStep", "ApprovalRequest", "ApprovalRecord",
     "PurchaseOrder", "PurchaseOrderItem", "Supplier",
     "AuditLog",
+    "CertStandard", "PerfDefault",
 ]
