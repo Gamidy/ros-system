@@ -440,6 +440,8 @@ class ProjectCreate(BaseModel):
     refrigerant: Optional[str] = None
     capacity_range: Optional[str] = None
     voltage_freq: Optional[str] = None
+    series_name: Optional[str] = None
+    energy_rating: Optional[str] = None
     ip_ownership: Optional[str] = None
     project_duration: Optional[str] = None
     dev_category: Optional[str] = None

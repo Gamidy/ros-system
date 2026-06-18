@@ -26,6 +26,7 @@ from app.api.pm_proposal_utils import (
     inject_cooling_capacity_to_core_performance,
     generate_labor_costs_json,
     get_cert_costs_from_compliance,
+    generate_project_name,
 )
 
 router = APIRouter(prefix="/pm", tags=["产品经理工作台"])
@@ -77,6 +78,8 @@ def _project_to_dict(p: Project) -> dict:
         "refrigerant": p.refrigerant,
         "capacity_range": p.capacity_range,
         "voltage_freq": p.voltage_freq,
+        "series_name": p.series_name,
+        "energy_rating": p.energy_rating,
         "ip_ownership": p.ip_ownership,
         "project_duration": p.project_duration,
         "dev_category": p.dev_category,
@@ -247,6 +250,8 @@ def _apply_project_fields(
     refrigerant: str | None = None,
     capacity_range: str | None = None,
     voltage_freq: str | None = None,
+    series_name: str | None = None,
+    energy_rating: str | None = None,
     ip_ownership: str | None = None,
     project_duration: str | None = None,
     dev_category: str | None = None,
@@ -335,6 +340,10 @@ def _apply_project_fields(
         p.capacity_range = capacity_range
     if voltage_freq is not None:
         p.voltage_freq = voltage_freq
+    if series_name is not None:
+        p.series_name = series_name
+    if energy_rating is not None:
+        p.energy_rating = energy_rating
     if ip_ownership is not None:
         p.ip_ownership = ip_ownership
     if project_duration is not None:
@@ -454,6 +463,8 @@ def pm_create_project(
     refrigerant: str | None = Body(None, max_length=50),
     capacity_range: str | None = Body(None, max_length=100),
     voltage_freq: str | None = Body(None, max_length=50),
+    series_name: str | None = Body(None, max_length=50),
+    energy_rating: str | None = Body(None, max_length=20),
     ip_ownership: str | None = Body(None, max_length=100),
     project_duration: str | None = Body(None, max_length=50),
     dev_category: str | None = Body(None, max_length=50),
@@ -532,6 +543,8 @@ def pm_create_project(
         refrigerant=refrigerant,
         capacity_range=capacity_range,
         voltage_freq=voltage_freq,
+        series_name=series_name,
+        energy_rating=energy_rating,
         ip_ownership=ip_ownership,
         project_duration=project_duration,
         dev_category=dev_category,
@@ -625,6 +638,8 @@ def pm_create_draft(
     refrigerant: str | None = Body(None, max_length=50),
     capacity_range: str | None = Body(None, max_length=100),
     voltage_freq: str | None = Body(None, max_length=50),
+    series_name: str | None = Body(None, max_length=50),
+    energy_rating: str | None = Body(None, max_length=20),
     ip_ownership: str | None = Body(None, max_length=100),
     project_duration: str | None = Body(None, max_length=50),
     dev_category: str | None = Body(None, max_length=50),
@@ -695,6 +710,8 @@ def pm_create_draft(
         refrigerant=refrigerant,
         capacity_range=capacity_range,
         voltage_freq=voltage_freq,
+        series_name=series_name,
+        energy_rating=energy_rating,
         ip_ownership=ip_ownership,
         project_duration=project_duration,
         dev_category=dev_category,
@@ -771,6 +788,8 @@ def pm_update_draft(
     refrigerant: str | None = Body(None, max_length=50),
     capacity_range: str | None = Body(None, max_length=100),
     voltage_freq: str | None = Body(None, max_length=50),
+    series_name: str | None = Body(None, max_length=50),
+    energy_rating: str | None = Body(None, max_length=20),
     ip_ownership: str | None = Body(None, max_length=100),
     project_duration: str | None = Body(None, max_length=50),
     dev_category: str | None = Body(None, max_length=50),
@@ -837,6 +856,8 @@ def pm_update_draft(
             refrigerant=refrigerant,
             capacity_range=capacity_range,
             voltage_freq=voltage_freq,
+            series_name=series_name,
+            energy_rating=energy_rating,
             ip_ownership=ip_ownership,
             project_duration=project_duration,
             dev_category=dev_category,

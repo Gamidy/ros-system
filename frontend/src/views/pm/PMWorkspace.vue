@@ -212,7 +212,7 @@
               </el-col>
             </el-row>
             <el-row :gutter="16">
-              <el-col :span="12">
+              <el-col :span="8">
                 <el-form-item label="制冷剂">
                   <el-select v-model="projectForm.refrigerant" placeholder="选择制冷剂" clearable style="width:100%">
                     <el-option label="R32" value="R32" />
@@ -222,6 +222,22 @@
                   </el-select>
                 </el-form-item>
               </el-col>
+              <el-col :span="8">
+                <el-form-item label="系列名称">
+                  <el-select v-model="projectForm.series_name" placeholder="选择系列" clearable style="width:100%">
+                    <el-option v-for="o in kbOptions.series" :key="o.code" :label="o.name" :value="o.code" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item label="能效等级">
+                  <el-select v-model="projectForm.energy_rating" placeholder="能效星级" clearable style="width:100%">
+                    <el-option v-for="o in kbOptions.energy_rating" :key="o.code" :label="o.name" :value="o.code" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="客户名称">
                   <el-input v-model="projectForm.customer_name" placeholder="客户名称" />
@@ -1139,7 +1155,8 @@ interface ProjectItem {
   scene?: string; linked_product?: string; target_end_date?: string
   background_basis?: string; product_type?: string; target_market?: string
   refrigerant?: string; main_capacity?: string; capacity_range?: string
-  voltage_freq?: string; ip_ownership?: string; project_duration?: string
+  voltage_freq?: string; series_name?: string; energy_rating?: string
+  ip_ownership?: string; project_duration?: string
   dev_category?: string; project_origin?: string
   start_date?: string; required_date?: string; sample_qty?: number
   annual_planning_ref?: string; annual_planning_id?: number | null
@@ -1260,6 +1277,7 @@ const projectForm = reactive<Record<string, any>>({
   leader_id: null as number | null,
   product_type: '', target_market: '', climate_zone: '', refrigerant: '',
   customer_name: '', capacity_range: '', voltage_freq: '',
+  series_name: '', energy_rating: '',
   start_date: null, target_end_date: null,
   ip_ownership: '', project_duration: '',
   dev_category: '', project_origin: '', other_requirements: '',
@@ -1283,6 +1301,7 @@ const projectForm = reactive<Record<string, any>>({
 const kbOptions = reactive<Record<string, KbOption[]>>({
   market: [], product_type: [], capacity: [], voltage: [],
   ip_ownership: [], main_capacity: [], cert: [],
+  series: [], energy_rating: [],
 })
 
 // 项目群选项
@@ -1675,15 +1694,56 @@ const grossMarginText = computed(() => {
   return '¥' + gross.toFixed(0) + ' (' + (fobCny > 0 ? ((gross / fobCny) * 100).toFixed(1) : '0.0') + '%)'
 })
 
-// 自动生成项目名称: 目标市场+能效+能力段+制冷剂+产品类型
+// 系统配置中的产品类型简写映射
+const productShortNames = computed(() => {
+  const raw = systemConfig.value.product_short_names
+  if (raw) {
+    try { return JSON.parse(raw) as Record<string, string> } catch {}
+  }
+  return {} as Record<string, string>
+})
+
+// 自动生成项目名称: 出口{市场}{系列}款{冷量K}/{制冷剂}/{能效等级}{产品简写}
 const autoProjectName = computed(() => {
-  const parts: string[] = []
-  if (projectForm.target_market) parts.push(projectForm.target_market)
-  if (projectForm.energy_efficiency_req) parts.push(projectForm.energy_efficiency_req)
-  if (projectForm.capacity_range) parts.push(projectForm.capacity_range)
-  if (projectForm.refrigerant) parts.push(projectForm.refrigerant)
-  if (projectForm.product_type) parts.push(projectForm.product_type)
-  return parts.length > 0 ? parts.join('-') + ' 新品立项' : '（自动生成：请填写相关字段）'
+  const f = projectForm
+  const hasAny = f.target_market || f.series_name || f.capacity_range || f.refrigerant || f.energy_rating || f.product_type
+  if (!hasAny) return '（自动生成：请填写相关字段）'
+
+  const parts: string[] = ['出口']
+
+  if (f.target_market) parts.push(f.target_market)
+  if (f.series_name) parts.push(f.series_name + '款')
+
+  // 冷量：提取K值
+  const cr = (f.capacity_range || '').toUpperCase().trim()
+  let capK = ''
+  if (cr) {
+    let m = cr.match(/(\d+(?:\.\d+)?)\s*K/)
+    if (m) {
+      capK = parseInt(m[1]) + 'K'
+    } else {
+      m = cr.match(/(\d+(?:\.\d+)?)\s*BTU/)
+      if (m) {
+        capK = Math.round(parseFloat(m[1]) / 1000) + 'K'
+      } else {
+        m = cr.match(/(\d+)/)
+        if (m) capK = Math.round(parseFloat(m[1]) / 1000) + 'K'
+      }
+    }
+  }
+  if (capK) parts.push(capK)
+  else if (f.capacity_range) parts.push(f.capacity_range)
+
+  if (f.refrigerant) parts.push('/' + f.refrigerant)
+  if (f.energy_rating) parts.push('/' + f.energy_rating)
+
+  if (f.product_type) {
+    const shorts = productShortNames.value
+    const short = shorts[f.product_type] || f.product_type
+    parts.push(short)
+  }
+
+  return parts.join('')
 })
 
 // 自动计算项目周期
@@ -2306,6 +2366,7 @@ function resetForm() {
     program_id: null, leader_id: null,
     product_type: '', target_market: '', climate_zone: '', refrigerant: '',
     customer_name: '', capacity_range: '', voltage_freq: '',
+    series_name: '', energy_rating: '',
     start_date: null, target_end_date: null,
     ip_ownership: '', project_duration: '',
     dev_category: '', project_origin: '', other_requirements: '',
@@ -2364,6 +2425,8 @@ function populateFormFromDraft(draft: ProjectItem) {
   projectForm.customer_name = draft.customer_name || ''
   projectForm.capacity_range = draft.capacity_range || ''
   projectForm.voltage_freq = draft.voltage_freq || ''
+  projectForm.series_name = draft.series_name || ''
+  projectForm.energy_rating = draft.energy_rating || ''
   projectForm.start_date = draft.start_date || null
   projectForm.target_end_date = draft.target_end_date || null
   projectForm.ip_ownership = draft.ip_ownership || ''
@@ -2620,6 +2683,8 @@ function buildProjectPayload(): Record<string, any> {
     customer_name: f.customer_name || undefined,
     capacity_range: f.capacity_range || undefined,
     voltage_freq: f.voltage_freq || undefined,
+    series_name: f.series_name || undefined,
+    energy_rating: f.energy_rating || undefined,
     start_date: f.start_date || undefined,
     target_end_date: f.target_end_date || undefined,
     ip_ownership: f.ip_ownership || undefined,
@@ -2711,7 +2776,7 @@ async function saveDraft() {
 async function submitProposal() {
   const name = autoProjectName.value
   if (!name || name === '（自动生成：请填写相关字段）') {
-    ElMessage.warning('请完善产品类型、目标市场、能力段、制冷剂、能效要求以生成项目名称')
+    ElMessage.warning('请完善产品类型、目标市场、系列名称、能力段、制冷剂、能效等级以生成项目名称')
     activeTab.value = 'overview_market'
     return
   }
@@ -2871,7 +2936,7 @@ async function onProjectTypeChange(projectType: string) {
 // API调用
 // ═══════════════════════════════════════════════
 
-const ALL_KB_CATEGORIES = ['market', 'product_type', 'capacity', 'voltage', 'ip_ownership', 'main_capacity', 'cert']
+const ALL_KB_CATEGORIES = ['market', 'product_type', 'capacity', 'voltage', 'ip_ownership', 'main_capacity', 'cert', 'series', 'energy_rating']
 
 async function fetchCertStandards(market: string) {
   try {

@@ -406,3 +406,72 @@ def generate_labor_costs_json(
         "items": labor_items,
     }
     return json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+
+
+# ══════════════════════════════════════════════════════════════
+# 7. 项目名称自动生成
+# ══════════════════════════════════════════════════════════════
+
+def extract_k(capacity_range: str) -> str:
+    """从 capacity_range 提取冷量K值。\"9000BTU\"→\"9K\" \"12000BTU\"→\"12K\" \"12K\"→\"12K\""""
+    if not capacity_range:
+        return ""
+    s = capacity_range.strip().upper()
+    # 已经带K后缀
+    m = re.search(r"(\d+(?:\.\d+)?)\s*K", s)
+    if m:
+        return f"{int(float(m.group(1)))}K"
+    # BTU格式: \"9000BTU\"
+    m = re.search(r"(\d+(?:\.\d+)?)\s*BTU", s)
+    if m:
+        btu = float(m.group(1))
+        return f"{int(btu / 1000)}K"
+    # 纯数字，按BTU处理
+    m = re.search(r"(\d+)", s)
+    if m:
+        btu = float(m.group(1))
+        return f"{int(btu / 1000)}K"
+    return ""
+
+
+def generate_project_name(
+    target_market: str,
+    series_name: str,
+    capacity_range: str,
+    refrigerant: str,
+    energy_rating: str,
+    product_type: str,
+    product_short_names: Optional[dict] = None,
+) -> str:
+    """按公式生成项目名称: 出口{市场}{系列}款{冷量K}/{制冷剂}/{能效等级}{产品简写}
+
+    示例: 市场=越南, 系列=J, 冷量=9000BTU→9K, 制冷剂=R32, 能效=5星, 产品=分体式壁挂机→分体机
+          → "出口越南J款9K/R32/5星分体机"
+    """
+    parts: list[str] = ["出口"]
+
+    if target_market:
+        parts.append(target_market)
+
+    if series_name:
+        parts.append(f"{series_name}款")
+
+    cap_k = extract_k(capacity_range)
+    if cap_k:
+        parts.append(cap_k)
+    else:
+        if capacity_range:
+            parts.append(capacity_range)
+
+    if refrigerant:
+        parts.append(f"/{refrigerant}")
+
+    if energy_rating:
+        parts.append(f"/{energy_rating}")
+
+    if product_type:
+        short_names = product_short_names or {}
+        short = short_names.get(product_type, product_type)
+        parts.append(short)
+
+    return "".join(parts)

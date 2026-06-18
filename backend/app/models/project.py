@@ -64,6 +64,8 @@ class Project(Base):
     refrigerant = Column(String(50), nullable=True, comment="制冷剂")
     capacity_range = Column(String(100), nullable=True, comment="覆盖容量")
     voltage_freq = Column(String(50), nullable=True, comment="电压频率")
+    series_name = Column(String(50), nullable=True, comment="系列名称（如 J/K/L/M）")
+    energy_rating = Column(String(20), nullable=True, comment="能效等级（如 5星/3星/1星）")
     ip_ownership = Column(String(100), nullable=True, comment="知识产权归属")
     project_duration = Column(String(50), nullable=True, comment="项目周期")
     dev_category = Column(String(50), nullable=True, comment="开发类别")
