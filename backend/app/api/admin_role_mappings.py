@@ -5,7 +5,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import require_role
+from app.core.security import require_role, get_current_user
 from app.models.role_position_mapping import RolePositionMapping
 
 router = APIRouter(prefix="/api/admin", tags=["admin-role-mappings"])
@@ -33,9 +33,9 @@ class RoleMappingOut(BaseModel):
 @router.get("/role-mappings", response_model=List[RoleMappingOut])
 def list_role_mappings(
     db: Session = Depends(get_db),
-    _=Depends(require_role("admin")),
+    _=Depends(get_current_user),
 ):
-    """查询所有角色→岗位映射"""
+    """查询所有角色→岗位映射（所有登录用户可读）"""
     return db.query(RolePositionMapping).order_by(RolePositionMapping.id).all()
 
 
