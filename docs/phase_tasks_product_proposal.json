@@ -1,0 +1,86 @@
+{
+  "phase_tasks": [
+    {
+      "id": "t1",
+      "title": "后端数据模型扩展 — 新增团队角色模板/物料部件清单/成本配置等6张表",
+      "domain_tags": ["fastapi", "sqlalchemy", "mysql", "alembic"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "reasoning": "纯增量：新增team_role_templates(按项目类型预设角色)、role_position_mapping(项目角色→系统岗位多对多)、material_component_items(物料与部件清单模板)、capacity_unit_cost(能力段单价含22000BTU)、indirect_cost_config(间接成本默认5000)、trial_qty_config(试制数量按项目等级)。均为独立新表，不修改project.py现有字段。需配套Alembic迁移脚本。低风险因为零破坏性变更，复杂度3因为表数量多但每张结构简单（各3-8列）。"
+    },
+    {
+      "id": "t2",
+      "title": "后端配置管理API — 管理员后台CRUD全部新增配置项",
+      "domain_tags": ["fastapi", "sqlalchemy"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "reasoning": "为t1所有新表提供标准CRUD端点：(1)扩展admin_config.py的DEFAULTS字典，增加indirect_cost/trial_qty_per_class/capacity_unit_cost_map等键 (2)新增/api/admin/team-role-templates和/api/admin/role-mappings路由 (3)扩展/api/pm/cert-standards支持认证费用查询。均为已有模式的复制扩展（参考现有cert_cost配置），无复杂业务逻辑。风险低，复杂度2因为接口模式已成熟。"
+    },
+    {
+      "id": "t3",
+      "title": "后端立项业务逻辑API — 跨Tab自动计算/模板加载/认证费用生成",
+      "domain_tags": ["fastapi", "sqlalchemy"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "reasoning": "扩展pm_workspace.py的_project_to_dict和_apply_project_fields，新增业务逻辑：(a)制冷量自动计算：从capacity_range解析BTU÷3.4128取整 (b)按target_market加载安全合规标准行(变量行数) (c)认证费用从Tab3 safety_compliance JSON解析标准名×管理员cert_cost配置自动生成费用行 (d)按project_origin/product_type自动加载团队角色模板 (e)人员工作负载计算（当前项目数+负载率） (f)团队摘要统计API。需在提案提交/草稿保存时计算并持久化或前端实时计算。风险中因为多Tab数据联动算法复杂，需单元测试验证。复杂度4。"
+    },
+    {
+      "id": "t4",
+      "title": "前端 Tab1&2 合并 — 项目概述+市场分析重组为单一Tab",
+      "domain_tags": ["vue3", "element-plus", "typescript"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "reasoning": "合并PMWorkspace.vue中Tab1(el-tab-pane name='overview')和Tab2(name='market')为单一Tab(name='overview_market')，四段式布局：(一)项目基本信息区—产品类型/目标市场/气候带(select→input自由文本)/制冷剂/客户名称/能力段/电压频率/知识产权/开发类别/项目来源(联动年度规划选择器)/立项日期/计划完成/项目周期/其他要求 (二)项目背景与目标—立项背景/总体目标/技术/成本/销售/认证/进度/专利各目标 (三)市场分析—年度规划引用/市场规模/售价/销量/竞品分析/客户关键需求表格 (四)交付物—样机数量/需求日期/清单。底部：所属项目群+项目负责人(从Tab5双向同步)。合并tabStatus为单一校验，调整buildProjectPayload/populateFormFromDraft/resetForm/vaildate函数中的字段归属。风险中因为模板重构约300行，但所有字段保留、逻辑不变。复杂度3。"
+    },
+    {
+      "id": "t5",
+      "title": "前端 Tab3 技术要求重构 — 流程引导+性能自动计算+物料部件合并",
+      "domain_tags": ["vue3", "element-plus", "typescript"],
+      "risk_level": "high",
+      "estimated_complexity": 4,
+      "reasoning": "重构Tab3为el-steps引导四步流程：❶性能指标→❷安全合规→❸物料部件→❹附件/功能配置。核心改动：(a)性能表—制冷量行自动计算(Tab1 capacity_range BTU÷3.4128取整)，电压/频率行自动同步Tab1，容差/能效等级行按目标市场从管理员配置加载默认值(watch联动) (b)安全合规表—target_market变化时从后端动态加载(越南3行/欧盟5行等不定行数)，行内字段只读(standard/key_requirement)+可编辑(involved_parts/cert_cycle/remark) (c)新增物料与部件清单表—含类型列(物料/部件)区分，合并原关键物料+核心部件，候选厂家从3列改为单textarea(一行一个厂家) (d)附件/功能配置从市场预设加载(已有逻辑，调整归属)。新增5+个watch和3+个computed。风险高因为自动计算逻辑和跨Tab数据同步复杂。复杂度4。"
+    },
+    {
+      "id": "t6",
+      "title": "前端 Tab4 成本核算重构 — 八项费用自动计算与联动",
+      "domain_tags": ["vue3", "element-plus", "typescript"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "reasoning": "重构Tab4成本核算的devCostTable从8行固定项扩展为动态混合：(a)原型开发成本—单价从capacity_unit_cost配置按能力段查表(含22000BTU)，数量行保持P0~P2+客户样机 (b)模具费用—table简化为数量+总费用+备注三列，移除供应商字段 (c)试制费用—试制数量按project_class从管理员trial_qty_config自动确定 (d)测试费用—保持手动填写 (e)认证费用—从Tab3安全合规标准列表×管理员cert_cost配置自动生成行(UL=20W/CE=3W) (f)人工成本—人月=项目周期(月从Tab1获取)×占比%，需从autoProjectDuration解析月份数 (g)间接成本—默认5000从indirect_cost_config加载 (h)项目开发总预算=八项之和。新增/修改5+个computed和多个watch联动。风险中因为计算链路长(跨Tab1→Tab4, Tab3→Tab4)但公式明确。复杂度3。"
+    },
+    {
+      "id": "t7",
+      "title": "前端+后端 Tab5 团队与职责重构 — 角色模板/负载/双向同步/摘要",
+      "domain_tags": ["vue3", "element-plus", "fastapi", "typescript"],
+      "risk_level": "high",
+      "estimated_complexity": 5,
+      "reasoning": "最复杂的Tab5全栈重构：(a)后端按project_type返回预设团队角色模板，前端选中项目类型后自动加载 (b)项目角色→系统岗位映射(如'结构工程师'→'主任结构工程师/高级结构工程师/结构工程师')，admin后台维护 (c)项目负责人与Tab1双向同步，watch teamTable中role='项目经理'的user_id变化→更新projectForm.leader_id (d)同一角色人数=N时自动展开为N行分配槽位(role相同但slot_id不同) (e)人员el-select下拉显示负载badge(当前项目数+负载率%) (f)部门自动填充：onTeamUserChange查user.department，失败时tooltip提示手动填写 (g)团队摘要浮动面板：总人数/已分配/未分配/各角色人数统计 (h)teamTable新增'上级'列，el-select从已选成员过滤 (i)审批人候选列表过滤为Tab5已选user_id集合 (j)核心职责由PM手动el-input填写。前端teamTable数据结构大幅扩展(新增slot_id/load_count/load_rate/superior_id列)，后端需新增用户负载查询接口。风险高因为新功能最多且涉及跨Tab双向同步。复杂度5为最高。"
+    }
+  ],
+  "risk_assessment": {
+    "t1": "low",
+    "t2": "low",
+    "t3": "medium",
+    "t4": "medium",
+    "t5": "high",
+    "t6": "medium",
+    "t7": "high"
+  },
+  "dependency_graph": {
+    "t1": [],
+    "t2": ["t1"],
+    "t3": ["t1", "t2"],
+    "t4": ["t3"],
+    "t5": ["t3", "t4"],
+    "t6": ["t3", "t4", "t5"],
+    "t7": ["t2", "t3", "t4"]
+  },
+  "meta": {
+    "total_tasks": 7,
+    "source_file": "PMWorkspace.vue (2536行)",
+    "backend_apis": ["admin_config.py", "pm_workspace.py", "pm_config.py"],
+    "models": ["project.py", "pm_config.py", "system_config.py"],
+    "estimated_total_complexity": 24,
+    "risk_distribution": {"low": 2, "medium": 3, "high": 2}
+  }
+}

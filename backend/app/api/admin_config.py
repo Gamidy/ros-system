@@ -15,6 +15,9 @@ DEFAULTS = {
     "cert_cost": '{"UL":20,"CE":3,"default":3}',
     "accessory_defaults": '[{"market":"通用","name":"除尘网","default_selection":"标配"},{"market":"通用","name":"WiFi模块","default_selection":"选配"},{"market":"通用","name":"蓝牙遥控","default_selection":"选配"},{"market":"通用","name":"离子发生器","default_selection":"不配"}]',
     "feature_defaults": '[{"market":"通用","name":"自清洁","default_selection":"标配"},{"market":"通用","name":"除霜","default_selection":"标配"},{"market":"通用","name":"快速制冷","default_selection":"标配"},{"market":"通用","name":"静音模式","default_selection":"选配"},{"market":"通用","name":"ECO模式","default_selection":"选配"}]',
+    "indirect_cost": "5000",
+    "trial_qty_per_class": '{"T":5,"A":3,"B":2,"C":1}',
+    "capacity_unit_cost_map": '{"07K":{"btu":7000,"cost":0.075},"09K":{"btu":9000,"cost":0.095},"12K":{"btu":12000,"cost":0.105},"18K":{"btu":18000,"cost":0.142},"22K":{"btu":22000,"cost":0.178},"24K":{"btu":24000,"cost":0.178}}',
 }
 
 

@@ -9,6 +9,7 @@
 - PATCH /api/pm/project/{pid} — 快捷更新项目字段
 """
 from datetime import datetime, date
+import json
 import random
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
@@ -20,6 +21,12 @@ from app.models.user import User
 from app.models.project import Project, Program
 from app.models.product import Product, Platform
 from app.schemas import ProjectCreate, ProjectOut
+from app.api.pm_proposal_utils import (
+    calc_cooling_capacity_btu_to_w,
+    inject_cooling_capacity_to_core_performance,
+    generate_labor_costs_json,
+    get_cert_costs_from_compliance,
+)
 
 router = APIRouter(prefix="/pm", tags=["产品经理工作台"])
 
@@ -102,6 +109,7 @@ def _project_to_dict(p: Project) -> dict:
         "mold_costs": p.mold_costs,
         "prototype_costs_detail": p.prototype_costs_detail,
         "test_costs": p.test_costs,
+        "cert_costs": p.cert_costs,
         "labor_costs": p.labor_costs,
         # Sheet 5 - 团队与职责
         "team_members": p.team_members,
@@ -555,6 +563,15 @@ def pm_create_project(
         team_members=team_members,
     )
 
+    # ── 自动计算：制冷量 BTU → 瓦特，注入 core_performance ──
+    if capacity_range:
+        p.core_performance = inject_cooling_capacity_to_core_performance(
+            p.core_performance, capacity_range
+        )
+    # ── 自动计算：人月费用，写入 labor_costs ──
+    if project_duration or team_members:
+        p.labor_costs = generate_labor_costs_json(project_duration, team_members)
+
     try:
         db.add(p)
         db.flush()
@@ -709,6 +726,15 @@ def pm_create_draft(
         team_members=team_members,
     )
 
+    # ── 自动计算：制冷量 BTU → 瓦特，注入 core_performance ──
+    if capacity_range:
+        p.core_performance = inject_cooling_capacity_to_core_performance(
+            p.core_performance, capacity_range
+        )
+    # ── 自动计算：人月费用，写入 labor_costs ──
+    if project_duration or team_members:
+        p.labor_costs = generate_labor_costs_json(project_duration, team_members)
+
     try:
         db.add(p)
         db.commit()
@@ -842,6 +868,19 @@ def pm_update_draft(
             team_members=team_members,
         )
 
+        # ── 自动计算：制冷量 BTU → 瓦特 ──
+        if capacity_range and p.capacity_range:
+            p.core_performance = inject_cooling_capacity_to_core_performance(
+                p.core_performance, p.capacity_range
+            )
+        # ── 自动计算：人月费用 ──
+        if project_duration is not None or team_members is not None:
+            from app.api.pm_proposal_utils import generate_labor_costs_json as _gen_labor
+            p.labor_costs = _gen_labor(
+                project_duration if project_duration is not None else p.project_duration,
+                team_members if team_members is not None else p.team_members,
+            )
+
         db.commit()
         db.refresh(p)
     except Exception:
@@ -886,6 +925,19 @@ def pm_submit_draft(
         # 转为正式项目
         p.is_draft = False
         p.status = "planning"
+
+        # ── 提交时自动生成认证费用（写入 cert_costs）──
+        if p.safety_compliance:
+            cert_rows = get_cert_costs_from_compliance(p.safety_compliance)
+            p.cert_costs = json.dumps(cert_rows, ensure_ascii=False, default=str)
+        # ── 提交时自动计算人月费用（写入 labor_costs）──
+        if p.project_duration or p.team_members:
+            p.labor_costs = generate_labor_costs_json(p.project_duration, p.team_members)
+        # ── 提交时自动计算制冷量 ──
+        if p.capacity_range:
+            p.core_performance = inject_cooling_capacity_to_core_performance(
+                p.core_performance, p.capacity_range
+            )
 
         db.flush()
 

@@ -60,10 +60,9 @@
             </div>
           </template>
           <div class="initiation-intro">
-            <p>新建产品立项申请，填写以下五个模块信息：</p>
+            <p>新建产品立项申请，填写以下四个模块信息：</p>
             <ul>
-              <li>📋 <strong>项目概述</strong> — 基本信息、背景目标、交付物</li>
-              <li>🏪 <strong>市场与客户需求</strong> — 市场需求背景、客户关键需求</li>
+              <li>📋 <strong>项目概述与市场</strong> — 基本信息、背景目标、市场分析、交付物</li>
               <li>⚙️ <strong>技术要求</strong> — 核心性能参数、安全合规、配件功能选配</li>
               <li>💰 <strong>成本核算</strong> — 开发费用、经济指标、模具/样机/人工/测试费用</li>
               <li>👥 <strong>团队与职责</strong> — 14角色团队选择、职责分工</li>
@@ -172,29 +171,18 @@
       @close="resetForm"
     >
       <el-tabs v-model="activeTab" type="border-card" class="drawer-tabs">
-        <!-- ═══════════ Tab 1: 项目概述 ═══════════ -->
-        <el-tab-pane name="overview">
+        <!-- ═══════════ Tab 1: 项目概述与市场 ═══════════ -->
+        <el-tab-pane name="overview_market">
           <template #label>
             <span>
-              <span v-if="tabStatus.overview.valid">✅</span>
+              <span v-if="tabStatus.overview_market.valid">✅</span>
               <span v-else>❌</span>
-              📋 项目概述
+              📋 项目概述与市场
             </span>
           </template>
           <el-form :model="projectForm" label-width="120px" size="small">
-            <!-- 一、项目基本信息 -->
-            <el-divider content-position="left">一、项目基本信息</el-divider>
-            <!-- 新增：项目群选择 + 项目负责人 -->
-            <el-form-item label="所属项目群" label-width="120px" size="small">
-              <el-select v-model="projectForm.program_id" placeholder="选择项目群" clearable filterable style="width:100%">
-                <el-option v-for="p in programOptions" :key="p.id" :label="p.name" :value="p.id" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="项目负责人" label-width="120px" size="small">
-              <el-select v-model="projectForm.leader_id" placeholder="从团队成员中选择" clearable filterable style="width:100%">
-                <el-option v-for="u in allTeamUsers" :key="u.id" :label="`${u.full_name || u.username} (${u.role})`" :value="u.id" />
-              </el-select>
-            </el-form-item>
+            <!-- 一、项目基本信息区 -->
+            <el-divider content-position="left">一、项目基本信息区</el-divider>
             <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="项目名称">
@@ -219,11 +207,7 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item label="温带">
-                  <el-select v-model="projectForm.climate_zone" placeholder="选择温带" clearable style="width:100%">
-                    <el-option label="T1" value="T1" />
-                    <el-option label="T2" value="T2" />
-                    <el-option label="T3" value="T3" />
-                  </el-select>
+                  <el-input v-model="projectForm.climate_zone" placeholder="温带（如 T1/T2/T3）" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -310,6 +294,12 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <!-- ⭐ 条件联动：项目来源选"产品年度规划"时显示 -->
+            <el-form-item v-if="projectForm.project_origin === '产品年度规划'" label="年度规划项">
+              <el-select v-model="projectForm.annual_planning_id" placeholder="选择关联的年度规划项" clearable filterable style="width:100%">
+                <el-option v-for="item in planningItems" :key="item.id" :label="`${item.name} (${item.year})`" :value="item.id" />
+              </el-select>
+            </el-form-item>
             <el-form-item label="其他要求">
               <el-input v-model="projectForm.other_requirements" type="textarea" :rows="2" placeholder="其他特殊要求" />
             </el-form-item>
@@ -362,38 +352,8 @@
               <el-input v-model="projectForm.other_goals" type="textarea" :rows="2" placeholder="其他目标" />
             </el-form-item>
 
-            <!-- 三、项目交付物 -->
-            <el-divider content-position="left">三、项目交付物</el-divider>
-            <el-row :gutter="16">
-              <el-col :span="12">
-                <el-form-item label="样机数量">
-                  <el-input-number v-model="projectForm.sample_qty" :min="0" :step="1" style="width:100%" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="样机需求日期">
-                  <el-date-picker v-model="projectForm.sample_required_date" type="date" placeholder="需求日期" style="width:100%" value-format="YYYY-MM-DD" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-form-item label="交付物清单">
-              <el-input v-model="projectForm.deliverables" type="textarea" :rows="3" placeholder="项目交付物清单（样机/图纸/BOM/测试报告等）" />
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <!-- ═══════════ Tab 2: 市场与客户需求 ═══════════ -->
-        <el-tab-pane name="market">
-          <template #label>
-            <span>
-              <span v-if="tabStatus.market.valid">✅</span>
-              <span v-else>❌</span>
-              🏪 市场与客户需求
-            </span>
-          </template>
-          <el-form :model="projectForm" label-width="120px" size="small">
-            <!-- 一、市场需求背景 -->
-            <el-divider content-position="left">一、市场需求背景</el-divider>
+            <!-- 三、市场分析 -->
+            <el-divider content-position="left">三、市场分析</el-divider>
             <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="主销容量段">
@@ -420,9 +380,23 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <el-form-item label="年度规划引用">
+              <el-select v-model="projectForm.annual_planning_ref" placeholder="选择年度规划引用" clearable filterable style="width:100%">
+                <el-option v-for="item in planningItems" :key="item.id" :label="item.name" :value="item.name" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="市场需求概述">
+              <el-input v-model="projectForm.market_demand_overview" type="textarea" :rows="2" placeholder="市场需求总体概述" />
+            </el-form-item>
+            <el-form-item label="竞品对标分析">
+              <el-input v-model="projectForm.competitor_analysis" type="textarea" :rows="2" placeholder="竞品对标分析" />
+            </el-form-item>
+            <el-form-item label="客户特殊要求">
+              <el-input v-model="projectForm.customer_special_req" type="textarea" :rows="2" placeholder="客户特殊要求" />
+            </el-form-item>
 
-            <!-- 二、客户关键需求 -->
-            <el-divider content-position="left">二、客户关键需求</el-divider>
+            <!-- 客户关键需求表格 -->
+            <el-divider content-position="left">客户关键需求</el-divider>
             <el-table :data="customerReqTable" border size="small" class="section-table">
               <el-table-column prop="category" label="需求类别" width="120">
                 <template #default="{ row }">
@@ -456,6 +430,37 @@
               </el-table-column>
             </el-table>
             <el-button size="small" style="margin-top:8px" @click="addCustomerReqRow">+ 添加行</el-button>
+
+            <!-- 四、交付物 -->
+            <el-divider content-position="left">四、交付物</el-divider>
+            <el-row :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="样机数量">
+                  <el-input-number v-model="projectForm.sample_qty" :min="0" :step="1" style="width:100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="样机需求日期">
+                  <el-date-picker v-model="projectForm.sample_required_date" type="date" placeholder="需求日期" style="width:100%" value-format="YYYY-MM-DD" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-form-item label="交付物清单">
+              <el-input v-model="projectForm.deliverables" type="textarea" :rows="3" placeholder="项目交付物清单（样机/图纸/BOM/测试报告等）" />
+            </el-form-item>
+
+            <!-- 底部：所属项目群 + 项目负责人 -->
+            <el-divider content-position="left">项目归属</el-divider>
+            <el-form-item label="所属项目群" label-width="120px" size="small">
+              <el-select v-model="projectForm.program_id" placeholder="选择项目群" clearable filterable style="width:100%">
+                <el-option v-for="p in programOptions" :key="p.id" :label="p.name" :value="p.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="项目负责人" label-width="120px" size="small">
+              <el-select v-model="projectForm.leader_id" placeholder="从团队成员中选择" clearable filterable style="width:100%">
+                <el-option v-for="u in allTeamUsers" :key="u.id" :label="`${u.full_name || u.username} (${u.role})`" :value="u.id" />
+              </el-select>
+            </el-form-item>
           </el-form>
         </el-tab-pane>
 
@@ -468,124 +473,235 @@
               ⚙️ 技术要求
             </span>
           </template>
-          <!-- 一、核心性能参数 -->
-          <el-divider content-position="left">一、核心性能参数</el-divider>
-          <el-table :data="corePerfTable" border size="small" class="section-table">
-            <el-table-column prop="param_name" label="参数名称" width="120">
-              <template #default="{ row }">
-                <el-input v-model="row.param_name" size="small" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="target_value" label="目标值" width="140">
-              <template #default="{ row }">
-                <el-input v-model="row.target_value" size="small" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="aux_competitor" label="AUX竞品" width="120">
-              <template #default="{ row }">
-                <el-input v-model="row.aux_competitor" size="small" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="tcl_competitor" label="TCL竞品" width="120">
-              <template #default="{ row }">
-                <el-input v-model="row.tcl_competitor" size="small" />
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="70">
-              <template #default="{ $index }">
-                <el-button link type="danger" size="small" @click="removeCorePerfRow($index)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-button size="small" style="margin-top:8px" @click="addCorePerfRow">+ 添加行</el-button>
 
-          <!-- 二、安全与合规要求 -->
-          <el-divider content-position="left">二、安全与合规要求</el-divider>
-          <el-table :data="safetyComplianceTable" border size="small" class="section-table">
-            <el-table-column prop="standard" label="法规标准" width="140">
-              <template #default="{ row }">
-                <span class="linked-val">{{ row.standard }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="applicable_market" label="适用市场" width="120">
-              <template #default="{ row }">
-                <span class="linked-val">{{ row.applicable_market }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="key_requirement" label="关键要求" min-width="140">
-              <template #default="{ row }">
-                <span class="linked-val">{{ row.key_requirement }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="verification_method" label="验证方式" width="120">
-              <template #default="{ row }">
-                <span class="linked-val">{{ row.verification_method }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="involved_parts" label="涉及零部件" width="120">
-              <template #default="{ row }">
-                <el-input v-model="row.involved_parts" size="small" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="cert_cycle" label="认证周期" width="100">
-              <template #default="{ row }">
-                <el-input v-model="row.cert_cycle" size="small" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="remark" label="备注" width="120">
-              <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" />
-              </template>
-            </el-table-column>
-          </el-table>
+          <!-- 流程引导 el-steps -->
+          <el-steps :active="techStep" finish-status="success" align-center style="margin-bottom:20px;cursor:pointer">
+            <el-step title="性能指标" description="核心性能参数" @click="techStep = 0" />
+            <el-step title="安全合规" description="法规标准要求" @click="techStep = 1" />
+            <el-step title="物料部件" description="关键物料与部件" @click="techStep = 2" />
+            <el-step title="附件/功能配置" description="配件与功能选配" @click="techStep = 3" />
+          </el-steps>
 
-          <!-- 三、配件选配 -->
-          <el-divider content-position="left">三、配件选配</el-divider>
-          <el-table :data="accessoryConfigTable" border size="small" class="section-table">
-            <el-table-column prop="name" label="配件名称" min-width="160">
-              <template #default="{ row }">
-                <span>{{ row.name }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="selection" label="选配情况" min-width="160">
-              <template #default="{ row }">
-                <el-select v-model="row.selection" size="small" style="width:100%">
-                  <el-option label="标配" value="标配" />
-                  <el-option label="选配" value="选配" />
-                  <el-option label="不配" value="不配" />
-                </el-select>
-              </template>
-            </el-table-column>
-            <el-table-column label="" width="90">
-              <template #default="{ row }">
-                <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
-              </template>
-            </el-table-column>
-          </el-table>
+          <!-- Step ❶: 性能指标 -->
+          <template v-if="techStep === 0">
+            <el-divider content-position="left">❶ 核心性能参数</el-divider>
+            <el-table :data="corePerfTable" border size="small" class="section-table">
+              <el-table-column prop="param_name" label="参数名称" width="130">
+                <template #default="{ row }">
+                  <el-input v-model="row.param_name" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="baseline" label="基准值" width="140">
+                <template #default="{ row }">
+                  <el-input
+                    v-if="row.source === 'auto' || row.source === 'market_config'"
+                    :model-value="row.baseline"
+                    size="small"
+                    disabled
+                  />
+                  <el-input v-else v-model="row.baseline" size="small" placeholder="手动填写" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="target_value" label="目标值" width="140">
+                <template #default="{ row }">
+                  <el-input v-model="row.target_value" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="aux_competitor" label="AUX竞品" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.aux_competitor" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="tcl_competitor" label="TCL竞品" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.tcl_competitor" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="source" label="来源" width="100">
+                <template #default="{ row }">
+                  <el-tag v-if="row.source === 'auto'" type="success" size="small">自动</el-tag>
+                  <el-tag v-else-if="row.source === 'market_config'" type="primary" size="small">市场配置</el-tag>
+                  <el-tag v-else type="info" size="small">手动</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="70">
+                <template #default="{ $index }">
+                  <el-button link type="danger" size="small" @click="removeCorePerfRow($index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-button size="small" style="margin-top:8px" @click="addCorePerfRow">+ 添加行</el-button>
+          </template>
 
-          <!-- 四、功能选配 -->
-          <el-divider content-position="left">四、功能选配</el-divider>
-          <el-table :data="featureConfigTable" border size="small" class="section-table">
-            <el-table-column prop="name" label="功能名称" min-width="160">
-              <template #default="{ row }">
-                <span>{{ row.name }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="selection" label="选配情况" min-width="160">
-              <template #default="{ row }">
-                <el-select v-model="row.selection" size="small" style="width:100%">
-                  <el-option label="标配" value="标配" />
-                  <el-option label="选配" value="选配" />
-                  <el-option label="不配" value="不配" />
-                </el-select>
-              </template>
-            </el-table-column>
-            <el-table-column label="" width="90">
-              <template #default="{ row }">
-                <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
-              </template>
-            </el-table-column>
-          </el-table>
+          <!-- Step ❷: 安全合规 -->
+          <template v-if="techStep === 1">
+            <el-divider content-position="left">❷ 安全与合规要求</el-divider>
+            <div v-if="safetyComplianceTable.length === 0" style="color:#909399;font-size:13px;padding:20px 0">
+              请在「项目概述与市场」中选择目标市场以加载安全合规标准
+            </div>
+            <el-table v-else :data="safetyComplianceTable" border size="small" class="section-table">
+              <el-table-column prop="standard" label="法规标准" width="160">
+                <template #default="{ row }">
+                  <span class="linked-val">{{ row.standard }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="applicable_market" label="适用市场" width="100">
+                <template #default="{ row }">
+                  <span class="linked-val">{{ row.applicable_market }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="key_requirement" label="关键要求" min-width="140">
+                <template #default="{ row }">
+                  <span class="linked-val">{{ row.key_requirement }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="verification_method" label="验证方式" width="120">
+                <template #default="{ row }">
+                  <span class="linked-val">{{ row.verification_method }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="involved_parts" label="涉及零部件" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.involved_parts" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="cert_cycle" label="认证周期" width="100">
+                <template #default="{ row }">
+                  <el-input v-model="row.cert_cycle" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" width="140">
+                <template #default="{ row }">
+                  <el-input v-model="row.remark" size="small" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </template>
+
+          <!-- Step ❸: 物料部件 -->
+          <template v-if="techStep === 2">
+            <el-divider content-position="left">❸ 物料与部件清单</el-divider>
+            <el-table :data="materialComponentTable" border size="small" class="section-table">
+              <el-table-column prop="type" label="类型" width="90">
+                <template #default="{ row }">
+                  <el-select v-model="row.type" size="small" style="width:100%">
+                    <el-option label="物料" value="物料" />
+                    <el-option label="部件" value="部件" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column prop="name" label="名称" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.name" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="spec" label="规格" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.spec" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="qty" label="数量" width="80">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.qty" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="unit" label="单位" width="70">
+                <template #default="{ row }">
+                  <el-input v-model="row.unit" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="usage" label="用途" width="100">
+                <template #default="{ row }">
+                  <el-input v-model="row.usage" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="supplier" label="供应商" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.supplier" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="delivery_cycle" label="交期" width="90">
+                <template #default="{ row }">
+                  <el-input v-model="row.delivery_cycle" size="small" placeholder="如: 30天" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="unit_price" label="单价(¥)" width="100">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.unit_price" :min="0" :step="0.01" size="small" controls-position="right" style="width:100%" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="subtotal" label="小计(¥)" width="100">
+                <template #default="{ row }">
+                  <span>{{ ((row.qty || 0) * (row.unit_price || 0)).toFixed(2) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="candidate_vendors" label="候选厂家" min-width="160">
+                <template #default="{ row }">
+                  <el-input v-model="row.candidate_vendors" type="textarea" :rows="2" size="small" placeholder="一行一个厂家" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" width="120">
+                <template #default="{ row }">
+                  <el-input v-model="row.remark" size="small" />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="70" fixed="right">
+                <template #default="{ $index }">
+                  <el-button link type="danger" size="small" @click="removeMaterialComponentRow($index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-button size="small" style="margin-top:8px" @click="addMaterialComponentRow">+ 添加行</el-button>
+          </template>
+
+          <!-- Step ❹: 附件/功能配置 -->
+          <template v-if="techStep === 3">
+            <el-divider content-position="left">❹ 附件配置</el-divider>
+            <el-table :data="accessoryConfigTable" border size="small" class="section-table">
+              <el-table-column prop="name" label="配件名称" min-width="160">
+                <template #default="{ row }">
+                  <span>{{ row.name }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="selection" label="选配情况" min-width="160">
+                <template #default="{ row }">
+                  <el-select v-model="row.selection" size="small" style="width:100%">
+                    <el-option label="标配" value="标配" />
+                    <el-option label="选配" value="选配" />
+                    <el-option label="不配" value="不配" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="" width="90">
+                <template #default="{ row }">
+                  <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <el-divider content-position="left" style="margin-top:20px">❹ 功能配置</el-divider>
+            <el-table :data="featureConfigTable" border size="small" class="section-table">
+              <el-table-column prop="name" label="功能名称" min-width="160">
+                <template #default="{ row }">
+                  <span>{{ row.name }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="selection" label="选配情况" min-width="160">
+                <template #default="{ row }">
+                  <el-select v-model="row.selection" size="small" style="width:100%">
+                    <el-option label="标配" value="标配" />
+                    <el-option label="选配" value="选配" />
+                    <el-option label="不配" value="不配" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="" width="90">
+                <template #default="{ row }">
+                  <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </template>
         </el-tab-pane>
 
         <!-- ═══════════ Tab 4: 成本核算 ═══════════ -->
@@ -688,24 +804,47 @@
 
           <!-- 三、模具/工装费用初步核算 -->
           <el-divider content-position="left">三、模具/工装费用初步核算</el-divider>
+          <div style="margin-bottom:8px">
+            <el-button size="small" @click="addMoldRow">+ 添加行</el-button>
+          </div>
           <el-table :data="moldCostTable" border size="small" class="section-table">
-            <el-table-column prop="unit_type" label="内外机" width="80" />
-            <el-table-column prop="category" label="类别" width="100" />
+            <el-table-column label="模具名称" min-width="160">
+              <template #default="{ row }">
+                <el-input v-model="row.name" size="small" placeholder="模具名称" />
+              </template>
+            </el-table-column>
             <el-table-column label="数量" width="100">
               <template #default="{ row }">
                 <el-input-number v-model="row.qty" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </template>
             </el-table-column>
-            <el-table-column label="合计(W)" width="120">
+            <el-table-column label="合计(W)" width="130">
               <template #default="{ row }">
                 <el-input-number v-model="row.total" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" min-width="160">
+              <template #default="{ row }">
+                <el-input v-model="row.remark" size="small" placeholder="备注" />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="70">
+              <template #default="{ $index }">
+                <el-button link type="danger" size="small" @click="removeMoldRow($index)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
           <div class="cost-summary">模具/工装合计: <strong>¥{{ moldCostTotal.toFixed(1) }} 万元</strong></div>
 
-          <!-- 四、试制样机费用 -->
-          <el-divider content-position="left">四、试制样机费用</el-divider>
+          <!-- 四、试制费用（按项目等级确定数量） -->
+          <el-divider content-position="left">四、试制费用</el-divider>
+          <div class="cost-summary" style="background:#f0f9eb;padding:10px 16px;border-radius:6px;margin-bottom:8px">
+            试制数量: <strong>{{ trialQty }}台</strong>（按项目等级「{{ projectForm.dev_category || '未设置' }}」自动确定）
+            <span v-if="trialQty > 20" style="color:#e6a23c;margin-left:8px">⚠ 建议分批试制</span>
+          </div>
+
+          <!-- 五、试制样机费用 -->
+          <el-divider content-position="left">五、试制样机费用</el-divider>
           <el-table :data="protoCostTable" border size="small" class="section-table">
             <el-table-column prop="stage" label="阶段" width="80" />
             <el-table-column label="数量" width="100">
@@ -726,8 +865,8 @@
           </el-table>
           <div class="cost-summary">样机合计: P0~P2 <strong>¥{{ protoDevTotal.toFixed(2) }} 万元</strong> | 客户样机: <strong>¥{{ clientSampleCost.toFixed(2) }} 万元</strong> | 总计: <strong>¥{{ protoCostTotal.toFixed(2) }} 万元</strong></div>
 
-          <!-- 五、人工费用初步核算 -->
-          <el-divider content-position="left">五、人工费用初步核算</el-divider>
+          <!-- 六、人工费用初步核算 -->
+          <el-divider content-position="left">六、人工费用初步核算</el-divider>
           <el-table :data="laborCostTable" border size="small" class="section-table">
             <el-table-column prop="module" label="模块" width="100" />
             <el-table-column label="人数" width="80">
@@ -740,9 +879,10 @@
                 <el-input-number v-model="row.monthly_salary" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
               </template>
             </el-table-column>
-            <el-table-column label="时间(月)" width="100">
+            <el-table-column label="人月" width="130">
               <template #default="{ row }">
-                <el-input-number v-model="row.months" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
+                <span class="linked-val">{{ (projectDurationMonths * (row.occupancy_rate || 100) / 100).toFixed(1) }}</span>
+                <div style="font-size:11px;color:#909399">{{ projectDurationMonths }}月 × {{ row.occupancy_rate || 100 }}%</div>
               </template>
             </el-table-column>
             <el-table-column label="占用度%" width="100">
@@ -752,14 +892,14 @@
             </el-table-column>
             <el-table-column label="费用(W)" width="120">
               <template #default="{ row }">
-                {{ (row.people_count * row.monthly_salary * row.months * (row.occupancy_rate || 100) / 100).toFixed(1) }}
+                {{ (row.people_count * row.monthly_salary * projectDurationMonths * (row.occupancy_rate || 100) / 100).toFixed(1) }}
               </template>
             </el-table-column>
           </el-table>
           <div class="cost-summary">人工费用合计: <strong>¥{{ laborCostTotal.toFixed(1) }} 万元</strong></div>
 
-          <!-- 六、测试费用 -->
-          <el-divider content-position="left">六、测试费用</el-divider>
+          <!-- 七、测试费用 -->
+          <el-divider content-position="left">七、测试费用</el-divider>
           <el-table :data="testCostTable" border size="small" class="section-table">
             <el-table-column prop="stage" label="阶段" width="80" />
             <el-table-column label="天数" width="100">
@@ -768,8 +908,8 @@
               </template>
             </el-table-column>
             <el-table-column label="单价(W)" width="120">
-              <template>
-                <span>0.110</span>
+              <template #default="{ row }">
+                <span>{{ row.unit_price.toFixed(3) }}</span>
               </template>
             </el-table-column>
             <el-table-column label="合计(W)" width="120">
@@ -779,6 +919,32 @@
             </el-table-column>
           </el-table>
           <div class="cost-summary">测试费用合计: <strong>¥{{ testCostTotal.toFixed(2) }} 万元</strong></div>
+
+          <!-- 八、认证费用（从Tab3安全合规自动生成） -->
+          <el-divider content-position="left">八、认证费用（从Tab3安全合规自动生成）</el-divider>
+          <el-table v-if="certCostTable.length > 0" :data="certCostTable" border size="small" class="section-table">
+            <el-table-column prop="cert_name" label="标准名" width="100" />
+            <el-table-column prop="cert_body" label="认证机构" width="100" />
+            <el-table-column label="费用(W)" width="130">
+              <template #default="{ row }">
+                <el-input-number v-model="row.cost_wan" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="160">
+              <template #default="{ row }">
+                <el-input v-model="row.remark" size="small" placeholder="备注" />
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-else class="cost-summary" style="color:#909399">暂无认证费用（请在Tab3填写安全合规标准后自动生成）</div>
+          <div v-if="certCostTable.length > 0" class="cost-summary">认证费用合计: <strong>¥{{ certCostTotal.toFixed(1) }} 万元</strong></div>
+
+          <!-- 九、间接成本 -->
+          <el-divider content-position="left">九、间接成本</el-divider>
+          <div class="cost-summary" style="background:#f5f7fa;padding:10px 16px;border-radius:6px">
+            间接成本（管理/场地/水电等）: <strong>¥{{ indirectCost.toFixed(0) }} 元</strong>
+            <span style="font-size:12px;color:#909399;margin-left:8px">（管理员配置，不可修改）</span>
+          </div>
         </el-tab-pane>
 
         <!-- ═══════════ Tab 5: 团队与职责 ═══════════ -->
@@ -791,11 +957,40 @@
             </span>
           </template>
           <div class="team-section">
+            <!-- 项目类型选择（与Tab1 dev_category同步） -->
             <div class="team-toolbar">
+              <el-form-item label="项目类型" label-width="80px" size="small" style="margin-bottom:0">
+                <el-select v-model="selectedProjectType" placeholder="选择项目类型加载角色模板" clearable @change="onProjectTypeChange" style="width:180px">
+                  <el-option label="全新开发" value="全新开发" />
+                  <el-option label="派生" value="派生" />
+                  <el-option label="降本优化" value="降本优化" />
+                </el-select>
+              </el-form-item>
               <el-button type="primary" size="small" @click="addTeamRow">添加成员</el-button>
-              <span class="team-hint">选择角色后自动筛选对应人员，选择人员后自动填充部门</span>
+              <span class="team-hint">选择项目类型自动加载预设角色模板</span>
             </div>
-            <el-table :data="teamTable" border size="small" class="section-table">
+
+            <!-- 团队摘要面板 -->
+            <div class="team-summary" v-if="teamTable.length > 0">
+              <el-tag size="small" type="info">总角色: {{ teamSummary.totalRoles }}</el-tag>
+              <el-tag size="small" type="info">总人数: {{ teamSummary.totalSlots }}</el-tag>
+              <el-tag size="small" :type="teamSummary.unfilled === 0 ? 'success' : 'warning'">已分配: {{ teamSummary.filled }}</el-tag>
+              <el-tag size="small" :type="teamSummary.unfilled > 0 ? 'danger' : 'success'">未分配: {{ teamSummary.unfilled }}</el-tag>
+              <span class="team-summary-roles">
+                <span v-for="sr in teamSummary.roleSummaries" :key="sr.role" class="summary-role-item">
+                  {{ sr.role }} {{ sr.headcount }}
+                  <span v-if="sr.filled === sr.headcount">✅</span>
+                  <span v-else>⚠{{ sr.filled }}/{{ sr.headcount }}</span>
+                </span>
+              </span>
+            </div>
+
+            <el-table :data="teamTable" border size="small" class="section-table" row-key="seq">
+              <!-- 序号 -->
+              <el-table-column label="序号" width="55" align="center">
+                <template #default="{ $index }">{{ $index + 1 }}</template>
+              </el-table-column>
+              <!-- 角色 -->
               <el-table-column label="角色" width="140">
                 <template #default="{ row, $index }">
                   <el-select v-model="row.role" size="small" placeholder="选择角色" @change="onTeamRoleChange($index)" style="width:100%">
@@ -803,28 +998,103 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="姓名" min-width="140">
+              <!-- 人数 -->
+              <el-table-column label="人数" width="65" align="center">
                 <template #default="{ row, $index }">
-                  <el-select v-model="row.user_id" size="small" placeholder="选择人员" filterable @change="onTeamUserChange($index)" style="width:100%">
+                  <el-input-number v-model="row.headcount" :min="1" :max="10" size="small" controls-position="right" @change="onHeadcountChange($index)" style="width:60px" />
+                </template>
+              </el-table-column>
+              <!-- 姓名（支持槽位展开） -->
+              <el-table-column label="姓名" min-width="200">
+                <template #default="{ row, $index }">
+                  <!-- headcount=1: 直接显示 -->
+                  <template v-if="row.headcount <= 1">
+                    <el-select v-model="row.user_id" size="small" placeholder="选择人员" filterable @change="onTeamUserChange($index, 0)" style="width:100%">
+                      <el-option
+                        v-for="u in getUsersByRole(row.role)"
+                        :key="u.id"
+                        :label="getUserOptionLabel(u)"
+                        :value="u.id"
+                      >
+                        <div class="user-option">
+                          <span>{{ u.full_name || u.username }}</span>
+                          <span v-if="getWorkloadBadge(u.id)" class="workload-badge" :style="{color: getWorkloadBadge(u.id)?.color}">
+                            {{ getWorkloadBadge(u.id)?.text }}
+                          </span>
+                        </div>
+                      </el-option>
+                    </el-select>
+                  </template>
+                  <!-- headcount>1: 弹出槽位编辑 -->
+                  <template v-else>
+                    <el-popover placement="bottom" :width="320" trigger="click">
+                      <template #reference>
+                        <el-tag
+                          :type="getSlotFillStatus(row) === 'full' ? 'success' : getSlotFillStatus(row) === 'partial' ? 'warning' : 'info'"
+                          style="cursor:pointer"
+                        >
+                          {{ getSlotSummary(row) }}
+                        </el-tag>
+                      </template>
+                      <div class="slot-editor">
+                        <div v-for="(slot, si) in row.slots" :key="slot.slot_id" class="slot-row">
+                          <span class="slot-label">槽{{ slot.slot_id }}</span>
+                          <el-select v-model="slot.user_id" size="small" placeholder="选择人员" filterable @change="onSlotUserChange($index, si)" style="width:180px">
+                            <el-option
+                              v-for="u in getUsersByRole(row.role)"
+                              :key="u.id"
+                              :label="getUserOptionLabel(u)"
+                              :value="u.id"
+                            >
+                              <div class="user-option">
+                                <span>{{ u.full_name || u.username }}</span>
+                                <span v-if="getWorkloadBadge(u.id)" class="workload-badge" :style="{color: getWorkloadBadge(u.id)?.color}">
+                                  {{ getWorkloadBadge(u.id)?.text }}
+                                </span>
+                              </div>
+                            </el-option>
+                          </el-select>
+                          <span v-if="slot.department" class="slot-dept">{{ slot.department }}</span>
+                        </div>
+                      </div>
+                    </el-popover>
+                  </template>
+                </template>
+              </el-table-column>
+              <!-- 部门 -->
+              <el-table-column label="部门" width="120">
+                <template #default="{ row }">
+                  <el-tooltip
+                    v-if="row._departmentFailed && !row.department"
+                    content="该用户未设置部门信息，请手动填写"
+                    placement="top"
+                    :disabled="!row._departmentFailed"
+                  >
+                    <el-input v-model="row.department" size="small" :disabled="!row._departmentFailed && !row._departmentManual" placeholder="自动填充" />
+                  </el-tooltip>
+                  <el-input v-else v-model="row.department" size="small" :disabled="!row._departmentManual" placeholder="自动填充" />
+                </template>
+              </el-table-column>
+              <!-- 上级（汇报关系） -->
+              <el-table-column label="上级" width="140">
+                <template #default="{ row, $index }">
+                  <el-select v-model="row.superior_id" size="small" placeholder="选择上级" clearable filterable style="width:100%">
                     <el-option
-                      v-for="u in getUsersByRole(row.role)"
-                      :key="u.id"
-                      :label="u.full_name"
-                      :value="u.id"
+                      v-for="s in getSuperiorOptions($index)"
+                      :key="s.id"
+                      :label="s.label"
+                      :value="s.id"
                     />
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="部门" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.department" size="small" disabled />
-                </template>
-              </el-table-column>
+              <!-- 核心职责 -->
               <el-table-column label="核心职责" min-width="180">
                 <template #default="{ row }">
-                  <el-input v-model="row.responsibility" size="small" placeholder="核心职责描述" />
+                  <el-input v-model="row.responsibility" size="small" placeholder="核心职责描述（可从模板自动填充）" />
                 </template>
               </el-table-column>
+              <!-- 操作 -->
               <el-table-column label="操作" width="70">
                 <template #default="{ $index }">
                   <el-button link type="danger" size="small" @click="removeTeamRow($index)">删除</el-button>
@@ -872,7 +1142,9 @@ interface ProjectItem {
   voltage_freq?: string; ip_ownership?: string; project_duration?: string
   dev_category?: string; project_origin?: string
   start_date?: string; required_date?: string; sample_qty?: number
-  annual_planning_ref?: string; is_draft?: boolean
+  annual_planning_ref?: string; annual_planning_id?: number | null
+  market_demand_overview?: string; competitor_analysis?: string; customer_special_req?: string
+  climate_zone?: string; is_draft?: boolean
   has_outsourcing?: boolean
   customer_name?: string; cert_requirements?: string; energy_efficiency_req?: string
   target_price?: string; customer_requirements?: string; other_requirements?: string
@@ -883,24 +1155,48 @@ interface ProjectItem {
   deliverables?: string; fob_price?: number; bom_cost_target?: number
   annual_sales_forecast?: number; product_lifecycle?: string
   dev_cost_items?: string; mold_costs?: string; prototype_costs_detail?: string
-  test_costs?: string; labor_costs?: string
+  test_costs?: string; labor_costs?: string; cert_costs?: string
   core_performance?: string; safety_compliance?: string
+  material_components?: string
   accessory_config?: string; feature_config?: string
   team_members?: string
   approval_status?: string  // 审批状态: pending/approved/rejected
 }
 interface CustomerReqRow { category: string; description: string; source: string; tech_impact: string; market_impact: string }
-interface CorePerfRow { param_name: string; target_value: string; aux_competitor: string; tcl_competitor: string }
+interface CorePerfRow { param_name: string; baseline: string; target_value: string; aux_competitor: string; tcl_competitor: string; source: string }
+interface MaterialComponentRow { type: string; name: string; spec: string; qty: number; unit: string; usage: string; supplier: string; delivery_cycle: string; unit_price: number; candidate_vendors: string; remark: string }
 interface SafetyComplianceRow { standard: string; applicable_market: string; key_requirement: string; verification_method: string; involved_parts: string; cert_cycle: string; remark: string }
 interface ConfigRow { name: string; selection: string; _original?: string }
 interface DevCostRow { item: string; budget: number; remark: string; linked: boolean }
-interface MoldCostRow { unit_type: string; category: string; qty: number; total: number }
+interface MoldCostRow { name: string; qty: number; total: number; remark: string }
+interface CertCostRow { cert_name: string; cert_body: string; cost_wan: number; remark: string }
 interface ProtoCostRow { stage: string; qty: number; unit_cost: number }
 interface LaborCostRow { module: string; people_count: number; monthly_salary: number; months: number; occupancy_rate: number }
 interface TestCostRow { stage: string; days: number; unit_price: number }
-interface TeamMemberRow { role: string; user_id: number | null; department: string; responsibility: string }
+interface TeamSlot {
+  slot_id: number       // 1-based index within a row
+  user_id: number | null
+  full_name: string
+  department: string
+}
+interface TeamMemberRow {
+  role: string
+  headcount: number     // 新增：该角色需要的人数
+  slots: TeamSlot[]     // 新增：人员槽位
+  user_id: number | null  // headcount=1时快捷字段
+  full_name: string
+  department: string
+  responsibility: string
+  superior_id: number | null  // 新增：上级汇报对象 user_id
+  seq: number           // 新增：排序
+  _departmentManual?: boolean  // 部门是否手动填写
+  _departmentFailed?: boolean  // 部门自动填充失败
+}
 interface TeamRole { label: string; value: string; sys_role: string }
-interface UserInfo { id: number; username: string; full_name: string; department: string; position: string; role: string }
+interface UserInfo { id: number; username: string; full_name: string; department: string; position: string; role: string; job_title?: string }
+interface RoleMapping { project_role: string; sys_roles: string[] }
+interface UserWorkload { user_id: number; project_count: number; workload_pct: number }
+interface TeamRoleTemplateItem { role_name: string; headcount: number; responsibility_default: string; seq: number }
 
 // ═══════════════════════════════════════════════
 // 计算属性 (必须在所有响应式数据定义之前？不，必须在之后。但按规范，computed可在任意位置)
@@ -944,15 +1240,14 @@ const expandedProjectId = ref<number | null>(null)
 
 // 抽屉
 const drawerVisible = ref(false)
-const activeTab = ref('overview')
+const activeTab = ref('overview_market')
 const draftId = ref<number | null>(null)
 const savingDraft = ref(false)
 const submitting = ref(false)
 
 // Tab 校验状态
 const tabStatus = reactive<Record<string, { valid: boolean; errors: string[] }>>({
-  overview: { valid: false, errors: [] },
-  market: { valid: false, errors: [] },
+  overview_market: { valid: false, errors: [] },
   technical: { valid: false, errors: [] },
   cost: { valid: false, errors: [] },
   team: { valid: false, errors: [] },
@@ -968,12 +1263,14 @@ const projectForm = reactive<Record<string, any>>({
   start_date: null, target_end_date: null,
   ip_ownership: '', project_duration: '',
   dev_category: '', project_origin: '', other_requirements: '',
+  annual_planning_id: null as number | null,
   background_basis: '', overall_goal: '', tech_goal: '', cost_goal: '',
   sales_goal: '', cert_goal: '', schedule_goal: '', patent_goal: '', other_goals: '',
   sample_qty: undefined as number | undefined,
   sample_required_date: null as string | null,
   deliverables: '',
   main_capacity: '', target_price: '', energy_efficiency_req: '', cert_requirements: '',
+  market_demand_overview: '', competitor_analysis: '', customer_special_req: '',
   fob_price: undefined as number | undefined,
   bom_cost_target: undefined as number | undefined,
   annual_sales_forecast: undefined as number | undefined,
@@ -994,6 +1291,10 @@ const programOptions = ref<{ id: number; name: string; code: string }[]>([])
 // 团队
 const teamRoles = ref<TeamRole[]>([])
 const allTeamUsers = ref<UserInfo[]>([])
+const roleMappings = ref<RoleMapping[]>([])          // 新增：项目角色→系统岗位多映射
+const userWorkloads = ref<UserWorkload[]>([])         // 新增：人员负载数据
+const selectedProjectType = ref('')                   // 新增：选中的项目类型（与Tab1 dev_category同步）
+const teamRoleTemplate = ref<TeamRoleTemplateItem[]>([]) // 新增：从API加载的角色模板
 
 // 汇率
 const exchangeRate = ref(7.20)
@@ -1012,19 +1313,27 @@ const customerReqTable = reactive<CustomerReqRow[]>([
 // Tab 3 表格: 核心性能参数 (13行)
 // ═══════════════════════════════════════════════
 const corePerfTable = reactive<CorePerfRow[]>([
-  { param_name: '制冷量(W)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: 'CSPF(W/W)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '能效等级', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '容差(%)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '出风量(m³/h)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '噪音dB(A)(内/外)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '尺寸(mm)(内/外)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '电压/频率', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '制冷剂', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '充注量(g)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '装柜量(20GP)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: '制热量(W)', target_value: '', aux_competitor: '', tcl_competitor: '' },
-  { param_name: 'HSPF(W/W)', target_value: '', aux_competitor: '', tcl_competitor: '' },
+  { param_name: '制冷量(W)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'auto' },
+  { param_name: 'CSPF(W/W)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'market_config' },
+  { param_name: '能效等级', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'market_config' },
+  { param_name: '容差(%)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'market_config' },
+  { param_name: '出风量(m³/h)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'manual' },
+  { param_name: '噪音dB(A)(内/外)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'manual' },
+  { param_name: '尺寸(mm)(内/外)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'manual' },
+  { param_name: '电压/频率', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'auto' },
+  { param_name: '制冷剂', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'auto' },
+  { param_name: '充注量(g)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'manual' },
+  { param_name: '装柜量(20GP)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'manual' },
+  { param_name: '制热量(W)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'manual' },
+  { param_name: 'HSPF(W/W)', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'market_config' },
+])
+
+// Tab 3: 技术步骤导航
+const techStep = ref(0)
+
+// Tab 3 表格: 物料与部件清单
+const materialComponentTable = reactive<MaterialComponentRow[]>([
+  { type: '物料', name: '', spec: '', qty: 1, unit: '个', usage: '', supplier: '', delivery_cycle: '', unit_price: 0, candidate_vendors: '', remark: '' },
 ])
 
 // Tab 3 表格: 安全与合规要求 (3行)
@@ -1065,14 +1374,14 @@ const devCostTable = reactive<DevCostRow[]>([
   { item: '开发费用合计', budget: 0, remark: '', linked: true },
 ])
 
-// Tab 4 表格: 模具/工装费用 (6行)
+// Tab 4 表格: 模具/工装费用 (可增删)
 const moldCostTable = reactive<MoldCostRow[]>([
-  { unit_type: '内机', category: '钣金', qty: 0, total: 0 },
-  { unit_type: '内机', category: '注塑', qty: 0, total: 0 },
-  { unit_type: '外机', category: '钣金', qty: 0, total: 0 },
-  { unit_type: '外机', category: '注塑', qty: 0, total: 0 },
-  { unit_type: '其他', category: '翅片', qty: 0, total: 0 },
-  { unit_type: '工装', category: '工装', qty: 0, total: 0 },
+  { name: '内机钣金模具', qty: 0, total: 0, remark: '' },
+  { name: '内机注塑模具', qty: 0, total: 0, remark: '' },
+  { name: '外机钣金模具', qty: 0, total: 0, remark: '' },
+  { name: '外机注塑模具', qty: 0, total: 0, remark: '' },
+  { name: '翅片模具', qty: 0, total: 0, remark: '' },
+  { name: '工装夹具', qty: 0, total: 0, remark: '' },
 ])
 
 // Tab 4 表格: 试制样机费用 (5行)
@@ -1102,25 +1411,37 @@ const testCostTable = reactive<TestCostRow[]>([
   { stage: 'P2', days: 30, unit_price: 0.11 },
 ])
 
+// Tab 4 表格: 认证费用 (从Tab3安全合规自动生成)
+const certCostTable = reactive<CertCostRow[]>([])
+
 // ═══════════════════════════════════════════════
-// Tab 5 表格: 团队人员 (14行)
+// Tab 5 表格: 团队人员（动态从角色模板加载，初始为空）
 // ═══════════════════════════════════════════════
-const teamTable = reactive<TeamMemberRow[]>([
-  { role: '项目经理', user_id: null, department: '', responsibility: '全面负责项目管理' },
-  { role: '系统工程师', user_id: null, department: '', responsibility: '系统方案设计' },
-  { role: '系统工程师', user_id: null, department: '', responsibility: '性能匹配调试' },
-  { role: '结构工程师', user_id: null, department: '', responsibility: '室内机结构设计' },
-  { role: '结构工程师', user_id: null, department: '', responsibility: '室外机结构设计' },
-  { role: '结构工程师', user_id: null, department: '', responsibility: '面板及外观设计' },
-  { role: '电控工程师', user_id: null, department: '', responsibility: '硬件电路设计' },
-  { role: '电控工程师', user_id: null, department: '', responsibility: '软件控制逻辑' },
-  { role: '电气工程师', user_id: null, department: '', responsibility: '电气系统设计' },
-  { role: '电气工程师', user_id: null, department: '', responsibility: '线束及接插件' },
-  { role: '工艺工程师', user_id: null, department: '', responsibility: '生产工艺规划' },
-  { role: 'IQC工程师', user_id: null, department: '', responsibility: '来料质量控制' },
-  { role: '采购工程师', user_id: null, department: '', responsibility: '零部件采购' },
-  { role: '项目管理员', user_id: null, department: '', responsibility: '项目文档及进度跟踪' },
-])
+const teamTable = reactive<TeamMemberRow[]>([])
+
+function createEmptySlot(slotId: number): TeamSlot {
+  return { slot_id: slotId, user_id: null, full_name: '', department: '' }
+}
+
+function createTeamRow(role: string, headcount: number, responsibility: string, seq: number): TeamMemberRow {
+  const slots: TeamSlot[] = []
+  for (let i = 1; i <= headcount; i++) {
+    slots.push(createEmptySlot(i))
+  }
+  return {
+    role,
+    headcount,
+    slots,
+    user_id: headcount === 1 ? null : null,
+    full_name: '',
+    department: '',
+    responsibility,
+    superior_id: null,
+    seq,
+    _departmentManual: false,
+    _departmentFailed: false,
+  }
+}
 
 // ═══════════════════════════════════════════════
 // 计算属性
@@ -1130,12 +1451,19 @@ const teamTable = reactive<TeamMemberRow[]>([
 const systemConfig = ref<Record<string, any>>({})
 
 const protoUnitCostFromConfig = computed(() => {
-  const raw = systemConfig.value.proto_unit_cost
+  const raw = systemConfig.value.capacity_unit_cost_map
   if (raw) {
-    try { return JSON.parse(raw) as Record<string, number> } catch {}
+    try { return JSON.parse(raw) as Record<string, { btu: number; cost: number }> } catch {}
   }
   // fallback
-  return { '7K': 0.075, '9K': 0.095, '12K': 0.105, '18K': 0.142, '24K': 0.178 }
+  return {
+    '07K': { btu: 7000, cost: 0.075 },
+    '09K': { btu: 9000, cost: 0.095 },
+    '12K': { btu: 12000, cost: 0.105 },
+    '18K': { btu: 18000, cost: 0.142 },
+    '22K': { btu: 22000, cost: 0.178 },
+    '24K': { btu: 24000, cost: 0.178 },
+  }
 })
 
 // 样机单套费用 - 按冷量段查表 (万元)
@@ -1143,11 +1471,50 @@ const prototypeUnitCost = computed(() => {
   const cr = projectForm.capacity_range
   if (!cr) return 0
   const map = protoUnitCostFromConfig.value
-  // Try to match any key contained in capacity_range
+  const upper = cr.toUpperCase()
+  // Try to match by key
   for (const [key, val] of Object.entries(map)) {
-    if (cr.toUpperCase().includes(key.toUpperCase())) return Number(val)
+    if (upper.includes(key.toUpperCase())) return Number((val as any).cost || val)
   }
   return 0.1 // default
+})
+
+// 项目周期月数 (用于人月计算)
+const projectDurationMonths = computed(() => {
+  const s = projectForm.start_date
+  const e = projectForm.target_end_date
+  if (!s || !e) return 0
+  try {
+    const start = new Date(s)
+    const end = new Date(e)
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
+    const diffMs = end.getTime() - start.getTime()
+    if (diffMs < 0) return 0
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+    return Math.floor(days / 30)
+  } catch { return 0 }
+})
+
+// 试制数量 — 按项目等级查表
+const trialQty = computed(() => {
+  const dc = projectForm.dev_category
+  if (!dc) return 5
+  const raw = systemConfig.value.trial_qty_per_class
+  const map: Record<string, number> = (() => {
+    if (raw) { try { return JSON.parse(raw) } catch {} }
+    return { 'T': 5, 'A': 3, 'B': 2, 'C': 1 }
+  })()
+  return map[dc] ?? map['C'] ?? 1
+})
+
+// 间接成本 — 管理员配置
+const indirectCost = computed(() => {
+  const raw = systemConfig.value.indirect_cost
+  if (raw) {
+    const n = Number(raw)
+    if (!isNaN(n)) return n
+  }
+  return 5000
 })
 
 // 制造费用+人工 - 按冷量
@@ -1190,14 +1557,19 @@ const protoCostTotal = computed(() =>
   protoCostTable.reduce((sum, r) => sum + (r.qty || 0) * (r.unit_cost || 0), 0)
 )
 
-// 人工费用合计
+// 人工费用合计 (使用项目周期月数)
 const laborCostTotal = computed(() =>
-  laborCostTable.reduce((sum, r) => sum + (r.people_count || 0) * (r.monthly_salary || 0) * (r.months || 0) * ((r.occupancy_rate || 100) / 100), 0)
+  laborCostTable.reduce((sum, r) => sum + (r.people_count || 0) * (r.monthly_salary || 0) * projectDurationMonths.value * ((r.occupancy_rate || 100) / 100), 0)
 )
 
 // 测试费用合计
 const testCostTotal = computed(() =>
   testCostTable.reduce((sum, r) => sum + (r.days || 0) * (r.unit_price || 0), 0)
+)
+
+// 认证费用合计
+const certCostTotal = computed(() =>
+  certCostTable.reduce((sum, r) => sum + (Number(r.cost_wan) || 0), 0)
 )
 
 const certCost = computed(() => {
@@ -1222,18 +1594,14 @@ function refreshDevCostRemarks() {
   // [0] 工装及模具费用
   const moldModules = moldCostTable.filter(r => r.total > 0)
   if (moldModules.length > 0) {
-    devCostTable[0].remark = '模具：' + moldModules.map(r => `${r.category}${r.qty}套${r.total.toFixed(1)}W`).join(' / ')
+    devCostTable[0].remark = '模具：' + moldModules.map(r => `${r.name}${r.qty}套${r.total.toFixed(1)}W`).join(' / ')
   } else {
     devCostTable[0].remark = ''
   }
   // [1] 认证费用
-  const cert = (projectForm.cert_requirements || '').toUpperCase()
-  const cost = certCost.value
-  if (cert && cost > 0) {
-    const certParts: string[] = []
-    if (cert.includes('UL')) certParts.push(`UL ${cost}W`)
-    else if (cert.includes('CE')) certParts.push(`CE ${cost}W`)
-    else certParts.push(`${projectForm.cert_requirements} ${cost}W`)
+  const certCostVal = certCostTotal.value
+  if (certCostVal > 0) {
+    const certParts = certCostTable.map(r => `${r.cert_name} ${r.cost_wan}W`)
     devCostTable[1].remark = certParts.join(' + ')
   } else {
     devCostTable[1].remark = ''
@@ -1280,7 +1648,8 @@ function refreshDevCostRemarks() {
 }
 const devCostGrandTotal = computed(() => {
   const sumFirst7 = devCostTable.slice(0, 7).reduce((s, r) => s + (Number(r.budget) || 0), 0)
-  return sumFirst7
+  // 总预算 = 前7项 + 认证费用合计 + 间接成本
+  return sumFirst7 + certCostTotal.value + indirectCost.value / 10000
 })
 
 // BOM成本占比
@@ -1359,33 +1728,94 @@ watch(autoProjectDuration, (val) => {
   projectForm.project_duration = val
 }, { immediate: true })
 
-// capacity_range → 核心性能表制冷量行
+// capacity_range → 核心性能表制冷量行 (自动计算 BTU→W)
 watch(() => projectForm.capacity_range, (val) => {
-  if (val && corePerfTable.length > 0) {
-    corePerfTable[0].target_value = val
+  if (corePerfTable.length > 0) {
+    corePerfTable[0].target_value = val || ''
+    // 自动计算制冷量基准值: 解析BTU ÷ 3.4128 取整
+    if (val && corePerfTable[0].source === 'auto') {
+      const btuMatch = (val || '').match(/(\d+)\s*K?(?:\s*BTU)?/i)
+      if (btuMatch) {
+        let btu = parseInt(btuMatch[1])
+        // "07K"/"12K" format: K means ×1000
+        if (/(\d+)\s*K/i.test(val)) btu *= 1000
+        const watts = Math.round(btu / 3.4128)
+        corePerfTable[0].baseline = watts + 'W'
+      } else {
+        corePerfTable[0].baseline = ''
+      }
+    }
   }
 })
 
 // refrigerant → 核心性能表制冷剂行
 watch(() => projectForm.refrigerant, (val) => {
-  if (val && corePerfTable.length > 8) {
-    corePerfTable[8].target_value = val
+  if (corePerfTable.length > 8) {
+    corePerfTable[8].target_value = val || ''
+    if (corePerfTable[8].source === 'auto') {
+      corePerfTable[8].baseline = val || ''
+    }
   }
 })
 
-// voltage_freq → 核心性能表电压行
+// voltage_freq → 核心性能表电压行 (同步基准值)
 watch(() => projectForm.voltage_freq, (val) => {
-  if (val && corePerfTable.length > 7) {
-    corePerfTable[7].target_value = val
+  if (corePerfTable.length > 7) {
+    corePerfTable[7].target_value = val || ''
+    if (corePerfTable[7].source === 'auto') {
+      corePerfTable[7].baseline = val || ''
+    }
   }
 })
 
-// budget/fob_price联动 → 认证费用联动 (certCost)
-watch(certCost, (val) => {
+// 认证费用联动 (certCostTotal → devCostTable[1])
+watch(certCostTotal, (val) => {
   if (devCostTable.length > 1 && devCostTable[1].linked) {
     devCostTable[1].budget = val
   }
 })
+
+// safetyComplianceTable 变化 → 自动生成认证费用表
+watch(
+  () => safetyComplianceTable.map(r => r.standard),
+  (standards) => {
+    if (standards.length === 0) {
+      certCostTable.length = 0
+      return
+    }
+    const costMap: Record<string, number> = (() => {
+      const raw = systemConfig.value.cert_cost
+      if (raw) { try { return JSON.parse(raw) } catch {} }
+      return { 'UL': 20, 'CE': 3, 'CB': 4, 'CCC': 5, 'TUV': 15, 'ETL': 12, 'CSA': 10, 'SAA': 6, 'PSE': 8, 'KC': 7, 'BSMI': 5, 'NOM': 4, 'INMETRO': 6, 'SASO': 5, 'ISO': 3, 'IEC': 3, 'EN': 3, 'default': 3 }
+    })()
+    const defaultCost = costMap['default'] || 3
+    const seen = new Set<string>()
+    const newRows: CertCostRow[] = []
+    for (const std of standards) {
+      // Extract cert body name (e.g., "IEC 60335-2-40" → "IEC", "CE EMC Directive" → "CE")
+      const upper = std.toUpperCase()
+      const certNames = upper.split(/[/,;，；、\s]+/).filter(t => /^[A-Z]{2,8}$/.test(t))
+      for (const cn of certNames) {
+        if (!seen.has(cn)) {
+          seen.add(cn)
+          const cost = costMap[cn] ?? defaultCost
+          newRows.push({ cert_name: cn, cert_body: cn, cost_wan: cost, remark: '' })
+        }
+      }
+    }
+    // If no cert names extracted, use the whole standard as name
+    if (newRows.length === 0 && standards.length > 0) {
+      const first = standards[0].toUpperCase().split(/[/,;，；、\s]+/).filter(t => /^[A-Z]{2,8}$/.test(t))[0] || standards[0]
+      if (!seen.has(first)) {
+        seen.add(first)
+        newRows.push({ cert_name: first, cert_body: first, cost_wan: defaultCost, remark: '' })
+      }
+    }
+    certCostTable.length = 0
+    newRows.forEach(r => certCostTable.push(r))
+  },
+  { deep: true }
+)
 
 // 样板单套费用联动 → 更新protoCostTable的unit_cost
 watch(prototypeUnitCost, (val) => {
@@ -1470,11 +1900,69 @@ watch(activeTab, () => {
   validateCurrentTab()
 })
 
+// ⭐ 项目来源选"产品年度规划"时联动清空/显示年度规划选择器
+watch(() => projectForm.project_origin, (val) => {
+  if (val !== '产品年度规划') {
+    projectForm.annual_planning_id = null
+  }
+})
+
+// ⭐ 新增：dev_category → selectedProjectType 同步（Tab1↔Tab5）
+watch(() => projectForm.dev_category, (val) => {
+  if (val && val !== selectedProjectType.value) {
+    selectedProjectType.value = val
+    loadTeamRoleTemplate(val)
+  }
+})
+
+// ⭐ 新增：项目负责人双向同步（Tab1↔Tab5）
+// teamTable中role为'项目经理'或'项目负责人'的行的user_id → projectForm.leader_id
+watch(
+  () => {
+    const leaderRow = teamTable.find(r => r.role === '项目经理' || r.role === '项目负责人')
+    if (!leaderRow) return null
+    if (leaderRow.headcount <= 1) return leaderRow.user_id
+    return leaderRow.slots.length > 0 ? leaderRow.slots[0].user_id : null
+  },
+  (newLeaderId) => {
+    if (newLeaderId != null && projectForm.leader_id !== newLeaderId) {
+      projectForm.leader_id = newLeaderId
+    }
+  }
+)
+
+// projectForm.leader_id变化 → 同步回teamTable
+watch(() => projectForm.leader_id, (newId) => {
+  if (newId == null) return
+  const leaderRow = teamTable.find(r => r.role === '项目经理' || r.role === '项目负责人')
+  if (!leaderRow) return
+  // Only sync if leader row user_id doesn't already match
+  const currentLeaderId = leaderRow.headcount <= 1 ? leaderRow.user_id : (leaderRow.slots.length > 0 ? leaderRow.slots[0].user_id : null)
+  if (currentLeaderId !== newId) {
+    if (leaderRow.headcount <= 1) {
+      leaderRow.user_id = newId
+      // Trigger user change effects
+      const user = allTeamUsers.value.find(u => u.id === newId)
+      if (user) {
+        leaderRow.full_name = user.full_name || user.username
+        leaderRow.department = user.department || ''
+      }
+    } else if (leaderRow.slots.length > 0) {
+      leaderRow.slots[0].user_id = newId
+      const user = allTeamUsers.value.find(u => u.id === newId)
+      if (user) {
+        leaderRow.slots[0].full_name = user.full_name || user.username
+        leaderRow.slots[0].department = user.department || ''
+      }
+    }
+  }
+})
+
 // ═══════════════════════════════════════════════
 // Tab 校验函数
 // ═══════════════════════════════════════════════
 
-function validateOverview(): void {
+function validateOverviewMarket(): void {
   const errs: string[] = []
   const f = projectForm
   if (!f.program_id) errs.push('所属项目群')
@@ -1486,18 +1974,12 @@ function validateOverview(): void {
   if (!f.voltage_freq) errs.push('电压频率')
   if (!f.start_date) errs.push('立项日期')
   if (!f.target_end_date) errs.push('计划完成日期')
-  tabStatus.overview.valid = errs.length === 0
-  tabStatus.overview.errors = errs
-}
-
-function validateMarket(): void {
-  const errs: string[] = []
-  const hasContent = customerReqTable.some(row =>
+  const hasCustomerReq = customerReqTable.some(row =>
     row.category || row.description || row.source || row.tech_impact || row.market_impact
   )
-  if (!hasContent) errs.push('客户关键需求至少填写一行')
-  tabStatus.market.valid = errs.length === 0
-  tabStatus.market.errors = errs
+  if (!hasCustomerReq) errs.push('客户关键需求至少填写一行')
+  tabStatus.overview_market.valid = errs.length === 0
+  tabStatus.overview_market.errors = errs
 }
 
 function validateTechnical(): void {
@@ -1505,6 +1987,8 @@ function validateTechnical(): void {
   const hasTargetValue = corePerfTable.some(row => row.target_value)
   if (!hasTargetValue) errs.push('核心性能参数至少一行填写目标值')
   if (safetyComplianceTable.length === 0) errs.push('安全合规标准未加载，请先选择目标市场')
+  const hasMaterial = materialComponentTable.some(row => row.name || row.spec)
+  if (!hasMaterial) errs.push('物料部件清单至少填写一行')
   tabStatus.technical.valid = errs.length === 0
   tabStatus.technical.errors = errs
 }
@@ -1521,7 +2005,10 @@ function validateCost(): void {
 
 function validateTeam(): void {
   const errs: string[] = []
-  const hasUser = teamTable.some(row => row.user_id != null)
+  const hasUser = teamTable.some(row => {
+    if (row.headcount <= 1) return row.user_id != null
+    return row.slots.some(s => s.user_id != null)
+  })
   if (!hasUser) errs.push('团队至少选择一名成员')
   if (teamTable.length === 0) errs.push('团队表格不能为空')
   tabStatus.team.valid = errs.length === 0
@@ -1529,8 +2016,7 @@ function validateTeam(): void {
 }
 
 function validateAllTabs(): boolean {
-  validateOverview()
-  validateMarket()
+  validateOverviewMarket()
   validateTechnical()
   validateCost()
   validateTeam()
@@ -1540,8 +2026,7 @@ function validateAllTabs(): boolean {
 function validateCurrentTab(): void {
   const tab = activeTab.value
   const validators: Record<string, () => void> = {
-    overview: validateOverview,
-    market: validateMarket,
+    overview_market: validateOverviewMarket,
     technical: validateTechnical,
     cost: validateCost,
     team: validateTeam,
@@ -1595,16 +2080,153 @@ function progressColor(progress: number): string {
 }
 
 // ═══════════════════════════════════════════════
-// 团队按角色过滤
+// Tab 5 计算属性
+// ═══════════════════════════════════════════════
+
+// 团队摘要
+const teamSummary = computed(() => {
+  const totalRoles = teamTable.length
+  let totalSlots = 0
+  let filled = 0
+  const roleSummaries: { role: string; headcount: number; filled: number }[] = []
+  
+  for (const row of teamTable) {
+    const hc = row.headcount || 1
+    totalSlots += hc
+    let rowFilled = 0
+    if (hc <= 1) {
+      if (row.user_id != null) rowFilled = 1
+    } else {
+      rowFilled = row.slots.filter(s => s.user_id != null).length
+    }
+    filled += rowFilled
+    roleSummaries.push({ role: row.role, headcount: hc, filled: rowFilled })
+  }
+  return {
+    totalRoles,
+    totalSlots,
+    filled,
+    unfilled: totalSlots - filled,
+    roleSummaries,
+  }
+})
+
+// 审批人候选：所有已选团队成员ID
+const teamMemberIds = computed(() => {
+  const ids: number[] = []
+  for (const row of teamTable) {
+    if (row.headcount <= 1) {
+      if (row.user_id != null) ids.push(row.user_id)
+    } else {
+      for (const slot of row.slots) {
+        if (slot.user_id != null) ids.push(slot.user_id)
+      }
+    }
+  }
+  return [...new Set(ids)]
+})
+
+// ═══════════════════════════════════════════════
+// 团队按角色过滤（多岗位映射）
 // ═══════════════════════════════════════════════
 
 function getUsersByRole(role: string): UserInfo[] {
   if (!role) return allTeamUsers.value
+  // 先查项目角色→系统岗位映射表
+  const mapping = roleMappings.value.find(m => m.project_role === role)
+  if (mapping && mapping.sys_roles.length > 0) {
+    // 多岗位：用户role字段或job_title字段包含任一映射值即可
+    return allTeamUsers.value.filter(u => {
+      const userRole = u.role || ''
+      const userTitle = u.job_title || ''
+      return mapping.sys_roles.some(sr =>
+        userRole === sr || userTitle.includes(sr) || userRole.includes(sr)
+      )
+    })
+  }
+  // fallback: 沿用旧的 sys_role 映射
   const roleMap: Record<string, string> = {}
   teamRoles.value.forEach(r => { roleMap[r.value] = r.sys_role })
   const sysRole = roleMap[role]
   if (!sysRole) return allTeamUsers.value
   return allTeamUsers.value.filter(u => u.role === sysRole)
+}
+
+// 用户选项标签（含负载badge文本）
+function getUserOptionLabel(u: UserInfo): string {
+  const wl = getWorkloadInfo(u.id)
+  if (wl) {
+    return `${u.full_name || u.username} · ${wl.project_count}个项目 · 负载${wl.workload_pct}%`
+  }
+  return u.full_name || u.username
+}
+
+// 获取负载badge信息（颜色 + 文本）
+function getWorkloadBadge(userId: number): { text: string; color: string } | null {
+  const wl = getWorkloadInfo(userId)
+  if (!wl) return null
+  const pct = wl.workload_pct
+  let color = '#67c23a' // green: <50%
+  if (pct >= 80) color = '#f56c6c'      // red: >80%
+  else if (pct >= 50) color = '#e6a23c' // yellow: 50-80%
+  return { text: `负载${pct}%`, color }
+}
+
+function getWorkloadInfo(userId: number): UserWorkload | undefined {
+  return userWorkloads.value.find(w => w.user_id === userId)
+}
+
+// 槽位填充状态
+function getSlotFillStatus(row: TeamMemberRow): 'full' | 'partial' | 'empty' {
+  if (row.headcount <= 1) {
+    return row.user_id != null ? 'full' : 'empty'
+  }
+  const filled = row.slots.filter(s => s.user_id != null).length
+  if (filled === row.headcount) return 'full'
+  if (filled > 0) return 'partial'
+  return 'empty'
+}
+
+// 槽位摘要文本
+function getSlotSummary(row: TeamMemberRow): string {
+  if (row.headcount <= 1) {
+    return row.full_name || '未分配'
+  }
+  const filled = row.slots.filter(s => s.user_id != null).length
+  const names = row.slots.filter(s => s.full_name).map(s => s.full_name).join(', ')
+  return names || `${filled}/${row.headcount} 已分配`
+}
+
+// 上级选项：从teamTable中已选人员过滤（排除自己）
+function getSuperiorOptions(excludeIndex: number): { id: number; label: string }[] {
+  const options: { id: number; label: string }[] = []
+  const excludeIds = new Set<number>()
+  
+  // 收集当前行的所有user_id，排除自己
+  const row = teamTable[excludeIndex]
+  if (row) {
+    if (row.headcount <= 1) {
+      if (row.user_id != null) excludeIds.add(row.user_id)
+    } else {
+      row.slots.forEach(s => { if (s.user_id != null) excludeIds.add(s.user_id) })
+    }
+  }
+
+  for (let i = 0; i < teamTable.length; i++) {
+    const r = teamTable[i]
+    if (r.headcount <= 1) {
+      if (r.user_id != null && !excludeIds.has(r.user_id)) {
+        options.push({ id: r.user_id, label: r.full_name || `成员#${r.user_id}` })
+      }
+    } else {
+      for (const slot of r.slots) {
+        if (slot.user_id != null && !excludeIds.has(slot.user_id)) {
+          options.push({ id: slot.user_id, label: slot.full_name || `成员#${slot.user_id}` })
+        }
+      }
+    }
+  }
+  return options
 }
 
 // ═══════════════════════════════════════════════
@@ -1646,6 +2268,7 @@ function selectPlan(item: PlanningItem) {
   selectedPlanId.value = item.id
   filteredProjects.value = item.projects || []
   projectForm.annual_planning_ref = item.name
+  projectForm.annual_planning_id = item.id
 }
 
 // ═══════════════════════════════════════════════
@@ -1673,7 +2296,7 @@ function openDrawer(draft?: ProjectItem | null) {
     tabStatus[key].valid = false
     tabStatus[key].errors = []
   })
-  activeTab.value = 'overview'
+  activeTab.value = 'overview_market'
   drawerVisible.value = true
 }
 
@@ -1686,12 +2309,14 @@ function resetForm() {
     start_date: null, target_end_date: null,
     ip_ownership: '', project_duration: '',
     dev_category: '', project_origin: '', other_requirements: '',
+    annual_planning_id: null,
     background_basis: '', overall_goal: '', tech_goal: '', cost_goal: '',
     sales_goal: '', cert_goal: '', schedule_goal: '', patent_goal: '', other_goals: '',
     sample_qty: undefined,
     sample_required_date: null,
     deliverables: '',
     main_capacity: '', target_price: '', energy_efficiency_req: '', cert_requirements: '',
+    market_demand_overview: '', competitor_analysis: '', customer_special_req: '',
     fob_price: undefined,
     bom_cost_target: undefined,
     annual_sales_forecast: undefined,
@@ -1702,15 +2327,31 @@ function resetForm() {
   Object.assign(projectForm, empty)
   // Reset cost tables
   devCostTable.forEach(r => { r.budget = 0; r.remark = '' })
-  moldCostTable.forEach(r => { r.qty = 0 })
+  moldCostTable.length = 0
+  moldCostTable.push(
+    { name: '内机钣金模具', qty: 0, total: 0, remark: '' },
+    { name: '内机注塑模具', qty: 0, total: 0, remark: '' },
+    { name: '外机钣金模具', qty: 0, total: 0, remark: '' },
+    { name: '外机注塑模具', qty: 0, total: 0, remark: '' },
+    { name: '翅片模具', qty: 0, total: 0, remark: '' },
+    { name: '工装夹具', qty: 0, total: 0, remark: '' },
+  )
   protoCostTable.forEach(r => { r.qty = r.stage === 'P2' ? 20 : r.stage === 'P1-1' || r.stage === 'P1-2' ? 10 : 5 })
+  certCostTable.length = 0
   laborCostTable.forEach(r => { r.people_count = 1; r.monthly_salary = 1.5; r.months = 6; r.occupancy_rate = 100 })
   testCostTable.forEach(r => { r.days = 10; r.unit_price = 0.11 })
+  // Reset Tab3 tables
+  materialComponentTable.length = 0
+  materialComponentTable.push({ type: '物料', name: '', spec: '', qty: 1, unit: '个', usage: '', supplier: '', delivery_cycle: '', unit_price: 0, candidate_vendors: '', remark: '' })
+  techStep.value = 0
   // Reset tab validation status
   Object.keys(tabStatus).forEach(key => {
     tabStatus[key].valid = false
     tabStatus[key].errors = []
   })
+  // Reset team table
+  teamTable.length = 0
+  selectedProjectType.value = ''
 }
 
 function populateFormFromDraft(draft: ProjectItem) {
@@ -1728,6 +2369,7 @@ function populateFormFromDraft(draft: ProjectItem) {
   projectForm.ip_ownership = draft.ip_ownership || ''
   projectForm.dev_category = draft.dev_category || ''
   projectForm.project_origin = draft.project_origin || ''
+  projectForm.annual_planning_id = (draft as any).annual_planning_id ?? null
   projectForm.other_requirements = draft.other_requirements || ''
   projectForm.background_basis = draft.background_basis || draft.background_basis_raw || ''
   projectForm.overall_goal = draft.overall_goal || ''
@@ -1745,6 +2387,9 @@ function populateFormFromDraft(draft: ProjectItem) {
   projectForm.target_price = draft.target_price || ''
   projectForm.energy_efficiency_req = draft.energy_efficiency_req || ''
   projectForm.cert_requirements = draft.cert_requirements || ''
+  projectForm.market_demand_overview = (draft as any).market_demand_overview || ''
+  projectForm.competitor_analysis = (draft as any).competitor_analysis || ''
+  projectForm.customer_special_req = (draft as any).customer_special_req || ''
   projectForm.fob_price = draft.fob_price ?? undefined
   projectForm.bom_cost_target = draft.bom_cost_target ?? undefined
   projectForm.annual_sales_forecast = draft.annual_sales_forecast ?? undefined
@@ -1770,8 +2415,14 @@ function populateFormFromDraft(draft: ProjectItem) {
     try {
       const parsed = JSON.parse(draft.mold_costs)
       if (Array.isArray(parsed)) {
-        parsed.forEach((item: any, i: number) => {
-          if (moldCostTable[i]) moldCostTable[i].qty = item.qty ?? 0
+        moldCostTable.length = 0
+        parsed.forEach((item: any) => {
+          moldCostTable.push({
+            name: item.name || item.category || '',
+            qty: item.qty ?? 0,
+            total: item.total ?? 0,
+            remark: item.remark || '',
+          })
         })
       }
     } catch { /* ignore */ }
@@ -1791,7 +2442,37 @@ function populateFormFromDraft(draft: ProjectItem) {
       const parsed = JSON.parse(draft.team_members)
       if (Array.isArray(parsed)) {
         teamTable.length = 0
-        parsed.forEach((item: TeamMemberRow) => teamTable.push({ ...item }))
+        parsed.forEach((item: any) => {
+          const row = createTeamRow(
+            item.role || '',
+            item.headcount || 1,
+            item.responsibility || '',
+            item.seq || teamTable.length + 1
+          )
+          // Restore single-user fields
+          if (item.headcount <= 1 || !item.slots) {
+            row.user_id = item.user_id ?? null
+            row.full_name = item.full_name || ''
+            row.department = item.department || ''
+            if (row.slots.length > 0) {
+              row.slots[0].user_id = item.user_id ?? null
+              row.slots[0].full_name = item.full_name || ''
+              row.slots[0].department = item.department || ''
+            }
+          }
+          // Restore slots
+          if (item.slots && Array.isArray(item.slots)) {
+            item.slots.forEach((s: any, si: number) => {
+              if (row.slots[si]) {
+                row.slots[si].user_id = s.user_id ?? null
+                row.slots[si].full_name = s.full_name || ''
+                row.slots[si].department = s.department || ''
+              }
+            })
+          }
+          row.superior_id = item.superior_id ?? null
+          teamTable.push(row)
+        })
       }
     } catch { /* ignore */ }
   }
@@ -1805,6 +2486,23 @@ function populateFormFromDraft(draft: ProjectItem) {
             testCostTable[i].days = item.days ?? testCostTable[i].days
             testCostTable[i].unit_price = item.unit_price ?? testCostTable[i].unit_price
           }
+        })
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复认证费用
+  if (draft.cert_costs) {
+    try {
+      const parsed = JSON.parse(draft.cert_costs)
+      if (Array.isArray(parsed)) {
+        certCostTable.length = 0
+        parsed.forEach((item: any) => {
+          certCostTable.push({
+            cert_name: item.cert_name || '',
+            cert_body: item.cert_body || '',
+            cost_wan: item.cost_wan ?? 0,
+            remark: item.remark || '',
+          })
         })
       }
     } catch { /* ignore */ }
@@ -1844,9 +2542,27 @@ function populateFormFromDraft(draft: ProjectItem) {
         corePerfTable.length = 0
         parsed.forEach((item: any) => corePerfTable.push({
           param_name: item.param_name || '',
+          baseline: item.baseline || '',
           target_value: item.target_value || '',
           aux_competitor: item.aux_competitor || '',
-          tcl_competitor: item.tcl_competitor || ''
+          tcl_competitor: item.tcl_competitor || '',
+          source: item.source || 'manual',
+        }))
+      }
+    } catch { /* ignore */ }
+  }
+  // 恢复物料与部件清单
+  if (draft.material_components) {
+    try {
+      const parsed = JSON.parse(draft.material_components)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        materialComponentTable.length = 0
+        parsed.forEach((item: any) => materialComponentTable.push({
+          type: item.type || '物料', name: item.name || '', spec: item.spec || '',
+          qty: item.qty ?? 1, unit: item.unit || '个', usage: item.usage || '',
+          supplier: item.supplier || '', delivery_cycle: item.delivery_cycle || '',
+          unit_price: item.unit_price ?? 0, candidate_vendors: item.candidate_vendors || '',
+          remark: item.remark || '',
         }))
       }
     } catch { /* ignore */ }
@@ -1910,6 +2626,7 @@ function buildProjectPayload(): Record<string, any> {
     project_duration: autoProjectDuration.value !== '请选择起止日期' ? autoProjectDuration.value : undefined,
     dev_category: f.dev_category || undefined,
     project_origin: f.project_origin || undefined,
+    annual_planning_id: f.annual_planning_id ?? undefined,
     other_requirements: f.other_requirements || undefined,
     background_basis: f.background_basis || undefined,
     overall_goal: f.overall_goal || undefined,
@@ -1927,6 +2644,9 @@ function buildProjectPayload(): Record<string, any> {
     target_price: f.target_price || undefined,
     energy_efficiency_req: f.energy_efficiency_req || undefined,
     cert_requirements: f.cert_requirements || undefined,
+    market_demand_overview: f.market_demand_overview || undefined,
+    competitor_analysis: f.competitor_analysis || undefined,
+    customer_special_req: f.customer_special_req || undefined,
     fob_price: f.fob_price ?? undefined,
     bom_cost_target: f.bom_cost_target ?? undefined,
     annual_sales_forecast: f.annual_sales_forecast ?? undefined,
@@ -1937,15 +2657,34 @@ function buildProjectPayload(): Record<string, any> {
     customer_requirements: JSON.stringify(customerReqTable),
     core_performance: JSON.stringify(corePerfTable),
     safety_compliance: JSON.stringify(safetyComplianceTable),
+    material_components: JSON.stringify(materialComponentTable.map(r => ({
+      type: r.type, name: r.name, spec: r.spec, qty: r.qty, unit: r.unit,
+      usage: r.usage, supplier: r.supplier, delivery_cycle: r.delivery_cycle,
+      unit_price: r.unit_price, candidate_vendors: r.candidate_vendors, remark: r.remark
+    }))),
     accessory_config: JSON.stringify(accessoryConfigTable.map(({ name, selection }) => ({ name, selection }))),
     feature_config: JSON.stringify(featureConfigTable.map(({ name, selection }) => ({ name, selection }))),
     dev_cost_items: JSON.stringify(devCostTable.map(r => ({ item: r.item, budget: r.budget, remark: r.remark, linked: r.linked }))),
-    mold_costs: JSON.stringify(moldCostTable.map(r => ({ unit_type: r.unit_type, category: r.category, qty: r.qty, total: r.total }))),
+    mold_costs: JSON.stringify(moldCostTable.map(r => ({ name: r.name, qty: r.qty, total: r.total, remark: r.remark }))),
     prototype_costs_detail: JSON.stringify(protoCostTable.map(r => ({ stage: r.stage, qty: r.qty, unit_cost: r.unit_cost }))),
     labor_costs: JSON.stringify(laborCostTable.map(r => ({ module: r.module, people_count: r.people_count, monthly_salary: r.monthly_salary, months: r.months, occupancy_rate: r.occupancy_rate }))),
     test_costs: JSON.stringify(testCostTable.map(r => ({ stage: r.stage, days: r.days, unit_price: r.unit_price }))),
-    team_members: JSON.stringify(teamTable.filter(t => t.user_id != null).map(t => ({
-      role: t.role, user_id: t.user_id, department: t.department, responsibility: t.responsibility
+    cert_costs: JSON.stringify(certCostTable.map(r => ({ cert_name: r.cert_name, cert_body: r.cert_body, cost_wan: r.cost_wan, remark: r.remark }))),
+    team_members: JSON.stringify(teamTable.map(t => ({
+      role: t.role,
+      headcount: t.headcount || 1,
+      user_id: t.headcount <= 1 ? t.user_id : null,
+      full_name: t.full_name || '',
+      department: t.department || '',
+      responsibility: t.responsibility || '',
+      superior_id: t.superior_id,
+      seq: t.seq || 0,
+      slots: t.slots.map(s => ({
+        slot_id: s.slot_id,
+        user_id: s.user_id,
+        full_name: s.full_name || '',
+        department: s.department || '',
+      })),
     }))),
   }
 }
@@ -1973,7 +2712,7 @@ async function submitProposal() {
   const name = autoProjectName.value
   if (!name || name === '（自动生成：请填写相关字段）') {
     ElMessage.warning('请完善产品类型、目标市场、能力段、制冷剂、能效要求以生成项目名称')
-    activeTab.value = 'overview'
+    activeTab.value = 'overview_market'
     return
   }
 
@@ -1981,7 +2720,7 @@ async function submitProposal() {
   const allValid = validateAllTabs()
   if (!allValid) {
     // 找到第一个不通过的Tab并切换
-    const tabOrder = ['overview', 'market', 'technical', 'cost', 'team']
+    const tabOrder = ['overview_market', 'technical', 'cost', 'team']
     const firstInvalid = tabOrder.find(t => !tabStatus[t].valid)
     if (firstInvalid) {
       activeTab.value = firstInvalid
@@ -2013,18 +2752,29 @@ async function submitProposal() {
 // 表格增删行函数
 // ═══════════════════════════════════════════════
 
+function addMoldRow() {
+  moldCostTable.push({ name: '', qty: 0, total: 0, remark: '' })
+}
+function removeMoldRow(index: number) { moldCostTable.splice(index, 1) }
+
 function addCustomerReqRow() {
   customerReqTable.push({ category: '', description: '', source: '', tech_impact: '', market_impact: '' })
 }
 function removeCustomerReqRow(index: number) { customerReqTable.splice(index, 1) }
 
 function addCorePerfRow() {
-  corePerfTable.push({ param_name: '', target_value: '', aux_competitor: '', tcl_competitor: '' })
+  corePerfTable.push({ param_name: '', baseline: '', target_value: '', aux_competitor: '', tcl_competitor: '', source: 'manual' })
 }
 function removeCorePerfRow(index: number) { corePerfTable.splice(index, 1) }
 
+function addMaterialComponentRow() {
+  materialComponentTable.push({ type: '物料', name: '', spec: '', qty: 1, unit: '个', usage: '', supplier: '', delivery_cycle: '', unit_price: 0, candidate_vendors: '', remark: '' })
+}
+function removeMaterialComponentRow(index: number) { materialComponentTable.splice(index, 1) }
+
 function addTeamRow() {
-  teamTable.push({ role: '', user_id: null, department: '', responsibility: '' })
+  const seq = teamTable.length > 0 ? Math.max(...teamTable.map(r => r.seq || 0)) + 1 : 1
+  teamTable.push(createTeamRow('', 1, '', seq))
 }
 function removeTeamRow(index: number) { teamTable.splice(index, 1) }
 
@@ -2032,15 +2782,88 @@ function onTeamRoleChange(index: number) {
   const row = teamTable[index]
   if (!row) return
   row.user_id = null
+  row.full_name = ''
   row.department = ''
+  row._departmentManual = false
+  row._departmentFailed = false
+  row.slots.forEach(s => { s.user_id = null; s.full_name = ''; s.department = '' })
 }
 
-function onTeamUserChange(index: number) {
+function onHeadcountChange(index: number) {
   const row = teamTable[index]
-  if (!row || row.user_id == null) return
-  const user = allTeamUsers.value.find(u => u.id === row.user_id)
+  if (!row) return
+  const newHc = row.headcount || 1
+  // Adjust slots array
+  while (row.slots.length < newHc) {
+    row.slots.push(createEmptySlot(row.slots.length + 1))
+  }
+  while (row.slots.length > newHc) {
+    row.slots.pop()
+  }
+  // If headcount becomes 1, copy first slot data to row-level fields
+  if (newHc === 1 && row.slots.length > 0) {
+    row.user_id = row.slots[0].user_id
+    row.full_name = row.slots[0].full_name
+    row.department = row.slots[0].department
+  } else {
+    row.user_id = null
+    row.full_name = ''
+  }
+}
+
+function onTeamUserChange(index: number, slotIndex: number = 0) {
+  const row = teamTable[index]
+  if (!row) return
+  
+  if (row.headcount <= 1) {
+    // Direct user assignment
+    const user = allTeamUsers.value.find(u => u.id === row.user_id)
+    if (user) {
+      row.full_name = user.full_name || user.username
+      if (user.department) {
+        row.department = user.department
+        row._departmentFailed = false
+        row._departmentManual = false
+      } else {
+        row.department = ''
+        row._departmentFailed = true
+        row._departmentManual = true // allow manual input
+      }
+    }
+  }
+  // Slot-level changes are handled by onSlotUserChange
+}
+
+function onSlotUserChange(rowIndex: number, slotIndex: number) {
+  const row = teamTable[rowIndex]
+  if (!row || !row.slots[slotIndex]) return
+  const slot = row.slots[slotIndex]
+  const user = allTeamUsers.value.find(u => u.id === slot.user_id)
   if (user) {
-    row.department = user.department || ''
+    slot.full_name = user.full_name || user.username
+    slot.department = user.department || ''
+  }
+  // Sync row-level for headcount=1
+  if (row.headcount === 1 && row.slots.length > 0) {
+    row.user_id = row.slots[0].user_id
+    row.full_name = row.slots[0].full_name
+    row.department = row.slots[0].department
+  }
+  // Update row department from all slots
+  if (row.headcount > 1) {
+    const depts = row.slots.filter(s => s.department).map(s => s.department)
+    row.department = [...new Set(depts)].join('/')
+    row._departmentFailed = depts.length < row.slots.length
+  }
+}
+
+// 项目类型变更 → 加载角色模板
+async function onProjectTypeChange(projectType: string) {
+  selectedProjectType.value = projectType
+  if (projectType) {
+    // 同步到Tab1 dev_category
+    projectForm.dev_category = projectType
+    await loadTeamRoleTemplate(projectType)
   }
 }
 
@@ -2079,9 +2902,11 @@ async function fetchPerfDefaults(market: string, capacity: string) {
     items.forEach((item: any) => {
       corePerfTable.push({
         param_name: item.param_name,
+        baseline: item.baseline || '',
         target_value: item.target_value || '',
         aux_competitor: item.aux_competitor || '',
-        tcl_competitor: item.tcl_competitor || ''
+        tcl_competitor: item.tcl_competitor || '',
+        source: item.source || 'market_config',
       })
     })
   } catch {
@@ -2171,6 +2996,67 @@ async function fetchAllTeamUsers() {
   } catch { /* non-critical */ }
 }
 
+// 新增：获取角色映射表
+async function fetchRoleMappings() {
+  try {
+    const res = await api.get('/api/admin/role-mappings')
+    roleMappings.value = res.data?.items || res.data || []
+  } catch { /* non-critical, fallback to sys_role mapping */ }
+}
+
+// 新增：获取人员负载数据
+async function fetchUserWorkloads() {
+  try {
+    const res = await api.get('/api/pm/user-workloads')
+    userWorkloads.value = res.data?.items || res.data || []
+  } catch { /* non-critical */ }
+}
+
+// 新增：加载角色模板
+async function loadTeamRoleTemplate(projectType: string) {
+  try {
+    const res = await api.get('/api/pm/team-role-template', { params: { project_type: projectType } })
+    const items: TeamRoleTemplateItem[] = res.data?.items || res.data || []
+    if (items.length > 0) {
+      teamTable.length = 0
+      items
+        .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+        .forEach(item => {
+          teamTable.push(createTeamRow(
+            item.role_name,
+            item.headcount || 1,
+            item.responsibility_default || '',
+            item.seq || 0
+          ))
+        })
+    }
+  } catch {
+    // API not available, use default fallback
+    if (teamTable.length === 0) {
+      loadDefaultTeamTemplate()
+    }
+  }
+}
+
+// 默认角色模板（API不可用时的fallback）
+function loadDefaultTeamTemplate() {
+  const defaults: TeamRoleTemplateItem[] = [
+    { role_name: '项目经理', headcount: 1, responsibility_default: '全面负责项目管理', seq: 1 },
+    { role_name: '系统工程师', headcount: 2, responsibility_default: '系统方案设计与性能匹配', seq: 2 },
+    { role_name: '结构工程师', headcount: 3, responsibility_default: '结构设计与外观设计', seq: 3 },
+    { role_name: '电控工程师', headcount: 2, responsibility_default: '硬件电路与软件控制', seq: 4 },
+    { role_name: '电气工程师', headcount: 2, responsibility_default: '电气系统与线束设计', seq: 5 },
+    { role_name: '工艺工程师', headcount: 1, responsibility_default: '生产工艺规划', seq: 6 },
+    { role_name: 'IQC工程师', headcount: 1, responsibility_default: '来料质量控制', seq: 7 },
+    { role_name: '采购工程师', headcount: 1, responsibility_default: '零部件采购', seq: 8 },
+    { role_name: '项目管理员', headcount: 1, responsibility_default: '项目文档及进度跟踪', seq: 9 },
+  ]
+  teamTable.length = 0
+  defaults.forEach(item => {
+    teamTable.push(createTeamRow(item.role_name, item.headcount, item.responsibility_default, item.seq))
+  })
+}
+
 async function fetchPrograms() {
   try {
     const res = await api.get('/pm/programs')
@@ -2204,9 +3090,18 @@ onMounted(async () => {
     await fetchKbOptions()
     await fetchTeamRoles()
     await fetchAllTeamUsers()
+    await fetchRoleMappings()
+    await fetchUserWorkloads()
     await fetchPrograms()
     await fetchExchangeRate()
     await fetchSystemConfig()
+    // 加载默认角色模板（如果没有项目类型则用默认值）
+    if (projectForm.dev_category) {
+      selectedProjectType.value = projectForm.dev_category
+      await loadTeamRoleTemplate(projectForm.dev_category)
+    } else if (teamTable.length === 0) {
+      loadDefaultTeamTemplate()
+    }
     // 如果已有默认值（如从草稿加载），自动加载相关联数据
     if (projectForm.target_market) {
       fetchCertStandards(projectForm.target_market)
@@ -2525,6 +3420,79 @@ onMounted(async () => {
 .team-hint {
   font-size: 12px;
   color: #909399;
+}
+
+/* 团队摘要 */
+.team-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+}
+
+.team-summary-roles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.summary-role-item {
+  font-size: 12px;
+  color: #606266;
+  white-space: nowrap;
+}
+
+/* 用户选项负载badge */
+.user-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.workload-badge {
+  font-size: 11px;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* 槽位编辑器 */
+.slot-editor {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.slot-row:last-child {
+  border-bottom: none;
+}
+
+.slot-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #606266;
+  min-width: 30px;
+}
+
+.slot-dept {
+  font-size: 11px;
+  color: #909399;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawer-footer {

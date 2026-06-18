@@ -102,6 +102,7 @@ class Project(Base):
     mold_costs = Column(Text, nullable=True, comment="模具费用JSON")
     prototype_costs_detail = Column(Text, nullable=True, comment="样机费用JSON")
     test_costs = Column(Text, nullable=True, comment="测试费用JSON")
+    cert_costs = Column(Text, nullable=True, comment="认证费用JSON（自动生成）")
     labor_costs = Column(Text, nullable=True, comment="人工费用JSON")
     # ══════════════════════════════════════════
     # Sheet 5 - 团队与职责
