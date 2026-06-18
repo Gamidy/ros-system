@@ -1703,7 +1703,7 @@ const productShortNames = computed(() => {
   return {} as Record<string, string>
 })
 
-// 自动生成项目名称: 出口{市场}{系列}款{冷量K}/{制冷剂}/{能效等级}{产品简写}
+// 自动生成项目名称: 出口{市场}{系列}款{冷量K}/{制冷剂}/{能效等级}{产品简写}项目开发
 const autoProjectName = computed(() => {
   const f = projectForm
   const hasAny = f.target_market || f.series_name || f.capacity_range || f.refrigerant || f.energy_rating || f.product_type
@@ -1743,7 +1743,7 @@ const autoProjectName = computed(() => {
     parts.push(short)
   }
 
-  return parts.join('')
+  return parts.join('') + '项目开发'
 })
 
 // 自动计算项目周期

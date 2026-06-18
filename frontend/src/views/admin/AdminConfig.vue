@@ -143,6 +143,56 @@
       </el-table>
     </el-card>
 
+    <!-- 间接成本 -->
+    <el-card shadow="never" class="config-section">
+      <template #header><span>💰 间接成本（万元）</span></template>
+      <el-form label-width="120px" size="small">
+        <el-form-item label="默认间接成本">
+          <el-input-number v-model="indirectCostVal" :min="0" :step="0.1" size="small" />
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 试制数量按项目等级 -->
+    <el-card shadow="never" class="config-section">
+      <template #header><span>🔧 试制数量（按项目等级）</span></template>
+      <el-table :data="trialQtyRows" border size="small">
+        <el-table-column prop="class" label="等级" width="80" />
+        <el-table-column label="试制台数">
+          <template #default="{ row }">
+            <el-input-number v-model="row.qty" :min="1" :step="1" size="small" />
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 产品类型简写映射 -->
+    <el-card shadow="never" class="config-section">
+      <template #header>
+        <div class="card-header">
+          <span>📝 产品类型简写</span>
+          <el-button type="primary" size="small" @click="addShortNameRow">+ 添加</el-button>
+        </div>
+      </template>
+      <el-table :data="shortNameRows" border size="small">
+        <el-table-column label="产品类型全称">
+          <template #default="{ row }">
+            <el-input v-model="row.full" size="small" placeholder="如: 分体式壁挂机" />
+          </template>
+        </el-table-column>
+        <el-table-column label="简写">
+          <template #default="{ row }">
+            <el-input v-model="row.short" size="small" placeholder="如: 挂机" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="70">
+          <template #default="{ $index }">
+            <el-button link type="danger" size="small" @click="shortNameRows.splice($index, 1)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
     <div class="save-bar">
       <el-button type="primary" @click="saveAll" :loading="saving">💾 保存全部配置</el-button>
       <span v-if="saveSuccess" class="success-msg">✅ 保存成功</span>
@@ -205,6 +255,29 @@ function addFeatureDefault() {
   featureDefaultRows.push({ market: '', name: '', default_selection: '选配' })
 }
 
+// 间接成本
+const indirectCostVal = ref(0.5)
+
+// 试制数量
+interface TrialQtyRow { class: string; qty: number }
+const trialQtyRows = reactive<TrialQtyRow[]>([
+  { class: 'T', qty: 5 },
+  { class: 'A', qty: 3 },
+  { class: 'B', qty: 2 },
+  { class: 'C', qty: 1 },
+])
+
+// 产品类型简写
+interface ShortNameRow { full: string; short: string }
+const shortNameRows = reactive<ShortNameRow[]>([
+  { full: '分体式壁挂机', short: '挂机' },
+  { full: '分体立柜机', short: '柜机' },
+  { full: '窗机', short: '窗机' },
+])
+function addShortNameRow() {
+  shortNameRows.push({ full: '', short: '' })
+}
+
 async function loadConfig() {
   try {
     const res = await api.get('/admin/config')
@@ -248,6 +321,21 @@ async function loadConfig() {
         parsed.forEach((item: any) => featureDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
       }
     }
+    if (data.indirect_cost) indirectCostVal.value = Number(data.indirect_cost)
+    if (data.trial_qty_per_class) {
+      const parsed = JSON.parse(data.trial_qty_per_class)
+      trialQtyRows.length = 0
+      Object.entries(parsed).forEach(([cls, qty]: [string, any]) => {
+        trialQtyRows.push({ class: cls, qty: Number(qty) })
+      })
+    }
+    if (data.product_short_names) {
+      const parsed = JSON.parse(data.product_short_names)
+      shortNameRows.length = 0
+      Object.entries(parsed).forEach(([full, short]: [string, any]) => {
+        shortNameRows.push({ full, short: String(short) })
+      })
+    }
   } catch { /* use defaults */ }
 }
 
@@ -271,6 +359,13 @@ async function saveAll() {
       ),
       feature_defaults: JSON.stringify(
         featureDefaultRows.map(r => ({ market: r.market, name: r.name, default_selection: r.default_selection }))
+      ),
+      indirect_cost: String(indirectCostVal.value),
+      trial_qty_per_class: JSON.stringify(
+        Object.fromEntries(trialQtyRows.map(r => [r.class, r.qty]))
+      ),
+      product_short_names: JSON.stringify(
+        Object.fromEntries(shortNameRows.map(r => [r.full, r.short]))
       ),
     }
     await api.put('/admin/config/batch', payload)

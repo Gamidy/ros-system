@@ -443,10 +443,10 @@ def generate_project_name(
     product_type: str,
     product_short_names: Optional[dict] = None,
 ) -> str:
-    """按公式生成项目名称: 出口{市场}{系列}款{冷量K}/{制冷剂}/{能效等级}{产品简写}
+    """按公式生成项目名称: 出口{市场}{系列}款{冷量K}/{制冷剂}/{能效等级}{产品简写}项目开发
 
-    示例: 市场=越南, 系列=J, 冷量=9000BTU→9K, 制冷剂=R32, 能效=5星, 产品=分体式壁挂机→分体机
-          → "出口越南J款9K/R32/5星分体机"
+    示例: 市场=越南, 系列=J, 冷量=9000BTU→9K, 制冷剂=R32, 能效=5星, 产品=分体式壁挂机→挂机
+          → "出口越南J款9K/R32/5星挂机项目开发"
     """
     parts: list[str] = ["出口"]
 
@@ -474,4 +474,4 @@ def generate_project_name(
         short = short_names.get(product_type, product_type)
         parts.append(short)
 
-    return "".join(parts)
+    return "".join(parts) + "项目开发"
