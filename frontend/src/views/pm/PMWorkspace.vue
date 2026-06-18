@@ -2999,7 +2999,7 @@ async function fetchAllTeamUsers() {
 // 新增：获取角色映射表
 async function fetchRoleMappings() {
   try {
-    const res = await api.get('/api/admin/role-mappings')
+    const res = await api.get('/admin/role-mappings')
     roleMappings.value = res.data?.items || res.data || []
   } catch { /* non-critical, fallback to sys_role mapping */ }
 }
@@ -3007,7 +3007,7 @@ async function fetchRoleMappings() {
 // 新增：获取人员负载数据
 async function fetchUserWorkloads() {
   try {
-    const res = await api.get('/api/pm/user-workloads')
+    const res = await api.get('/pm/user-workloads')
     userWorkloads.value = res.data?.items || res.data || []
   } catch { /* non-critical */ }
 }
