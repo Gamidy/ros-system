@@ -558,12 +558,22 @@
             <el-table-column prop="item" label="费用项目" width="140" />
             <el-table-column label="预算(W)" width="140">
               <template #default="{ row }">
-                <el-input-number
-                  v-if="!row.linked"
-                  v-model="row.budget"
-                  :min="0" :step="0.1" size="small" controls-position="right" style="width:100%"
-                />
-                <span v-else class="linked-val">{{ row.budget.toFixed(1) }}</span>
+                <template v-if="row.item === '委外开发费用'">
+                  <el-input-number
+                    v-if="projectForm.has_outsourcing"
+                    v-model="row.budget"
+                    :min="0" :step="0.1" size="small" controls-position="right" style="width:100%"
+                  />
+                  <span v-else class="linked-val">0.0</span>
+                </template>
+                <template v-else>
+                  <el-input-number
+                    v-if="!row.linked"
+                    v-model="row.budget"
+                    :min="0" :step="0.1" size="small" controls-position="right" style="width:100%"
+                  />
+                  <span v-else class="linked-val">{{ row.budget.toFixed(1) }}</span>
+                </template>
               </template>
             </el-table-column>
             <el-table-column label="占比%" width="100">
@@ -579,6 +589,9 @@
             </el-table-column>
           </el-table>
           <div class="cost-summary">开发费用合计: <strong>¥{{ devCostGrandTotal.toFixed(1) }} 万元</strong></div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <el-switch v-model="projectForm.has_outsourcing" size="small" active-text="有委外开发" inactive-text="无委外开发" />
+          </div>
 
           <!-- 二、经济指标分析 -->
           <el-divider content-position="left">二、经济指标分析</el-divider>
@@ -809,6 +822,7 @@ interface ProjectItem {
   dev_category?: string; project_origin?: string
   start_date?: string; required_date?: string; sample_qty?: number
   annual_planning_ref?: string; is_draft?: boolean
+  has_outsourcing?: boolean
   customer_name?: string; cert_requirements?: string; energy_efficiency_req?: string
   target_price?: string; customer_requirements?: string; other_requirements?: string
   overall_goal?: string; background_basis_raw?: string; tech_goal?: string
@@ -898,6 +912,7 @@ const projectForm = reactive<Record<string, any>>({
   annual_sales_forecast: undefined as number | undefined,
   product_lifecycle: '',
   annual_planning_ref: '',
+  has_outsourcing: false,
 })
 
 // 知识库下拉选项
@@ -975,7 +990,7 @@ const devCostTable = reactive<DevCostRow[]>([
   { item: '研发人工费用', budget: 0, remark: '', linked: true },
   { item: '样机试制费用', budget: 0, remark: '', linked: true },
   { item: '测试费用耗材', budget: 0, remark: '', linked: true },
-  { item: '委外开发费用', budget: 0, remark: '无', linked: true },
+  { item: '委外开发费用', budget: 0, remark: '无', linked: false },
   { item: '客户样机费用', budget: 0, remark: '', linked: true },
   { item: '开发费用合计', budget: 0, remark: '', linked: true },
 ])
@@ -1128,7 +1143,11 @@ const devCostRemark = computed(() => {
     parts.push(`客户样机费用：${clientRow.qty}套 ${clientSampleCost.value.toFixed(1)}W`)
   }
   // 委外
-  parts.push('委外开发费用：无')
+  if (projectForm.has_outsourcing && devCostTable[5].budget > 0) {
+    parts.push(`委外开发费用：${devCostTable[5].budget.toFixed(1)}W`)
+  } else {
+    parts.push('委外开发费用：无')
+  }
   // 认证
   const cert = projectForm.cert_requirements || ''
   if (cert && certCost.value > 0) parts.push(`认证费用：${cert} ${certCost.value}W`)
@@ -1296,6 +1315,14 @@ watch(devCostGrandTotal, (val) => {
   }
 })
 
+// 委外开发: has_outsourcing=false → budget=0
+watch(() => projectForm.has_outsourcing, (val) => {
+  if (!val && devCostTable.length > 5) {
+    devCostTable[5].budget = 0
+    devCostTable[5].remark = '无'
+  }
+})
+
 // ═══════════════════════════════════════════════
 // 工具函数
 // ═══════════════════════════════════════════════
@@ -1424,6 +1451,7 @@ function resetForm() {
     annual_sales_forecast: undefined,
     product_lifecycle: '',
     annual_planning_ref: '',
+    has_outsourcing: false,
   }
   Object.assign(projectForm, empty)
   // Reset cost tables
@@ -1469,6 +1497,7 @@ function populateFormFromDraft(draft: ProjectItem) {
   projectForm.annual_sales_forecast = draft.annual_sales_forecast ?? undefined
   projectForm.product_lifecycle = draft.product_lifecycle || ''
   projectForm.annual_planning_ref = draft.annual_planning_ref || ''
+  projectForm.has_outsourcing = draft.has_outsourcing || false
 
   // 恢复成本表格
   if (draft.dev_cost_items) {
@@ -1554,6 +1583,7 @@ function buildProjectPayload(): Record<string, any> {
     annual_sales_forecast: f.annual_sales_forecast ?? undefined,
     product_lifecycle: f.product_lifecycle || undefined,
     annual_planning_ref: f.annual_planning_ref || undefined,
+    has_outsourcing: f.has_outsourcing || false,
     // 表格数据
     customer_requirements: JSON.stringify(customerReqTable),
     core_performance: JSON.stringify(corePerfTable),
