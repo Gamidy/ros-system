@@ -544,42 +544,48 @@
           <el-table :data="accessoryConfigTable" border size="small" class="section-table">
             <el-table-column prop="name" label="配件名称" min-width="160">
               <template #default="{ row }">
-                <el-input v-model="row.name" size="small" />
+                <span>{{ row.name }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="selection" label="选配情况" min-width="200">
+            <el-table-column prop="selection" label="选配情况" min-width="160">
               <template #default="{ row }">
-                <el-input v-model="row.selection" size="small" />
+                <el-select v-model="row.selection" size="small" style="width:100%">
+                  <el-option label="标配" value="标配" />
+                  <el-option label="选配" value="选配" />
+                  <el-option label="不配" value="不配" />
+                </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="70">
-              <template #default="{ $index }">
-                <el-button link type="danger" size="small" @click="removeAccessoryRow($index)">删除</el-button>
+            <el-table-column label="" width="90">
+              <template #default="{ row }">
+                <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
               </template>
             </el-table-column>
           </el-table>
-          <el-button size="small" style="margin-top:8px" @click="addAccessoryRow">+ 添加行</el-button>
 
           <!-- 四、功能选配 -->
           <el-divider content-position="left">四、功能选配</el-divider>
           <el-table :data="featureConfigTable" border size="small" class="section-table">
             <el-table-column prop="name" label="功能名称" min-width="160">
               <template #default="{ row }">
-                <el-input v-model="row.name" size="small" />
+                <span>{{ row.name }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="selection" label="选配情况" min-width="200">
+            <el-table-column prop="selection" label="选配情况" min-width="160">
               <template #default="{ row }">
-                <el-input v-model="row.selection" size="small" />
+                <el-select v-model="row.selection" size="small" style="width:100%">
+                  <el-option label="标配" value="标配" />
+                  <el-option label="选配" value="选配" />
+                  <el-option label="不配" value="不配" />
+                </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="70">
-              <template #default="{ $index }">
-                <el-button link type="danger" size="small" @click="removeFeatureRow($index)">删除</el-button>
+            <el-table-column label="" width="90">
+              <template #default="{ row }">
+                <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
               </template>
             </el-table-column>
           </el-table>
-          <el-button size="small" style="margin-top:8px" @click="addFeatureRow">+ 添加行</el-button>
         </el-tab-pane>
 
         <!-- ═══════════ Tab 4: 成本核算 ═══════════ -->
@@ -886,7 +892,7 @@ interface ProjectItem {
 interface CustomerReqRow { category: string; description: string; source: string; tech_impact: string; market_impact: string }
 interface CorePerfRow { param_name: string; target_value: string; aux_competitor: string; tcl_competitor: string }
 interface SafetyComplianceRow { standard: string; applicable_market: string; key_requirement: string; verification_method: string; involved_parts: string; cert_cycle: string; remark: string }
-interface ConfigRow { name: string; selection: string }
+interface ConfigRow { name: string; selection: string; _original?: string }
 interface DevCostRow { item: string; budget: number; remark: string; linked: boolean }
 interface MoldCostRow { unit_type: string; category: string; qty: number; total: number }
 interface ProtoCostRow { stage: string; qty: number; unit_cost: number }
@@ -1443,10 +1449,12 @@ watch(() => projectForm.has_outsourcing, (val) => {
   }
 })
 
-// 目标市场变化 → 加载安全合规标准
+// 目标市场变化 → 加载安全合规标准 + 配件/功能默认
 watch(() => projectForm.target_market, (market) => {
   if (market) {
     fetchCertStandards(market)
+    fetchAccessoryDefaults(market)
+    fetchFeatureDefaults(market)
   }
 })
 
@@ -1867,7 +1875,7 @@ function populateFormFromDraft(draft: ProjectItem) {
       const parsed = JSON.parse(draft.accessory_config)
       if (Array.isArray(parsed)) {
         accessoryConfigTable.length = 0
-        parsed.forEach((item: any) => accessoryConfigTable.push({ name: item.name || '', selection: item.selection || '' }))
+        parsed.forEach((item: any) => accessoryConfigTable.push({ name: item.name || '', selection: item.selection || '', _original: item.selection || '' }))
       }
     } catch { /* ignore */ }
   }
@@ -1877,7 +1885,7 @@ function populateFormFromDraft(draft: ProjectItem) {
       const parsed = JSON.parse(draft.feature_config)
       if (Array.isArray(parsed)) {
         featureConfigTable.length = 0
-        parsed.forEach((item: any) => featureConfigTable.push({ name: item.name || '', selection: item.selection || '' }))
+        parsed.forEach((item: any) => featureConfigTable.push({ name: item.name || '', selection: item.selection || '', _original: item.selection || '' }))
       }
     } catch { /* ignore */ }
   }
@@ -1929,8 +1937,8 @@ function buildProjectPayload(): Record<string, any> {
     customer_requirements: JSON.stringify(customerReqTable),
     core_performance: JSON.stringify(corePerfTable),
     safety_compliance: JSON.stringify(safetyComplianceTable),
-    accessory_config: JSON.stringify(accessoryConfigTable),
-    feature_config: JSON.stringify(featureConfigTable),
+    accessory_config: JSON.stringify(accessoryConfigTable.map(({ name, selection }) => ({ name, selection }))),
+    feature_config: JSON.stringify(featureConfigTable.map(({ name, selection }) => ({ name, selection }))),
     dev_cost_items: JSON.stringify(devCostTable.map(r => ({ item: r.item, budget: r.budget, remark: r.remark, linked: r.linked }))),
     mold_costs: JSON.stringify(moldCostTable.map(r => ({ unit_type: r.unit_type, category: r.category, qty: r.qty, total: r.total }))),
     prototype_costs_detail: JSON.stringify(protoCostTable.map(r => ({ stage: r.stage, qty: r.qty, unit_cost: r.unit_cost }))),
@@ -2015,16 +2023,6 @@ function addCorePerfRow() {
 }
 function removeCorePerfRow(index: number) { corePerfTable.splice(index, 1) }
 
-function addAccessoryRow() {
-  accessoryConfigTable.push({ name: '', selection: '' })
-}
-function removeAccessoryRow(index: number) { accessoryConfigTable.splice(index, 1) }
-
-function addFeatureRow() {
-  featureConfigTable.push({ name: '', selection: '' })
-}
-function removeFeatureRow(index: number) { featureConfigTable.splice(index, 1) }
-
 function addTeamRow() {
   teamTable.push({ role: '', user_id: null, department: '', responsibility: '' })
 }
@@ -2084,6 +2082,40 @@ async function fetchPerfDefaults(market: string, capacity: string) {
         target_value: item.target_value || '',
         aux_competitor: item.aux_competitor || '',
         tcl_competitor: item.tcl_competitor || ''
+      })
+    })
+  } catch {
+    // API not available yet, keep existing data
+  }
+}
+
+async function fetchAccessoryDefaults(market: string) {
+  try {
+    const res = await api.get('/pm/accessory-defaults', { params: { market } })
+    const items = res.data?.items || []
+    accessoryConfigTable.length = 0
+    items.forEach((item: any) => {
+      accessoryConfigTable.push({
+        name: item.name,
+        selection: item.default_selection || '选配',
+        _original: item.default_selection || '选配'
+      })
+    })
+  } catch {
+    // API not available yet, keep existing data
+  }
+}
+
+async function fetchFeatureDefaults(market: string) {
+  try {
+    const res = await api.get('/pm/feature-defaults', { params: { market } })
+    const items = res.data?.items || []
+    featureConfigTable.length = 0
+    items.forEach((item: any) => {
+      featureConfigTable.push({
+        name: item.name,
+        selection: item.default_selection || '选配',
+        _original: item.default_selection || '选配'
       })
     })
   } catch {
@@ -2178,6 +2210,8 @@ onMounted(async () => {
     // 如果已有默认值（如从草稿加载），自动加载相关联数据
     if (projectForm.target_market) {
       fetchCertStandards(projectForm.target_market)
+      fetchAccessoryDefaults(projectForm.target_market)
+      fetchFeatureDefaults(projectForm.target_market)
     }
     if (projectForm.target_market && projectForm.capacity_range) {
       fetchPerfDefaults(projectForm.target_market, projectForm.capacity_range)

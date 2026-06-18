@@ -71,6 +71,78 @@
       </el-table>
     </el-card>
 
+    <!-- 配件默认选项 -->
+    <el-card shadow="never" class="config-section">
+      <template #header>
+        <div class="card-header">
+          <span>🔌 配件默认选项</span>
+          <el-button type="primary" size="small" @click="addAccessoryDefault">+ 添加</el-button>
+        </div>
+      </template>
+      <el-table :data="accessoryDefaultRows" border size="small">
+        <el-table-column label="市场" width="140">
+          <template #default="{ row }">
+            <el-input v-model="row.market" size="small" placeholder="如: 沙特" />
+          </template>
+        </el-table-column>
+        <el-table-column label="配件名称" min-width="160">
+          <template #default="{ row }">
+            <el-input v-model="row.name" size="small" placeholder="配件名称" />
+          </template>
+        </el-table-column>
+        <el-table-column label="默认选配" width="130">
+          <template #default="{ row }">
+            <el-select v-model="row.default_selection" size="small" style="width:100%">
+              <el-option label="标配" value="标配" />
+              <el-option label="选配" value="选配" />
+              <el-option label="不配" value="不配" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="70">
+          <template #default="{ $index }">
+            <el-button link type="danger" size="small" @click="accessoryDefaultRows.splice($index, 1)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 功能默认选项 -->
+    <el-card shadow="never" class="config-section">
+      <template #header>
+        <div class="card-header">
+          <span>⚙️ 功能默认选项</span>
+          <el-button type="primary" size="small" @click="addFeatureDefault">+ 添加</el-button>
+        </div>
+      </template>
+      <el-table :data="featureDefaultRows" border size="small">
+        <el-table-column label="市场" width="140">
+          <template #default="{ row }">
+            <el-input v-model="row.market" size="small" placeholder="如: 沙特" />
+          </template>
+        </el-table-column>
+        <el-table-column label="功能名称" min-width="160">
+          <template #default="{ row }">
+            <el-input v-model="row.name" size="small" placeholder="功能名称" />
+          </template>
+        </el-table-column>
+        <el-table-column label="默认选配" width="130">
+          <template #default="{ row }">
+            <el-select v-model="row.default_selection" size="small" style="width:100%">
+              <el-option label="标配" value="标配" />
+              <el-option label="选配" value="选配" />
+              <el-option label="不配" value="不配" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="70">
+          <template #default="{ $index }">
+            <el-button link type="danger" size="small" @click="featureDefaultRows.splice($index, 1)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
     <div class="save-bar">
       <el-button type="primary" @click="saveAll" :loading="saving">💾 保存全部配置</el-button>
       <span v-if="saveSuccess" class="success-msg">✅ 保存成功</span>
@@ -111,6 +183,28 @@ const certCostRows = reactive([
   { key: '其他', value: 3 },
 ])
 
+// 配件默认选项
+interface AccessoryDefaultRow { market: string; name: string; default_selection: string }
+const accessoryDefaultRows = reactive<AccessoryDefaultRow[]>([
+  { market: '沙特', name: '遥控器', default_selection: '标配' },
+  { market: '沙特', name: '安装支架', default_selection: '标配' },
+])
+
+function addAccessoryDefault() {
+  accessoryDefaultRows.push({ market: '', name: '', default_selection: '选配' })
+}
+
+// 功能默认选项
+interface FeatureDefaultRow { market: string; name: string; default_selection: string }
+const featureDefaultRows = reactive<FeatureDefaultRow[]>([
+  { market: '沙特', name: '自清洁', default_selection: '标配' },
+  { market: '沙特', name: '防直吹', default_selection: '标配' },
+])
+
+function addFeatureDefault() {
+  featureDefaultRows.push({ market: '', name: '', default_selection: '选配' })
+}
+
 async function loadConfig() {
   try {
     const res = await api.get('/admin/config')
@@ -140,6 +234,20 @@ async function loadConfig() {
         if (row) row.value = Number(v)
       })
     }
+    if (data.accessory_defaults) {
+      const parsed = JSON.parse(data.accessory_defaults)
+      if (Array.isArray(parsed)) {
+        accessoryDefaultRows.length = 0
+        parsed.forEach((item: any) => accessoryDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
+      }
+    }
+    if (data.feature_defaults) {
+      const parsed = JSON.parse(data.feature_defaults)
+      if (Array.isArray(parsed)) {
+        featureDefaultRows.length = 0
+        parsed.forEach((item: any) => featureDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
+      }
+    }
   } catch { /* use defaults */ }
 }
 
@@ -157,6 +265,12 @@ async function saveAll() {
       ),
       cert_cost: JSON.stringify(
         Object.fromEntries(certCostRows.map(r => [r.key, r.value]))
+      ),
+      accessory_defaults: JSON.stringify(
+        accessoryDefaultRows.map(r => ({ market: r.market, name: r.name, default_selection: r.default_selection }))
+      ),
+      feature_defaults: JSON.stringify(
+        featureDefaultRows.map(r => ({ market: r.market, name: r.name, default_selection: r.default_selection }))
       ),
     }
     await api.put('/admin/config/batch', payload)

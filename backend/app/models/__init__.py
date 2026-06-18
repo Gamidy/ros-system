@@ -9,6 +9,7 @@ from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, Ap
 from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.audit import AuditLog
 from app.models.pm_config import CertStandard, PerfDefault
+from app.models.pm_accessory import AccessoryDefault, FeatureDefault
 from app.models.proposal_approval import ProposalApproval
 
 __all__ = [
@@ -22,5 +23,6 @@ __all__ = [
     "PurchaseOrder", "PurchaseOrderItem", "Supplier",
     "AuditLog",
     "CertStandard", "PerfDefault",
+    "AccessoryDefault", "FeatureDefault",
     "ProposalApproval",
 ]

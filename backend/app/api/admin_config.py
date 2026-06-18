@@ -13,6 +13,8 @@ DEFAULTS = {
     "test_unit_price": "0.11",
     "mfg_cost_threshold": '[{"max_kw":12,"cost":50},{"max_kw":999,"cost":60}]',
     "cert_cost": '{"UL":20,"CE":3,"default":3}',
+    "accessory_defaults": '[{"market":"通用","name":"除尘网","default_selection":"标配"},{"market":"通用","name":"WiFi模块","default_selection":"选配"},{"market":"通用","name":"蓝牙遥控","default_selection":"选配"},{"market":"通用","name":"离子发生器","default_selection":"不配"}]',
+    "feature_defaults": '[{"market":"通用","name":"自清洁","default_selection":"标配"},{"market":"通用","name":"除霜","default_selection":"标配"},{"market":"通用","name":"快速制冷","default_selection":"标配"},{"market":"通用","name":"静音模式","default_selection":"选配"},{"market":"通用","name":"ECO模式","default_selection":"选配"}]',
 }
 
 
