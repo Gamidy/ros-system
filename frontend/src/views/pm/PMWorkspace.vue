@@ -167,7 +167,14 @@
     >
       <el-tabs v-model="activeTab" type="border-card" class="drawer-tabs">
         <!-- ═══════════ Tab 1: 项目概述 ═══════════ -->
-        <el-tab-pane label="📋 项目概述" name="overview">
+        <el-tab-pane name="overview">
+          <template #label>
+            <span>
+              <span v-if="tabStatus.overview.valid">✅</span>
+              <span v-else>❌</span>
+              📋 项目概述
+            </span>
+          </template>
           <el-form :model="projectForm" label-width="120px" size="small">
             <!-- 一、项目基本信息 -->
             <el-divider content-position="left">一、项目基本信息</el-divider>
@@ -359,7 +366,14 @@
         </el-tab-pane>
 
         <!-- ═══════════ Tab 2: 市场与客户需求 ═══════════ -->
-        <el-tab-pane label="🏪 市场与客户需求" name="market">
+        <el-tab-pane name="market">
+          <template #label>
+            <span>
+              <span v-if="tabStatus.market.valid">✅</span>
+              <span v-else>❌</span>
+              🏪 市场与客户需求
+            </span>
+          </template>
           <el-form :model="projectForm" label-width="120px" size="small">
             <!-- 一、市场需求背景 -->
             <el-divider content-position="left">一、市场需求背景</el-divider>
@@ -429,7 +443,14 @@
         </el-tab-pane>
 
         <!-- ═══════════ Tab 3: 技术要求 ═══════════ -->
-        <el-tab-pane label="⚙️ 技术要求" name="technical">
+        <el-tab-pane name="technical">
+          <template #label>
+            <span>
+              <span v-if="tabStatus.technical.valid">✅</span>
+              <span v-else>❌</span>
+              ⚙️ 技术要求
+            </span>
+          </template>
           <!-- 一、核心性能参数 -->
           <el-divider content-position="left">一、核心性能参数</el-divider>
           <el-table :data="corePerfTable" border size="small" class="section-table">
@@ -545,7 +566,14 @@
         </el-tab-pane>
 
         <!-- ═══════════ Tab 4: 成本核算 ═══════════ -->
-        <el-tab-pane label="💰 成本核算" name="cost">
+        <el-tab-pane name="cost">
+          <template #label>
+            <span>
+              <span v-if="tabStatus.cost.valid">✅</span>
+              <span v-else>❌</span>
+              💰 成本核算
+            </span>
+          </template>
           <!-- 一、项目开发费用 -->
           <el-divider content-position="left">一、项目开发费用</el-divider>
           <el-table :data="devCostTable" border size="small" class="section-table">
@@ -731,7 +759,14 @@
         </el-tab-pane>
 
         <!-- ═══════════ Tab 5: 团队与职责 ═══════════ -->
-        <el-tab-pane label="👥 团队与职责" name="team">
+        <el-tab-pane name="team">
+          <template #label>
+            <span>
+              <span v-if="tabStatus.team.valid">✅</span>
+              <span v-else>❌</span>
+              👥 团队与职责
+            </span>
+          </template>
           <div class="team-section">
             <div class="team-toolbar">
               <el-button type="primary" size="small" @click="addTeamRow">添加成员</el-button>
@@ -888,6 +923,15 @@ const activeTab = ref('overview')
 const draftId = ref<number | null>(null)
 const savingDraft = ref(false)
 const submitting = ref(false)
+
+// Tab 校验状态
+const tabStatus = reactive<Record<string, { valid: boolean; errors: string[] }>>({
+  overview: { valid: false, errors: [] },
+  market: { valid: false, errors: [] },
+  technical: { valid: false, errors: [] },
+  cost: { valid: false, errors: [] },
+  team: { valid: false, errors: [] },
+})
 
 // 项目表单 - budget和sample_qty初始值为undefined
 const projectForm = reactive<Record<string, any>>({
@@ -1389,6 +1433,88 @@ watch([() => projectForm.target_market, () => projectForm.capacity_range], ([mar
   }
 })
 
+// Tab 切换时自动校验当前Tab
+watch(activeTab, () => {
+  validateCurrentTab()
+})
+
+// ═══════════════════════════════════════════════
+// Tab 校验函数
+// ═══════════════════════════════════════════════
+
+function validateOverview(): void {
+  const errs: string[] = []
+  const f = projectForm
+  if (!f.product_type) errs.push('产品类型')
+  if (!f.target_market) errs.push('目标市场')
+  if (!f.capacity_range) errs.push('能力段')
+  if (!f.refrigerant) errs.push('制冷剂')
+  if (!f.voltage_freq) errs.push('电压频率')
+  if (!f.start_date) errs.push('立项日期')
+  if (!f.target_end_date) errs.push('计划完成日期')
+  tabStatus.overview.valid = errs.length === 0
+  tabStatus.overview.errors = errs
+}
+
+function validateMarket(): void {
+  const errs: string[] = []
+  const hasContent = customerReqTable.some(row =>
+    row.category || row.description || row.source || row.tech_impact || row.market_impact
+  )
+  if (!hasContent) errs.push('客户关键需求至少填写一行')
+  tabStatus.market.valid = errs.length === 0
+  tabStatus.market.errors = errs
+}
+
+function validateTechnical(): void {
+  const errs: string[] = []
+  const hasTargetValue = corePerfTable.some(row => row.target_value)
+  if (!hasTargetValue) errs.push('核心性能参数至少一行填写目标值')
+  if (safetyComplianceTable.length === 0) errs.push('安全合规标准未加载，请先选择目标市场')
+  tabStatus.technical.valid = errs.length === 0
+  tabStatus.technical.errors = errs
+}
+
+function validateCost(): void {
+  const errs: string[] = []
+  const f = projectForm
+  if (devCostGrandTotal.value <= 0) errs.push('开发费用合计必须大于0')
+  if (f.fob_price === undefined || f.fob_price === null || Number(f.fob_price) <= 0) errs.push('目标出厂价FOB')
+  if (f.bom_cost_target === undefined || f.bom_cost_target === null || Number(f.bom_cost_target) <= 0) errs.push('目标BOM成本')
+  tabStatus.cost.valid = errs.length === 0
+  tabStatus.cost.errors = errs
+}
+
+function validateTeam(): void {
+  const errs: string[] = []
+  const hasUser = teamTable.some(row => row.user_id != null)
+  if (!hasUser) errs.push('团队至少选择一名成员')
+  if (teamTable.length === 0) errs.push('团队表格不能为空')
+  tabStatus.team.valid = errs.length === 0
+  tabStatus.team.errors = errs
+}
+
+function validateAllTabs(): boolean {
+  validateOverview()
+  validateMarket()
+  validateTechnical()
+  validateCost()
+  validateTeam()
+  return Object.values(tabStatus).every(t => t.valid)
+}
+
+function validateCurrentTab(): void {
+  const tab = activeTab.value
+  const validators: Record<string, () => void> = {
+    overview: validateOverview,
+    market: validateMarket,
+    technical: validateTechnical,
+    cost: validateCost,
+    team: validateTeam,
+  }
+  validators[tab]?.()
+}
+
 // ═══════════════════════════════════════════════
 // 工具函数
 // ═══════════════════════════════════════════════
@@ -1494,6 +1620,11 @@ function openDrawer(draft?: ProjectItem | null) {
     draftId.value = null
     resetForm()
   }
+  // Reset tab validation status
+  Object.keys(tabStatus).forEach(key => {
+    tabStatus[key].valid = false
+    tabStatus[key].errors = []
+  })
   activeTab.value = 'overview'
   drawerVisible.value = true
 }
@@ -1526,6 +1657,11 @@ function resetForm() {
   protoCostTable.forEach(r => { r.qty = r.stage === 'P2' ? 20 : r.stage === 'P1-1' || r.stage === 'P1-2' ? 10 : 5 })
   laborCostTable.forEach(r => { r.people_count = 1; r.monthly_salary = 1.5; r.months = 6; r.occupancy_rate = 100 })
   testCostTable.forEach(r => { r.days = 10; r.unit_price = 0.11 })
+  // Reset tab validation status
+  Object.keys(tabStatus).forEach(key => {
+    tabStatus[key].valid = false
+    tabStatus[key].errors = []
+  })
 }
 
 function populateFormFromDraft(draft: ProjectItem) {
@@ -1787,6 +1923,21 @@ async function submitProposal() {
     activeTab.value = 'overview'
     return
   }
+
+  // 全Tab校验
+  const allValid = validateAllTabs()
+  if (!allValid) {
+    // 找到第一个不通过的Tab并切换
+    const tabOrder = ['overview', 'market', 'technical', 'cost', 'team']
+    const firstInvalid = tabOrder.find(t => !tabStatus[t].valid)
+    if (firstInvalid) {
+      activeTab.value = firstInvalid
+      const errors = tabStatus[firstInvalid].errors
+      ElMessage.warning(`请完善「${firstInvalid}」信息：${errors.join('、')}`)
+    }
+    return
+  }
+
   submitting.value = true
   try {
     const payload = buildProjectPayload()
