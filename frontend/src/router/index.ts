@@ -87,6 +87,12 @@ const router = createRouter({
           meta: { title: '审批管理' },
         },
         {
+          path: 'approvals/proposals',
+          name: 'ProposalApprovals',
+          component: () => import('../views/approvals/ProposalApprovals.vue'),
+          meta: { title: '产品立项审批' },
+        },
+        {
           path: 'rd-dashboard',
           name: 'RDDashboard',
           component: () => import('../views/rd/RDDashboard.vue'),

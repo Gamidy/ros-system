@@ -2,7 +2,7 @@ import type { Component } from 'vue'
 import {
   Monitor, Goods, List, Folder, Document, WarningFilled,
   Stamp, Cpu, WarnTriangleFilled, Refresh, Select,
-  ShoppingCart, DataAnalysis, Setting,
+  ShoppingCart, DataAnalysis, Setting, Checked,
 } from '@element-plus/icons-vue'
 
 /** 系统支持的全部角色（与后端 permissions.py ALL_ROLES 对齐） */
@@ -74,6 +74,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/quality',        title: '质量问题',       icon: WarnTriangleFilled },
   { path: '/changes',        title: '变更管理',       icon: Refresh },
   { path: '/approvals',      title: '审批管理',       icon: Select },
+  { path: '/approvals/proposals', title: '产品立项审批', icon: Checked },
   { path: '/purchases',      title: '采购管理',       icon: ShoppingCart },
   { path: '/mm',            title: '模块管理',       icon: DataAnalysis },
   { path: '/pm-workspace',   title: '工作台',         icon: Monitor },

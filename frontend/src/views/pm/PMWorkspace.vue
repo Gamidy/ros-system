@@ -42,7 +42,10 @@
             <div class="linked-title">关联项目</div>
             <div v-for="proj in filteredProjects" :key="proj.id" class="linked-item">
               <span>{{ proj.name }}</span>
-              <el-tag :type="statusTagType(proj.status)" size="small">{{ statusLabel(proj.status) }}</el-tag>
+              <div class="linked-item-tags">
+                <el-tag v-if="proj.approval_status" :type="approvalTagType(proj.approval_status)" size="small">{{ approvalLabel(proj.approval_status) }}</el-tag>
+                <el-tag :type="statusTagType(proj.status)" size="small">{{ statusLabel(proj.status) }}</el-tag>
+              </div>
             </div>
           </div>
         </el-card>
@@ -109,7 +112,10 @@
           <div v-for="proj in myProjects" :key="proj.id" class="project-card" @click="toggleExpand(proj.id)">
             <div class="project-card-header">
               <span class="project-name">{{ proj.name }}</span>
-              <el-tag :type="statusTagType(proj.status)" size="small">{{ statusLabel(proj.status) }}</el-tag>
+              <div class="project-card-tags">
+                <el-tag v-if="proj.approval_status" :type="approvalTagType(proj.approval_status)" size="small">{{ approvalLabel(proj.approval_status) }}</el-tag>
+                <el-tag :type="statusTagType(proj.status)" size="small">{{ statusLabel(proj.status) }}</el-tag>
+              </div>
             </div>
             <el-progress
               :percentage="proj.progress || 0"
@@ -838,7 +844,7 @@ interface PlanningItem {
   id: number; name: string; year: string; description: string
   doc_ref: string; project_count: number; projects?: ProjectSummary[]
 }
-interface ProjectSummary { id: number; name: string; status: string }
+interface ProjectSummary { id: number; name: string; status: string; approval_status?: string }
 interface Product { id: number; code: string; name: string; status: string; capacity?: string }
 interface ProjectItem {
   id: number; name: string; status: string; project_class: string
@@ -863,6 +869,7 @@ interface ProjectItem {
   core_performance?: string; safety_compliance?: string
   accessory_config?: string; feature_config?: string
   team_members?: string
+  approval_status?: string  // 审批状态: pending/approved/rejected
 }
 interface CustomerReqRow { category: string; description: string; source: string; tech_impact: string; market_impact: string }
 interface CorePerfRow { param_name: string; target_value: string; aux_competitor: string; tcl_competitor: string }
@@ -1540,6 +1547,20 @@ function statusLabel(status: string): string {
   return map[status] || status
 }
 
+function approvalTagType(status: string): string {
+  const map: Record<string, string> = {
+    pending: 'warning', approved: 'success', rejected: 'danger'
+  }
+  return map[status] || 'info'
+}
+
+function approvalLabel(status: string): string {
+  const map: Record<string, string> = {
+    pending: '审批中', approved: '审批通过', rejected: '审批驳回'
+  }
+  return map[status] || status
+}
+
 function progressColor(progress: number): string {
   if (progress >= 80) return '#67c23a'
   if (progress >= 40) return '#409eff'
@@ -1941,14 +1962,12 @@ async function submitProposal() {
   submitting.value = true
   try {
     const payload = buildProjectPayload()
+    // Always submit via /pm/proposals/submit — backend handles both new & draft
     if (draftId.value) {
-      await api.put('/pm/proposals/draft', { ...payload, id: draftId.value })
-      await api.post('/pm/proposals/submit', { id: draftId.value })
-      ElMessage.success('立项已提交')
-    } else {
-      await api.post('/pm/proposals', payload)
-      ElMessage.success('立项已提交')
+      payload.id = draftId.value
     }
+    await api.post('/pm/proposals/submit', payload)
+    ElMessage.success('已提交审批，等待审批人审核')
     drawerVisible.value = false
     await fetchWorkspaceData()
   } catch {
@@ -2271,6 +2290,12 @@ onMounted(async () => {
   font-size: 13px;
 }
 
+.linked-item-tags {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
 /* 立项入口 */
 .initiation-intro {
   font-size: 13px;
@@ -2344,6 +2369,12 @@ onMounted(async () => {
 .project-card-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.project-card-tags {
+  display: flex;
+  gap: 4px;
   align-items: center;
 }
 
