@@ -51,8 +51,8 @@ def get_config(db: Session = Depends(get_db), user=Depends(get_current_user)):
 
 
 @router.get("/public")
-def get_public_config(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """获取公开系统配置（所有登录用户可读，仅返回UI渲染和计算所需的非敏感配置）"""
+def get_public_config(db: Session = Depends(get_db)):
+    """获取公开系统配置（无需登录即可访问，仅返回UI渲染和计算所需的非敏感配置）"""
     full = _get_config_dict(db)
     public = {k: v for k, v in full.items() if k in PUBLIC_KEYS}
     return {"data": public}
