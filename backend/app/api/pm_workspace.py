@@ -164,7 +164,7 @@ def pm_workspace(
     owner_name = current_user.username
 
     # ── 我的项目 ──
-    my_projects_query = db.query(Project).filter(Project.owner == owner_name, Project.is_deleted == False)
+    my_projects_query = db.query(Project).filter(Project.owner == owner_name)
     my_projects_raw = my_projects_query.order_by(Project.created_at.desc()).all()
 
     my_projects = []
@@ -220,7 +220,7 @@ def pm_workspace(
         "my_projects": my_projects,
         "products": products,
         "stats": stats,
-        "annual_plans": annual_plans,
+        "planning_items": annual_plans,
         "recent_projects": recent_projects,
     }
 
