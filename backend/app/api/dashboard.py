@@ -128,10 +128,18 @@ def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("das
     )
     project_status_distribution = {row[0] or "unknown": row[1] for row in project_status_rows}
 
+    # 待审批项目数: approval_status='pending' AND is_draft=0 AND is_deleted=0
+    pending_approvals_count = db.query(func.count(Project.id)).filter(
+        Project.approval_status == "pending",
+        Project.is_draft == False,
+        Project.is_deleted == False,
+    ).scalar() or 0
+
     layer2 = Layer2ProjectOps(
         project_count=project_count,
         on_time_rate=on_time_rate,
         overdue_count=overdue_count,
+        pending_approvals_count=pending_approvals_count,
         recent_projects=recent_projects,
         project_status_distribution=project_status_distribution,
     )

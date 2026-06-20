@@ -902,6 +902,7 @@ class Layer2ProjectOps(BaseModel):
     project_count: int = 0
     on_time_rate: float = 0.0
     overdue_count: int = 0
+    pending_approvals_count: int = 0
     recent_projects: list[RecentProjectSummary] = Field(default_factory=list)
     project_status_distribution: dict[str, int] = Field(default_factory=dict)
 

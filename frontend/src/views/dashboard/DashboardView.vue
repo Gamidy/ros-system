@@ -84,7 +84,7 @@
           <el-icon :size="16"><TrendCharts /></el-icon>
         </div>
         <h2 class="section-title">项目运营</h2>
-        <span class="section-count">3 项指标</span>
+        <span class="section-count">4 项指标</span>
       </div>
       
       <div class="stats-grid">
@@ -94,13 +94,13 @@
           class="stat-card"
           @click="drillDown(key)"
         >
-          <div class="stat-icon" :style="{ background: item.color + '12', color: item.color }">
+          <div class="stat-icon" :style="{ background: getL2CardColor(key, item.color) + '12', color: getL2CardColor(key, item.color) }">
             <el-icon :size="22">
               <component :is="item.icon" />
             </el-icon>
           </div>
           <div class="stat-content">
-            <div class="stat-value" :style="{ color: item.color }">{{ opsData?.[key] ?? '-' }}</div>
+            <div class="stat-value" :style="{ color: getL2CardColor(key, item.color) }">{{ opsData?.[key] ?? '-' }}</div>
             <div class="stat-label">{{ item.label }}</div>
           </div>
           <div class="stat-arrow">
@@ -250,6 +250,7 @@ const L2Cards = {
   project_count: { label: '项目总数', color: '#0284c7', icon: 'Folder' },
   on_time_rate: { label: '按时完成率', color: '#059669', icon: 'CircleCheck' },
   overdue_count: { label: '超期项目', color: '#dc2626', icon: 'Warning' },
+  pending_approvals_count: { label: '待审批', color: '#d97706', icon: 'Clock' },
 }
 
 const L3Cards = {
@@ -284,6 +285,14 @@ function statusType(s: string) {
 }
 function statusLabel(s: string) {
   return statusMap[s]?.label || s
+}
+
+function getL2CardColor(key: string, defaultColor: string): string {
+  if (key === 'pending_approvals_count') {
+    const count = Number(opsData.value?.[key]) || 0
+    return count > 0 ? '#d97706' : '#059669'  // warning : success
+  }
+  return defaultColor
 }
 
 const penetrationTreeData = computed(() => {
@@ -389,6 +398,7 @@ function drillDown(key: string) {
     project_count: '/projects',
     on_time_rate: '/projects',
     overdue_count: '/projects',
+    pending_approvals_count: '/approvals/proposals',
     phase_progress: '/projects',
     test_pass_rate: '/tests',
     issue_close_rate: '/projects',

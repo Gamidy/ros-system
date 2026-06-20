@@ -114,6 +114,7 @@ class Project(Base):
     # Draft 机制
     # ══════════════════════════════════════════
     is_draft = Column(Boolean, default=True, nullable=False, comment="是否草稿")
+    approval_status = Column(String(20), default="pending", nullable=True, comment="审批状态: pending/approved/rejected")
     is_deleted = Column(Boolean, default=False, nullable=False, comment="软删除标记")
     customer_name = Column(String(100), nullable=True, comment="customer_name")
     other_requirements = Column(Text, nullable=True, comment="other_requirements")

@@ -125,6 +125,12 @@ const router = createRouter({
           meta: { title: '测试页', menu: 'pm-workspace' },
         },
         {
+          path: 'competitor-bench',
+          name: 'CompetitorBench',
+          component: () => import('../views/pm/CompetitorBench.vue'),
+          meta: { title: '竞品对标' },
+        },
+        {
           path: 'admin-config',
           name: 'AdminConfig',
           component: () => import('../views/admin/AdminConfig.vue'),

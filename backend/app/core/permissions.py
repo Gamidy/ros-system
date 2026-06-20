@@ -42,6 +42,7 @@ ALL_MENUS = [
     "changes",          # 变更
     "approvals",        # 审批
     "pm-workspace",     # 产品经理工作台
+    "competitor_bench", # 竞品对标
     "purchases",        # 采购
     "rd_dashboard",     # 研发总监
     "mm",               # 模块管理
@@ -60,6 +61,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
     "product_manager": [
         "dashboard", "products", "bom", "projects",
         "certifications", "alerts", "pm-workspace",
+        "competitor_bench",
     ],
     "systems_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -171,6 +173,7 @@ MENU_PATH_MAP: dict[str, str] = {
     "rd_dashboard": "/rd-dashboard",
     "mm": "/mm",
     "pm-workspace": "/pm-workspace",
+    "competitor_bench": "/competitor-bench",
     "admin-config": "/admin-config",
 }
 

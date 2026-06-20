@@ -1,0 +1,90 @@
+{
+  "title": "P5-PM UX优化 — Claude风格 + 产品经理日常场景",
+  "phase": "P5",
+  "stories": [
+    {
+      "id": "US-P5-01",
+      "title": "Dashboard: 待审批提醒卡片",
+      "priority": "P0",
+      "description": "PM每天打开仪表盘，需要第一眼看到有多少待审批的立项书。当前仪表盘4层12卡片中无任何审批状态信息。",
+      "acceptance": [
+        "Dashboard新增'待审批'统计卡片，显示数字badge（如'3个待审批'）",
+        "后端/api/dashboard/summary返回pending_approvals_count字段",
+        "卡片点击跳转到/approvals/proposals页面",
+        "卡片颜色：有pending时warning色，无pending时success色"
+      ]
+    },
+    {
+      "id": "US-P5-02",
+      "title": "竞品对标独立页面",
+      "priority": "P0",
+      "description": "PM进行竞品分析时需要独立页面，而非嵌入PMWorkspace子组件。当前CompetitorBench.vue仅作为PMWorkspace内嵌组件，无独立路由。",
+      "acceptance": [
+        "新路由/competitor-bench，独立页面",
+        "保留PMWorkspace中内嵌引用不变",
+        "独立页面包含：市场选择器 + 冷量段过滤 + 11列参数矩阵 + 采纳按钮",
+        "页面应用Claude暖纸色主题（与其他页面一致）",
+        "侧栏菜单新增'竞品对标'入口"
+      ]
+    },
+    {
+      "id": "US-P5-03",
+      "title": "BOMView Claude风格微调",
+      "priority": "P1",
+      "description": "BOM树可视化页面的统计卡片和树节点需应用Claude暖纸色主题。",
+      "acceptance": [
+        "BOMView统计卡片使用Claude风格（#f5f4ed背景、暖色边框）",
+        "el-tree节点选中色使用--el-color-primary (#d97757)",
+        "el-select/el-table等Element Plus组件自动继承全局Claude变量",
+        "节点悬浮效果使用暖色系"
+      ]
+    },
+    {
+      "id": "US-P5-04",
+      "title": "PMWorkspace立项抽屉：竞品快速参考面板",
+      "priority": "P1",
+      "description": "PM填写产品立项表单时，需要在技术要求Tab看到竞品数据作为参考，而非切换页面。",
+      "acceptance": [
+        "技术要求Tab底部新增'竞品快速参考'el-collapse折叠面板",
+        "根据已选目标市场和冷量段自动过滤竞品数据",
+        "显示竞品核心参数简表（品牌/型号/冷量/能效/噪音/EER）",
+        "面板默认折叠，点击展开"
+      ]
+    },
+    {
+      "id": "US-P5-05",
+      "title": "导航栏审批小红点通知",
+      "priority": "P1",
+      "description": "侧栏'审批管理'菜单项显示待审批数量badge，PM不用点进去才知道有审批。",
+      "acceptance": [
+        "侧栏审批菜单项右侧显示数字badge（el-badge）",
+        "数量从/api/auth/me或/api/dashboard/summary的pending_approvals_count获取",
+        "数量=0时不显示badge",
+        "点击后badge不清零（下次刷新重新获取）"
+      ]
+    },
+    {
+      "id": "US-P5-06",
+      "title": "全局Claude风格一致性检查",
+      "priority": "P2",
+      "description": "确保所有页面（登录/注册/仪表盘/PM工作台/BOM/竞品对标/审批/管理配置）统一应用Claude暖纸色主题。",
+      "acceptance": [
+        "所有页面背景色为#f5f4ed",
+        "所有Element Plus组件使用Claude变量（d97757主色）",
+        "el-card/el-table/el-dialog/el-drawer均为暖纸色系",
+        "侧栏暗色#1a1917在所有页面一致",
+        "字体色#4a4a4a（暖灰，非纯黑）"
+      ]
+    }
+  ],
+  "execution_notes": {
+    "independent_stories": ["US-P5-01", "US-P5-02", "US-P5-03"],
+    "sequential_deps": {
+      "US-P5-04": ["US-P5-02"],
+      "US-P5-05": ["US-P5-01"],
+      "US-P5-06": []
+    },
+    "estimated_total_lines": "~300行(后端50+前端250)",
+    "priority_order": "P0 → P1 → P2"
+  }
+}

@@ -78,6 +78,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/purchases',      title: '采购管理',       icon: ShoppingCart },
   { path: '/mm',            title: '模块管理',       icon: DataAnalysis },
   { path: '/pm-workspace',   title: '工作台',         icon: Monitor },
+  { path: '/competitor-bench', title: '竞品对标',     icon: DataAnalysis },
   { path: '/rd-dashboard',   title: '研发总监',       icon: DataAnalysis },
   { path: '/admin-config',   title: '系统设置',       icon: Setting },
 ]

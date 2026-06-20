@@ -272,19 +272,20 @@ h3 { margin: 0 0 12px; color: #303133; }
 .stats-row { margin-bottom: 16px; }
 
 .stat-card {
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-color-primary-light-7);
   border-radius: 6px;
   padding: 12px 16px;
   height: 100%;
   text-align: center;
 }
 .stat-label { font-size: 12px; color: #909399; margin-bottom: 4px; }
-.stat-value { font-size: 20px; font-weight: 600; color: #303133; }
+.stat-value { font-size: 20px; font-weight: 600; color: var(--el-color-primary); }
 .stat-empty { font-size: 16px; color: #c0c4cc; }
 .type-tag { margin: 2px 4px 2px 0; }
 
 .tree-wrapper {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--el-border-color);
   border-radius: 6px;
   padding: 8px;
   min-height: 120px;
@@ -294,6 +295,12 @@ h3 { margin: 0 0 12px; color: #303133; }
 .tree-wrapper :deep(.el-tree-node__content) {
   height: 32px;
   font-size: 13px;
+}
+.tree-wrapper :deep(.el-tree-node__content:hover) {
+  background: var(--el-fill-color-light);
+}
+.tree-wrapper :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: var(--el-color-primary-light-9);
 }
 .tree-wrapper :deep(.el-tree-node__expand-icon) {
   font-size: 14px;
