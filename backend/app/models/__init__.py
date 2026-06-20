@@ -18,6 +18,7 @@ from app.models.material_component_template import MaterialComponentTemplate
 from app.models.capacity_unit_cost import CapacityUnitCost
 from app.models.indirect_cost_config import IndirectCostConfig
 from app.models.trial_qty_config import TrialQtyConfig
+from app.models.annual_plan import AnnualPlan
 
 __all__ = [
     "User",
@@ -39,4 +40,5 @@ __all__ = [
     "CapacityUnitCost",
     "IndirectCostConfig",
     "TrialQtyConfig",
+    "AnnualPlan",
 ]

@@ -20,6 +20,8 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.project import Project, Program
 from app.models.product import Product, Platform
+from app.models.annual_plan import AnnualPlan
+from app.core.security import require_role
 from app.schemas import ProjectCreate, ProjectOut
 from app.api.pm_proposal_utils import (
     calc_cooling_capacity_btu_to_w,
@@ -208,10 +210,22 @@ def pm_workspace(
         "overdue_count": overdue_count,
     }
 
-    # ── 年度规划去重列表 ──
-    annual_plans = list(dict.fromkeys(
-        p.annual_planning_ref for p in my_projects_raw if p.annual_planning_ref
-    ))
+    # ── 年度规划列表（从AnnualPlan表查询，附加project_count）──
+    annual_plans_raw = db.query(AnnualPlan).order_by(AnnualPlan.year.desc(), AnnualPlan.created_at.desc()).all()
+    planning_items = []
+    for ap in annual_plans_raw:
+        project_count = 0  # TODO: 等Project模型同步后恢复真实计数
+        planning_items.append({
+            "id": ap.id,
+            "name": ap.name,
+            "year": ap.year,
+            "description": ap.description,
+            "doc_ref": ap.doc_ref,
+            "owner": ap.owner,
+            "project_count": project_count,
+            "created_at": str(ap.created_at) if ap.created_at else None,
+            "updated_at": str(ap.updated_at) if ap.updated_at else None,
+        })
 
     # ── 最近5个项目 ──
     recent_projects = my_projects[:5] if len(my_projects) > 5 else my_projects
@@ -220,7 +234,7 @@ def pm_workspace(
         "my_projects": my_projects,
         "products": products,
         "stats": stats,
-        "planning_items": annual_plans,
+        "planning_items": planning_items,
         "recent_projects": recent_projects,
     }
 
@@ -1034,3 +1048,141 @@ def pm_update_project(
         raise
 
     return _project_to_dict(p)
+
+
+# ══════════════════════════════════════════════════════════════
+# 年度规划 (AnnualPlan) CRUD — P2.1 ~ P2.3
+# ══════════════════════════════════════════════════════════════
+
+def _planning_item_to_dict(ap: AnnualPlan, project_count: int = 0) -> dict:
+    """将 AnnualPlan ORM 对象转为包含 project_count 的 dict"""
+    return {
+        "id": ap.id,
+        "name": ap.name,
+        "year": ap.year,
+        "description": ap.description,
+        "doc_ref": ap.doc_ref,
+        "owner": ap.owner,
+        "project_count": project_count,
+        "created_at": str(ap.created_at) if ap.created_at else None,
+        "updated_at": str(ap.updated_at) if ap.updated_at else None,
+    }
+
+
+@router.get("/planning-items")
+def list_planning_items(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+):
+    """获取年度规划列表，附加每个规划关联的项目数"""
+    plans = db.query(AnnualPlan).order_by(AnnualPlan.year.desc(), AnnualPlan.created_at.desc()).all()
+    result = []
+    for ap in plans:
+        project_count = 0  # TODO: 等Project模型同步后恢复真实计数
+        result.append(_planning_item_to_dict(ap, project_count))
+    return result
+
+
+@router.post("/planning-items")
+def create_planning_item(
+    name: str = Body(..., max_length=200),
+    year: int = Body(...),
+    description: str | None = Body(None),
+    doc_ref: str | None = Body(None, max_length=500),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+):
+    """创建年度规划条目"""
+    if not name or not name.strip():
+        raise HTTPException(status_code=400, detail="规划名称不能为空")
+    if year < 2000 or year > 2100:
+        raise HTTPException(status_code=400, detail="请输入有效的年度")
+
+    # 检查同一年度下是否已有同名规划
+    existing = db.query(AnnualPlan).filter(
+        AnnualPlan.name == name.strip(),
+        AnnualPlan.year == year,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail=f"年度 {year} 下已存在同名规划 '{name}'")
+
+    ap = AnnualPlan(
+        name=name.strip(),
+        year=year,
+        description=description,
+        doc_ref=doc_ref,
+        owner=current_user.username,
+    )
+    try:
+        db.add(ap)
+        db.commit()
+        db.refresh(ap)
+    except Exception:
+        db.rollback()
+        raise
+
+    return _planning_item_to_dict(ap, 0)
+
+
+@router.put("/planning-items/{plan_id}")
+def update_planning_item(
+    plan_id: int,
+    name: str | None = Body(None, max_length=200),
+    year: int | None = Body(None),
+    description: str | None = Body(None),
+    doc_ref: str | None = Body(None, max_length=500),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+):
+    """更新年度规划条目"""
+    ap = db.query(AnnualPlan).filter(AnnualPlan.id == plan_id).first()
+    if not ap:
+        raise HTTPException(status_code=404, detail="年度规划不存在")
+
+    try:
+        if name is not None:
+            if not name.strip():
+                raise HTTPException(status_code=400, detail="规划名称不能为空")
+            ap.name = name.strip()
+        if year is not None:
+            if year < 2000 or year > 2100:
+                raise HTTPException(status_code=400, detail="请输入有效的年度")
+            ap.year = year
+        if description is not None:
+            ap.description = description
+        if doc_ref is not None:
+            ap.doc_ref = doc_ref
+
+        db.commit()
+        db.refresh(ap)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+
+    # 返回时附加 project_count (TODO: 等Project模型同步后恢复)
+    project_count = 0
+    return _planning_item_to_dict(ap, project_count)
+
+
+@router.delete("/planning-items/{plan_id}")
+def delete_planning_item(
+    plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+):
+    """删除年度规划条目"""
+    ap = db.query(AnnualPlan).filter(AnnualPlan.id == plan_id).first()
+    if not ap:
+        raise HTTPException(status_code=404, detail="年度规划不存在")
+
+    try:
+        db.delete(ap)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"detail": "年度规划已删除"}
