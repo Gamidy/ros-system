@@ -1,0 +1,354 @@
+{
+  "p5_phase": "BOM树可视化 + 竞品对标浏览器验证 + 产品立项全流程测试",
+  "generated_at": "2026-06-21",
+  "project_path": "/Users/gamidy/ros-source/ros-system",
+  "server": "139.196.15.52",
+  "tech_stack": {
+    "frontend": "Vue3 + Element Plus + TypeScript",
+    "backend": "FastAPI + SQLAlchemy",
+    "browser_test": "AppleScript + Safari (macOS)"
+  },
+
+  "diagnosis_summary": {
+    "bom_view": {
+      "current_state": "BOMView.vue 仅展示BOM列表和物料主数据的扁平表格，无树形可视化。路由 /bom 已注册。",
+      "api_ready": "GET /api/bom/{id}/tree 端点已完整实现（bom.py 第285-310行），返回嵌套JSON含children递归结构。",
+      "data_status": "P4已导入1条BOM（BOM-ROS-R32-12000-001）+ 17条BOMItems（3根节点+14子节点），构建6层树。",
+      "gap": "前端无任何树形渲染组件，需在BOMView.vue中新增树面板。"
+    },
+    "competitor_bench": {
+      "current_state": "CompetitorBench.vue 组件已实现（矩阵表格+采纳功能），但作为PMWorkspace子组件嵌入，无法独立路由访问。",
+      "data_status": "P4计划导入36-48条竞品记录（泰国/印尼/中东各12条+原有越南5条），需先确认数据已实际导入。",
+      "apple_script_pattern": "scripts/p3_browser_regression.applescript 已验证可用（7步流程：首页→登录→PM工作台→立项抽屉→竞品对标→年度规划→错误检查）。",
+      "gap": "需编写专用AppleScript加载竞品对标页面并验证矩阵渲染41条数据记录。"
+    },
+    "proposal_flow": {
+      "current_state": "产品立项全流程API已完整：POST /api/pm/proposals/draft（草稿）→ PUT更新 → POST /api/pm/proposals/submit（提交审批）→ GET /api/approvals/proposals（待审批）→ POST /api/approvals/{id}/review（审批操作）。ProposalApprovals.vue前端审批页面已完整。",
+      "pm_workspace": "PMWorkspace.vue 3652行，含完整立项抽屉（4个Tab：项目概述/技术要求/成本核算/团队），表单字段完整。",
+      "gap": "需实际端到端测试全流程：填写→保存草稿→编辑草稿→提交审批→并行审批→总监终审→自动创建项目。"
+    }
+  },
+
+  "tasks": [
+    {
+      "id": "P5-1",
+      "name": "BOM树可视化页面开发",
+      "priority": "P0",
+      "estimated_hours": 6,
+      "executor": "前端开发",
+      "description": "在BOMView.vue中新增BOM树形可视化面板，使用Element Plus el-tree组件渲染6层BOM树，支持展开/折叠、节点搜索、物料详情弹出。",
+      
+      "subtasks": [
+        {
+          "id": "P5-1-1",
+          "name": "BOM选择器 + 树形面板",
+          "estimated_hours": 2,
+          "file": "frontend/src/views/bom/BOMView.vue",
+          "approach": "在现有双列表下方新增第三区域：\n1. 上半部分：BOM选择器（el-select下拉选择BOM编号，数据源来自GET /api/bom/）\n2. 下半部分：el-tree 组件渲染选中BOM的树形结构\n3. 点击BOM后调用 GET /api/bom/{bom_id}/tree\n4. el-tree props: { children: 'children', label: 'label' }，节点label格式: '[item_type] part_name × quantity (part_no)'\n5. 节点区分颜色：Assembly(蓝色)/Component(橙色)/Part(绿色)/Subassembly(紫色)\n6. 默认全部展开(default-expand-all)，支持filter-node-method搜索",
+          "deliverable": "BOM树在页面上以el-tree可视化，支持展开/折叠/搜索"
+        },
+        {
+          "id": "P5-1-2",
+          "name": "树节点详情弹出",
+          "estimated_hours": 1.5,
+          "file": "frontend/src/views/bom/BOMView.vue",
+          "approach": "1. 点击树节点弹出 el-dialog 或 el-popover 显示物料详情\n2. 调用 GET /api/bom/parts/{part_id}?keyword={part_no} 或直接使用BOMItem已包含的字段\n3. 显示：物料号、名称、规格、单位、数量、位置号、备注、item_type\n4. 若该物料有AVL供应商，一并展示（GET /api/bom/parts/{part_id}/avl）",
+          "deliverable": "点击节点弹窗显示完整物料信息"
+        },
+        {
+          "id": "P5-1-3",
+          "name": "视图切换：列表 ↔ 树",
+          "estimated_hours": 1,
+          "file": "frontend/src/views/bom/BOMView.vue",
+          "approach": "1. 页面顶部添加 el-radio-group 切换 '列表视图' / '树形视图'\n2. 列表视图：保留现有双列表布局（物料主数据+BOM列表）\n3. 树形视图：BOM选择器 + el-tree + 节点详情\n4. 使用 v-if / v-show 切换",
+          "deliverable": "用户可在列表和树形两种视图之间切换"
+        },
+        {
+          "id": "P5-1-4",
+          "name": "BOM树统计信息卡片",
+          "estimated_hours": 0.5,
+          "file": "frontend/src/views/bom/BOMView.vue",
+          "approach": "在树面板上方添加统计卡片行（el-row + el-statistic 或简单卡片）：\n- 总节点数\n- 最大层级深度\n- 根节点数（Assembly级别）\n- Part数量 / Component数量\n数据从树API返回后通过递归计算获得",
+          "deliverable": "树顶部展示BOM统计摘要"
+        },
+        {
+          "id": "P5-1-5",
+          "name": "响应式布局 + 样式打磨",
+          "estimated_hours": 1,
+          "file": "frontend/src/views/bom/BOMView.vue",
+          "approach": "1. 树面板使用el-card包裹，添加scoped样式\n2. 节点颜色通过scoped CSS类名控制(.tree-node--assembly等)\n3. 移动端/窄屏下树面板全宽\n4. el-tree节点间距、字体、hover效果优化\n5. 添加loading动画（v-loading）",
+          "deliverable": "树形视图美观、响应式、可交互"
+        }
+      ],
+      "api_endpoints_used": [
+        "GET /api/bom/ → BOM列表",
+        "GET /api/bom/{bom_id}/tree → 树形结构",
+        "GET /api/bom/{bom_id}/items → BOM条目平铺（备用）",
+        "GET /api/bom/parts/{part_id} → 物料详情",
+        "GET /api/bom/parts/{part_id}/avl → AVL供应商"
+      ],
+      "test_data": {
+        "bom_no": "BOM-ROS-R32-12000-001",
+        "expected_tree_depth": 3,
+        "expected_total_nodes": 17,
+        "root_nodes": [
+          "ROS-IDU-12000-01 (室内机总成) → 6子节点",
+          "ROS-ODU-12000-01 (室外机总成) → 8子节点",
+          "ROS-PIPE-12000-01 (连接管组件) → 0子节点"
+        ]
+      },
+      "acceptance": [
+        "BOM选择器可下拉选择已有BOM",
+        "el-tree正确渲染6层树形结构",
+        "节点颜色按item_type区分",
+        "搜索功能可过滤节点（filter-node-method）",
+        "点击节点弹出物料详情",
+        "视图切换按钮正常工作",
+        "统计卡片数字正确"
+      ]
+    },
+
+    {
+      "id": "P5-2",
+      "name": "竞品对标浏览器验证（AppleScript + Safari）",
+      "priority": "P0",
+      "estimated_hours": 3,
+      "executor": "QA/自动化测试",
+      "description": "使用AppleScript驱动Safari浏览器，验证竞品对标页面的41条数据矩阵正确渲染。复用P3的浏览器回归脚本模式，新增竞品对标专用验证步骤。",
+
+      "subtasks": [
+        {
+          "id": "P5-2-1",
+          "name": "编写竞品对标专用AppleScript验证脚本",
+          "estimated_hours": 1.5,
+          "file": "scripts/p5_competitor_bench_verify.applescript",
+          "approach": "基于 scripts/p3_browser_regression.applescript 模板，编写专用验证脚本：\n\nStep 1 - HTTPS访问：导航至 https://139.196.15.52/\nStep 2 - 登录：使用 testuser (pm角色) 或 zhangzhenjie 账号登录\nStep 3 - 导航至PM工作台：URL → /pm-workspace\nStep 4 - 加载竞品对标：\n  - 选择目标市场（如'泰国'），触发fetchBenchmark\n  - 等待竞品表格渲染完成\n  - JavaScript检测: document.querySelectorAll('.bench-table .el-table__row').length\nStep 5 - 矩阵数据验证：\n  - 验证表格行数 ≥ 11 (PARAM_NAMES 固定11个参数行)\n  - 验证品牌列数 ≥ 4 (Daikin/Panasonic + 原有)\n  - 验证无JS错误: document.querySelectorAll('.el-message--error')\n  - 验证无404/空白\nStep 6 - 数据完整性检查：\n  - 遍历表格单元格，统计非'-'值的数量\n  - 预期≥ 41条有效数据（11参数 × 4品牌，部分为空值填入'-'）\n  - 抽查特定单元格值（如泰国Daikin FTKM09SV2S的eer=3.85）\nStep 7 - 采纳功能验证：\n  - 点击一个'[采纳]'按钮\n  - 验证按钮变为'✓ 已采纳'且单元格高亮\nStep 8 - 多市场切换验证：\n  - 切换市场为'印尼'，等待重新加载\n  - 验证Sharp/LG品牌列出现\n  - 切换市场为'中东'，验证Gree/Midea品牌列出现\nStep 9 - 汇总报告：\n  - 输出每步通过/失败状态\n  - 统计总竞品记录数（跨市场累加）\n  - 写入临时报告文件 /tmp/p5_bench_report.txt",
+          "deliverable": "完整的AppleScript验证脚本，覆盖3个市场×多品牌的竞品矩阵"
+        },
+        {
+          "id": "P5-2-2",
+          "name": "执行AppleScript并收集验证结果",
+          "estimated_hours": 1,
+          "approach": "1. 确认服务器竞品数据已导入（3市场×12条=36条新数据 + 原有5条 = 41条）\n   - 验证命令: curl https://139.196.15.52/api/pm/competitors/benchmark?market=泰国 | python3 -c \"import sys,json; d=json.load(sys.stdin); print(f'泰国: {len(d[\\\"competitors\\\"])}条')\"\n   - 逐一验证泰国/印尼/中东\n2. 在macOS上执行: osascript scripts/p5_competitor_bench_verify.applescript\n3. 读取报告: cat /tmp/p5_bench_report.txt\n4. 分析失败项并修复",
+          "deliverable": "执行报告显示所有步骤通过，41条数据矩阵渲染正确"
+        },
+        {
+          "id": "P5-2-3",
+          "name": "竞品数据完整性补充（如需）",
+          "estimated_hours": 0.5,
+          "approach": "若服务器竞品数据不足41条（P4导入未执行），使用 curl POST 补充导入：\n- 复用 P4_task_plan.json 中的 data_plan 竞品模型数据\n- 批量 POST /api/pm/competitors\n- 验证导入后各市场数据量达标",
+          "deliverable": "泰国≥12条、印尼≥12条、中东≥12条竞品记录",
+          "condition": "仅当P5-2-2验证发现数据不足时执行"
+        }
+      ],
+      "api_endpoints_used": [
+        "GET /api/pm/competitors/benchmark?market={market} → 竞品矩阵查询",
+        "POST /api/pm/competitors → 批量导入竞品（如需要）",
+        "GET /api/auth/login → 获取token（curl方式）"
+      ],
+      "test_data": {
+        "expected_markets": ["泰国", "印尼", "中东"],
+        "expected_brands_per_market": {
+          "泰国": ["Daikin", "Panasonic", "Mitsubishi"],
+          "印尼": ["Sharp", "LG"],
+          "中东": ["Gree", "Midea"]
+        },
+        "expected_params": ["制冷功率(W)", "能效比 EER", "室内噪音(dB)", "室外噪音(dB)", "循环风量(m³/h)", "内机尺寸(mm)", "外机尺寸(mm)", "出厂价", "上市年份", "能效等级"],
+        "expected_min_records": 41
+      },
+      "acceptance": [
+        "AppleScript在Safari中成功加载竞品对标页面",
+        "泰国市场矩阵显示Daikin/Panasonic/Mitsubishi列",
+        "印尼市场矩阵显示Sharp/LG列",
+        "中东市场矩阵显示Gree/Midea列",
+        "参数行数=11（固定PARAM_NAMES）",
+        "非空单元格总数 ≥ 41",
+        "[采纳]按钮可点击并变为'✓ 已采纳'",
+        "无JS错误、无404、无空白页",
+        "多市场切换后正确重新加载",
+        "输出完整报告到 /tmp/p5_bench_report.txt"
+      ]
+    },
+
+    {
+      "id": "P5-3",
+      "name": "产品立项全流程实际测试",
+      "priority": "P0",
+      "estimated_hours": 5,
+      "executor": "QA + 产品经理（填写表单数据）",
+      "description": "端到端测试产品立项完整流程：打开PM工作台 → 点击'产品立项'打开抽屉 → 填写4个Tab表单 → 保存草稿 → 编辑草稿 → 提交审批 → 各角色审批操作 → 验证项目自动创建。",
+
+      "subtasks": [
+        {
+          "id": "P5-3-1",
+          "name": "准备测试数据与测试用户",
+          "estimated_hours": 0.5,
+          "approach": "1. 确认测试账号可用：\n   - 产品经理(zhangzhenjie / 123456) — 负责创建和提交立项\n   - 结构模块经理(module_manager_struct角色) — 并行审批人1\n   - 系统模块经理(module_manager_sys角色) — 并行审批人2\n   - 电控工程师(electrical_control_engineer角色) — 并行审批人3\n   - 电气工程师(electrical_engineer角色) — 并行审批人4\n   - 研发总监(rd_director角色) — 终审人\n2. 如缺少角色账号，通过POST /api/auth/register 创建\n3. 准备测试立项表单数据JSON（含4个Tab完整字段）",
+          "deliverable": "6个测试角色账号就绪，测试表单数据JSON准备完成"
+        },
+        {
+          "id": "P5-3-2",
+          "name": "阶段1：填写表单 → 保存草稿 → 验证草稿",
+          "estimated_hours": 1.5,
+          "approach": "使用curl + AppleScript（模拟浏览器交互）或纯curl方式测试：\n\n流程A - 保存草稿：\n  1. 以产品经理身份登录获取token\n  2. POST /api/pm/proposals/draft 提交完整表单数据\n  3. 验证返回 { id, code, name } 且 is_draft=true\n  4. GET /api/pm/proposals/draft?owner=zhangzhenjie 验证草稿列表\n\n流程B - 编辑草稿（模拟浏览器修改）：\n  5. PUT /api/pm/proposals/draft 传入 { id: xxx, name: '修改后名称', ... }\n  6. 验证草稿更新成功\n\n流程C - AppleScript模拟表单填写（在PMWorkspace页面）：\n  7. 打开Safari → 登录 → 导航到 /pm-workspace\n  8. 点击'产品立项'按钮打开抽屉\n  9. JavaScript填充Tab1（项目概述）各字段\n  10. 切换到Tab2（技术要求）填充核心性能参数表\n  11. 切换到Tab3（成本核算）填充经济指标\n  12. 切换到Tab4（团队）选择团队角色\n  13. 点击'保存草稿'按钮\n  14. JavaScript检测 toast 消息 '草稿已保存'\n  15. 验证抽屉未关闭（草稿保存不掉）",
+          "deliverable": "草稿创建+编辑成功，API和前端均验证通过"
+        },
+        {
+          "id": "P5-3-3",
+          "name": "阶段2：提交审批 → 验证审批记录",
+          "estimated_hours": 1,
+          "approach": "1. POST /api/pm/proposals/submit 传入 { project_id: draft_id }\n2. 验证返回 { message: '立项审批已提交', approval: {...} }\n3. 验证 approval.status = 'pending_parallel'\n4. 验证 approval.parallel_reviewers 包含4个审批人\n5. 验证 approval.snapshot 包含完整项目数据快照\n6. 检查通知：以每个审批人身份登录，查 GET /api/notifications\n7. AppleScript验证：PMWorkspace页面草稿按钮变为'已提交'状态",
+          "deliverable": "审批记录创建成功，状态=pending_parallel，4位审批人收到通知"
+        },
+        {
+          "id": "P5-3-4",
+          "name": "阶段3：并行审批操作 → 总监终审 → 自动创建项目",
+          "estimated_hours": 1.5,
+          "approach": "以4位并行审批人身份依次操作：\n\n1. 结构模块经理审批：\n   - 登录 → GET /api/approvals/proposals?mode=pending 查看待审批\n   - POST /api/approvals/{approval_id}/review { action: 'approved', reason: '结构方案可行' }\n   - 验证 parallel_reviewers[0].status = 'approved'\n\n2. 系统模块经理审批：\n   - 登录 → POST review { action: 'approved', reason: '系统架构合理' }\n\n3. 电控工程师审批：\n   - 登录 → POST review { action: 'approved', reason: '电控方案OK' }\n\n4. 电气工程师审批：\n   - 登录 → POST review { action: 'approved', reason: '电气方案OK' }\n   - 此时全部通过 → 状态自动变为 pending_director\n   - 验证研发总监收到通知\n\n5. 研发总监终审：\n   - 登录 → GET /api/approvals/proposals?mode=pending → 应出现该审批\n   - POST /api/approvals/{approval_id}/review { action: 'approved', reason: '批准立项' }\n   - 验证 approval.status = 'approved'\n   - 验证项目状态变化: is_draft=false, status='planning'\n   - 验证 project.code 自动生成（PRJ-格式）\n   - 验证 ProjectGate 自动创建（M1-M9模板）\n   - 验证团队成员收到'项目已立项'通知\n\n6. 驳回场景测试（可选）：\n   - 创建第二个草稿并提交\n   - 某审批人 POST review { action: 'rejected', reason: '测试驳回' }\n   - 验证 status='rejected'，产品经理收到驳回通知\n   - 产品经理修改草稿后重新提交 → 验证 resubmit_count 递增 + previous_snapshot 保存",
+          "deliverable": "全流程通过，项目从草稿→提交→并行审批→总监终审→自动正式立项"
+        },
+        {
+          "id": "P5-3-5",
+          "name": "编写全流程自动化测试脚本",
+          "estimated_hours": 1,
+          "file": "scripts/p5_proposal_e2e_test.sh",
+          "approach": "编写bash脚本整合curl调用，实现无浏览器纯API端到端测试：\n\n#!/bin/bash\nBASE=\"https://139.196.15.52/api\"\n\n# 1. 获取各角色token\nTOKEN_PM=$(curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"zhangzhenjie\",\"password\":\"123456\"}' | jq -r '.access_token')\n\n# 2. 创建草稿\nDRAFT=$(curl -s -X POST $BASE/pm/proposals/draft \\\n  -H \"Authorization: Bearer $TOKEN_PM\" \\\n  -H 'Content-Type: application/json' \\\n  -d @test_data/proposal_test.json)\nDRAFT_ID=$(echo $DRAFT | jq -r '.id')\necho \"✅ 草稿创建: id=$DRAFT_ID\"\n\n# 3. 编辑草稿（补全字段）\ncurl -s -X PUT $BASE/pm/proposals/draft \\\n  -H \"Authorization: Bearer $TOKEN_PM\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"id\\\":$DRAFT_ID,\\\"project_duration\\\":12,\\\"target_market\\\":\\\"越南\\\"}\"\necho \"✅ 草稿编辑完成\"\n\n# 4. 提交审批\nSUBMIT=$(curl -s -X POST $BASE/pm/proposals/submit \\\n  -H \"Authorization: Bearer $TOKEN_PM\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"project_id\\\":$DRAFT_ID}\")\nAPPROVAL_ID=$(echo $SUBMIT | jq -r '.approval.id')\nSTATUS=$(echo $SUBMIT | jq -r '.approval.status')\necho \"✅ 提交审批: approval_id=$APPROVAL_ID, status=$STATUS\"\n\n# 5-8. 四位并行审批人依次通过\nfor ROLE in module_manager_struct module_manager_sys electrical_control_engineer electrical_engineer; do\n  # 获取该角色token（需预设账号）\n  TOKEN=$(curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' -d \"{\\\"username\\\":\\\"${ROLE}\\\",\\\"password\\\":\\\"123456\\\"}\" | jq -r '.access_token')\n  RESULT=$(curl -s -X POST $BASE/approvals/$APPROVAL_ID/review \\\n    -H \"Authorization: Bearer $TOKEN\" \\\n    -H 'Content-Type: application/json' \\\n    -d '{\"action\":\"approved\",\"reason\":\"自动化测试通过\"}')\n  echo \"✅ $ROLE 审批完成\"\ndone\n\n# 9. 研发总监终审\nTOKEN_DIR=$(curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"rd_director\",\"password\":\"123456\"}' | jq -r '.access_token')\nFINAL=$(curl -s -X POST $BASE/approvals/$APPROVAL_ID/review \\\n  -H \"Authorization: Bearer $TOKEN_DIR\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"action\":\"approved\",\"reason\":\"批准立项\"}')\nFINAL_STATUS=$(echo $FINAL | jq -r '.approval.status')\necho \"✅ 总监终审完成: status=$FINAL_STATUS\"\n\n# 10. 验证项目正式创建\nPROJECT=$(curl -s -X GET $BASE/projects/$DRAFT_ID -H \"Authorization: Bearer $TOKEN_PM\")\nIS_DRAFT=$(echo $PROJECT | jq -r '.is_draft')\nNEW_STATUS=$(echo $PROJECT | jq -r '.status')\nNEW_CODE=$(echo $PROJECT | jq -r '.code')\necho \"✅ 项目正式立项: code=$NEW_CODE, is_draft=$IS_DRAFT, status=$NEW_STATUS\"\n\n脚本输出每步通过/失败状态，生成JSON报告。",
+          "deliverable": "可重复执行的全流程E2E bash测试脚本，生成测试报告"
+        },
+        {
+          "id": "P5-3-6",
+          "name": "AppleScript前端交互流程验证（补充）",
+          "estimated_hours": 1,
+          "file": "scripts/p5_proposal_browser_test.applescript",
+          "approach": "补充AppleScript验证前端UI的完整交互路径：\n1. Safari打开PMWorkspace\n2. 点击'产品立项'按钮 → 验证抽屉打开\n3. 验证4个Tab都存在\n4. 切换到Tab2 → JavaScript填充核心性能参数表一行\n5. 点击'添加参数' → 验证新增一行\n6. 切换到Tab3 → 验证经济指标自动计算（BOM成本占比、毛利率）\n7. 点击'保存草稿' → 验证toast提示\n8. 关闭抽屉再打开 → 验证草稿数据回填\n9. 点击'提交审批' → 验证确认对话框 → 确认提交\n10. 验证页面状态更新（按钮变为'已提交'）\n11. 错误检查：无JS error / 404 / 空白",
+          "deliverable": "AppleScript前端UI验证脚本"
+        }
+      ],
+      "api_endpoints_used": [
+        "POST /api/auth/login → 获取token",
+        "POST /api/auth/register → 创建测试角色（如需要）",
+        "POST /api/pm/proposals/draft → 创建草稿",
+        "PUT /api/pm/proposals/draft → 更新草稿",
+        "POST /api/pm/proposals/submit → 提交审批",
+        "GET /api/approvals/proposals?mode=pending → 待审批列表",
+        "GET /api/approvals/proposals?mode=my → 我提交的",
+        "GET /api/approvals/{id} → 审批详情（含快照+当前数据对比）",
+        "POST /api/approvals/{id}/review → 审批操作",
+        "GET /api/projects/{id} → 验证项目正式创建",
+        "GET /api/notifications → 验证通知推送"
+      ],
+      "test_roles": [
+        {"role": "product_manager", "username": "zhangzhenjie", "action": "创建+编辑+提交"},
+        {"role": "module_manager_struct", "username": "struct_mgr", "action": "并行审批"},
+        {"role": "module_manager_sys", "username": "sys_mgr", "action": "并行审批"},
+        {"role": "electrical_control_engineer", "username": "ctrl_eng", "action": "并行审批"},
+        {"role": "electrical_engineer", "username": "elec_eng", "action": "并行审批"},
+        {"role": "rd_director", "username": "rd_director", "action": "总监终审"}
+      ],
+      "acceptance": [
+        "草稿创建返回200 + id/code/name",
+        "草稿编辑（PUT更新）返回200",
+        "提交审批返回 approval.status='pending_parallel'",
+        "审批记录含 parallel_reviewers 4人 + director_reviewer_id",
+        "4位审批人依次通过后状态自动变为 pending_director",
+        "研发总监终审通过后状态变为 approved",
+        "项目 is_draft=false, status='planning', code自动生成PRJ-格式",
+        "ProjectGate M1-M9自动创建",
+        "驳回→修改→重新提交→resubmit_count递增+previous_snapshot保存",
+        "各角色在审批页面可看到待审批列表",
+        "通知系统正常推送",
+        "bash E2E脚本一键执行全部通过",
+        "AppleScript前端UI验证无JS错误"
+      ]
+    }
+  ],
+
+  "execution_plan": {
+    "phase_order": ["P5-1(前端独立)", "P5-2(AppleScript)", "P5-3(全流程测试)"],
+    "parallelizable": true,
+    "note": "三个任务互不依赖，可并行执行。P5-1纯前端无后端依赖（API已就绪），P5-2依赖服务器数据（需先确认导入），P5-3依赖测试角色账号就绪。",
+
+    "p5_1_bom_tree": {
+      "step1": "在BOMView.vue script中新增树相关ref（selectedBomId, treeData, treeLoading等）",
+      "step2": "模板新增树形视图区域（BOM选择器 + el-tree + 统计卡片）",
+      "step3": "实现 fetchBomTree(bomId) 函数调用 GET /api/bom/{bom_id}/tree",
+      "step4": "实现节点点击弹窗 fetchPartDetail",
+      "step5": "添加视图切换 radio-group",
+      "step6": "样式打磨 + 前端 build 验证: cd frontend && npm run build",
+      "assignee": "前端开发",
+      "deliverable": "更新后的 BOMView.vue (~+150行模板 + ~+100行脚本)"
+    },
+
+    "p5_2_bench_verify": {
+      "step1": "验证服务器竞品数据: curl 3个市场benchmark端点确认≥41条",
+      "step2": "如需补数据: curl POST批量导入（复用P4 data_plan）",
+      "step3": "编写 p5_competitor_bench_verify.applescript",
+      "step4": "在macOS执行: osascript scripts/p5_competitor_bench_verify.applescript",
+      "step5": "分析报告修复失败项",
+      "assignee": "QA/自动化测试",
+      "deliverable": "验证报告显示3市场×11参数矩阵正常渲染"
+    },
+
+    "p5_3_proposal_e2e": {
+      "step1": "准备测试账号（注册缺失角色用户）",
+      "step2": "编写测试数据JSON test_data/proposal_test.json",
+      "step3": "编写bash E2E脚本 scripts/p5_proposal_e2e_test.sh",
+      "step4": "执行脚本验证全流程",
+      "step5": "编写AppleScript前端UI验证脚本",
+      "step6": "执行AppleScript验证前端交互",
+      "assignee": "QA + 后端开发（辅助API调用）",
+      "deliverable": "E2E脚本输出全部✅ + AppleScript报告无错误"
+    }
+  },
+
+  "files_to_create": [
+    {
+      "path": "scripts/p5_competitor_bench_verify.applescript",
+      "description": "竞品对标浏览器验证AppleScript脚本",
+      "estimated_lines": 150
+    },
+    {
+      "path": "scripts/p5_proposal_e2e_test.sh",
+      "description": "产品立项全流程E2E测试bash脚本",
+      "estimated_lines": 120
+    },
+    {
+      "path": "scripts/p5_proposal_browser_test.applescript",
+      "description": "产品立项前端UI交互AppleScript验证脚本",
+      "estimated_lines": 180
+    },
+    {
+      "path": "test_data/proposal_test.json",
+      "description": "产品立项测试数据JSON（4个Tab完整字段）",
+      "estimated_lines": 150
+    }
+  ],
+
+  "files_to_modify": [
+    {
+      "path": "frontend/src/views/bom/BOMView.vue",
+      "changes": "新增树形可视化面板：BOM选择器、el-tree组件、节点详情弹窗、统计卡片、视图切换按钮",
+      "estimated_new_lines": 250,
+      "lines_affected": "模板 ~+150行 + 脚本 ~+100行"
+    }
+  ],
+
+  "risk_notes": [
+    "P5-1: el-tree大数据量(>100节点)时渲染性能需关注，当前17节点无性能问题",
+    "P5-1: BOM树API返回的children嵌套需确认前后端字段名一致（后端返回 children: [...]，el-tree默认prop就是children）",
+    "P5-2: AppleScript依赖macOS Safari，须在macOS上执行。若Safari版本过新可能JavaScript权限受限，需在Safari开发菜单中启用'允许Apple Events中的JavaScript'",
+    "P5-2: 竞品数据若未在P4完成导入，需先执行导入（curl批量POST）再验证",
+    "P5-3: 并行审批依赖系统中存在对应角色用户。若某些角色无用户，需先注册（POST /api/auth/register）",
+    "P5-3: 审批流程中驳回→修改→重新提交路径需验证 resubmit_count 和 previous_snapshot 正确保存用于修改对比",
+    "P5-3: E2E脚本依赖jq工具解析JSON响应，需确认服务器已安装jq（或改用python -m json.tool）",
+    "前端build后建议部署到服务器验证：scp -r dist/* 到 /opt/ros-system/frontend/dist/ 并 nginx -s reload",
+    "el-input-number在Element Plus中不支持placeholder属性，表单label的说明文字替代方案已在P4-3中处理"
+  ],
+
+  "estimated_total_hours": 14,
+  "estimated_total_hours_breakdown": {
+    "P5-1_BOM树可视化": "6h (前端开发)",
+    "P5-2_竞品对标验证": "3h (AppleScript编写+执行)",
+    "P5-3_产品立项全流程": "5h (E2E脚本+AppleScript+实际测试)"
+  }
+}
