@@ -1138,6 +1138,10 @@ def update_planning_item(
     ap = db.query(AnnualPlan).filter(AnnualPlan.id == plan_id).first()
     if not ap:
         raise HTTPException(status_code=404, detail="年度规划不存在")
+    
+    # 所有权校验
+    if ap.owner != current_user.username:
+        raise HTTPException(status_code=403, detail="无权修改他人的年度规划")
 
     try:
         if name is not None:
@@ -1156,7 +1160,6 @@ def update_planning_item(
         db.commit()
         db.refresh(ap)
     except HTTPException:
-        db.rollback()
         raise
     except Exception:
         db.rollback()
@@ -1177,6 +1180,14 @@ def delete_planning_item(
     ap = db.query(AnnualPlan).filter(AnnualPlan.id == plan_id).first()
     if not ap:
         raise HTTPException(status_code=404, detail="年度规划不存在")
+    
+    # 所有权校验
+    if ap.owner != current_user.username:
+        raise HTTPException(status_code=403, detail="无权删除他人的年度规划")
+    
+    # 检查关联项目
+    if db.query(Project).filter(Project.annual_planning_ref == ap.name, Project.is_deleted == False).count() > 0:
+        raise HTTPException(status_code=409, detail="该规划下存在关联项目，请先解除关联后再删除")
 
     try:
         db.delete(ap)

@@ -3,13 +3,16 @@
 AnnualPlan 代表产品经理创建的年度规划条目。
 项目通过 annual_planning_ref 字段关联到年度规划。
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, func, UniqueConstraint
 from app.core.database import Base
 
 
 class AnnualPlan(Base):
     """年度规划"""
     __tablename__ = "annual_plans"
+    __table_args__ = (
+        UniqueConstraint('name', 'year', name='uq_annual_plan_name_year'),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(200), nullable=False, comment="年度规划名称")
