@@ -2743,12 +2743,17 @@ async function submitProposal() {
 
   submitting.value = true
   try {
-    const payload = buildProjectPayload()
-    // Always submit via /pm/proposals/submit — backend handles both new & draft
-    if (draftId.value) {
-      payload.id = draftId.value
+    // 1. 必须先保存草稿（后端 submit 只接受 project_id）
+    if (!draftId.value) {
+      await saveDraft()
+      if (!draftId.value) {
+        ElMessage.error('草稿保存失败，无法提交')
+        submitting.value = false
+        return
+      }
     }
-    await api.post('/pm/proposals/submit', payload)
+    // 2. 提交审批 — 后端期望 {project_id: int}
+    await api.post('/pm/proposals/submit', { project_id: draftId.value })
     ElMessage.success('已提交审批，等待审批人审核')
     drawerVisible.value = false
     await fetchWorkspaceData()

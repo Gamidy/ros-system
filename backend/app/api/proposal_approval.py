@@ -594,3 +594,140 @@ def review_approval(
             "message": "审批操作成功",
             "approval": _proposal_to_out(pa),
         }
+
+
+# ══════════════════════════════════════════════════════════════════
+# POST /api/pm/proposals/draft — 创建产品立项草稿
+# ══════════════════════════════════════════════════════════════════
+
+@router.post("/pm/proposals/draft")
+def create_proposal_draft(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """产品经理保存立项草稿。接收完整表单数据，创建 Project(is_draft=True)。"""
+    import random
+
+    name = payload.get("name") or f"草稿-{current_user.username}-{datetime.now().strftime('%m%d%H%M')}"
+    code = payload.get("code") or f"DRF-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100,999)}"
+
+    p = Project(
+        code=code,
+        name=name,
+        project_class=payload.get("project_class") or "C",
+        program_id=payload.get("program_id"),
+        product_code=payload.get("product_code"),
+        source=payload.get("project_origin") or payload.get("source"),
+        status="planning",
+        start_date=_parse_date(payload.get("start_date")),
+        target_end_date=_parse_date(payload.get("target_end_date")),
+        owner=current_user.username,
+        leader_id=payload.get("leader_id"),
+        description=payload.get("background_basis"),
+        market_policy=payload.get("market_policy"),
+        annual_planning_ref=payload.get("annual_planning_ref"),
+        budget=payload.get("budget"),
+        product_type=payload.get("product_type"),
+        target_market=payload.get("target_market"),
+        climate_zone=payload.get("climate_zone"),
+        refrigerant=payload.get("refrigerant"),
+        capacity_range=payload.get("capacity_range"),
+        voltage_freq=payload.get("voltage_freq"),
+        series_name=payload.get("series_name"),
+        energy_rating=payload.get("energy_rating"),
+        ip_ownership=payload.get("ip_ownership"),
+        project_duration=payload.get("project_duration"),
+        dev_category=payload.get("dev_category"),
+        project_origin=payload.get("project_origin"),
+        background_basis=payload.get("background_basis"),
+        overall_goal=payload.get("overall_goal"),
+        tech_goal=payload.get("tech_goal"),
+        cost_goal=payload.get("cost_goal"),
+        sales_goal=payload.get("sales_goal"),
+        cert_goal=payload.get("cert_goal"),
+        schedule_goal=payload.get("schedule_goal"),
+        patent_goal=payload.get("patent_goal"),
+        other_goals=payload.get("other_goals"),
+        is_draft=True,
+    )
+    db.add(p)
+    db.flush()
+    db.commit()
+    return {"id": p.id, "code": p.code, "name": p.name}
+
+
+# ══════════════════════════════════════════════════════════════════
+# PUT /api/pm/proposals/draft — 更新产品立项草稿
+# ══════════════════════════════════════════════════════════════════
+
+@router.put("/pm/proposals/draft")
+def update_proposal_draft(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """更新已有草稿。payload 必须包含 id 字段。"""
+    draft_id = payload.get("id")
+    if not draft_id:
+        raise HTTPException(status_code=400, detail="缺少草稿 id")
+
+    p = db.query(Project).filter(
+        Project.id == draft_id,
+        Project.is_draft == True,
+        Project.owner == current_user.username,
+    ).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="草稿不存在或无权修改")
+
+    _apply_payload(p, payload)
+    p.updated_at = datetime.now()
+    db.commit()
+    return {"id": p.id, "code": p.code, "name": p.name}
+
+
+def _parse_date(val):
+    """安全解析日期字符串"""
+    if not val:
+        return None
+    try:
+        for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y-%m-%dT%H:%M:%S"]:
+            try:
+                return datetime.strptime(str(val)[:10], fmt).date()
+            except ValueError:
+                continue
+    except Exception:
+        pass
+    return None
+
+
+def _apply_payload(p: Project, payload: dict):
+    """将 payload 字典中的已知字段应用到 Project 对象"""
+    mappings = [
+        ("name", "name"), ("code", "code"), ("project_class", "project_class"),
+        ("program_id", "program_id"), ("product_code", "product_code"),
+        ("project_origin", "source"), ("source", "source"),
+        ("status", "status"),
+        ("leader_id", "leader_id"), ("budget", "budget"),
+        ("product_type", "product_type"), ("target_market", "target_market"),
+        ("climate_zone", "climate_zone"), ("refrigerant", "refrigerant"),
+        ("capacity_range", "capacity_range"), ("voltage_freq", "voltage_freq"),
+        ("series_name", "series_name"), ("energy_rating", "energy_rating"),
+        ("ip_ownership", "ip_ownership"), ("project_duration", "project_duration"),
+        ("dev_category", "dev_category"), ("project_origin", "project_origin"),
+        ("background_basis", "background_basis"), ("overall_goal", "overall_goal"),
+        ("tech_goal", "tech_goal"), ("cost_goal", "cost_goal"),
+        ("sales_goal", "sales_goal"), ("cert_goal", "cert_goal"),
+        ("schedule_goal", "schedule_goal"), ("patent_goal", "patent_goal"),
+        ("other_goals", "other_goals"),
+        ("market_policy", "market_policy"),
+        ("annual_planning_ref", "annual_planning_ref"),
+        ("description", "description"),
+    ]
+    for src_key, col_name in mappings:
+        if src_key in payload and payload[src_key] is not None:
+            setattr(p, col_name, payload[src_key])
+    # Date fields
+    for key in ["start_date", "target_end_date"]:
+        if key in payload:
+            setattr(p, key, _parse_date(payload[key]))
