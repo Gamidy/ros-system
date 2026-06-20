@@ -84,7 +84,7 @@
           <el-icon :size="16"><TrendCharts /></el-icon>
         </div>
         <h2 class="section-title">项目运营</h2>
-        <span class="section-count">4 项指标</span>
+        <span class="section-count">5 项指标</span>
       </div>
       
       <div class="stats-grid">
