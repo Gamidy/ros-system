@@ -121,12 +121,44 @@ function handleAdopt(row: BenchmarkRow, brand: string) {
   })
 }
 
+/** 将后端返回的 {market, competitors, param_names} 转换为 BenchmarkRow[] */
+function transformBenchmarkData(raw: any): BenchmarkRow[] {
+  if (!raw || !raw.param_names || !raw.competitors) return []
+
+  const competitors = raw.competitors as any[]
+  const paramNames = raw.param_names as Array<{ key: string; label: string; unit: string }>
+
+  // 收集所有品牌名
+  const brandSet = new Set<string>()
+  for (const c of competitors) {
+    if (c.brand) brandSet.add(c.brand)
+  }
+
+  return paramNames.map((p) => {
+    const row: BenchmarkRow = {
+      param_key: p.key,
+      param_name: p.unit ? `${p.label} (${p.unit})` : p.label,
+      our_target: '—',
+      competitors: {},
+    }
+
+    for (const c of competitors) {
+      const val = c[p.key]
+      if (val !== undefined && val !== null) {
+        row.competitors[c.brand] = { value: Number(val), model: c.model || '' }
+      }
+    }
+
+    return row
+  })
+}
+
 async function fetchBenchmark(market: string) {
   if (!market) return
   loading.value = true
   try {
     const res = await api.get('/pm/competitors/benchmark', { params: { market } })
-    benchmarkData.value = res.data?.items || res.data || []
+    benchmarkData.value = transformBenchmarkData(res.data)
     // Reset adopted state when market changes
     adoptedKeys.value = new Set()
   } catch {
