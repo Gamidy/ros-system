@@ -10,6 +10,7 @@ from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.audit import AuditLog
 from app.models.pm_config import CertStandard, PerfDefault
 from app.models.pm_accessory import AccessoryDefault, FeatureDefault
+from app.models.competitor import CompetitorModel
 from app.models.proposal_approval import ProposalApproval
 from app.models.team_role_template import TeamRoleTemplate
 from app.models.role_position_mapping import RolePositionMapping
@@ -29,6 +30,7 @@ __all__ = [
     "PurchaseOrder", "PurchaseOrderItem", "Supplier",
     "AuditLog",
     "CertStandard", "PerfDefault",
+    "CompetitorModel",
     "AccessoryDefault", "FeatureDefault",
     "ProposalApproval",
     "TeamRoleTemplate",

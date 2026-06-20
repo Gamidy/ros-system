@@ -505,6 +505,11 @@
               </el-table-column>
             </el-table>
             <el-button size="small" style="margin-top:8px" @click="addCorePerfRow">+ 添加行</el-button>
+            <CompetitorBench 
+              :market="projectForm.target_market"
+              :coolingCapacity="projectForm.capacity_range"
+              @adopt="onAdoptCompetitor"
+            />
           </template>
 
           <!-- Step ❷: 安全合规 -->
@@ -1095,6 +1100,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Link } from '@element-plus/icons-vue'
 import api from '../../api'
+import CompetitorBench from './CompetitorBench.vue'
 
 // ═══════════════════════════════════════════════
 // 类型定义
@@ -3083,6 +3089,42 @@ async function fetchSystemConfig() {
       systemConfig.value = res.data.data
     }
   } catch { /* use defaults */ }
+}
+
+// ═══════════════════════════════════════════════
+// 竞品对标：采纳竞品参数
+// ═══════════════════════════════════════════════
+// paramKey → corePerfTable.param_name 映射表
+const PARAM_KEY_MAP: Record<string, string> = {
+  cooling_w: '制冷量(W)',
+  cspf: 'CSPF(W/W)',
+  energy_grade: '能效等级',
+  tolerance: '容差(%)',
+  air_flow: '出风量(m³/h)',
+  noise_indoor: '室内噪音dB(A)',
+  noise_outdoor: '室外噪音dB(A)',
+  pipe_size: '接管尺寸',
+  refrigerant: '制冷剂',
+  net_weight_indoor: '内机净重(kg)',
+  net_weight_outdoor: '外机净重(kg)',
+  dimension_indoor: '内机尺寸(mm)',
+  dimension_outdoor: '外机尺寸(mm)',
+}
+
+function onAdoptCompetitor({ paramKey, value, brand }: { paramKey: string; value: number; brand: string }) {
+  const paramName = PARAM_KEY_MAP[paramKey]
+  if (!paramName) {
+    ElMessage.warning(`未知参数: ${paramKey}`)
+    return
+  }
+  const row = corePerfTable.find(r => r.param_name === paramName)
+  if (!row) {
+    ElMessage.warning(`核心性能表中未找到参数: ${paramName}`)
+    return
+  }
+  row.target_value = String(value)
+  row.source = brand
+  ElMessage.success(`已采纳 ${brand} 的 ${paramName} 值: ${value}`)
 }
 
 // ═══════════════════════════════════════════════

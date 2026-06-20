@@ -8,7 +8,7 @@ from app.core.security import csrf_middleware
 from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, admin_config, pm_config, pm_accessory, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel
 from app.models import system_config  # ensure table created
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
@@ -74,6 +74,8 @@ app.include_router(knowledge.router)
 app.include_router(pm_workspace.router, prefix="/api")
 app.include_router(pm_config.router, prefix="/api")
 app.include_router(pm_accessory.router, prefix="/api")
+app.include_router(competitor_bench.router, prefix="/api")
+app.include_router(competitor.router, prefix="/api")
 app.include_router(admin_config.router)
 app.include_router(admin_role_templates.router)
 app.include_router(admin_role_mappings.router)
