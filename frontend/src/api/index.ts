@@ -34,4 +34,9 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   return res.data
 }
 
+export async function forgotPassword(phone: string, full_name: string) {
+  const res = await api.post('/auth/forgot-password', { phone, full_name })
+  return res.data
+}
+
 export default api

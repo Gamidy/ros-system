@@ -9,11 +9,13 @@ const router = createRouter({
       path: '/login',
       name: 'Login',
       component: () => import('../views/login/LoginView.vue'),
+      meta: { public: true },
     },
     {
       path: '/register',
       name: 'Register',
       component: () => import('../views/register/RegisterView.vue'),
+      meta: { public: true },
     },
     {
       path: '/',
@@ -111,16 +113,16 @@ const router = createRouter({
           meta: { title: '模块管理' },
         },
         {
-          path: 'pm-workspace-test',
-          name: 'PMWorkspaceTest',
-          component: () => import('../views/pm/TestView.vue'),
-          meta: { title: '测试页', menu: 'pm-workspace' },
-        },
-        {
           path: 'pm-workspace',
           name: 'PMWorkspace',
           component: () => import('../views/pm/PMWorkspace.vue'),
           meta: { title: '工作台', menu: 'pm-workspace' },
+        },
+        {
+          path: 'pm-workspace-test',
+          name: 'PMWorkspaceTest',
+          component: () => import('../views/pm/TestView.vue'),
+          meta: { title: '测试页', menu: 'pm-workspace' },
         },
         {
           path: 'admin-config',
@@ -135,37 +137,23 @@ const router = createRouter({
 
 router.beforeEach(async (to, _from, next) => {
   const token = localStorage.getItem('token')
-  const isPublic = to.name === 'Login' || to.name === 'Register'
-
-  // 1. 未登录 → 公开页放行，其他跳登录
+  const isPublic = to.meta.public === true
   if (!token) {
     if (isPublic) return next()
     return next('/login')
   }
-
-  // 2. 已登录 → 公开页直接放行
   if (isPublic) return next()
-
-  // 3. 已登录且有 token → 确保用户信息已加载，进行角色路由权限检查
   const authStore = useAuthStore()
-
   try {
-    // 如果用户信息尚未加载，先获取
-    if (!authStore.user) {
-      await authStore.fetchUser()
-    }
+    if (!authStore.user) await authStore.fetchUser()
   } catch {
-    // 获取用户信息失败（如 token 过期），清空并跳转登录
     authStore.logout()
     return next('/login')
   }
-
-  // 4. 角色路由权限检查
   if (!authStore.hasRouteAccess(to.path)) {
     ElMessage.warning('没有访问该页面的权限，已跳转到驾驶舱')
     return next('/dashboard')
   }
-
   next()
 })
 

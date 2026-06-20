@@ -41,6 +41,7 @@ ALL_MENUS = [
     "quality",          # 质量
     "changes",          # 变更
     "approvals",        # 审批
+    "pm-workspace",     # 产品经理工作台
     "purchases",        # 采购
     "rd_dashboard",     # 研发总监
     "mm",               # 模块管理

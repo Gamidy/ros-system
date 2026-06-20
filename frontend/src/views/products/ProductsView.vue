@@ -55,7 +55,6 @@
               <template #default="{ row }">
                 <el-button link size="small" type="primary" @click="openVersionManage(row)">版本</el-button>
                 <el-button link size="small" type="success" @click="openMarketAssign(row)">市场</el-button>
-                <el-button link size="small" type="primary" @click="handleInitiateProject(row)">发起项目</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -132,10 +131,10 @@
 
     <!-- Platform Dialog -->
     <el-dialog v-model="showPlatformDialog" title="新建平台" width="520">
-      <el-form ref="pfFormRef" :model="pfForm" :rules="pfRules" label-width="100" size="small">
-        <el-form-item label="平台编码" prop="code"><el-input v-model="pfForm.code" placeholder="如 IDU900" /></el-form-item>
-        <el-form-item label="平台名称" prop="name"><el-input v-model="pfForm.name" placeholder="室内机900平台" /></el-form-item>
-        <el-form-item label="类型" prop="platform_type">
+      <el-form :model="pfForm" label-width="100" size="small">
+        <el-form-item label="平台编码"><el-input v-model="pfForm.code" placeholder="如 IDU900" /></el-form-item>
+        <el-form-item label="平台名称"><el-input v-model="pfForm.name" placeholder="室内机900平台" /></el-form-item>
+        <el-form-item label="类型">
           <el-select v-model="pfForm.platform_type"><el-option label="室内机 IDU" value="IDU" /><el-option label="室外机 ODU" value="ODU" /></el-select>
         </el-form-item>
         <el-form-item label="外观尺寸"><el-input v-model="pfForm.dimensions" placeholder="如 900×600×300mm" /></el-form-item>
@@ -149,10 +148,10 @@
 
     <!-- Product Dialog -->
     <el-dialog v-model="showProductDialog" title="新建产品" width="520">
-      <el-form ref="pdFormRef" :model="pdForm" :rules="pdRules" label-width="110" size="small">
-        <el-form-item label="产品编码" prop="code"><el-input v-model="pdForm.code" placeholder="如 EU-09K" /></el-form-item>
-        <el-form-item label="产品名称" prop="name"><el-input v-model="pdForm.name" placeholder="EU系列09K" /></el-form-item>
-        <el-form-item label="主平台" prop="platform_id">
+      <el-form :model="pdForm" label-width="110" size="small">
+        <el-form-item label="产品编码"><el-input v-model="pdForm.code" placeholder="如 EU-09K" /></el-form-item>
+        <el-form-item label="产品名称"><el-input v-model="pdForm.name" placeholder="EU系列09K" /></el-form-item>
+        <el-form-item label="主平台">
           <el-select v-model="pdForm.platform_id"><el-option v-for="p in platforms" :key="p.id" :label="`${p.code} (${p.platform_type})`" :value="p.id" /></el-select>
         </el-form-item>
         <el-form-item label="室内平台">
@@ -162,8 +161,6 @@
           <el-select v-model="pdForm.outdoor_platform_id" clearable><el-option v-for="p in oduPlatforms" :key="p.id" :label="p.code" :value="p.id" /></el-select>
         </el-form-item>
         <el-form-item label="容量"><el-input v-model="pdForm.capacity" placeholder="如 09K/12K" /></el-form-item>
-        <el-form-item label="内机成品码"><el-input v-model="pdForm.indoor_product_code" placeholder="内机成品编码" /></el-form-item>
-        <el-form-item label="外机成品码"><el-input v-model="pdForm.outdoor_product_code" placeholder="外机成品编码" /></el-form-item>
         <el-form-item label="主市场"><el-input v-model="pdForm.market" placeholder="如 EU/VN/CN" /></el-form-item>
       </el-form>
       <template #footer>
@@ -174,9 +171,9 @@
 
     <!-- Market Dialog -->
     <el-dialog v-model="showMarketDialog" title="新建市场" width="450">
-      <el-form ref="mktFormRef" :model="mktForm" :rules="mktRules" label-width="80" size="small">
-        <el-form-item label="市场代码" prop="code"><el-input v-model="mktForm.code" placeholder="如 EU" /></el-form-item>
-        <el-form-item label="市场名称" prop="name"><el-input v-model="mktForm.name" placeholder="如 欧盟" /></el-form-item>
+      <el-form :model="mktForm" label-width="80" size="small">
+        <el-form-item label="市场代码"><el-input v-model="mktForm.code" placeholder="如 EU" /></el-form-item>
+        <el-form-item label="市场名称"><el-input v-model="mktForm.name" placeholder="如 欧盟" /></el-form-item>
         <el-form-item label="区域"><el-input v-model="mktForm.region" placeholder="如 Europe" /></el-form-item>
       </el-form>
       <template #footer>
@@ -201,9 +198,9 @@
 
     <!-- Version Dialog -->
     <el-dialog v-model="showVersionDialog" title="新建版本" width="500">
-      <el-form ref="verFormRef" :model="verForm" :rules="verRules" label-width="100" size="small">
+      <el-form :model="verForm" label-width="100" size="small">
         <el-form-item label="产品">{{ currentProduct?.code }} - {{ currentProduct?.name }}</el-form-item>
-        <el-form-item label="版本号" prop="version_no"><el-input v-model="verForm.version_no" placeholder="如 V1.0" /></el-form-item>
+        <el-form-item label="版本号"><el-input v-model="verForm.version_no" placeholder="如 V1.0" /></el-form-item>
         <el-form-item label="变更原因"><el-input v-model="verForm.reason" type="textarea" :rows="2" /></el-form-item>
         <el-form-item label="变更类型">
           <el-select v-model="verForm.change_type" clearable>
@@ -259,51 +256,11 @@
         <el-button @click="showVersionListDialog = false">关闭</el-button>
       </template>
     </el-dialog>
-
-    <!-- Project Dialog -->
-    <el-dialog v-model="showProjectDialog" title="新建项目申请" width="560">
-      <el-form ref="projectFormRef" :model="projectForm" :rules="projectRules" label-width="100" size="small">
-        <el-form-item label="项目编号">
-          <el-input v-model="projectForm.code" placeholder="自动生成或手动输入" />
-        </el-form-item>
-        <el-form-item label="项目名称" prop="name">
-          <el-input v-model="projectForm.name" placeholder="请输入项目名称" />
-        </el-form-item>
-        <el-form-item label="项目等级">
-          <el-select v-model="projectForm.project_class">
-            <el-option label="T" value="T" />
-            <el-option label="A" value="A" />
-            <el-option label="B" value="B" />
-            <el-option label="C" value="C" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="关联产品">
-          <el-input v-model="projectForm.product_code" disabled />
-        </el-form-item>
-        <el-form-item label="开发模块">
-          <el-input v-model="projectForm.dev_modules" placeholder="如 硬件/软件/结构" />
-        </el-form-item>
-        <el-form-item label="项目经理" prop="owner">
-          <el-input v-model="projectForm.owner" placeholder="请输入项目经理" />
-        </el-form-item>
-        <el-form-item label="目标日期">
-          <el-date-picker v-model="projectForm.target_end_date" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="projectForm.description" type="textarea" :rows="3" placeholder="项目描述" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showProjectDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitProject">提交</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import type { FormInstance, FormRules } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
@@ -325,62 +282,13 @@ const showMarketDialog = ref(false)
 const showVersionDialog = ref(false)
 const showVersionListDialog = ref(false)
 const showMarketAssignDialog = ref(false)
-const showProjectDialog = ref(false)
-const currentProjectProduct = ref<any>(null)
 
 // Forms
 const pfForm = ref({ code: '', name: '', platform_type: 'IDU', dimensions: '', hard_constraints: '' })
-const pdForm = ref({ code: '', name: '', platform_id: 0, indoor_platform_id: null as number | null, outdoor_platform_id: null as number | null, capacity: '', indoor_product_code: '', outdoor_product_code: '', market: '' })
+const pdForm = ref({ code: '', name: '', platform_id: 0, indoor_platform_id: null as number | null, outdoor_platform_id: null as number | null, capacity: '', market: '' })
 const mktForm = ref({ code: '', name: '', region: '' })
 const verForm = ref({ version_no: '', reason: '', change_type: '', customer_perceivable: false })
 const variantForm = ref({ factory_code: '', factory_name: '', mbom_version: '' })
-const projectForm = reactive({
-  code: '',
-  name: '',
-  project_class: 'B',
-  product_code: '',
-  dev_modules: '',
-  owner: '',
-  target_end_date: '',
-  description: '',
-})
-
-// Form refs
-const pfFormRef = ref<FormInstance>()
-const pdFormRef = ref<FormInstance>()
-const mktFormRef = ref<FormInstance>()
-const verFormRef = ref<FormInstance>()
-const projectFormRef = ref<FormInstance>()
-
-// Form rules
-const pfRules: FormRules = {
-  code: [{ required: true, message: '请输入平台编码', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入平台名称', trigger: 'blur' }],
-  platform_type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-}
-
-const pdRules: FormRules = {
-  code: [{ required: true, message: '请输入产品编码', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入产品名称', trigger: 'blur' }],
-  platform_id: [
-    { required: true, message: '请选择主平台', trigger: 'change' },
-    { validator: (_rule, value, callback) => { if (value > 0) callback(); else callback(new Error('请选择主平台')) }, trigger: 'change' },
-  ],
-}
-
-const mktRules: FormRules = {
-  code: [{ required: true, message: '请输入市场代码', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入市场名称', trigger: 'blur' }],
-}
-
-const verRules: FormRules = {
-  version_no: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
-}
-
-const projectRules: FormRules = {
-  name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
-  owner: [{ required: true, message: '请输入项目经理', trigger: 'blur' }],
-}
 
 // State
 const currentProduct = ref<any>(null)
@@ -424,8 +332,6 @@ async function onTabChange(name: string) {
 
 // Platform
 async function savePlatform() {
-  const valid = await pfFormRef.value?.validate().catch(() => false)
-  if (!valid) return
   try {
     await api.post('/products/platforms', pfForm.value)
     ElMessage.success('平台创建成功')
@@ -437,21 +343,17 @@ async function savePlatform() {
 
 // Product
 async function saveProduct() {
-  const valid = await pdFormRef.value?.validate().catch(() => false)
-  if (!valid) return
   try {
     await api.post('/products', pdForm.value)
     ElMessage.success('产品创建成功')
     showProductDialog.value = false
-    pdForm.value = { code: '', name: '', platform_id: 0, indoor_platform_id: null, outdoor_platform_id: null, capacity: '', indoor_product_code: '', outdoor_product_code: '', market: '' }
+    pdForm.value = { code: '', name: '', platform_id: 0, indoor_platform_id: null, outdoor_platform_id: null, capacity: '', market: '' }
     await fetchAll()
   } catch {}
 }
 
 // Market
 async function saveMarket() {
-  const valid = await mktFormRef.value?.validate().catch(() => false)
-  if (!valid) return
   try {
     await api.post('/products/markets', mktForm.value)
     ElMessage.success('市场创建成功')
@@ -492,8 +394,6 @@ async function fetchVersions(pid: number) {
 }
 
 async function saveVersion() {
-  const valid = await verFormRef.value?.validate().catch(() => false)
-  if (!valid) return
   try {
     await api.post(`/products/${currentProduct.value.id}/versions`, verForm.value)
     ElMessage.success('版本创建成功')
@@ -508,39 +408,6 @@ async function changeVersionStatus(vid: number, status: string) {
     await api.patch(`/products/versions/${vid}/status`, { status })
     ElMessage.success('状态更新成功')
     await fetchVersions(currentProduct.value.id)
-  } catch {}
-}
-
-// Project
-function handleInitiateProject(row: any) {
-  currentProjectProduct.value = row
-  projectForm.code = ''
-  projectForm.name = ''
-  projectForm.project_class = 'B'
-  projectForm.product_code = row.code || ''
-  projectForm.dev_modules = ''
-  projectForm.owner = ''
-  projectForm.target_end_date = ''
-  projectForm.description = ''
-  showProjectDialog.value = true
-}
-
-async function submitProject() {
-  const valid = await projectFormRef.value?.validate().catch(() => false)
-  if (!valid) return
-  try {
-    await api.post('/api/projects', {
-      code: projectForm.code || undefined,
-      name: projectForm.name,
-      project_class: projectForm.project_class,
-      product_code: projectForm.product_code,
-      dev_modules: projectForm.dev_modules,
-      owner: projectForm.owner,
-      target_end_date: projectForm.target_end_date || undefined,
-      description: projectForm.description,
-    })
-    ElMessage.success('项目已创建')
-    showProjectDialog.value = false
   } catch {}
 }
 
