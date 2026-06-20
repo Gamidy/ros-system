@@ -703,6 +703,23 @@
               </el-table-column>
             </el-table>
           </template>
+
+          <!-- 竞品快速参考 -->
+          <el-divider content-position="left">🔍 竞品快速参考</el-divider>
+          <el-collapse v-model="competitorRefActive" style="margin-top:8px">
+            <el-collapse-item title="展开竞品数据对比（根据已选目标市场和冷量段自动过滤）" name="ref">
+              <el-table :data="quickRefCompetitors" border size="small" max-height="300">
+                <el-table-column prop="brand" label="品牌" width="80" />
+                <el-table-column prop="model" label="型号" width="140" />
+                <el-table-column prop="cooling_capacity" label="冷量" width="70" />
+                <el-table-column prop="energy_rating" label="能效" width="60" />
+                <el-table-column prop="cooling_w" label="制冷(W)" width="80" />
+                <el-table-column prop="eer" label="EER" width="60" />
+                <el-table-column prop="noise_indoor_db" label="噪音(dB)" width="80" />
+                <el-table-column prop="factory_price" label="出厂价" width="90" />
+              </el-table>
+            </el-collapse-item>
+          </el-collapse>
         </el-tab-pane>
 
         <!-- ═══════════ Tab 4: 成本核算 ═══════════ -->
@@ -1369,6 +1386,10 @@ const corePerfTable = reactive<CorePerfRow[]>([
 // Tab 3: 技术步骤导航
 const techStep = ref(0)
 
+// 竞品快速参考
+const competitorRefActive = ref<string[]>([])
+const quickRefCompetitors = ref<any[]>([])
+
 // Tab 3 表格: 物料与部件清单
 const materialComponentTable = reactive<MaterialComponentRow[]>([
   { type: '物料', name: '', spec: '', qty: 1, unit: '个', usage: '', supplier: '', delivery_cycle: '', unit_price: 0, candidate_vendors: '', remark: '' },
@@ -1968,6 +1989,23 @@ watch(() => projectForm.target_market, (market) => {
 watch([() => projectForm.target_market, () => projectForm.capacity_range], ([market, capacity]) => {
   if (market && capacity) {
     fetchPerfDefaults(market, capacity)
+  }
+})
+
+// 目标市场或冷量段变化 → 加载竞品快速参考数据
+watch([() => projectForm.target_market, () => projectForm.capacity_range], async ([market, capacity]) => {
+  if (market) {
+    try {
+      const res = await api.get('/pm/competitors/benchmark', { params: { market } })
+      const comps = res.data?.competitors || []
+      if (capacity) {
+        quickRefCompetitors.value = comps.filter((c: any) => 
+          (c.cooling_capacity || '').includes(capacity.replace('K',''))
+        ).slice(0, 10)
+      } else {
+        quickRefCompetitors.value = comps.slice(0, 10)
+      }
+    } catch { quickRefCompetitors.value = [] }
   }
 })
 

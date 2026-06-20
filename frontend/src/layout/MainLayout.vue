@@ -17,7 +17,13 @@
           class="nav-item"
           :class="{ active: route.path === menu.path }"
         >
-          <el-icon class="nav-icon">
+          <el-badge v-if="menu.path.includes('approval') && pendingApprovalCount > 0" 
+            :value="pendingApprovalCount" :max="99" class="nav-badge">
+            <el-icon class="nav-icon">
+              <component :is="menu.icon" />
+            </el-icon>
+          </el-badge>
+          <el-icon v-else class="nav-icon">
             <component :is="menu.icon" />
           </el-icon>
           <span class="nav-label" v-show="!isCollapse">{{ menu.title }}</span>
@@ -78,11 +84,13 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import api from '../api'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const isCollapse = ref(false)
+const pendingApprovalCount = ref(0)
 
 const userInitial = computed(() => {
   const name = authStore.user?.username || 'U'
@@ -97,6 +105,12 @@ onMounted(async () => {
       handleLogout()
       return
     }
+  }
+  try {
+    const res = await api.get('/dashboard/summary')
+    pendingApprovalCount.value = res.data?.layer2_project_ops?.pending_approvals_count || 0
+  } catch {
+    // Silently ignore
   }
 })
 
