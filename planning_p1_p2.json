@@ -1,0 +1,150 @@
+{
+  "phase_tasks": [
+    {
+      "id": "P1-1",
+      "title": "仪表盘数据动态化 — 后端嵌套结构 + DB聚合数据",
+      "status": "planned",
+      "effort": "4-5h",
+      "dependencies": [],
+      "problem": "后端 dashboard.py 返回扁平 DashboardSummary{total_products, active_projects,...} 字段，但前端 DashboardView.vue 第325-331行期望嵌套结构 data.layer1_system_health / layer2_project_ops / layer3_penetration / layer4_ac_metrics，导致所有卡片显示 '-' (fallback)",
+      "subtasks": [
+        {
+          "id": "P1-1-1",
+          "title": "新增嵌套 DashboardResponse Schema",
+          "file": "backend/app/schemas/__init__.py",
+          "approach": "在 DashboardSummary 之后新增 DashboardResponse(BaseModel)，包含四个嵌套字段：\n1. layer1_system_health: 包含 total_platforms, total_products, total_versions, active_projects (int) + product_status_distribution (list[{name,value}])\n2. layer2_project_ops: 包含 project_count, on_time_rate (str like '85%'), overdue_count (int) + recent_projects (list) + project_status_distribution (list)\n3. layer3_penetration: Optional[dict] 包含 project_name + products[] → versions[] → boms[] 树结构\n4. layer4_ac_metrics: 包含 phase_progress (str), test_pass_rate (str), issue_close_rate (str), cost_execution_rate (str), generalization_rate (str) + phase_progress chart data (list)\n同时保留原 DashboardSummary 用于计算中间值",
+          "risk": "low"
+        },
+        {
+          "id": "P1-1-2",
+          "title": "重写 dashboard_summary() 端点计算嵌套数据",
+          "file": "backend/app/api/dashboard.py",
+          "approach": "修改 /dashboard/summary 端点：\n- L1 体系健康度: 查询 Platform/Product/Version/Project 四张表做 COUNT 聚合，按 status 分组做 product_status_distribution\n- L2 项目运营: 统计项目总数/按时完成率(actual_end_date <= target_end_date 的项目 / active 项目)/超期数，取最近5个项目做 recent_projects，按 status 分组做 project_status_distribution\n- L3 穿透分析: 选取一个活跃项目 → JOIN product → JOIN version → JOIN BOM 构建树，若无可返回 null（前端有 fallback）\n- L4 AC指标: 从 ProjectGate 表计算 phase_progress(M4/M5/M6通过率)，从 TestRequest 计算 test_pass_rate，从 QualityIssue 计算 issue_close_rate\n- 需要新增 imports: Platform, Version, BOM 模型\n- 返回 DashboardResponse 嵌套对象替代原 DashboardSummary",
+          "risk": "medium",
+          "note": "L3穿透树查询较复杂，若真实数据不足可返回null让前端用fallback"
+        },
+        {
+          "id": "P1-1-3",
+          "title": "移除前端 fallback 硬编码值并验证",
+          "file": "frontend/src/views/dashboard/DashboardView.vue",
+          "approach": "确认前端第325-331行的解构逻辑无需改动（已按嵌套结构读取），仅移除第346-359行 catch 块中的硬编码 fallback 数据（或保留作为网络异常时备用）。验证数据流通。",
+          "risk": "low"
+        }
+      ],
+      "acceptance": "仪表盘四大区域卡片显示真实DB聚合数字而非 '-'，饼图/柱状图/折线图由后端数据驱动"
+    },
+    {
+      "id": "P1-2",
+      "title": "年度规划列表增加编辑/删除按钮",
+      "status": "planned",
+      "effort": "2-3h",
+      "dependencies": [],
+      "problem": "PMWorkspace.vue 第24-39行展示 planningItems 列表，每条规划仅有点击选择(selectPlan)能力，无编辑/删除。后端 pm_workspace.py 已完成 PUT /pm/planning-items/{plan_id} (第1127行) 和 DELETE /pm/planning-items/{plan_id} (第1173行)，仅需前端对接。",
+      "subtasks": [
+        {
+          "id": "P1-2-1",
+          "title": "模板层: 规划列表项添加编辑/删除按钮",
+          "file": "frontend/src/views/pm/PMWorkspace.vue",
+          "approach": "在 plan-item div 内（约第29-38行）添加操作按钮区：\n- 编辑按钮（el-button type='warning' link circle, Edit图标）\n- 删除按钮（el-button type='danger' link circle, Delete图标）\n- 用 @click.stop 阻止冒泡（避免触发 selectPlan）",
+          "risk": "low"
+        },
+        {
+          "id": "P1-2-2",
+          "title": "脚本层: 实现 editPlanItem / deletePlanItem 函数",
+          "file": "frontend/src/views/pm/PMWorkspace.vue",
+          "approach": "在年度规划相关代码区（约2238-2278行）添加：\n- editPlanItem(item): 复用现有 showPlanDialog，将 planForm 预填充 item.name/year/description/doc_ref，设 editingPlanId，保存时判断 editingPlanId 走 PUT 还是 POST\n- deletePlanItem(item): ElMessageBox.confirm → await api.delete(`/pm/planning-items/${item.id}`) → 刷新列表\n- 修改 savePlanItem(): 若 editingPlanId 有值则调用 api.put(`/pm/planning-items/${editingPlanId}`)，否则 api.post；请求完成后清空 editingPlanId\n- 新增 ref: editingPlanId, editingPlan",
+          "risk": "low"
+        },
+        {
+          "id": "P1-2-3",
+          "title": "对话框标题动态切换",
+          "file": "frontend/src/views/pm/PMWorkspace.vue",
+          "approach": "el-dialog 的 title 改为 :title=\"editingPlanId ? '编辑年度规划项' : '新建年度规划项'\"",
+          "risk": "low"
+        }
+      ],
+      "acceptance": "年度规划列表每条规划右侧显示编辑和删除按钮，编辑可修改名称/年份/描述/文档引用，删除弹出确认框后删库并刷新列表"
+    },
+    {
+      "id": "P2-1",
+      "title": "错误提示友好化 — axios拦截器显示具体错误",
+      "status": "planned",
+      "effort": "1h",
+      "dependencies": [],
+      "problem": "frontend/src/api/index.ts 第24行错误拦截器: ElMessage.error(err.response?.data?.detail || '请求失败')。当后端未返回detail字段时显示通用 '请求失败'，用户无法定位问题。后端使用FastAPI HTTPException，detail字段总是存在，但需确认所有异常路径。",
+      "subtasks": [
+        {
+          "id": "P2-1-1",
+          "title": "增强axios响应拦截器错误提取逻辑",
+          "file": "frontend/src/api/index.ts",
+          "approach": "替换第24行 ElMessage.error 为：\n1. 优先取 err.response?.data?.detail (FastAPI HTTPException)\n2. 其次取 err.response?.data?.message\n3. 若 data 为纯字符串则直接使用\n4. 根据状态码提供默认文案: 400→'请求参数错误', 403→'权限不足', 404→'资源不存在', 409→'数据冲突', 422→'数据验证失败', 500→'服务器内部错误'\n5. 网络错误(err.response为空): '网络连接失败，请检查网络'\n6. 超时: '请求超时，请稍后重试'\n格式: ElMessage.error(errorMessage)",
+          "risk": "low"
+        },
+        {
+          "id": "P2-1-2",
+          "title": "验证后端关键异常路径的detail字段",
+          "file": "backend/app/api/dashboard.py / pm_workspace.py / etc",
+          "approach": "确认所有 HTTPException 抛出都携带中文 detail 字符串（当前已有: 404→'预警记录不存在', 403→'无权修改...', 409→'同名规划', 400→'名称不能为空'等）。抽查 dashboard.py 中当前无异常路径无需修改。",
+          "risk": "low"
+        }
+      ],
+      "acceptance": "API错误时显示具体中文错误信息（如'年度2026下已存在同名规划'），不同HTTP状态码有对应友好提示，网络断开时提示'网络连接失败'"
+    },
+    {
+      "id": "P2-2",
+      "title": "全场景PM浏览器回归验证",
+      "status": "skipped",
+      "effort": "N/A",
+      "reason": "需要在浏览器中交互操作验证PM功能的完整性（产品立项、草稿、提交审批、年度规划CRUD全流程），AI-A无法执行浏览器交互。标记为跳过，交由人工QA执行。"
+    }
+  ],
+  "reasoning": "诊断结果显示当前系统存在三个核心问题：(1) 仪表盘前后端数据结构完全不一致，后端返回扁平字段前端期望四层嵌套，导致所有卡片显示'-'。需重构后端DashboardResponse schema并按L1~L4层计算真实DB聚合数据。(2) 年度规划后端已有完整CRUD(POST/PUT/DELETE /pm/planning-items)，前端仅实现了创建，缺少编辑/删除按钮。这是一个纯前端补齐工作量，约2-3h。(3) axios拦截器错误提示对无detail字段场景降级为通用'请求失败'，需增强状态码映射和多字段降级提取。P2-2浏览器回归不可自动化，标记跳过。\n\n实施顺序建议：P1-1(后端优先) → P1-2(前端独立) → P2-1(前端独立)，三者可并行开发。P1-1需要同时修改schemas和dashboard.py且涉及多表JOIN查询，是风险最高、工作量最大的任务。",
+  "risk_assessment": {
+    "P1-1": {
+      "level": "medium",
+      "concerns": [
+        "L3穿透分析需要跨Project→Product→Version→BOM多表JOIN，SQL复杂度高",
+        "若DB中数据不足（无BOM/Version关联），穿透树返回null需确保前端fallback正常",
+        "L4 AC指标（test_pass_rate / issue_close_rate）依赖TestRequest和QualityIssue表数据，若表为空则指标为0%或N/A",
+        "endpoint响应模型变更后需确认前端TypeScript类型无需改动（前端已按嵌套结构解构）"
+      ]
+    },
+    "P1-2": {
+      "level": "low",
+      "concerns": [
+        "编辑对话框复用现有planForm时需正确切换新建/编辑模式（editingPlanId判空）",
+        "删除需二次确认，避免误操作",
+        "操作后需调用fetchWorkspaceData()刷新列表"
+      ]
+    },
+    "P2-1": {
+      "level": "low",
+      "concerns": [
+        "修改axios全局拦截器影响所有API调用，需确保新错误文案在各种场景下合理",
+        "需处理ElMessage已在别处重复提示的风险（当前所有catch块注释 '// handled by interceptor'，无重复风险）"
+      ]
+    }
+  },
+  "files_to_modify": [
+    {
+      "path": "backend/app/schemas/__init__.py",
+      "changes": "新增 DashboardResponse 嵌套Schema（layer1_system_health, layer2_project_ops, layer3_penetration, layer4_ac_metrics）",
+      "lines_affected": "约865行之后追加 ~60行"
+    },
+    {
+      "path": "backend/app/api/dashboard.py",
+      "changes": "重写 dashboard_summary() 函数，计算四层嵌套数据，返回 DashboardResponse 替代 DashboardSummary；新增 Platform/Version/BOM/ProjectGate 导入和查询逻辑",
+      "lines_affected": "第27-85行全部替换，约80-120行新代码"
+    },
+    {
+      "path": "frontend/src/views/pm/PMWorkspace.vue",
+      "changes": "规划列表项模板添加编辑/删除按钮；脚本层实现 editPlanItem/deletePlanItem/modifySavePlanItem；对话框标题动态化；新增 editingPlanId ref",
+      "lines_affected": "模板 ~20行修改 + 脚本 ~40行新增/修改"
+    },
+    {
+      "path": "frontend/src/api/index.ts",
+      "changes": "增强错误拦截器，提取detail/message/statusCode多级降级，增加状态码中文映射和网络异常捕获",
+      "lines_affected": "第17-26行修改，约15行"
+    }
+  ]
+}

@@ -36,6 +36,10 @@
             <div class="plan-item-count" v-if="item.project_count !== undefined">
               关联项目: {{ item.project_count }} 个
             </div>
+            <div class="plan-item-actions">
+              <el-button link circle :icon="Edit" size="small" @click.stop="editPlanItem(item)" title="编辑" />
+              <el-button link circle :icon="Delete" size="small" @click.stop="deletePlanItem(item)" title="删除" />
+            </div>
           </div>
           <!-- 选中规划 → 显示关联项目 -->
           <div v-if="filteredProjects.length > 0" class="linked-projects">
@@ -141,7 +145,7 @@
     </div>
 
     <!-- ═══════════════ 对话框：新建年度规划项 ═══════════════ -->
-    <el-dialog v-model="showPlanDialog" title="新建年度规划项" width="500px" :close-on-click-modal="false">
+    <el-dialog v-model="showPlanDialog" :title="editingPlanId ? '编辑年度规划项' : '新建年度规划项'" width="500px" :close-on-click-modal="false">
       <el-form :model="planForm" label-width="80px" size="small">
         <el-form-item label="名称">
           <el-input v-model="planForm.name" placeholder="如: 2026年度海外空调产品规划" />
@@ -1097,8 +1101,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Link } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Link, Edit, Delete } from '@element-plus/icons-vue'
 import api from '../../api'
 import CompetitorBench from './CompetitorBench.vue'
 
@@ -1202,6 +1206,7 @@ const filteredProjects = ref<ProjectSummary[]>([])
 const showPlanDialog = ref(false)
 const savingPlan = ref(false)
 const planForm = reactive({ name: '', year: '', description: '', doc_ref: '' })
+const editingPlanId = ref<number | null>(null)
 
 // 产品/项目
 const products = ref<Product[]>([])
@@ -2244,6 +2249,7 @@ function openPlanDialog() {
   planForm.year = ''
   planForm.description = ''
   planForm.doc_ref = ''
+  editingPlanId.value = null
   showPlanDialog.value = true
 }
 
@@ -2254,14 +2260,21 @@ async function savePlanItem() {
   }
   savingPlan.value = true
   try {
-    await api.post('/pm/planning-items', {
+    const payload = {
       name: planForm.name,
       year: planForm.year,
       description: planForm.description,
       doc_ref: planForm.doc_ref || annualPlanningRef.value,
-    })
-    ElMessage.success('年度规划项创建成功')
+    }
+    if (editingPlanId.value) {
+      await api.put(`/pm/planning-items/${editingPlanId.value}`, payload)
+      ElMessage.success('年度规划项更新成功')
+    } else {
+      await api.post('/pm/planning-items', payload)
+      ElMessage.success('年度规划项创建成功')
+    }
     showPlanDialog.value = false
+    editingPlanId.value = null
     await fetchWorkspaceData()
   } catch {
     // handled by interceptor
@@ -2275,6 +2288,34 @@ function selectPlan(item: PlanningItem) {
   filteredProjects.value = item.projects || []
   projectForm.annual_planning_ref = item.name
   projectForm.annual_planning_id = item.id
+}
+
+function editPlanItem(item: PlanningItem) {
+  planForm.name = item.name
+  planForm.year = item.year
+  planForm.description = item.description || ''
+  planForm.doc_ref = item.doc_ref || ''
+  editingPlanId.value = item.id
+  showPlanDialog.value = true
+}
+
+async function deletePlanItem(item: PlanningItem) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除年度规划项「${item.name}」吗？此操作不可恢复。`,
+      '删除确认',
+      { confirmButtonText: '确认删除', cancelButtonText: '取消', type: 'warning' }
+    )
+    await api.delete(`/pm/planning-items/${item.id}`)
+    ElMessage.success('已删除')
+    if (selectedPlanId.value === item.id) {
+      selectedPlanId.value = null
+      filteredProjects.value = []
+    }
+    await fetchWorkspaceData()
+  } catch {
+    // cancelled or handled by interceptor
+  }
 }
 
 // ═══════════════════════════════════════════════
