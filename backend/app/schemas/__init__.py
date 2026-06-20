@@ -484,6 +484,19 @@ class ProjectDraftSave(ProjectCreate):
     pass
 
 
+class ProjectUpdate(BaseModel):
+    """项目更新 - PATCH 请求体"""
+    name: Optional[str] = None
+    status: Optional[str] = None
+    owner: Optional[str] = None
+    target_end_date: Optional[date] = None
+    actual_end_date: Optional[date] = None
+    description: Optional[str] = None
+    customer_name: Optional[str] = None
+    other_requirements: Optional[str] = None
+    budget: Optional[int] = None
+
+
 class ProjectOut(ProjectCreate):
     id: int
     status: str

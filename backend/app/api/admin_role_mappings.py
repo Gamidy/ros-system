@@ -9,6 +9,8 @@ from app.core.security import require_role, get_current_user
 from app.models.role_position_mapping import RolePositionMapping
 
 router = APIRouter(prefix="/api/admin", tags=["admin-role-mappings"])
+# PM 脱敏端点路由 — 产品经理等角色可用，仅返回角色名
+pm_router = APIRouter(prefix="/api/pm", tags=["pm-role-mappings"])
 
 
 # ── Request/Response Schemas ──────────────────────────────────────────
@@ -28,14 +30,23 @@ class RoleMappingOut(BaseModel):
         from_attributes = True
 
 
-# ── Routes ────────────────────────────────────────────────────────────
+class RoleMappingPublicOut(BaseModel):
+    """脱敏版：仅返回角色名，不暴露内部岗位映射"""
+    id: int
+    project_role: str
+
+    class Config:
+        from_attributes = True
+
+
+# ── Admin Routes (敏感全量) ──────────────────────────────────────────
 
 @router.get("/role-mappings", response_model=List[RoleMappingOut])
 def list_role_mappings(
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_role("admin")),
 ):
-    """查询所有角色→岗位映射（所有登录用户可读）"""
+    """查询所有角色→岗位映射（仅admin）"""
     return db.query(RolePositionMapping).order_by(RolePositionMapping.id).all()
 
 
@@ -69,3 +80,14 @@ def delete_role_mapping(
     db.delete(mapping)
     db.commit()
     return {"ok": True, "id": mapping_id}
+
+
+# ── PM Routes (脱敏，所有登录用户可读) ───────────────────────────────
+
+@pm_router.get("/role-mappings", response_model=List[RoleMappingPublicOut])
+def list_role_mappings_public(
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """查询角色列表（脱敏版：仅返回角色名，所有登录用户可读）"""
+    return db.query(RolePositionMapping).order_by(RolePositionMapping.id).all()

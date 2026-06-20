@@ -7,6 +7,13 @@ from app.core.security import get_current_user
 
 router = APIRouter(prefix="/api/admin/config", tags=["admin-config"])
 
+# ── 配置分类 ──────────────────────────────────────────────────────
+# 敏感配置：包含商业敏感数据（成本、价格、阈值），仅 admin 可读
+SENSITIVE_KEYS = {"proto_unit_cost", "test_unit_price", "mfg_cost_threshold", "cert_cost"}
+# 公开配置：UI渲染和计算所需的非敏感配置，所有登录用户可读
+PUBLIC_KEYS = {"product_short_names", "accessory_defaults", "feature_defaults",
+               "trial_qty_per_class", "indirect_cost", "capacity_unit_cost_map"}
+
 # 默认配置
 DEFAULTS = {
     "proto_unit_cost": '{"7K":0.075,"9K":0.095,"12K":0.105,"18K":0.142,"24K":0.178}',
@@ -23,7 +30,7 @@ DEFAULTS = {
 
 
 def _require_admin(user):
-    if user.get("role") != "admin":
+    if user.role != "admin":
         raise HTTPException(403, "仅管理员可操作")
 
 
@@ -38,8 +45,17 @@ def _get_config_dict(db: Session) -> dict:
 
 @router.get("")
 def get_config(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """获取系统配置（所有登录用户可读，修改需admin）"""
+    """获取完整系统配置（仅admin）"""
+    _require_admin(user)
     return {"data": _get_config_dict(db)}
+
+
+@router.get("/public")
+def get_public_config(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """获取公开系统配置（所有登录用户可读，仅返回UI渲染和计算所需的非敏感配置）"""
+    full = _get_config_dict(db)
+    public = {k: v for k, v in full.items() if k in PUBLIC_KEYS}
+    return {"data": public}
 
 
 @router.put("")

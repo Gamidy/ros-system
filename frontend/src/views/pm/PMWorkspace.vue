@@ -3004,7 +3004,7 @@ async function fetchAllTeamUsers() {
 // 新增：获取角色映射表
 async function fetchRoleMappings() {
   try {
-    const res = await api.get('/admin/role-mappings')
+    const res = await api.get('/pm/role-mappings')
     roleMappings.value = res.data?.items || res.data || []
   } catch { /* non-critical, fallback to sys_role mapping */ }
 }
@@ -3078,7 +3078,7 @@ async function fetchExchangeRate() {
 
 async function fetchSystemConfig() {
   try {
-    const res = await api.get('/admin/config')
+    const res = await api.get('/admin/config/public')
     if (res.data?.data) {
       systemConfig.value = res.data.data
     }

@@ -9,7 +9,7 @@ from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
 from app.schemas import (
-    ProgramCreate, ProjectCreate, ProjectOut, TaskCreate, RiskCreate,
+    ProgramCreate, ProjectCreate, ProjectUpdate, ProjectOut, TaskCreate, RiskCreate,
     MilestoneCreate, GateStatusUpdate,
 )
 
@@ -222,6 +222,8 @@ def create_project(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
+    from app.core.sanitize import sanitize_html
+
     # 手动校验项目名称
     if not req.name or not req.name.strip():
         raise HTTPException(status_code=400, detail="项目名称不能为空")
@@ -245,12 +247,16 @@ def create_project(
     source_category = _auto_source_category(req.source)
 
     p = Project(
-        code=code, name=req.name, project_class=project_class,
+        code=code,
+        name=sanitize_html(req.name.strip()),
+        project_class=project_class,
         program_id=req.program_id, product_code=req.product_code,
         source=req.source, source_category=source_category,
         dev_modules=req.dev_modules, change_impacts=req.change_impacts,
         start_date=req.start_date, target_end_date=req.target_end_date,
-        owner=req.owner, description=req.description, critical_path=req.critical_path,
+        owner=sanitize_html(req.owner.strip()) if req.owner else None,
+        description=sanitize_html(req.description) if req.description else None,
+        critical_path=req.critical_path,
         market_policy=req.market_policy, annual_planning_ref=req.annual_planning_ref, budget=req.budget,
     )
     db.add(p)
@@ -318,6 +324,8 @@ def get_project_detail(pid: int, db: Session = Depends(get_db), _=Depends(requir
                 "reviewer": g.reviewer,
                 "is_high_risk_zone": g.is_high_risk_zone,
                 "is_hidden": g.is_hidden,
+                "project_id": g.project_id,
+                "created_at": g.created_at,
             }
             for g in sorted(p.gates, key=lambda x: x.seq)
         ],
@@ -337,6 +345,7 @@ def get_project_detail(pid: int, db: Session = Depends(get_db), _=Depends(requir
                 "impact": r.impact, "mitigation": r.mitigation,
                 "status": r.status, "raised_by": r.raised_by,
                 "resolved_at": r.resolved_at, "created_at": r.created_at,
+                "project_id": r.project_id,
             }
             for r in p.risks
         ],
@@ -346,31 +355,63 @@ def get_project_detail(pid: int, db: Session = Depends(get_db), _=Depends(requir
 @project_router.patch("/{pid}")
 def update_project(
     pid: int,
-    status: str | None = None,
-    owner: str | None = None,
-    target_end_date: date | None = None,
-    actual_end_date: date | None = None,
-    description: str | None = None,
+    body: ProjectUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
+    from app.core.sanitize import sanitize_html
+
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
-    if status:
-        if status not in ("planning", "running", "completed", "paused", "cancelled"):
-            raise HTTPException(status_code=400, detail=f"无效状态: {status}")
-        p.status = status
-        if status == "completed":
-            p.actual_end_date = actual_end_date or date.today()
-    if owner is not None:
-        p.owner = owner
-    if target_end_date is not None:
-        p.target_end_date = target_end_date
-    if actual_end_date is not None:
-        p.actual_end_date = actual_end_date
-    if description is not None:
-        p.description = description
+
+    updated = False
+
+    if body.name is not None:
+        if not body.name.strip():
+            raise HTTPException(status_code=400, detail="项目名称不能为空")
+        p.name = sanitize_html(body.name.strip())
+        updated = True
+
+    if body.status is not None:
+        if body.status not in ("planning", "running", "completed", "paused", "cancelled"):
+            raise HTTPException(status_code=400, detail=f"无效状态: {body.status}")
+        p.status = body.status
+        if body.status == "completed":
+            p.actual_end_date = body.actual_end_date or date.today()
+        updated = True
+
+    if body.owner is not None:
+        p.owner = sanitize_html(body.owner.strip())
+        updated = True
+
+    if body.target_end_date is not None:
+        p.target_end_date = body.target_end_date
+        updated = True
+
+    if body.actual_end_date is not None:
+        p.actual_end_date = body.actual_end_date
+        updated = True
+
+    if body.description is not None:
+        p.description = sanitize_html(body.description)
+        updated = True
+
+    if body.customer_name is not None:
+        p.customer_name = sanitize_html(body.customer_name.strip())
+        updated = True
+
+    if body.other_requirements is not None:
+        p.other_requirements = sanitize_html(body.other_requirements)
+        updated = True
+
+    if body.budget is not None:
+        p.budget = body.budget
+        updated = True
+
+    if not updated:
+        raise HTTPException(status_code=400, detail="未提供任何更新字段")
+
     db.commit()
     db.refresh(p)
     return {"message": "更新成功", "id": p.id, "status": p.status, "owner": p.owner}
