@@ -1,9 +1,9 @@
 """认证API"""
 import secrets
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.security import get_password_hash, verify_password, create_access_token, get_current_user, require_role
+from app.core.security import get_password_hash, verify_password, create_access_token, get_current_user, require_role, invalidate_token, oauth2_scheme
 from app.core.permissions import get_allowed_menus, get_allowed_paths, is_valid_role
 from app.models.user import User
 from app.models.approval import ApprovalChain, ApprovalRequest
@@ -23,6 +23,13 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     token = create_access_token(data={"sub": str(user.id), "role": user.role})
     return Token(access_token=token)
+
+
+@router.post("/logout")
+def logout(token: str = Security(oauth2_scheme)):
+    """登出：将当前 token 加入黑名单使其失效"""
+    invalidate_token(token)
+    return {"message": "已登出"}
 
 
 @router.post("/register", response_model=UserOut)

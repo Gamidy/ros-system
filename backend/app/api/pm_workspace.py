@@ -164,7 +164,7 @@ def pm_workspace(
     owner_name = current_user.username
 
     # ── 我的项目 ──
-    my_projects_query = db.query(Project).filter(Project.owner == owner_name)
+    my_projects_query = db.query(Project).filter(Project.owner == owner_name, Project.is_deleted == False)
     my_projects_raw = my_projects_query.order_by(Project.created_at.desc()).all()
 
     my_projects = []
@@ -507,7 +507,7 @@ def pm_create_project(
 
     # 自动生成项目编号
     code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
-    while db.query(Project).filter(Project.code == code).first():
+    while db.query(Project).filter(Project.code == code, Project.is_deleted == False).first():
         code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
 
     p = Project(
@@ -827,7 +827,7 @@ def pm_update_draft(
     current_user: User = Depends(_require_pm),
 ):
     """PM 更新草稿项目 — 仅 owner 本人可编辑, 使用 is not None 判断"""
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
 
@@ -923,7 +923,7 @@ def pm_submit_draft(
     current_user: User = Depends(_require_pm),
 ):
     """草稿提交为正式项目 — is_draft=False, status='planning', 自动生成 code 和 Gate 模板"""
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
 
@@ -939,7 +939,7 @@ def pm_submit_draft(
         # 自动生成项目编号 (如果还没有)
         if not p.code:
             code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
-            while db.query(Project).filter(Project.code == code).first():
+            while db.query(Project).filter(Project.code == code, Project.is_deleted == False).first():
                 code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
             p.code = code
 
@@ -1007,7 +1007,7 @@ def pm_update_project(
     current_user: User = Depends(_require_pm),
 ):
     """PM 快捷更新项目 — 仅 owner 本人可编辑"""
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
 

@@ -17,6 +17,14 @@ from app.models.user import User
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+# ── Token 黑名单（登出失效） ─────────────────────────────────────
+TOKEN_BLACKLIST: set = set()
+
+
+def invalidate_token(token: str) -> None:
+    """将 token 加入黑名单，使其立即失效"""
+    TOKEN_BLACKLIST.add(token)
+
 
 # ── XSS 防护 ──────────────────────────────────────────────────────────
 
@@ -111,6 +119,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    # 检查 token 是否已被登出（黑名单）
+    if token in TOKEN_BLACKLIST:
+        raise HTTPException(status_code=401, detail="Token 已失效，请重新登录")
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = int(payload.get("sub"))

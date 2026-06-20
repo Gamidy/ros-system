@@ -75,7 +75,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // 即使请求失败也清理本地状态
+    }
     token.value = ''
     user.value = null
     allowedPaths.value = new Set()

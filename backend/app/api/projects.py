@@ -18,6 +18,23 @@ project_router = APIRouter(prefix="/projects", tags=["项目管理"])
 
 
 # ══════════════════════════════════════════════════════════════
+# Owner 姓名脱敏
+# ══════════════════════════════════════════════════════════════
+
+def _mask_name(name: str | None) -> str | None:
+    """姓名脱敏: 张三→张*, 李四光→李*光"""
+    if not name or not name.strip():
+        return name
+    name = name.strip()
+    if len(name) == 1:
+        return "*"
+    if len(name) == 2:
+        return name[0] + "*"
+    # len >= 3: 保留首尾，中间用 * 替代
+    return name[0] + "*" + name[-1]
+
+
+# ══════════════════════════════════════════════════════════════
 # Gate Templates by Project Class
 # ══════════════════════════════════════════════════════════════
 
@@ -99,7 +116,7 @@ def _validate_gate_transition(project_id: int, target_code: str, new_status: str
     existing_codes = {g.gate_code: g.status for g in existing_gates}
 
     # 获取当前项目等级对应的模板codes
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).filter(Project.id == project_id, Project.is_deleted == False).first()
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
 
@@ -176,7 +193,7 @@ def get_program(pid: int, db: Session = Depends(get_db), _=Depends(require_menu(
                 "name": prj.name,
                 "project_class": prj.project_class,
                 "status": prj.status,
-                "owner": prj.owner,
+                "owner": _mask_name(prj.owner),
                 "start_date": prj.start_date,
                 "target_end_date": prj.target_end_date,
             }
@@ -189,7 +206,7 @@ def get_program(pid: int, db: Session = Depends(get_db), _=Depends(require_menu(
 # Project Endpoints
 # ══════════════════════════════════════════════════════════════
 
-@project_router.get("", response_model=list[ProjectOut])
+@project_router.get("")
 def list_projects(
     program_id: int | None = Query(None),
     project_class: str | None = Query(None, pattern="^(T|A|B|C)$"),
@@ -197,10 +214,13 @@ def list_projects(
     product_code: str | None = Query(None),
     source: str | None = Query(None),
     source_category: str | None = Query(None),
+    keyword: str | None = Query(None, description="按项目名称/编号模糊搜索"),
+    page: int = Query(1, ge=1, description="页码，从1开始"),
+    page_size: int = Query(20, ge=1, le=100, description="每页条数，最大100"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("projects")),
 ):
-    q = db.query(Project)
+    q = db.query(Project).filter(Project.is_deleted == False)
     if program_id is not None:
         q = q.filter(Project.program_id == program_id)
     if project_class:
@@ -213,7 +233,37 @@ def list_projects(
         q = q.filter(Project.source == source)
     if source_category:
         q = q.filter(Project.source_category == source_category)
-    return q.order_by(Project.created_at.desc()).all()
+    if keyword:
+        like_pattern = f"%{keyword}%"
+        q = q.filter(
+            (Project.name.like(like_pattern)) | (Project.code.like(like_pattern))
+        )
+
+    total = q.count()
+    items = q.order_by(Project.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    # Build response with pagination metadata
+    result = {
+        "items": [{
+            "id": p.id, "code": p.code, "name": p.name,
+            "program_id": p.program_id, "product_code": p.product_code,
+            "project_class": p.project_class, "source": p.source,
+            "source_category": p.source_category,
+            "dev_modules": p.dev_modules, "change_impacts": p.change_impacts,
+            "status": p.status, "start_date": p.start_date,
+            "target_end_date": p.target_end_date,
+            "actual_end_date": p.actual_end_date,
+            "critical_path": p.critical_path,
+            "owner": _mask_name(p.owner), "description": p.description,
+            "market_policy": p.market_policy, "annual_planning_ref": p.annual_planning_ref, "budget": p.budget,
+            "is_draft": p.is_draft,
+            "created_at": p.created_at, "updated_at": p.updated_at,
+        } for p in items],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+    return result
 
 
 @project_router.post("", response_model=ProjectOut)
@@ -235,6 +285,15 @@ def create_project(
 
     if db.query(Project).filter(Project.code == code).first():
         raise HTTPException(status_code=400, detail="项目编号已存在")
+
+    # 同名检查：排除草稿（草稿允许重名，正式项目不允许重名）
+    name_dup = db.query(Project).filter(
+        Project.name == req.name.strip(),
+        Project.is_deleted == False,
+        Project.is_draft == False,
+    ).first()
+    if name_dup:
+        raise HTTPException(status_code=400, detail=f"项目名称「{req.name.strip()}」已存在（ID: {name_dup.id}），请更换名称")
 
     # 默认项目等级
     project_class = req.project_class if req.project_class else 'C'
@@ -299,7 +358,7 @@ def create_project(
 
 @project_router.get("/{pid}", response_model=ProjectOut)
 def get_project_detail(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     return {
@@ -361,7 +420,7 @@ def update_project(
 ):
     from app.core.sanitize import sanitize_html
 
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
 
@@ -417,13 +476,28 @@ def update_project(
     return {"message": "更新成功", "id": p.id, "status": p.status, "owner": p.owner}
 
 
+@project_router.delete("/{pid}")
+def delete_project(
+    pid: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "project_admin")),
+):
+    """软删除项目：设置 is_deleted=True，不物理删除数据"""
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="项目不存在或已被删除")
+    p.is_deleted = True
+    db.commit()
+    return {"message": "项目已删除", "id": pid, "name": p.name}
+
+
 # ══════════════════════════════════════════════════════════════
 # Gate Management
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/gates")
 def list_gates(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     gates = db.query(ProjectGate).filter(
@@ -444,7 +518,7 @@ def create_gate(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     if db.query(ProjectGate).filter(
@@ -470,7 +544,7 @@ def bulk_create_gates(
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
     """根据项目等级自动生成全部M1~M9 Gate，或覆盖不全的"""
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
 
@@ -544,7 +618,7 @@ def update_gate_status(
 
 @project_router.get("/{pid}/tasks")
 def list_tasks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     return db.query(Task).filter(Task.project_id == pid).order_by(Task.created_at.desc()).all()
@@ -557,7 +631,7 @@ def create_task(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     if req.milestone_id and not db.query(Milestone).filter(
@@ -621,7 +695,7 @@ def update_task(
 
 @project_router.get("/{pid}/milestones")
 def list_milestones(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     return db.query(Milestone).filter(Milestone.project_id == pid).order_by(Milestone.created_at.desc()).all()
@@ -634,7 +708,7 @@ def create_milestone(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     m = Milestone(
@@ -706,7 +780,7 @@ def get_delay_chain(pid: int, db: Session = Depends(get_db), _=Depends(require_m
       }
     ]
     """
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
 
@@ -819,7 +893,7 @@ def get_delay_chain(pid: int, db: Session = Depends(get_db), _=Depends(require_m
 
 @project_router.get("/{pid}/risks")
 def list_risks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     return db.query(Risk).filter(Risk.project_id == pid).order_by(Risk.created_at.desc()).all()
@@ -832,7 +906,7 @@ def create_risk(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ):
-    p = db.query(Project).filter(Project.id == pid).first()
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     if req.risk_level not in ("A", "B", "C"):

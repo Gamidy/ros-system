@@ -103,6 +103,7 @@ def check_overdue(
         Project.target_end_date.isnot(None),
         Project.target_end_date < today,
         Project.status.in_(["planning", "running"]),
+        Project.is_deleted == False,
     ).all()
 
     for proj in overdue_projects:

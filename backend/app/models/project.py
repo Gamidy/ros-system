@@ -27,7 +27,7 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     code = Column(String(50), unique=True, index=True, nullable=False, comment="项目编号")
-    name = Column(String(200), nullable=False, comment="项目名称")
+    name = Column(String(200), nullable=False, unique=True, comment="项目名称")
     # 归属
     program_id = Column(Integer, ForeignKey("programs.id"), nullable=True, comment="归属Program")
     product_code = Column(String(50), nullable=True, comment="关联产品编码")
@@ -114,6 +114,7 @@ class Project(Base):
     # Draft 机制
     # ══════════════════════════════════════════
     is_draft = Column(Boolean, default=True, nullable=False, comment="是否草稿")
+    is_deleted = Column(Boolean, default=False, nullable=False, comment="软删除标记")
     customer_name = Column(String(100), nullable=True, comment="customer_name")
     other_requirements = Column(Text, nullable=True, comment="other_requirements")
     accessory_config = Column(Text, nullable=True, comment="accessory_config")

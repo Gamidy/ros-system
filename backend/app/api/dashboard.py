@@ -31,7 +31,8 @@ def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("das
 
     total_products = db.query(func.count(Product.id)).scalar() or 0
     active_projects = db.query(func.count(Project.id)).filter(
-        Project.status == "running"
+        Project.status == "running",
+        Project.is_deleted == False,
     ).scalar() or 0
 
     # 高风险项目：M4/M5/M6 Gate 处于高风险区且未通过

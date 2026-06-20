@@ -4,7 +4,7 @@
   产品经理提交草稿 → 并行审批(4人) → 研发总监终审 → 项目自动创建
   任意环节驳回则整个审批结束，通知产品经理修改
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Boolean, func
 from app.core.database import Base
 
 
@@ -30,5 +30,12 @@ class ProposalApproval(Base):
     director_reviewed_at = Column(DateTime, nullable=True)
     # 对比快照 JSON — 提交时的完整立项数据
     snapshot = Column(JSON, nullable=True, comment="提交时的立项数据快照")
+    # 上一次被驳回前的快照 (用于修改对比视图)
+    previous_snapshot = Column(JSON, nullable=True, comment="上一次驳回前的立项快照(修改对比用)")
+    # 重新提交次数
+    resubmit_count = Column(Integer, default=0, comment="驳回后重新提交次数")
+    # 催办标记
+    reminded = Column(Boolean, default=False, comment="是否已发24h催办通知")
+    escalated = Column(Boolean, default=False, comment="是否已升级通知(>48h)")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

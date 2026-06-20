@@ -14,7 +14,7 @@
 from datetime import datetime
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -149,6 +149,10 @@ def _proposal_to_out(pa: ProposalApproval) -> dict:
         "director_reason": pa.director_reason,
         "director_reviewed_at": str(pa.director_reviewed_at) if pa.director_reviewed_at else None,
         "snapshot": pa.snapshot,
+        "previous_snapshot": pa.previous_snapshot,
+        "resubmit_count": pa.resubmit_count,
+        "reminded": pa.reminded,
+        "escalated": pa.escalated,
         "created_at": str(pa.created_at) if pa.created_at else None,
         "updated_at": str(pa.updated_at) if pa.updated_at else None,
     }
@@ -195,7 +199,7 @@ def submit_proposal(
     5. 通知4位并行审批人
     """
     # ── 1. 校验项目 ──
-    p = db.query(Project).filter(Project.id == project_id).first()
+    p = db.query(Project).filter(Project.id == project_id, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
     if p.owner != current_user.username:
@@ -214,6 +218,22 @@ def submit_proposal(
     )
     if existing:
         raise HTTPException(status_code=400, detail="该项目已有进行中的审批")
+
+    # ── 2a. 查找上一次被驳回的记录 (用于修改对比) ──
+    previous_rejected = (
+        db.query(ProposalApproval)
+        .filter(
+            ProposalApproval.proposal_id == project_id,
+            ProposalApproval.status == "rejected",
+        )
+        .order_by(ProposalApproval.created_at.desc())
+        .first()
+    )
+    previous_snapshot = None
+    resubmit_count = 0
+    if previous_rejected:
+        previous_snapshot = previous_rejected.snapshot
+        resubmit_count = (previous_rejected.resubmit_count or 0) + 1
 
     # ── 3. 查找并行审批人 (4个角色) ──
     parallel_reviewers = []
@@ -253,6 +273,8 @@ def submit_proposal(
         parallel_reviewers=parallel_reviewers if parallel_reviewers else None,
         director_reviewer_id=director_id,
         snapshot=snapshot,
+        previous_snapshot=previous_snapshot,
+        resubmit_count=resubmit_count,
     )
     db.add(pa)
     db.flush()
@@ -282,20 +304,28 @@ def submit_proposal(
 @router.get("/approvals/proposals")
 def list_pending_approvals(
     mode: str = "pending",
-    page: int = 1,
-    page_size: int = 20,
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页条数"),
+    status: str | None = None,
+    keyword: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """获取审批列表
     mode=pending: 待当前用户审批
     mode=my: 当前用户提交的
+    status: 按审批状态筛选 (pending_parallel/pending_director/approved/rejected)
+    keyword: 按项目名称搜索
     """
     user_id = current_user.id
 
     if mode == "my":
         # 我提交的
         query = db.query(ProposalApproval).filter(ProposalApproval.proposer_id == user_id)
+        if status:
+            query = query.filter(ProposalApproval.status == status)
+        if keyword:
+            query = query.filter(ProposalApproval.title.ilike(f"%{keyword}%"))
         total = query.count()
         items = query.order_by(ProposalApproval.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
         return {"items": [_proposal_to_out(pa) for pa in items], "total": total}
@@ -304,11 +334,15 @@ def list_pending_approvals(
     results = []
 
     # ── 并行审批: pending_parallel 状态 ──
-    parallel_pending = (
-        db.query(ProposalApproval)
-        .filter(ProposalApproval.status == "pending_parallel")
-        .all()
+    parallel_query = db.query(ProposalApproval).filter(
+        ProposalApproval.status == "pending_parallel"
     )
+    if keyword:
+        parallel_query = parallel_query.filter(ProposalApproval.title.ilike(f"%{keyword}%"))
+    if status and status != "pending_parallel":
+        parallel_query = parallel_query.filter(False)  # skip if status filter excludes this
+    parallel_pending = parallel_query.all()
+
     for pa in parallel_pending:
         reviewers = pa.parallel_reviewers or []
         for r in reviewers:
@@ -317,16 +351,28 @@ def list_pending_approvals(
                 break
 
     # ── 研发总监: pending_director 状态 ──
-    director_pending = (
-        db.query(ProposalApproval)
-        .filter(
+    if not status or status == "pending_director":
+        director_query = db.query(ProposalApproval).filter(
             ProposalApproval.status == "pending_director",
             ProposalApproval.director_reviewer_id == user_id,
         )
-        .all()
-    )
-    for pa in director_pending:
-        results.append(_proposal_to_out(pa))
+        if keyword:
+            director_query = director_query.filter(ProposalApproval.title.ilike(f"%{keyword}%"))
+        director_pending = director_query.all()
+        for pa in director_pending:
+            results.append(_proposal_to_out(pa))
+
+    # ── 按状态筛选已完成的审批 (approved/rejected) ──
+    if status and status in ("approved", "rejected"):
+        completed_query = db.query(ProposalApproval).filter(
+            ProposalApproval.status == status,
+            ProposalApproval.proposer_id == user_id,
+        )
+        if keyword:
+            completed_query = completed_query.filter(ProposalApproval.title.ilike(f"%{keyword}%"))
+        completed = completed_query.order_by(ProposalApproval.created_at.desc()).all()
+        for pa in completed:
+            results.append(_proposal_to_out(pa))
 
     return {"items": results, "total": len(results)}
 
@@ -341,7 +387,7 @@ def get_approval_detail(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """获取审批详情（含原始立项数据快照）"""
+    """获取审批详情（含原始立项数据快照 + 修改对比）"""
     pa = db.query(ProposalApproval).filter(ProposalApproval.id == approval_id).first()
     if not pa:
         raise HTTPException(status_code=404, detail="审批记录不存在")
@@ -349,7 +395,7 @@ def get_approval_detail(
     detail = _proposal_to_out(pa)
 
     # 附带 project 当前最新数据用于对比
-    project = db.query(Project).filter(Project.id == pa.proposal_id).first()
+    project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
     if project:
         detail["project"] = _project_to_snapshot(project)
 
@@ -477,14 +523,14 @@ def review_approval(
             # 通过 → 自动创建项目 (草稿 → 正式)
             pa.status = "approved"
 
-            project = db.query(Project).filter(Project.id == pa.proposal_id).first()
+            project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
             if project and project.is_draft:
                 import random
 
                 # 自动生成项目编号
                 if not project.code:
                     code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
-                    while db.query(Project).filter(Project.code == code).first():
+                    while db.query(Project).filter(Project.code == code, Project.is_deleted == False).first():
                         code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
                     project.code = code
 

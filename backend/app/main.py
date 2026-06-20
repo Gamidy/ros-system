@@ -6,8 +6,9 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.security import csrf_middleware
 from app.middleware.audit import AuditMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, admin_config, pm_config, pm_accessory, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, admin_config, pm_config, pm_accessory, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel
 from app.models import system_config  # ensure table created
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
@@ -51,6 +52,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 # CSRF 纵深防护中间件
 app.middleware("http")(csrf_middleware)
 
+# 429 限流中间件 — 100req/min per IP, 200/min per user, 豁免 /health 和 /auth/login
+app.add_middleware(RateLimitMiddleware)
+
 # 审计日志中间件 — 记录所有 /api/ CUD 操作
 app.add_middleware(AuditMiddleware)
 
@@ -77,11 +81,24 @@ app.include_router(admin_role_mappings.pm_router)
 app.include_router(admin_cost_configs.router)
 app.include_router(proposal_approval.router, prefix="/api")
 app.include_router(pm_proposal_api.router, prefix="/api")
+app.include_router(rd_panel.router, prefix="/api")
 
 
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    # ── 启动审批催办定时任务 (每30分钟扫描一次) ──
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from app.services.approval_reminder import scan_and_remind
+
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(scan_and_remind, "interval", minutes=30, id="approval_reminder")
+        scheduler.start()
+        import logging
+        logging.getLogger(__name__).info("审批催办定时任务已启动 (每30分钟)")
+    except ImportError:
+        pass  # apscheduler not installed, skip
 
 
 @app.get("/health")
