@@ -2387,7 +2387,7 @@ function resetForm() {
   protoCostTable.forEach(r => { r.qty = r.stage === 'P2' ? 20 : r.stage === 'P1-1' || r.stage === 'P1-2' ? 10 : 5 })
   certCostTable.length = 0
   laborCostTable.forEach(r => { r.people_count = 1; r.monthly_salary = 1.5; r.months = 6; r.occupancy_rate = 100 })
-  testCostTable.forEach(r => { r.days = 10; r.unit_price = 0.11 })
+  testCostTable.forEach(r => { r.days = 10; r.unit_price = parseFloat(systemConfig.value.test_unit_price) || 0.11 })
   // Reset Tab3 tables
   materialComponentTable.length = 0
   materialComponentTable.push({ type: '物料', name: '', spec: '', qty: 1, unit: '个', usage: '', supplier: '', delivery_cycle: '', unit_price: 0, candidate_vendors: '', remark: '' })
@@ -3134,6 +3134,11 @@ async function fetchSystemConfig() {
     if (res.data?.data) {
       systemConfig.value = res.data.data
     }
+    // 同步测试费用单价
+    const tp = parseFloat(systemConfig.value.test_unit_price)
+    if (!isNaN(tp) && tp > 0) {
+      testCostTable.forEach(r => { r.unit_price = tp })
+    }
   } catch { /* use defaults */ }
 }
 
@@ -3179,6 +3184,7 @@ function onAdoptCompetitor({ paramKey, value, brand }: { paramKey: string; value
 
 onMounted(async () => {
   try {
+    await fetchSystemConfig()
     await fetchWorkspaceData()
     await fetchKbOptions()
     await fetchTeamRoles()
@@ -3187,7 +3193,6 @@ onMounted(async () => {
     await fetchUserWorkloads()
     await fetchPrograms()
     await fetchExchangeRate()
-    await fetchSystemConfig()
     // 加载默认角色模板（如果没有项目类型则用默认值）
     if (projectForm.dev_category) {
       selectedProjectType.value = projectForm.dev_category

@@ -17,6 +17,7 @@ from sqlalchemy import func as sqlfunc
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.models.system_config import SystemConfig
 from app.models.user import User
 from app.models.project import Project, Program
 from app.models.product import Product, Platform
@@ -1197,3 +1198,79 @@ def delete_planning_item(
         raise
 
     return {"detail": "年度规划已删除"}
+
+
+# ══════════════════════════════════════════════════════════════
+# GET /api/pm/capacity-cost-config — 冷量段成本配置查询
+# ══════════════════════════════════════════════════════════════
+
+def _normalize_capacity_key(capacity_range: str) -> str:
+    """Normalize capacity range key: '7K' → '07K', '12K' → '12K'"""
+    cap = capacity_range.strip().upper()
+    if len(cap) == 2 and cap[0].isdigit() and cap[1] == 'K':
+        return '0' + cap
+    return cap
+
+
+def _extract_capacity_number(capacity_range: str) -> int:
+    """Extract numeric part from capacity range: '12K' → 12, '07K' → 7"""
+    cap = capacity_range.strip().upper().rstrip('K')
+    try:
+        return int(cap)
+    except ValueError:
+        return 0
+
+
+@router.get("/capacity-cost-config")
+def get_capacity_cost_config(
+    capacity_range: str = Query(..., description="冷量段，如 12K, 07K, 18K"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_pm),
+):
+    """返回该冷量段对应的完整成本配置。
+    
+    从 system_config 表读取 mfg_cost_threshold, capacity_unit_cost_map, 
+    test_unit_price, indirect_cost，合并计算后返回。
+    """
+    # 读取所有需要的配置
+    config_keys = ["mfg_cost_threshold", "capacity_unit_cost_map", "test_unit_price", "indirect_cost"]
+    rows = db.query(SystemConfig).filter(SystemConfig.key.in_(config_keys)).all()
+    config = {row.key: row.value for row in rows}
+    
+    # ── 计算 manufacturing_cost ──
+    manufacturing_cost = 0
+    cap_num = _extract_capacity_number(capacity_range)
+    if "mfg_cost_threshold" in config:
+        try:
+            thresholds = json.loads(config["mfg_cost_threshold"])
+            for t in thresholds:
+                if cap_num <= t.get("max_kw", 0):
+                    manufacturing_cost = t.get("cost", 0)
+                    break
+        except (json.JSONDecodeError, TypeError):
+            pass
+    
+    # ── 计算 proto_unit_cost ──
+    proto_unit_cost = 0.0
+    if "capacity_unit_cost_map" in config:
+        try:
+            cost_map = json.loads(config["capacity_unit_cost_map"])
+            normalized_key = _normalize_capacity_key(capacity_range)
+            entry = cost_map.get(normalized_key)
+            if entry and isinstance(entry, dict):
+                proto_unit_cost = entry.get("cost", 0.0)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    
+    # ── test_unit_price ──
+    test_unit_price = float(config.get("test_unit_price", "0"))
+    
+    # ── indirect_cost ──
+    indirect_cost = int(float(config.get("indirect_cost", "0")))
+    
+    return {
+        "manufacturing_cost": manufacturing_cost,
+        "proto_unit_cost": proto_unit_cost,
+        "test_unit_price": test_unit_price,
+        "indirect_cost": indirect_cost,
+    }
