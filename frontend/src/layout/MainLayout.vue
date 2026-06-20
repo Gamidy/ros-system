@@ -9,9 +9,9 @@
         :default-active="route.path"
         :collapse="isCollapse"
         :router="true"
-        background-color="#001529"
-        text-color="#ffffffb3"
-        active-text-color="#fff"
+        background-color="transparent"
+        text-color="#a8a69e"
+        active-text-color="#d97757"
       >
         <!-- 动态渲染：根据角色权限显示菜单 -->
         <el-menu-item

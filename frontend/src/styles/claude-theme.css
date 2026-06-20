@@ -1,0 +1,318 @@
+/* ============================================
+   ROS - Claude Style Theme
+   Override Element Plus + Global Styles
+   ============================================ */
+
+/* ── Element Plus CSS Variable Overrides ── */
+:root {
+  /* Primary → Terracotta */
+  --el-color-primary: #d97757;
+  --el-color-primary-light-3: #e89b7a;
+  --el-color-primary-light-5: #f0bd9a;
+  --el-color-primary-light-7: #f7d9c4;
+  --el-color-primary-light-8: #fae8db;
+  --el-color-primary-light-9: #fdf3ed;
+  --el-color-primary-dark-2: #c96442;
+
+  /* Success → Warm Green */
+  --el-color-success: #2d7d5a;
+  --el-color-warning: #b8811c;
+  --el-color-danger: #c04a3a;
+  --el-color-info: #3a7d9e;
+
+  /* Background */
+  --el-bg-color: #f5f4ed;
+  --el-bg-color-page: #f5f4ed;
+  --el-bg-color-overlay: #ffffff;
+  --el-fill-color-blank: #ffffff;
+  --el-fill-color-light: #f0efe8;
+  --el-fill-color-lighter: #f5f4ed;
+
+  /* Text */
+  --el-text-color-primary: #1a1917;
+  --el-text-color-regular: #5e5d59;
+  --el-text-color-secondary: #87867f;
+  --el-text-color-placeholder: #b5b0a7;
+
+  /* Border */
+  --el-border-color: #e5e0da;
+  --el-border-color-light: #f0ebe5;
+  --el-border-color-lighter: #f5f2ed;
+  --el-border-radius-base: 10px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 9999px;
+
+  /* Shadows */
+  --el-box-shadow-light: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  --el-box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+  --el-box-shadow-dark: 0 8px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+
+  /* Font */
+  --el-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ── Global Page ── */
+html, body, #app {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f4ed;
+  color: #1a1917;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e5e0da; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #87867f; }
+
+/* ── Sidebar ── */
+.layout-aside {
+  background: #1a1917 !important;
+  border-right: 1px solid #2a2927;
+}
+
+.layout-aside .logo {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.layout-aside .logo-text {
+  color: #f5f4ed;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.layout-aside .logo-mini {
+  color: #d97757;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+/* Sidebar Menu Override */
+.layout-aside .el-menu {
+  background: #1a1917 !important;
+  border-right: none !important;
+}
+
+.layout-aside .el-menu-item {
+  color: #a8a69e !important;
+  border-radius: 8px;
+  margin: 2px 8px;
+  transition: all 0.15s ease;
+}
+
+.layout-aside .el-menu-item:hover {
+  background: rgba(255,255,255,0.06) !important;
+  color: #f5f4ed !important;
+}
+
+.layout-aside .el-menu-item.is-active {
+  background: rgba(217,119,87,0.2) !important;
+  color: #d97757 !important;
+  font-weight: 600;
+}
+
+/* ── Header ── */
+.layout-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e0da !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.layout-header .collapse-btn {
+  cursor: pointer;
+  color: #5e5d59;
+  transition: color 0.15s;
+}
+.layout-header .collapse-btn:hover {
+  color: #d97757;
+}
+
+.layout-header .user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.layout-header .user-info:hover {
+  background: #f0efe8;
+}
+
+.layout-header .username {
+  font-size: 14px;
+  color: #1a1917;
+  font-weight: 500;
+}
+
+.layout-header .role-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(217,119,87,0.12);
+  color: #d97757;
+  font-weight: 600;
+}
+
+/* ── Main Content ── */
+.layout-main {
+  background: #f5f4ed !important;
+  padding: 24px !important;
+}
+
+/* ── Card Override ── */
+.el-card {
+  border-radius: 16px !important;
+  border: 1px solid #e5e0da !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04) !important;
+  transition: all 0.25s ease;
+}
+.el-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04) !important;
+}
+
+/* ── Button Override ── */
+.el-button {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.15s ease !important;
+}
+
+.el-button--primary {
+  background: #d97757 !important;
+  border-color: #d97757 !important;
+}
+.el-button--primary:hover {
+  background: #c96442 !important;
+  border-color: #c96442 !important;
+  box-shadow: 0 4px 16px rgba(217,119,87,0.3) !important;
+  transform: translateY(-1px);
+}
+
+.el-button--default {
+  background: #ffffff !important;
+  border: 1px solid #e5e0da !important;
+  color: #1a1917 !important;
+}
+.el-button--default:hover {
+  background: #f0efe8 !important;
+  border-color: #d97757 !important;
+  color: #d97757 !important;
+}
+
+/* ── Input / Form Override ── */
+.el-input__wrapper {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  background: #f0efe8 !important;
+  border: none !important;
+  transition: all 0.15s ease;
+}
+.el-input__wrapper:hover {
+  background: #eae9e2 !important;
+}
+.el-input.is-focus .el-input__wrapper {
+  background: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(217,119,87,0.25) !important;
+}
+
+.el-textarea__inner {
+  border-radius: 12px !important;
+  background: #f0efe8 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.el-textarea__inner:focus {
+  background: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(217,119,87,0.25) !important;
+}
+
+/* ── Table Override ── */
+.el-table {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.el-table th.el-table__cell {
+  background: #f0efe8 !important;
+  color: #5e5d59 !important;
+  font-weight: 600;
+}
+.el-table tr:hover > td {
+  background: #fdf8f5 !important;
+}
+
+/* ── Dialog Override ── */
+.el-dialog {
+  border-radius: 20px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04) !important;
+}
+.el-dialog__header {
+  padding: 24px 24px 0 !important;
+}
+.el-dialog__title {
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  color: #1a1917 !important;
+}
+
+/* ── Tag / Badge ── */
+.el-tag {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+/* ── Tabs ── */
+.el-tabs__item {
+  color: #87867f !important;
+  font-weight: 500;
+}
+.el-tabs__item.is-active {
+  color: #d97757 !important;
+  font-weight: 700;
+}
+.el-tabs__active-bar {
+  background: #d97757 !important;
+}
+
+/* ── Breadcrumb ── */
+.el-breadcrumb__item {
+  color: #87867f;
+}
+
+/* ── Pagination ── */
+.el-pagination .el-pager li.is-active {
+  background: #d97757 !important;
+  border-radius: 8px;
+}
+
+/* ── Select Dropdown ── */
+.el-select-dropdown__item.selected {
+  color: #d97757 !important;
+  font-weight: 600;
+}
+
+/* ── Menu (in-page, not sidebar) ── */
+.el-menu--horizontal {
+  border-bottom: 1px solid #e5e0da !important;
+}
+
+/* ── Loading ── */
+.el-loading-spinner .circular circle {
+  stroke: #d97757;
+}
+
+/* ── Transitions ── */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
