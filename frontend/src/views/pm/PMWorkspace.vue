@@ -202,7 +202,13 @@
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="目标市场">
+                <el-form-item label-width="80px">
+                  <template #label>
+                    目标市场
+                    <el-tooltip content="选择产品目标销售市场，将自动加载该市场的安全合规标准要求（UL/CE/CB等）" placement="top">
+                      <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
+                    </el-tooltip>
+                  </template>
                   <el-select v-model="projectForm.target_market" placeholder="选择目标市场" clearable style="width:100%">
                     <el-option v-for="o in kbOptions.market" :key="o.code" :label="o.name" :value="o.code" />
                   </el-select>
@@ -291,7 +297,13 @@
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="开发类别">
+                <el-form-item label-width="80px">
+                  <template #label>
+                    开发类别
+                    <el-tooltip content="项目开发等级决定试制数量、评审流程等。全新开发≥20台试制，派生≥10台，降本优化≥5台" placement="top">
+                      <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
+                    </el-tooltip>
+                  </template>
                   <el-select v-model="projectForm.dev_category" placeholder="选择开发类别" clearable style="width:100%">
                     <el-option label="全新开发" value="全新开发" />
                     <el-option label="派生" value="派生" />
@@ -358,7 +370,13 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-form-item label="认证要求">
+                <el-form-item label-width="80px">
+                  <template #label>
+                    认证要求
+                    <el-tooltip content="从Tab3安全合规标准自动生成，选择目标市场后自动加载对应市场的认证标准要求" placement="top">
+                      <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
+                    </el-tooltip>
+                  </template>
                   <el-input :model-value="certRequirementsText" disabled placeholder="自动生成">
                     <template #suffix>
                       <span style="color:#67c23a;font-size:12px">自动</span>
@@ -466,7 +484,7 @@
             <el-table :data="corePerfTable" border size="small" class="section-table">
               <el-table-column prop="param_name" label="参数名称" width="130">
                 <template #default="{ row }">
-                  <el-input v-model="row.param_name" size="small" />
+                  <el-input v-model="row.param_name" size="small" placeholder="如: 制冷量(W)" />
                 </template>
               </el-table-column>
               <el-table-column prop="baseline" label="基准值" width="140">
@@ -482,17 +500,17 @@
               </el-table-column>
               <el-table-column prop="target_value" label="目标值" width="140">
                 <template #default="{ row }">
-                  <el-input v-model="row.target_value" size="small" />
+                  <el-input v-model="row.target_value" size="small" placeholder="如: 3500W" />
                 </template>
               </el-table-column>
               <el-table-column prop="aux_competitor" label="AUX竞品" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.aux_competitor" size="small" />
+                  <el-input v-model="row.aux_competitor" size="small" placeholder="AUX对应值" />
                 </template>
               </el-table-column>
               <el-table-column prop="tcl_competitor" label="TCL竞品" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.tcl_competitor" size="small" />
+                  <el-input v-model="row.tcl_competitor" size="small" placeholder="TCL对应值" />
                 </template>
               </el-table-column>
               <el-table-column prop="source" label="来源" width="100">
@@ -545,17 +563,17 @@
               </el-table-column>
               <el-table-column prop="involved_parts" label="涉及零部件" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.involved_parts" size="small" />
+                  <el-input v-model="row.involved_parts" size="small" placeholder="如: 压缩机/电控板" />
                 </template>
               </el-table-column>
               <el-table-column prop="cert_cycle" label="认证周期" width="100">
                 <template #default="{ row }">
-                  <el-input v-model="row.cert_cycle" size="small" />
+                  <el-input v-model="row.cert_cycle" size="small" placeholder="如: 45天" />
                 </template>
               </el-table-column>
               <el-table-column prop="remark" label="备注" width="140">
                 <template #default="{ row }">
-                  <el-input v-model="row.remark" size="small" />
+                  <el-input v-model="row.remark" size="small" placeholder="如: 需第三方检测" />
                 </template>
               </el-table-column>
             </el-table>
@@ -575,12 +593,12 @@
               </el-table-column>
               <el-table-column prop="name" label="名称" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.name" size="small" />
+                  <el-input v-model="row.name" size="small" placeholder="如: 蒸发器" />
                 </template>
               </el-table-column>
               <el-table-column prop="spec" label="规格" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.spec" size="small" />
+                  <el-input v-model="row.spec" size="small" placeholder="如: Φ7×0.25 双排" />
                 </template>
               </el-table-column>
               <el-table-column prop="qty" label="数量" width="80">
@@ -590,17 +608,17 @@
               </el-table-column>
               <el-table-column prop="unit" label="单位" width="70">
                 <template #default="{ row }">
-                  <el-input v-model="row.unit" size="small" />
+                  <el-input v-model="row.unit" size="small" placeholder="如: 个/套/m" />
                 </template>
               </el-table-column>
               <el-table-column prop="usage" label="用途" width="100">
                 <template #default="{ row }">
-                  <el-input v-model="row.usage" size="small" />
+                  <el-input v-model="row.usage" size="small" placeholder="如: 换热核心部件" />
                 </template>
               </el-table-column>
               <el-table-column prop="supplier" label="供应商" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.supplier" size="small" />
+                  <el-input v-model="row.supplier" size="small" placeholder="如: 美的/格力" />
                 </template>
               </el-table-column>
               <el-table-column prop="delivery_cycle" label="交期" width="90">
@@ -625,7 +643,7 @@
               </el-table-column>
               <el-table-column prop="remark" label="备注" width="120">
                 <template #default="{ row }">
-                  <el-input v-model="row.remark" size="small" />
+                  <el-input v-model="row.remark" size="small" placeholder="如: 长周期物料(8周)" />
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="70" fixed="right">
@@ -740,7 +758,7 @@
           <el-divider content-position="left">二、经济指标分析</el-divider>
           <el-row :gutter="16">
             <el-col :span="8">
-              <el-form-item label="目标出厂价FOB($)" label-width="150px" size="small">
+              <el-form-item label="目标出厂价FOB($)(美元)" label-width="150px" size="small">
                 <el-input-number v-model="projectForm.fob_price" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </el-form-item>
             </el-col>
@@ -750,31 +768,49 @@
               </el-form-item>
             </el-col>
             <el-col :span="8">
-              <el-form-item label="目标BOM成本(￥)" label-width="140px" size="small">
+              <el-form-item label="目标BOM成本(￥)(人民币)" label-width="140px" size="small">
                 <el-input-number v-model="projectForm.bom_cost_target" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="16">
             <el-col :span="8">
-              <el-form-item label="BOM成本占比" label-width="150px" size="small">
+              <el-form-item label-width="150px" size="small">
+                <template #label>
+                  BOM成本占比
+                  <el-tooltip content="BOM成本占出厂价的比例，计算公式: BOM成本÷(FOB价格×汇率)×100%" placement="top">
+                    <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </template>
                 <el-input :model-value="bomCostRatioText" disabled size="small" />
               </el-form-item>
             </el-col>
             <el-col :span="8">
-              <el-form-item label="制造费用+人工(￥)" label-width="130px" size="small">
+              <el-form-item label-width="130px" size="small">
+                <template #label>
+                  制造费用+人工(￥)
+                  <el-tooltip content="制造费用和人工成本合计(万元)，由系统按配置自动计算" placement="top">
+                    <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </template>
                 <el-input :model-value="manufacturingCost.toFixed(0)" disabled size="small" />
               </el-form-item>
             </el-col>
             <el-col :span="8">
-              <el-form-item label="毛利(￥)" label-width="140px" size="small">
+              <el-form-item label-width="140px" size="small">
+                <template #label>
+                  毛利(￥)
+                  <el-tooltip content="毛利 = 出厂价 - BOM成本 - 制造费用 - 人工费用，反映项目盈利能力" placement="top">
+                    <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </template>
                 <el-input :model-value="grossMarginText" disabled size="small" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="16">
             <el-col :span="12">
-              <el-form-item label="年销量预测(首年)" label-width="140px" size="small">
+              <el-form-item label="年销量预测(首年)(台)" label-width="140px" size="small">
                 <el-input-number v-model="projectForm.annual_sales_forecast" :min="0" :step="1000" size="small" controls-position="right" style="width:100%" />
               </el-form-item>
             </el-col>
@@ -796,7 +832,7 @@
                 <el-input v-model="row.name" size="small" placeholder="模具名称" />
               </template>
             </el-table-column>
-            <el-table-column label="数量" width="100">
+            <el-table-column label="数量(副)" width="100">
               <template #default="{ row }">
                 <el-input-number v-model="row.qty" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </template>
@@ -823,6 +859,9 @@
           <el-divider content-position="left">四、试制费用</el-divider>
           <div class="cost-summary" style="background:#f0f9eb;padding:10px 16px;border-radius:6px;margin-bottom:8px">
             试制数量: <strong>{{ trialQty }}台</strong>（按项目等级「{{ projectForm.dev_category || '未设置' }}」自动确定）
+            <el-tooltip content="全新开发≥20台，派生≥10台，降本优化≥5台，高难度/高复杂度项目可适当上浮" placement="top">
+              <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
+            </el-tooltip>
             <span v-if="trialQty > 20" style="color:#e6a23c;margin-left:8px">⚠ 建议分批试制</span>
           </div>
 
@@ -830,7 +869,7 @@
           <el-divider content-position="left">五、试制样机费用</el-divider>
           <el-table :data="protoCostTable" border size="small" class="section-table">
             <el-table-column prop="stage" label="阶段" width="80" />
-            <el-table-column label="数量" width="100">
+            <el-table-column label="数量(台)" width="100">
               <template #default="{ row }">
                 <el-input-number v-model="row.qty" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </template>
@@ -852,7 +891,7 @@
           <el-divider content-position="left">六、人工费用初步核算</el-divider>
           <el-table :data="laborCostTable" border size="small" class="section-table">
             <el-table-column prop="module" label="模块" width="100" />
-            <el-table-column label="人数" width="80">
+            <el-table-column label="人数(人)" width="80">
               <template #default="{ row }">
                 <el-input-number v-model="row.people_count" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </template>
@@ -885,7 +924,7 @@
           <el-divider content-position="left">七、测试费用</el-divider>
           <el-table :data="testCostTable" border size="small" class="section-table">
             <el-table-column prop="stage" label="阶段" width="80" />
-            <el-table-column label="天数" width="100">
+            <el-table-column label="天数(天)" width="100">
               <template #default="{ row }">
                 <el-input-number v-model="row.days" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
               </template>
@@ -904,7 +943,12 @@
           <div class="cost-summary">测试费用合计: <strong>¥{{ testCostTotal.toFixed(2) }} 万元</strong></div>
 
           <!-- 八、认证费用（从Tab3安全合规自动生成） -->
-          <el-divider content-position="left">八、认证费用（从Tab3安全合规自动生成）</el-divider>
+          <el-divider content-position="left">
+            八、认证费用（从Tab3安全合规自动生成）
+            <el-tooltip content="认证费用从Tab3安全合规标准自动映射，在Tab3填写标准后此处自动生成费用项，可手动调整金额" placement="top">
+              <el-icon style="margin-left:6px;cursor:help;color:#909399;font-size:14px"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </el-divider>
           <el-table v-if="certCostTable.length > 0" :data="certCostTable" border size="small" class="section-table">
             <el-table-column prop="cert_name" label="标准名" width="100" />
             <el-table-column prop="cert_body" label="认证机构" width="100" />
@@ -974,7 +1018,13 @@
                 <template #default="{ $index }">{{ $index + 1 }}</template>
               </el-table-column>
               <!-- 角色 -->
-              <el-table-column label="角色" width="140">
+              <el-table-column width="140">
+                <template #header>
+                  角色
+                  <el-tooltip content="选择项目类型后自动加载预设角色模板，可自行调整人数和分配人员。14种标准角色覆盖研发全流程" placement="top">
+                    <el-icon style="margin-left:4px;cursor:help;color:#909399;font-size:13px"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </template>
                 <template #default="{ row, $index }">
                   <el-select v-model="row.role" size="small" placeholder="选择角色" @change="onTeamRoleChange($index)" style="width:100%">
                     <el-option v-for="r in teamRoles" :key="r.value" :label="r.label" :value="r.value" />
@@ -1102,7 +1152,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Link, Edit, Delete } from '@element-plus/icons-vue'
+import { Link, Edit, Delete, QuestionFilled } from '@element-plus/icons-vue'
 import api from '../../api'
 import CompetitorBench from './CompetitorBench.vue'
 

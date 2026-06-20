@@ -1,0 +1,393 @@
+{
+  "p4_phase": "竞品数据增补 + BOM成本数据导入 + UI细节打磨",
+  "generated_at": "2026-06-21",
+  "project_path": "/Users/gamidy/ros-source/ros-system",
+  "server": "139.196.15.52",
+
+  "diagnosis_summary": {
+    "competitor_models": {
+      "count": 5,
+      "existing": "越南 Mitsubishi×4 + 泰国 Mitsubishi×1",
+      "gap": "缺少泰国Daikin/Panasonic, 印尼Sharp/LG, 中东Gree/Midea — 共需约45-60条"
+    },
+    "bom": {
+      "parts": 0,
+      "boms": 0,
+      "bom_items": 0,
+      "api_status": "BOM API路由正常注册(/api/bom前缀)，所有CRUD端点完整，但数据库无种子数据。GET /api/bom/items 不是有效路由(需改为 GET /api/bom/{bom_id}/items 或 GET /api/bom?…)",
+      "root_cause": "无种子数据，非API缺陷"
+    },
+    "ui_placeholder": {
+      "file": "frontend/src/views/pm/PMWorkspace.vue",
+      "lines": 3602,
+      "fields_with_placeholder": 53,
+      "fields_missing_placeholder": 26,
+      "fields_with_help_text": 0
+    }
+  },
+
+  "tasks": [
+    {
+      "id": "P4-1",
+      "name": "竞品数据增补（泰国/印尼/中东市场）",
+      "priority": "P0",
+      "estimated_hours": 4,
+      "executor": "产品经理/市场研究员",
+      "description": "按市场×冷量段×能效等级矩阵，构造真实竞品参数JSON，通过 POST /api/pm/competitors 批量导入",
+      "import_method": "curl POST 批量导入，需先获取auth token",
+      "auth_required": "需要 admin 或 product_manager 角色token",
+
+      "data_plan": {
+        "markets": ["泰国", "印尼", "中东"],
+        "capacity_ranges": ["9000BTU", "12000BTU", "18000BTU", "24000BTU"],
+        "energy_ratings": ["5星", "4星", "3星"],
+
+        "thailand": {
+          "brands": ["Daikin", "Panasonic"],
+          "models_per_brand": 6,
+          "target_total": 12,
+          "typical_specs": {
+            "product_type": "分体壁挂式",
+            "climate_zone": "T3",
+            "refrigerant": "R32",
+            "cooling_w_range": "800-2500",
+            "eer_range": "3.2-4.5",
+            "noise_indoor_range": "19-42",
+            "noise_outdoor_range": "46-55",
+            "airflow_range": "500-1200",
+            "factory_price": "$180-$520",
+            "launch_year": "2024-2025"
+          },
+          "daikin_models": [
+            {"model": "FTKM09SV2S", "cooling_capacity": "9000BTU", "energy_rating": "5星", "cooling_w": 820, "eer": 3.85, "noise_indoor_db": 19, "noise_outdoor_db": 46, "airflow_m3h": 540, "indoor_size_mm": "795×285×230", "outdoor_size_mm": "675×550×284", "factory_price": "$195", "launch_year": 2024, "notes": "Smarti系列, R32, WiFi"},
+            {"model": "FTKM12SV2S", "cooling_capacity": "12000BTU", "energy_rating": "5星", "cooling_w": 1080, "eer": 3.89, "noise_indoor_db": 22, "noise_outdoor_db": 47, "airflow_m3h": 630, "indoor_size_mm": "795×285×230", "outdoor_size_mm": "675×550×284", "factory_price": "$245", "launch_year": 2024, "notes": "Smarti系列"},
+            {"model": "FTKM18SV2S", "cooling_capacity": "18000BTU", "energy_rating": "5星", "cooling_w": 1620, "eer": 3.86, "noise_indoor_db": 29, "noise_outdoor_db": 49, "airflow_m3h": 800, "indoor_size_mm": "990×315×260", "outdoor_size_mm": "765×550×305", "factory_price": "$365", "launch_year": 2024, "notes": "Smarti系列"},
+            {"model": "FTKM24SV2S", "cooling_capacity": "24000BTU", "energy_rating": "4星", "cooling_w": 2280, "eer": 3.65, "noise_indoor_db": 36, "noise_outdoor_db": 53, "airflow_m3h": 1100, "indoor_size_mm": "1100×330×280", "outdoor_size_mm": "845×630×335", "factory_price": "$490", "launch_year": 2024, "notes": "Smarti系列"},
+            {"model": "FTKC09TV2S", "cooling_capacity": "9000BTU", "energy_rating": "4星", "cooling_w": 870, "eer": 3.62, "noise_indoor_db": 22, "noise_outdoor_db": 47, "airflow_m3h": 510, "indoor_size_mm": "795×285×230", "outdoor_size_mm": "675×550×284", "factory_price": "$175", "launch_year": 2023, "notes": "Smarti Lite"},
+            {"model": "FTKC12TV2S", "cooling_capacity": "12000BTU", "energy_rating": "4星", "cooling_w": 1140, "eer": 3.65, "noise_indoor_db": 24, "noise_outdoor_db": 48, "airflow_m3h": 600, "indoor_size_mm": "795×285×230", "outdoor_size_mm": "675×550×284", "factory_price": "$220", "launch_year": 2023, "notes": "Smarti Lite"}
+          ],
+          "panasonic_models": [
+            {"model": "CS-Z9XKR", "cooling_capacity": "9000BTU", "energy_rating": "5星", "cooling_w": 800, "eer": 3.95, "noise_indoor_db": 20, "noise_outdoor_db": 46, "airflow_m3h": 570, "indoor_size_mm": "799×290×235", "outdoor_size_mm": "685×560×290", "factory_price": "$210", "launch_year": 2024, "notes": "AEROWINGS, nanoeX"},
+            {"model": "CS-Z12XKR", "cooling_capacity": "12000BTU", "energy_rating": "5星", "cooling_w": 1050, "eer": 3.92, "noise_indoor_db": 22, "noise_outdoor_db": 47, "airflow_m3h": 660, "indoor_size_mm": "799×290×235", "outdoor_size_mm": "685×560×290", "factory_price": "$260", "launch_year": 2024, "notes": "AEROWINGS系列"},
+            {"model": "CS-Z18XKR", "cooling_capacity": "18000BTU", "energy_rating": "4星", "cooling_w": 1680, "eer": 3.72, "noise_indoor_db": 30, "noise_outdoor_db": 50, "airflow_m3h": 820, "indoor_size_mm": "1020×315×255", "outdoor_size_mm": "780×560×310", "factory_price": "$380", "launch_year": 2024, "notes": "大马力"},
+            {"model": "CS-Z24XKR", "cooling_capacity": "24000BTU", "energy_rating": "3星", "cooling_w": 2350, "eer": 3.48, "noise_indoor_db": 38, "noise_outdoor_db": 54, "airflow_m3h": 1150, "indoor_size_mm": "1125×335×275", "outdoor_size_mm": "855×640×340", "factory_price": "$510", "launch_year": 2024, "notes": "商用级"},
+            {"model": "CS-P9XKR", "cooling_capacity": "9000BTU", "energy_rating": "3星", "cooling_w": 920, "eer": 3.38, "noise_indoor_db": 24, "noise_outdoor_db": 48, "airflow_m3h": 500, "indoor_size_mm": "799×290×235", "outdoor_size_mm": "685×560×290", "factory_price": "$165", "launch_year": 2023, "notes": "经济型"},
+            {"model": "CS-P12XKR", "cooling_capacity": "12000BTU", "energy_rating": "3星", "cooling_w": 1180, "eer": 3.35, "noise_indoor_db": 26, "noise_outdoor_db": 49, "airflow_m3h": 590, "indoor_size_mm": "799×290×235", "outdoor_size_mm": "685×560×290", "factory_price": "$200", "launch_year": 2023, "notes": "经济型"}
+          ]
+        },
+
+        "indonesia": {
+          "brands": ["Sharp", "LG"],
+          "models_per_brand": 6,
+          "target_total": 12,
+          "typical_specs": {
+            "product_type": "分体壁挂式",
+            "climate_zone": "T3",
+            "refrigerant": "R32",
+            "voltage_freq": "220V/50Hz",
+            "cooling_w_range": "800-2500",
+            "eer_range": "3.0-4.2",
+            "factory_price": "$160-$480",
+            "launch_year": "2023-2025"
+          },
+          "sharp_models": [
+            {"model": "AH-09NCY", "cooling_capacity": "9000BTU", "energy_rating": "4星", "cooling_w": 850, "eer": 3.72, "noise_indoor_db": 23, "noise_outdoor_db": 47, "airflow_m3h": 550, "indoor_size_mm": "800×285×220", "outdoor_size_mm": "680×550×285", "factory_price": "$175", "launch_year": 2024, "notes": "Plasmacluster Ion"},
+            {"model": "AH-12NCY", "cooling_capacity": "12000BTU", "energy_rating": "4星", "cooling_w": 1120, "eer": 3.75, "noise_indoor_db": 25, "noise_outdoor_db": 48, "airflow_m3h": 640, "indoor_size_mm": "800×285×220", "outdoor_size_mm": "680×550×285", "factory_price": "$215", "launch_year": 2024, "notes": "Plasmacluster Ion"},
+            {"model": "AH-18NCY", "cooling_capacity": "18000BTU", "energy_rating": "3星", "cooling_w": 1750, "eer": 3.55, "noise_indoor_db": 32, "noise_outdoor_db": 51, "airflow_m3h": 830, "indoor_size_mm": "1000×315×250", "outdoor_size_mm": "760×555×310", "factory_price": "$340", "launch_year": 2024, "notes": "大马力"},
+            {"model": "AH-24NCY", "cooling_capacity": "24000BTU", "energy_rating": "3星", "cooling_w": 2400, "eer": 3.42, "noise_indoor_db": 39, "noise_outdoor_db": 55, "airflow_m3h": 1120, "indoor_size_mm": "1130×340×275", "outdoor_size_mm": "850×635×340", "factory_price": "$470", "launch_year": 2024, "notes": "旗舰"},
+            {"model": "AH-A9ZCY", "cooling_capacity": "9000BTU", "energy_rating": "5星", "cooling_w": 790, "eer": 4.05, "noise_indoor_db": 19, "noise_outdoor_db": 45, "airflow_m3h": 580, "indoor_size_mm": "800×285×220", "outdoor_size_mm": "680×550×285", "factory_price": "$210", "launch_year": 2025, "notes": "J-Tech Inverter, 旗舰节能"},
+            {"model": "AH-A12ZCY", "cooling_capacity": "12000BTU", "energy_rating": "5星", "cooling_w": 1030, "eer": 3.92, "noise_indoor_db": 21, "noise_outdoor_db": 46, "airflow_m3h": 670, "indoor_size_mm": "800×285×220", "outdoor_size_mm": "680×550×285", "factory_price": "$260", "launch_year": 2025, "notes": "J-Tech Inverter"}
+          ],
+          "lg_models": [
+            {"model": "S09ET.NSJ", "cooling_capacity": "9000BTU", "energy_rating": "4星", "cooling_w": 870, "eer": 3.62, "noise_indoor_db": 21, "noise_outdoor_db": 47, "airflow_m3h": 560, "indoor_size_mm": "810×290×220", "outdoor_size_mm": "690×555×290", "factory_price": "$185", "launch_year": 2024, "notes": "Dual Inverter, ThinQ"},
+            {"model": "S12ET.NSJ", "cooling_capacity": "12000BTU", "energy_rating": "4星", "cooling_w": 1150, "eer": 3.62, "noise_indoor_db": 23, "noise_outdoor_db": 48, "airflow_m3h": 650, "indoor_size_mm": "810×290×220", "outdoor_size_mm": "690×555×290", "factory_price": "$225", "launch_year": 2024, "notes": "Dual Inverter"},
+            {"model": "S18ET.NSJ", "cooling_capacity": "18000BTU", "energy_rating": "3星", "cooling_w": 1780, "eer": 3.48, "noise_indoor_db": 33, "noise_outdoor_db": 52, "airflow_m3h": 850, "indoor_size_mm": "1020×315×250", "outdoor_size_mm": "770×565×315", "factory_price": "$355", "launch_year": 2024, "notes": "Dual Inverter"},
+            {"model": "S24ET.NSJ", "cooling_capacity": "24000BTU", "energy_rating": "3星", "cooling_w": 2450, "eer": 3.35, "noise_indoor_db": 40, "noise_outdoor_db": 56, "airflow_m3h": 1150, "indoor_size_mm": "1140×340×275", "outdoor_size_mm": "860×650×345", "factory_price": "$485", "launch_year": 2024, "notes": "旗舰"},
+            {"model": "S09ET.USJ", "cooling_capacity": "9000BTU", "energy_rating": "5星", "cooling_w": 780, "eer": 4.10, "noise_indoor_db": 19, "noise_outdoor_db": 45, "airflow_m3h": 600, "indoor_size_mm": "810×290×220", "outdoor_size_mm": "690×555×290", "factory_price": "$230", "launch_year": 2025, "notes": "Artcool系列, 镜面面板"},
+            {"model": "S12ET.USJ", "cooling_capacity": "12000BTU", "energy_rating": "5星", "cooling_w": 1040, "eer": 3.85, "noise_indoor_db": 21, "noise_outdoor_db": 46, "airflow_m3h": 690, "indoor_size_mm": "810×290×220", "outdoor_size_mm": "690×555×290", "factory_price": "$285", "launch_year": 2025, "notes": "Artcool系列"}
+          ]
+        },
+
+        "middle_east": {
+          "brands": ["Gree", "Midea"],
+          "models_per_brand": 6,
+          "target_total": 12,
+          "typical_specs": {
+            "product_type": "分体壁挂式",
+            "climate_zone": "T3/T3+ (高温)",
+            "refrigerant": "R410A/R32",
+            "voltage_freq": "220V/60Hz & 380V/60Hz",
+            "cooling_w_range": "900-2800",
+            "eer_range": "2.8-3.8",
+            "factory_price": "$140-$450",
+            "launch_year": "2023-2025",
+            "special": "高温52°C运转、防沙尘设计"
+          },
+          "gree_models": [
+            {"model": "GWH09AAD-K6DNA1A", "cooling_capacity": "9000BTU", "energy_rating": "4星", "cooling_w": 890, "eer": 3.48, "noise_indoor_db": 24, "noise_outdoor_db": 48, "airflow_m3h": 530, "indoor_size_mm": "790×275×200", "outdoor_size_mm": "732×555×330", "factory_price": "$155", "launch_year": 2024, "notes": "T3高温, 52°C运转, G10 Inverter"},
+            {"model": "GWH12AAD-K6DNA1A", "cooling_capacity": "12000BTU", "energy_rating": "4星", "cooling_w": 1180, "eer": 3.52, "noise_indoor_db": 27, "noise_outdoor_db": 49, "airflow_m3h": 620, "indoor_size_mm": "790×275×200", "outdoor_size_mm": "732×555×330", "factory_price": "$190", "launch_year": 2024, "notes": "T3系列"},
+            {"model": "GWH18AAD-K6DNA1A", "cooling_capacity": "18000BTU", "energy_rating": "3星", "cooling_w": 1820, "eer": 3.38, "noise_indoor_db": 34, "noise_outdoor_db": 52, "airflow_m3h": 820, "indoor_size_mm": "1000×315×245", "outdoor_size_mm": "845×605×365", "factory_price": "$310", "launch_year": 2024, "notes": "大马力T3"},
+            {"model": "GWH24AAD-K6DNA1A", "cooling_capacity": "24000BTU", "energy_rating": "3星", "cooling_w": 2520, "eer": 3.25, "noise_indoor_db": 41, "noise_outdoor_db": 56, "airflow_m3h": 1100, "indoor_size_mm": "1150×345×270", "outdoor_size_mm": "900×640×375", "factory_price": "$425", "launch_year": 2024, "notes": "商用T3"},
+            {"model": "GWH12AAD-K6DNA2A", "cooling_capacity": "12000BTU", "energy_rating": "5星", "cooling_w": 1050, "eer": 3.82, "noise_indoor_db": 24, "noise_outdoor_db": 47, "airflow_m3h": 650, "indoor_size_mm": "790×275×200", "outdoor_size_mm": "732×555×330", "factory_price": "$230", "launch_year": 2025, "notes": "U-Crown系列, WiFi+AI"},
+            {"model": "GWH18AAD-K6DNA2A", "cooling_capacity": "18000BTU", "energy_rating": "4星", "cooling_w": 1700, "eer": 3.65, "noise_indoor_db": 31, "noise_outdoor_db": 50, "airflow_m3h": 860, "indoor_size_mm": "1000×315×245", "outdoor_size_mm": "845×605×365", "factory_price": "$365", "launch_year": 2025, "notes": "U-Crown系列"}
+          ],
+          "midea_models": [
+            {"model": "MSAB-09HRDN1", "cooling_capacity": "9000BTU", "energy_rating": "4星", "cooling_w": 880, "eer": 3.52, "noise_indoor_db": 22, "noise_outdoor_db": 47, "airflow_m3h": 550, "indoor_size_mm": "795×285×210", "outdoor_size_mm": "720×545×305", "factory_price": "$148", "launch_year": 2024, "notes": "Breezeless E, T3专用"},
+            {"model": "MSAB-12HRDN1", "cooling_capacity": "12000BTU", "energy_rating": "4星", "cooling_w": 1160, "eer": 3.55, "noise_indoor_db": 25, "noise_outdoor_db": 48, "airflow_m3h": 630, "indoor_size_mm": "795×285×210", "outdoor_size_mm": "720×545×305", "factory_price": "$182", "launch_year": 2024, "notes": "Breezeless E"},
+            {"model": "MSAB-18HRDN1", "cooling_capacity": "18000BTU", "energy_rating": "3星", "cooling_w": 1800, "eer": 3.42, "noise_indoor_db": 32, "noise_outdoor_db": 51, "airflow_m3h": 800, "indoor_size_mm": "990×310×245", "outdoor_size_mm": "830×598×355", "factory_price": "$295", "launch_year": 2024, "notes": "Breezeless E"},
+            {"model": "MSAB-24HRDN1", "cooling_capacity": "24000BTU", "energy_rating": "3星", "cooling_w": 2480, "eer": 3.28, "noise_indoor_db": 38, "noise_outdoor_db": 55, "airflow_m3h": 1080, "indoor_size_mm": "1120×340×270", "outdoor_size_mm": "890×635×370", "factory_price": "$410", "launch_year": 2024, "notes": "旗舰T3"},
+            {"model": "MSAB-12HRDN1-PRO", "cooling_capacity": "12000BTU", "energy_rating": "5星", "cooling_w": 1020, "eer": 3.92, "noise_indoor_db": 21, "noise_outdoor_db": 46, "airflow_m3h": 680, "indoor_size_mm": "795×285×210", "outdoor_size_mm": "720×545×305", "factory_price": "$235", "launch_year": 2025, "notes": "All Easy Pro, 防沙尘滤网"},
+            {"model": "MSAB-18HRDN1-PRO", "cooling_capacity": "18000BTU", "energy_rating": "4星", "cooling_w": 1660, "eer": 3.72, "noise_indoor_db": 29, "noise_outdoor_db": 49, "airflow_m3h": 840, "indoor_size_mm": "990×310×245", "outdoor_size_mm": "830×598×355", "factory_price": "$350", "launch_year": 2025, "notes": "All Easy Pro"}
+          ]
+        }
+      },
+
+      "import_script": {
+        "description": "使用bash脚本通过curl POST批量导入，需先获取auth token",
+        "steps": [
+          "1. 获取token: curl -X POST https://139.196.15.52/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"<password>\"}'",
+          "2. 使用token批量POST到 /api/pm/competitors",
+          "3. 验证: curl https://139.196.15.52/api/pm/competitors?market=泰国"
+        ],
+        "note": "competitor API路由为 /api/pm/competitors (注意是pm前缀，不是competitor)",
+        "role_required": "admin 或 product_manager"
+      }
+    },
+
+    {
+      "id": "P4-2",
+      "name": "BOM成本数据导入与API验证",
+      "priority": "P0",
+      "estimated_hours": 6,
+      "executor": "后端开发 + 系统工程师",
+      "description": "创建BOM种子数据(Part主数据 + BOM结构 + BOM Items 6层体系)，验证所有BOM API端点正常工作",
+      
+      "api_routing_analysis": {
+        "verdict": "BOM API路由全部正常，无缺失",
+        "registered_routes": [
+          "GET    /api/bom/categories          — Part分类列表",
+          "GET    /api/bom/parts               — Part主数据列表(支持筛选)",
+          "POST   /api/bom/parts               — 创建Part",
+          "GET    /api/bom/parts/cdf-expiring  — CDF到期检查",
+          "GET    /api/bom/parts/{part_id}     — Part详情含AVL",
+          "PATCH  /api/bom/parts/{part_id}     — 更新Part",
+          "GET    /api/bom/parts/{part_id}/avl — AVL列表",
+          "POST   /api/bom/parts/{part_id}/avl — 添加AVL",
+          "DELETE /api/bom/parts/{p_id}/avl/{a_id} — 移除AVL",
+          "GET    /api/bom/parts/{p_id}/alternatives — 替代料",
+          "POST   /api/bom/parts/{p_id}/alternatives — 设置替代料",
+          "GET    /api/bom/                    — BOM列表(支持筛选)",
+          "POST   /api/bom/                    — 创建BOM",
+          "PATCH  /api/bom/{bom_id}            — 更新BOM",
+          "GET    /api/bom/{bom_id}/items      — BOM条目列表",
+          "POST   /api/bom/{bom_id}/items      — 添加BOM条目",
+          "GET    /api/bom/{bom_id}/tree       — BOM树形结构"
+        ],
+        "common_misunderstanding": "GET /api/bom/items 不会匹配任何路由（需改为 GET /api/bom/{bom_id}/items）。前端如调用该路径需修正。"
+      },
+
+      "seed_data_plan": {
+        "strategy": "以一台典型1.5匹分体空调为例，建立完整6层BOM树",
+        "bom_no": "BOM-ROS-R32-12000-001",
+        "product_code": "ROS-R32-12000BTU-T3",
+        "version": "V1.0",
+        "description": "R32 1.5匹 T3海外分体空调 MBOM",
+
+        "part_categories": [
+          {"level": 1, "code": "1000", "name": "整机"},
+          {"level": 2, "code": "2000", "name": "室内机"},
+          {"level": 2, "code": "3000", "name": "室外机"},
+          {"level": 3, "code": "2100", "name": "换热系统"},
+          {"level": 3, "code": "2200", "name": "风道系统"},
+          {"level": 3, "code": "2300", "name": "电控系统"},
+          {"level": 3, "code": "2400", "name": "结构件"},
+          {"level": 3, "code": "3100", "name": "压缩冷凝系统"},
+          {"level": 3, "code": "3200", "name": "电气系统"},
+          {"level": 3, "code": "3300", "name": "结构外壳"}
+        ],
+
+        "parts_seed": [
+          {"part_no": "ROS-EVA-12000-R32-01", "name": "蒸发器组件", "spec": "Φ7×0.25 双排16孔 亲水铝箔", "unit": "套", "lifecycle": "production", "risk_level": "medium", "is_cdf_item": false},
+          {"part_no": "ROS-COND-12000-R32-01", "name": "冷凝器组件", "spec": "Φ7×0.22 单排24孔 蓝色铝箔", "unit": "套", "lifecycle": "production", "risk_level": "low", "is_cdf_item": false},
+          {"part_no": "ROS-COMP-12000-R32-01", "name": "直流变频压缩机", "spec": "GMCC KSN98D22UFZ R32专用", "unit": "台", "lifecycle": "production", "risk_level": "high", "is_cdf_item": true, "cdf_type": "安全件"},
+          {"part_no": "ROS-CTRL-12000-01", "name": "室内控制板PCBA", "spec": "主控+显示+WiFi模块 集成", "unit": "块", "lifecycle": "production", "risk_level": "high", "is_cdf_item": true, "cdf_type": "EMC件"},
+          {"part_no": "ROS-FAN-IDU-12000-01", "name": "贯流风扇", "spec": "Φ105×630mm ABS+GF", "unit": "个", "lifecycle": "production", "risk_level": "low", "is_cdf_item": false},
+          {"part_no": "ROS-MOTOR-IDU-12000-01", "name": "室内直流无刷电机", "spec": "310V DC 30W 1200RPM", "unit": "个", "lifecycle": "production", "risk_level": "medium", "is_cdf_item": false},
+          {"part_no": "ROS-FAN-ODU-12000-01", "name": "轴流风扇", "spec": "Φ425mm 3叶 ABS", "unit": "个", "lifecycle": "production", "risk_level": "low", "is_cdf_item": false},
+          {"part_no": "ROS-MOTOR-ODU-12000-01", "name": "室外交流电机", "spec": "220V 60W 850RPM", "unit": "个", "lifecycle": "production", "risk_level": "medium", "is_cdf_item": false},
+          {"part_no": "ROS-EXP-12000-01", "name": "电子膨胀阀", "spec": "EXV-2.0 R32 步进电机", "unit": "个", "lifecycle": "production", "risk_level": "high", "is_cdf_item": true, "cdf_type": "能效件"},
+          {"part_no": "ROS-FILTER-12000-01", "name": "空气滤网", "spec": "PP+PET 双层 抗菌", "unit": "片", "lifecycle": "production", "risk_level": "low", "is_cdf_item": false},
+          {"part_no": "ROS-CASE-IDU-12000-01", "name": "室内机外壳组件", "spec": "ABS HIPS 白色 800×285×220mm", "unit": "套", "lifecycle": "production", "risk_level": "low", "is_cdf_item": false},
+          {"part_no": "ROS-CASE-ODU-12000-01", "name": "室外机外壳组件", "spec": "镀锌钢板+粉末涂层 720×545×305mm", "unit": "套", "lifecycle": "production", "risk_level": "low", "is_cdf_item": false},
+          {"part_no": "ROS-PIPE-12000-01", "name": "连接管组件", "spec": "铜管Φ6.35/Φ9.52 4m 含保温", "unit": "套", "lifecycle": "production", "risk_level": "medium", "is_cdf_item": false},
+          {"part_no": "ROS-4WAY-12000-01", "name": "四通阀组件", "spec": "STF-0101 R32 220V", "unit": "个", "lifecycle": "production", "risk_level": "medium", "is_cdf_item": true, "cdf_type": "安全件"},
+          {"part_no": "ROS-SENSOR-12000-01", "name": "温度传感器套件", "spec": "NTC 10K 环温+管温×3", "unit": "套", "lifecycle": "production", "risk_level": "low", "is_cdf_item": false}
+        ],
+
+        "bom_tree_6level": [
+          {"level": 1, "part_no": "ROS-IDU-12000-01", "part_name": "室内机总成", "item_type": "Assembly", "quantity": 1},
+          {"level": 2, "part_no": "ROS-EVA-12000-R32-01", "part_name": "蒸发器组件", "item_type": "Component", "quantity": 1, "parent_level1": "ROS-IDU-12000-01"},
+          {"level": 2, "part_no": "ROS-FAN-IDU-12000-01", "part_name": "贯流风扇", "item_type": "Part", "quantity": 1, "parent_level1": "ROS-IDU-12000-01"},
+          {"level": 2, "part_no": "ROS-MOTOR-IDU-12000-01", "part_name": "室内直流无刷电机", "item_type": "Part", "quantity": 1, "parent_level1": "ROS-IDU-12000-01"},
+          {"level": 2, "part_no": "ROS-CTRL-12000-01", "part_name": "室内控制板PCBA", "item_type": "Component", "quantity": 1, "parent_level1": "ROS-IDU-12000-01"},
+          {"level": 2, "part_no": "ROS-CASE-IDU-12000-01", "part_name": "室内机外壳组件", "item_type": "Component", "quantity": 1, "parent_level1": "ROS-IDU-12000-01"},
+          {"level": 2, "part_no": "ROS-FILTER-12000-01", "part_name": "空气滤网", "item_type": "Part", "quantity": 2, "parent_level1": "ROS-IDU-12000-01"},
+          
+          {"level": 1, "part_no": "ROS-ODU-12000-01", "part_name": "室外机总成", "item_type": "Assembly", "quantity": 1},
+          {"level": 2, "part_no": "ROS-COMP-12000-R32-01", "part_name": "直流变频压缩机", "item_type": "Part", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          {"level": 2, "part_no": "ROS-COND-12000-R32-01", "part_name": "冷凝器组件", "item_type": "Component", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          {"level": 2, "part_no": "ROS-FAN-ODU-12000-01", "part_name": "轴流风扇", "item_type": "Part", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          {"level": 2, "part_no": "ROS-MOTOR-ODU-12000-01", "part_name": "室外交流电机", "item_type": "Part", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          {"level": 2, "part_no": "ROS-EXP-12000-01", "part_name": "电子膨胀阀", "item_type": "Part", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          {"level": 2, "part_no": "ROS-4WAY-12000-01", "part_name": "四通阀组件", "item_type": "Component", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          {"level": 2, "part_no": "ROS-SENSOR-12000-01", "part_name": "温度传感器套件", "item_type": "Component", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          {"level": 2, "part_no": "ROS-CASE-ODU-12000-01", "part_name": "室外机外壳组件", "item_type": "Component", "quantity": 1, "parent_level1": "ROS-ODU-12000-01"},
+          
+          {"level": 1, "part_no": "ROS-PIPE-12000-01", "part_name": "连接管组件", "item_type": "Component", "quantity": 1}
+        ],
+
+        "import_approach": "编写Python脚本 seed_bom.py，使用SQLAlchemy直接连接SQLite数据库批量插入。脚本位于 backend/scripts/seed_bom.py。先创建 PartCategory 和 Part，再创建 BOM 和 BOMItem。"
+      }
+    },
+
+    {
+      "id": "P4-3",
+      "name": "UI细节打磨 — PMWorkspace.vue placeholder/help text",
+      "priority": "P1",
+      "estimated_hours": 8,
+      "executor": "前端开发",
+      "description": "为PMWorkspace.vue中26个缺失placeholder的字段补充提示，并在关键区域添加help text/tooltip",
+      "file": "frontend/src/views/pm/PMWorkspace.vue",
+
+      "fields_missing_placeholder": [
+        {"section": "❶ 核心性能参数表", "line": 469, "field": "param_name", "current": "", "suggested_placeholder": "如: 制冷量(W)", "type": "el-input"},
+        {"section": "❶ 核心性能参数表", "line": 485, "field": "target_value", "current": "", "suggested_placeholder": "如: 3500W", "type": "el-input"},
+        {"section": "❶ 核心性能参数表", "line": 490, "field": "aux_competitor", "current": "", "suggested_placeholder": "AUX对应值", "type": "el-input"},
+        {"section": "❶ 核心性能参数表", "line": 495, "field": "tcl_competitor", "current": "", "suggested_placeholder": "TCL对应值", "type": "el-input"},
+
+        {"section": "❷ 安全合规表", "line": 548, "field": "involved_parts", "current": "", "suggested_placeholder": "如: 压缩机/电控板", "type": "el-input"},
+        {"section": "❷ 安全合规表", "line": 553, "field": "cert_cycle", "current": "", "suggested_placeholder": "如: 45天", "type": "el-input"},
+        {"section": "❷ 安全合规表", "line": 558, "field": "remark", "current": "", "suggested_placeholder": "如: 需第三方检测", "type": "el-input"},
+
+        {"section": "❸ 物料部件表", "line": 578, "field": "name", "current": "", "suggested_placeholder": "如: 蒸发器", "type": "el-input"},
+        {"section": "❸ 物料部件表", "line": 583, "field": "spec", "current": "", "suggested_placeholder": "如: Φ7×0.25 双排", "type": "el-input"},
+        {"section": "❸ 物料部件表", "line": 593, "field": "unit", "current": "", "suggested_placeholder": "如: 个/套/m", "type": "el-input"},
+        {"section": "❸ 物料部件表", "line": 598, "field": "usage", "current": "", "suggested_placeholder": "如: 换热核心部件", "type": "el-input"},
+        {"section": "❸ 物料部件表", "line": 603, "field": "supplier", "current": "", "suggested_placeholder": "如: 美的/格力", "type": "el-input"},
+        {"section": "❸ 物料部件表", "line": 628, "field": "remark", "current": "", "suggested_placeholder": "如: 长周期物料(8周)", "type": "el-input"},
+
+        {"section": "💰 经济指标", "line": 744, "field": "fob_price", "current": "", "suggested_placeholder": "美元计价FOB出厂价", "type": "el-input-number (需用form-item label说明)"},
+        {"section": "💰 经济指标", "line": 754, "field": "bom_cost_target", "current": "", "suggested_placeholder": "人民币目标BOM成本", "type": "el-input-number"},
+        {"section": "💰 经济指标", "line": 778, "field": "annual_sales_forecast", "current": "", "suggested_placeholder": "首年预计销量(台)", "type": "el-input-number"},
+
+        {"section": "三、模具费用表", "line": 801, "field": "qty", "current": "", "suggested_label_hint": "副", "type": "el-input-number"},
+        {"section": "三、模具费用表", "line": 806, "field": "total", "current": "", "suggested_label_hint": "万元", "type": "el-input-number"},
+
+        {"section": "五、样机费用表", "line": 835, "field": "qty", "current": "", "suggested_label_hint": "台", "type": "el-input-number"},
+
+        {"section": "六、人工费用表", "line": 857, "field": "people_count", "current": "", "suggested_label_hint": "人", "type": "el-input-number"},
+        {"section": "六、人工费用表", "line": 862, "field": "monthly_salary", "current": "", "suggested_label_hint": "万元/月", "type": "el-input-number"},
+        {"section": "六、人工费用表", "line": 873, "field": "occupancy_rate", "current": "", "suggested_label_hint": "%", "type": "el-input-number"},
+
+        {"section": "七、测试费用表", "line": 890, "field": "days", "current": "", "suggested_label_hint": "天", "type": "el-input-number"},
+
+        {"section": "八、认证费用表", "line": 913, "field": "cost_wan", "current": "", "suggested_label_hint": "万元", "type": "el-input-number"},
+
+        {"section": "👥 团队表", "line": 987, "field": "headcount", "current": "", "suggested_label_hint": "角色人数", "type": "el-input-number"}
+      ],
+
+      "help_text_suggestions": [
+        {
+          "location": "成本核算Tab — BOM成本占比",
+          "current": "无说明",
+          "suggestion": "在BOM成本占比旁添加 el-tooltip: \"BOM成本占比 = 目标BOM成本 / (FOB价格 × 汇率) × 100%。行业参考: 60%～75%\""
+        },
+        {
+          "location": "成本核算Tab — 制造费用+人工",
+          "current": "无说明",
+          "suggestion": "添加 tooltip: \"制造费用 = 开发费用×分摊系数 + 人工费用×分摊系数。由系统自动汇总Tab内各表格数据计算。\""
+        },
+        {
+          "location": "成本核算Tab — 毛利率",
+          "current": "无说明",
+          "suggestion": "添加 tooltip: \"毛利 = FOB收入¥ - BOM成本 - 制造费用 - 人工分摊。毛利率 = 毛利 / FOB收入¥ × 100%\""
+        },
+        {
+          "location": "成本核算Tab — 试制数量提示",
+          "current": "已有文字提示（line 824-827）",
+          "suggestion": "可额外添加 el-alert type='info': \"项目等级决定试制台数上限，具体规则由管理员在系统配置中设定\""
+        },
+        {
+          "location": "技术要求Tab — 认证需求自动生成",
+          "current": "无说明（line 357-366）",
+          "suggestion": "在disabled input旁添加: \"根据已选目标市场自动加载对应的安全合规标准清单\""
+        },
+        {
+          "location": "团队Tab — 项目类型加载模板",
+          "current": "有文字提示（line 953）",
+          "suggestion": "可改为 el-alert: \"选择项目类型后自动加载预设角色模板，可手工调整\""
+        },
+        {
+          "location": "团队Tab — 角色选择",
+          "current": "无说明",
+          "suggestion": "添加提示: \"14个可选角色: 产品经理/系统工程师/结构工程师/电控工程师/电气工程师/工艺工程师/测试工程师/品质工程师/采购工程师/认证工程师/项目经理/工业设计/软件开发/包装工程师\""
+        },
+        {
+          "location": "项目概述Tab — 项目等级说明",
+          "current": "有select但无说明",
+          "suggestion": "添加 tooltip: \"T级(战略)/A级(重点)/B级(常规)/C级(简单改型) — 等级影响审批流程和试制数量\""
+        },
+        {
+          "location": "项目概述Tab — 目标市场提示",
+          "current": "有select",
+          "suggestion": "添加提示: \"所选市场将自动加载对应的认证标准和安全合规要求清单\""
+        }
+      ],
+
+      "implementation_approach": {
+        "tool": "使用patch工具逐个替换PMWorkspace.vue中缺失placeholder的行",
+        "priority_order": [
+          "1. 先补26个缺失placeholder（投入产出比最高）",
+          "2. 再添加9处help text/tooltip",
+          "3. 对el-input-number类型字段，使用form-item的label或括号说明替代placeholder（Element Plus的el-input-number不支持placeholder属性，需通过form-item的说明文字实现）"
+        ],
+        "note": "el-input-number不支持placeholder属性（Element Plus特性），替代方案：(a) 保留form-item label足够清晰 (b) 在label后添加小字说明 (c) 使用el-tooltip包裹label",
+        "estimated_lines_changed": "~50行"
+      }
+    }
+  ],
+
+  "execution_plan": {
+    "phase1_competitor_data": {
+      "step1": "在本地或服务器上创建 JSON 种子文件 /opt/ros-system/backend/scripts/seed_competitors.json",
+      "step2": "通过 curl 获取 admin token 后批量 POST 导入（约36-48条记录）",
+      "step3": "验证: curl查询各市场竞品数量，确认覆盖完整",
+      "assignee": "产品经理（准备数据）+ 后端开发（执行导入）",
+      "deliverable": "泰国12条 + 印尼12条 + 中东12条 = 36条新竞品记录"
+    },
+    "phase2_bom_seed": {
+      "step1": "创建 /opt/ros-system/backend/scripts/seed_bom.py 种子脚本",
+      "step2": "覆盖 PartCategory(9条) + Part(15条) + BOM(1条) + BOMItem(17条) + PartAVL(若干)",
+      "step3": "执行 python3 seed_bom.py 导入",
+      "step4": "验证: curl https://139.196.15.52/api/bom/ 返回BOM列表; curl /api/bom/1/tree 返回6层树结构",
+      "assignee": "后端开发",
+      "deliverable": "完整BOM种子数据 + 所有API端点验证通过"
+    },
+    "phase3_ui_polish": {
+      "step1": "逐行修改 PMWorkspace.vue 26处缺失 placeholder",
+      "step2": "对 el-input-number 字段在前端 form-item label 处添加单位说明",
+      "step3": "为9个关键区域添加 el-tooltip 或 el-alert 帮助文本",
+      "step4": "前端 build 测试: cd frontend && npm run build",
+      "assignee": "前端开发",
+      "deliverable": "更新后的 PMWorkspace.vue，所有可输入字段均有提示"
+    }
+  },
+
+  "risk_notes": [
+    "竞品API路由前缀是 /api/pm/competitors（非 /api/competitor），注意区分",
+    "BOM树导入需确保 parent_item_id 层级正确（level 1整机 → level 2内外机 → ...），API有自动层级校验",
+    "el-input-number 不支持 placeholder，需通过 form-item label 或括号文字实现提示效果",
+    "服务器端需要 admin/product_manager 角色token才能写入竞品和BOM数据",
+    "前端build后需同步部署到服务器: scp dist/* 到 /opt/ros-system/frontend/dist/ 并 nginx reload"
+  ]
+}
