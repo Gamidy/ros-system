@@ -1247,8 +1247,8 @@ def get_capacity_cost_config(
                 if cap_num <= t.get("max_kw", 0):
                     manufacturing_cost = t.get("cost", 0)
                     break
-        except (json.JSONDecodeError, TypeError):
-            pass
+        except (json.JSONDecodeError, TypeError) as e:
+            logging.getLogger(__name__).warning(f"mfg_cost_threshold JSON解析失败: {e}")
     
     # ── 计算 proto_unit_cost ──
     proto_unit_cost = 0.0
@@ -1259,14 +1259,20 @@ def get_capacity_cost_config(
             entry = cost_map.get(normalized_key)
             if entry and isinstance(entry, dict):
                 proto_unit_cost = entry.get("cost", 0.0)
-        except (json.JSONDecodeError, TypeError):
-            pass
+        except (json.JSONDecodeError, TypeError) as e:
+            logging.getLogger(__name__).warning(f"capacity_unit_cost_map JSON解析失败: {e}")
     
     # ── test_unit_price ──
-    test_unit_price = float(config.get("test_unit_price", "0"))
+    try:
+        test_unit_price = float(config.get("test_unit_price", "0"))
+    except (ValueError, TypeError):
+        test_unit_price = 0.0
     
     # ── indirect_cost ──
-    indirect_cost = int(float(config.get("indirect_cost", "0")))
+    try:
+        indirect_cost = int(float(config.get("indirect_cost", "0")))
+    except (ValueError, TypeError):
+        indirect_cost = 0
     
     return {
         "manufacturing_cost": manufacturing_cost,
