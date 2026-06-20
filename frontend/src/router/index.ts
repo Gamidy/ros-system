@@ -79,6 +79,18 @@ const router = createRouter({
           component: () => import('../views/approvals/ApprovalsView.vue'),
           meta: { title: '审批管理' },
         },
+        {
+          path: 'pm-workspace',
+          name: 'PMWorkspace',
+          component: () => import('../views/pm/PMWorkspace.vue'),
+          meta: { title: '产品经理工作台' },
+        },
+        {
+          path: 'pm-workspace-test',
+          name: 'PMWorkspaceTest',
+          component: () => import('../views/pm/TestView.vue'),
+          meta: { title: 'PM测试页' },
+        },
       ],
     },
   ],

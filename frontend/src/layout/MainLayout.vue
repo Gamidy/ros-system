@@ -63,6 +63,11 @@
             </span>
           </template>
         </el-menu-item>
+        <!-- 产品经理工作台 -->
+        <el-menu-item index="/pm-workspace">
+          <el-icon><Briefcase /></el-icon>
+          <template #title>产品经理工作台</template>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
