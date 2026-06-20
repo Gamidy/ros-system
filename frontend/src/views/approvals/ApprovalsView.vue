@@ -182,13 +182,6 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
-interface ChainForm {
-  name: string
-  steps: { name: string; role: string }[]
-  id?: number
-  code?: string
-}
-
 const activeTab = ref('pending')
 const loading = ref(false)
 const list = ref<any[]>([])
@@ -216,7 +209,7 @@ const loadingChains = ref(false)
 const chainEditVisible = ref(false)
 const editingChain = ref<any>(null)
 const savingChain = ref(false)
-const chainForm = ref<ChainForm>({ name: '', steps: [{ name: '', role: '' }] })
+const chainForm = ref({ name: '', steps: [{ name: '', role: '' }] })
 
 function resetPage() { page.value = 1; fetchList() }
 
@@ -234,7 +227,7 @@ async function fetchList() {
       list.value = res.data.items ?? res.data ?? []
       total.value = res.data.total ?? list.value.length
     }
-  } catch { ElMessage.error('获取审批列表失败') }
+  } catch { /* ignore */ }
   finally { loading.value = false }
 }
 
@@ -263,7 +256,7 @@ function doApprove() {
       // 刷新通知计数
       window.dispatchEvent(new CustomEvent('approval-updated'))
     })
-    .catch(() => { ElMessage.error('审批操作失败') })
+    .catch(() => {})
 }
 
 // 驳回
@@ -290,7 +283,7 @@ async function doReject() {
     detailItem.value = null
     fetchList()
     window.dispatchEvent(new CustomEvent('approval-updated'))
-  } catch { ElMessage.error('驳回操作失败') }
+  } catch { /* ignore */ }
   finally { rejecting.value = false }
 }
 
@@ -300,7 +293,7 @@ async function fetchChains() {
   try {
     const res = await api.get('/approval/chains')
     chains.value = res.data ?? []
-  } catch { ElMessage.error('获取审批链失败') }
+  } catch { /* ignore */ }
   finally { loadingChains.value = false }
 }
 
@@ -335,7 +328,7 @@ async function saveChain() {
     ElMessage.success('保存成功')
     chainEditVisible.value = false
     await fetchChains()
-  } catch { ElMessage.error('保存审批链失败') }
+  } catch { /* ignore */ }
   finally { savingChain.value = false }
 }
 

@@ -26,17 +26,4 @@ api.interceptors.response.use(
   }
 )
 
-export async function changePassword(oldPassword: string, newPassword: string) {
-  const res = await api.put('/auth/password', {
-    old_password: oldPassword,
-    new_password: newPassword,
-  })
-  return res.data
-}
-
-export async function forgotPassword(phone: string, full_name: string) {
-  const res = await api.post('/auth/forgot-password', { phone, full_name })
-  return res.data
-}
-
 export default api

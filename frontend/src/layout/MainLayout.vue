@@ -13,14 +13,55 @@
         text-color="#ffffffb3"
         active-text-color="#fff"
       >
-        <!-- 动态渲染：根据角色权限显示菜单 -->
-        <el-menu-item
-          v-for="menu in authStore.visibleMenus"
-          :key="menu.path"
-          :index="menu.path"
-        >
-          <el-icon><component :is="menu.icon" /></el-icon>
-          <template #title>{{ menu.title }}</template>
+        <el-menu-item index="/dashboard">
+          <el-icon><Monitor /></el-icon>
+          <template #title>驾驶舱</template>
+        </el-menu-item>
+        <el-menu-item index="/products">
+          <el-icon><Goods /></el-icon>
+          <template #title>产品主线</template>
+        </el-menu-item>
+        <el-menu-item index="/bom">
+          <el-icon><List /></el-icon>
+          <template #title>BOM物料管理</template>
+        </el-menu-item>
+        <el-menu-item index="/projects">
+          <el-icon><Folder /></el-icon>
+          <template #title>项目管理</template>
+        </el-menu-item>
+        <el-menu-item index="/tests">
+          <el-icon><Document /></el-icon>
+          <template #title>实验与测试</template>
+        </el-menu-item>
+        <el-menu-item index="/alerts">
+          <el-icon><WarningFilled /></el-icon>
+          <template #title>预警体系</template>
+        </el-menu-item>
+        <el-menu-item index="/certifications">
+          <el-icon><Stamp /></el-icon>
+          <template #title>认证管理</template>
+        </el-menu-item>
+        <el-menu-item index="/prototypes">
+          <el-icon><Cpu /></el-icon>
+          <template #title>样机管理</template>
+        </el-menu-item>
+        <el-menu-item index="/quality">
+          <el-icon><WarnTriangleFilled /></el-icon>
+          <template #title>质量问题</template>
+        </el-menu-item>
+        <el-menu-item index="/changes">
+          <el-icon><Refresh /></el-icon>
+          <template #title>变更管理</template>
+        </el-menu-item>
+        <!-- 审批管理（带红点） -->
+        <el-menu-item index="/approvals">
+          <el-icon><DocumentChecked /></el-icon>
+          <template #title>
+            <span style="display: flex; align-items: center; gap: 6px;">
+              审批管理
+              <el-badge v-if="pendingCount > 0" :value="pendingCount" :max="99" class="approval-badge" />
+            </span>
+          </template>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -41,16 +82,11 @@
           <el-dropdown trigger="click">
             <span class="user-info">
               <el-avatar :size="28" icon="UserFilled" />
-              <span class="username">{{ authStore.user?.username || '用户' }}</span>
-              <span v-if="authStore.roleLabel" class="role-tag">{{ authStore.roleLabel }}</span>
+              <span class="username">{{ user?.username || '用户' }}</span>
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="passwordDialogVisible = true">
-                  <el-icon><Key /></el-icon>
-                  修改密码
-                </el-dropdown-item>
                 <el-dropdown-item @click="handleLogout">
                   <el-icon><SwitchButton /></el-icon>
                   退出登录
@@ -66,127 +102,60 @@
       </el-main>
     </el-container>
   </el-container>
-
-  <!-- 修改密码对话框 -->
-  <el-dialog v-model="passwordDialogVisible" title="修改密码" width="420px" :close-on-click-modal="false">
-    <el-form
-      ref="passwordFormRef"
-      :model="passwordForm"
-      :rules="passwordRules"
-      label-width="80px"
-      @keyup.enter="handleChangePassword"
-    >
-      <el-form-item label="旧密码" prop="oldPassword">
-        <el-input
-          v-model="passwordForm.oldPassword"
-          type="password"
-          show-password
-          placeholder="请输入旧密码"
-        />
-      </el-form-item>
-      <el-form-item label="新密码" prop="newPassword">
-        <el-input
-          v-model="passwordForm.newPassword"
-          type="password"
-          show-password
-          placeholder="至少6位"
-          minlength="6"
-        />
-      </el-form-item>
-      <el-form-item label="确认密码" prop="confirmPassword">
-        <el-input
-          v-model="passwordForm.confirmPassword"
-          type="password"
-          show-password
-          placeholder="请再次输入新密码"
-        />
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="passwordDialogVisible = false">取消</el-button>
-      <el-button type="primary" :loading="passwordChanging" @click="handleChangePassword">
-        确定
-      </el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import { useAuthStore } from '../stores/auth'
-import { changePassword } from '../api'
+import { ElMessage, ElNotification } from 'element-plus'
+import api from '../api'
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
 const isCollapse = ref(false)
+const user = ref<{ username: string; role?: string } | null>(null)
+const pendingCount = ref(0)
 
-// ── 修改密码 ──────────────────────────────
-const passwordDialogVisible = ref(false)
-const passwordChanging = ref(false)
-const passwordFormRef = ref<FormInstance>()
-const passwordForm = reactive({
-  oldPassword: '',
-  newPassword: '',
-  confirmPassword: '',
-})
-
-const validateConfirm = (_rule: any, value: string, callback: Function) => {
-  if (value !== passwordForm.newPassword) {
-    callback(new Error('两次输入的密码不一致'))
-  } else {
-    callback()
-  }
-}
-
-const passwordRules: FormRules = {
-  oldPassword: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
-  newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' },
-  ],
-  confirmPassword: [
-    { required: true, message: '请再次输入新密码', trigger: 'blur' },
-    { validator: validateConfirm, trigger: 'blur' },
-  ],
-}
-
-async function handleChangePassword() {
-  const valid = await passwordFormRef.value?.validate().catch(() => false)
-  if (!valid) return
-
-  passwordChanging.value = true
+async function fetchPendingCount() {
   try {
-    await changePassword(passwordForm.oldPassword, passwordForm.newPassword)
-    ElMessage.success('密码修改成功')
-    passwordDialogVisible.value = false
-    passwordForm.oldPassword = ''
-    passwordForm.newPassword = ''
-    passwordForm.confirmPassword = ''
-    passwordFormRef.value?.resetFields()
+    const res = await api.get('/dashboard/summary')
+    const count = res.data?.pending_approvals ?? 0
+    pendingCount.value = count
+    return count
   } catch {
-    // Error handled by axios interceptor
-  } finally {
-    passwordChanging.value = false
+    return 0
   }
 }
 
 onMounted(async () => {
-  // 如果用户信息尚未加载（例如直接刷新页面），先获取
-  if (!authStore.user && authStore.token) {
-    try {
-      await authStore.fetchUser()
-    } catch {
-      handleLogout()
+  try {
+    const res = await api.get('/auth/me')
+    user.value = res.data
+    
+    // 获取待审批数
+    const count = await fetchPendingCount()
+    
+    // 如果有待审批且角色是管理员/研发总监，弹出通知
+    if (count > 0 && (user.value?.role === 'admin' || user.value?.role === 'rd_director')) {
+      ElNotification({
+        title: '待审批提醒',
+        message: `您有 ${count} 条待审批请求，请及时处理`,
+        type: 'warning',
+        duration: 8000,
+      })
     }
+  } catch {
+    handleLogout()
   }
+  
+  // 监听审批状态变化（从审批页面发出的自定义事件）
+  window.addEventListener('approval-updated', () => {
+    fetchPendingCount()
+  })
 })
 
 function handleLogout() {
-  authStore.logout()
+  localStorage.removeItem('token')
   ElMessage.info('已退出')
   router.push('/login')
 }
@@ -239,17 +208,17 @@ function handleLogout() {
   gap: 8px;
   cursor: pointer;
 }
-.role-tag {
-  font-size: 12px;
-  color: #909399;
-  background: #f2f3f5;
-  padding: 0 8px;
-  border-radius: 4px;
-  line-height: 22px;
-}
 .layout-main {
   background: #f0f2f5;
   padding: 20px;
   overflow-y: auto;
+}
+.approval-badge :deep(.el-badge__content) {
+  background-color: #f56c6c;
+  border: none;
+  font-size: 11px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 5px;
 }
 </style>
