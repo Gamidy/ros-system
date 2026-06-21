@@ -2029,10 +2029,10 @@ watch([() => projectForm.target_market, () => projectForm.capacity_range], ([mar
   }
 })
 
-// Tab 切换时自动校验当前Tab
+// Tab 切换时自动校验当前Tab（immediate让初始render也触发校验）
 watch(activeTab, () => {
   validateCurrentTab()
-})
+}, { immediate: true })
 
 // ⭐ 项目来源选"产品年度规划"时联动清空/显示年度规划选择器
 watch(() => projectForm.project_origin, (val) => {
@@ -3855,5 +3855,10 @@ onMounted(async () => {
   align-items: center;
   flex-shrink: 0;
   margin-left: 12px;
+}
+
+/* ===== 抽屉中 el-select 下拉修复 ===== */
+.drawer-tabs .el-select-dropdown {
+  z-index: 9999 !important;
 }
 </style>
