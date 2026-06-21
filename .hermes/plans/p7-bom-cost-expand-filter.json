@@ -1,0 +1,31 @@
+{
+  "version": "P7",
+  "title": "BOM成本 + BOM扩展 + 竞品多维筛选",
+  "stories": [
+    {
+      "id": "US-P7-01",
+      "title": "BOM成本实时汇总",
+      "priority": "P0",
+      "description": "后端新增 GET /api/bom/{bom_id}/cost-summary 端点，遍历BOM树汇总成本",
+      "details": "BOM树已有17节点6层。需要：1)检查bom_materials是否有unit_price字段 2)新增cost-summary端点递归汇总树中各层级的物料成本 3)前端BOMView展示成本卡片"
+    },
+    {
+      "id": "US-P7-02",
+      "title": "BOM数据扩展 9000/18000/24000BTU",
+      "priority": "P1",
+      "description": "基于已有12000BTU BOM模板，在数据库中创建9000、18000、24000BTU的BOM定义和物料关联",
+      "details": "当前仅1条BOM(12000BTU)。需要复制结构×3冷量段，调整冷量相关参数。通过SSH在服务器上执行SQL/脚本。"
+    },
+    {
+      "id": "US-P7-03",
+      "title": "竞品对标多维筛选",
+      "priority": "P1",
+      "description": "后端新增energy_rating过滤 + 前端CompetitorStandalone增加能效等级筛选",
+      "details": "API已有market/brand/capacity过滤。需添加energy_rating查询参数。前端新增能效等级下拉过滤（3星/4星/5星），支持多条件AND交叉筛选。"
+    }
+  ],
+  "execution_notes": {
+    "independent_stories": ["US-P7-01", "US-P7-02", "US-P7-03"],
+    "parallel_safe": true
+  }
+}

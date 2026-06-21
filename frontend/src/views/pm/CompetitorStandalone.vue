@@ -39,6 +39,38 @@
           />
         </el-select>
       </div>
+      <div class="filter-item">
+        <label>能效等级</label>
+        <el-select
+          v-model="selectedEnergyRating"
+          placeholder="全部"
+          clearable
+          @change="fetchData"
+        >
+          <el-option
+            v-for="r in energyRatings"
+            :key="r"
+            :label="r"
+            :value="r"
+          />
+        </el-select>
+      </div>
+      <div class="filter-item">
+        <label>产品类型</label>
+        <el-select
+          v-model="selectedProductType"
+          placeholder="全部"
+          clearable
+          @change="fetchData"
+        >
+          <el-option
+            v-for="t in productTypes"
+            :key="t"
+            :label="t"
+            :value="t"
+          />
+        </el-select>
+      </div>
     </div>
 
     <!-- ========== 统计卡片 ========== -->
@@ -122,9 +154,13 @@ import api from '../../api'
 // ── 市场 & 冷量段选项 ──────────────────────────────────────────────
 const markets = ['越南', '泰国', '印尼', '中东']
 const capacities = ['9000BTU', '12000BTU', '18000BTU', '24000BTU']
+const energyRatings = ['3星', '4星', '5星']
+const productTypes = ['分体壁挂式', '分体柜式', '窗式', '移动式', '天花式']
 
 const selectedMarket = ref('')
 const selectedCapacity = ref('')
+const selectedEnergyRating = ref('')
+const selectedProductType = ref('')
 
 // ── 数据状态 ──────────────────────────────────────────────────────
 const loading = ref(false)
@@ -237,6 +273,12 @@ async function fetchData() {
     if (selectedCapacity.value) {
       params.capacity = selectedCapacity.value
     }
+    if (selectedEnergyRating.value) {
+      params.energy_rating = selectedEnergyRating.value
+    }
+    if (selectedProductType.value) {
+      params.product_type = selectedProductType.value
+    }
 
     const res = await api.get('/pm/competitors', { params })
     allItems.value = res.data.items || []
@@ -249,6 +291,8 @@ async function fetchData() {
 
 function onMarketChange() {
   selectedCapacity.value = ''
+  selectedEnergyRating.value = ''
+  selectedProductType.value = ''
   fetchData()
 }
 </script>

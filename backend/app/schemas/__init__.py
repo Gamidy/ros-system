@@ -302,6 +302,9 @@ class BOMItemCreate(BaseModel):
     item_type: str = "Part"
     level: int = Field(ge=1, le=6)
     quantity: float = 1.0
+    unit: str = "个"
+    unit_price: float = 0.0
+    amount: float = 1.0
     position_no: Optional[str] = None
     remark: Optional[str] = None
 
@@ -325,6 +328,9 @@ class BOMTreeItem(BaseModel):
     item_type: str
     level: int
     quantity: float
+    unit: str = "个"
+    unit_price: float = 0.0
+    amount: float = 1.0
     position_no: Optional[str] = None
     remark: Optional[str] = None
     children: list["BOMTreeItem"] = []
@@ -333,6 +339,40 @@ class BOMTreeItem(BaseModel):
 class BOMTreeOut(BaseModel):
     bom: BOMOut
     tree: list[BOMTreeItem]
+
+
+# ═══════════════ BOM 成本汇总 ═══════════════
+
+class BOMCostByLevel(BaseModel):
+    """各级成本统计"""
+    level: int
+    level_name: str  # 如 "L1-整机", "L2-内外机"
+    item_count: int
+    total_cost: float
+
+
+class BOMCostNode(BaseModel):
+    """BOM树节点含成本 — 递归结构"""
+    id: int
+    part_no: str
+    part_name: Optional[str] = None
+    item_type: str
+    level: int
+    quantity: float
+    unit: str = "个"
+    unit_price: float = 0.0
+    amount: float = 1.0
+    node_cost: float = 0.0  # 本节点直接成本 = unit_price × amount × quantity
+    subtree_cost: float = 0.0  # 子树总成本（含本节点+所有子节点）
+    children: list["BOMCostNode"] = []
+
+
+class BOMCostSummaryOut(BaseModel):
+    """BOM成本汇总响应"""
+    bom: BOMOut
+    total_cost: float = 0.0
+    cost_by_level: list[BOMCostByLevel] = []
+    tree_with_cost: list[BOMCostNode] = []
 
 
 # ═══════════════ 审批流 Schema ═══════════════

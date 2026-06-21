@@ -300,6 +300,9 @@ def get_bom_tree(bom_id: int, db: Session = Depends(get_db), _=Depends(require_m
                 "item_type": i.item_type,
                 "level": i.level,
                 "quantity": i.quantity,
+                "unit": getattr(i, "unit", "个"),
+                "unit_price": float(getattr(i, "unit_price", 0) or 0),
+                "amount": float(getattr(i, "amount", 1) or 1),
                 "position_no": i.position_no,
                 "remark": i.remark,
                 "children": build_tree(i.id),
@@ -308,6 +311,96 @@ def get_bom_tree(bom_id: int, db: Session = Depends(get_db), _=Depends(require_m
         ]
 
     return {"bom": _bom_to_dict(bom), "tree": build_tree()}
+
+
+@router.get("/{bom_id}/cost-summary")
+def get_bom_cost_summary(bom_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))):
+    """BOM成本实时汇总 — 递归遍历树，汇总各级成本"""
+    from collections import defaultdict
+
+    bom = db.query(BOM).filter(BOM.id == bom_id).first()
+    if not bom:
+        raise HTTPException(status_code=404, detail="BOM不存在")
+
+    items = db.query(BOMItem).filter(BOMItem.bom_id == bom_id).all()
+
+    # 层级名称映射
+    LEVEL_NAMES = {
+        1: "L1-整机",
+        2: "L2-内外机",
+        3: "L3-总成",
+        4: "L4-组件",
+        5: "L5-子件",
+        6: "L6-零部件",
+    }
+
+    def calc_cost(item) -> float:
+        """计算单个节点的直接成本: unit_price × amount × quantity"""
+        up = float(getattr(item, "unit_price", 0) or 0)
+        amt = float(getattr(item, "amount", 1) or 1)
+        qty = float(item.quantity or 1)
+        return round(up * amt * qty, 2)
+
+    # 按父级分组
+    children_map = defaultdict(list)
+    for i in items:
+        children_map[i.parent_item_id].append(i)
+
+    # 用于按层级汇总
+    level_costs = defaultdict(lambda: {"item_count": 0, "total_cost": 0.0})
+
+    def build_cost_tree(parent_id=None):
+        """递归构建含成本的树，返回 (nodes_list, subtree_total)"""
+        nodes = []
+        subtree_total = 0.0
+        for i in children_map.get(parent_id, []):
+            node_cost = calc_cost(i)
+            child_nodes, child_total = build_cost_tree(i.id)
+            sub_total = round(node_cost + child_total, 2)
+            subtree_total += sub_total
+
+            nodes.append({
+                "id": i.id,
+                "part_no": i.part_no,
+                "part_name": i.part_name,
+                "item_type": i.item_type,
+                "level": i.level,
+                "quantity": float(i.quantity or 1),
+                "unit": getattr(i, "unit", None) or "个",
+                "unit_price": float(getattr(i, "unit_price", 0) or 0),
+                "amount": float(getattr(i, "amount", 1) or 1),
+                "node_cost": node_cost,
+                "subtree_cost": sub_total,
+                "children": child_nodes,
+            })
+
+            # 层级汇总
+            lvl = i.level
+            level_costs[lvl]["item_count"] += 1
+            level_costs[lvl]["total_cost"] = round(
+                level_costs[lvl]["total_cost"] + node_cost, 2
+            )
+
+        return nodes, subtree_total
+
+    tree_with_cost, total_cost = build_cost_tree()
+
+    # 构建按层级汇总
+    cost_by_level = []
+    for lvl in sorted(level_costs.keys()):
+        cost_by_level.append({
+            "level": lvl,
+            "level_name": LEVEL_NAMES.get(lvl, f"L{lvl}"),
+            "item_count": level_costs[lvl]["item_count"],
+            "total_cost": level_costs[lvl]["total_cost"],
+        })
+
+    return {
+        "bom": _bom_to_dict(bom),
+        "total_cost": total_cost,
+        "cost_by_level": cost_by_level,
+        "tree_with_cost": tree_with_cost,
+    }
 
 
 # ══════════════════════════════════════════════════

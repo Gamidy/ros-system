@@ -78,6 +78,30 @@
         </el-tree>
         <el-empty v-else description="请选择一个BOM查看其树结构" :image-size="80" />
       </div>
+
+      <!-- 成本汇总卡片 -->
+      <div v-if="costSummary" class="cost-summary-section">
+        <el-divider content-position="left">
+          <span style="font-weight: 600; font-size: 14px;">💰 成本实时汇总</span>
+        </el-divider>
+
+        <!-- 总成本 -->
+        <div class="total-cost-card">
+          <span class="total-cost-label">BOM 总成本</span>
+          <span class="total-cost-value">¥ {{ costSummary.total_cost.toLocaleString() }}</span>
+        </div>
+
+        <!-- 各级成本 -->
+        <el-row :gutter="12" class="cost-level-row">
+          <el-col :span="4" v-for="lv in costSummary.cost_by_level" :key="lv.level">
+            <div class="cost-level-card">
+              <div class="cost-level-name">{{ lv.level_name }}</div>
+              <div class="cost-level-value">¥ {{ lv.total_cost.toLocaleString() }}</div>
+              <div class="cost-level-count">{{ lv.item_count }} 项</div>
+            </div>
+          </el-col>
+        </el-row>
+      </div>
     </el-card>
 
     <!-- ========== 原有：BOM物料管理（保持不变） ========== -->
@@ -172,6 +196,8 @@ const selectedBomId = ref<number | string | null>(null)
 const treeData = ref<any[]>([])
 const selectedNode = ref<any>(null)
 const showNodeDetail = ref(false)
+const costSummary = ref<any>(null)
+const loadingCost = ref(false)
 
 const treeProps = { children: 'children', label: 'part_name' }
 
@@ -205,9 +231,11 @@ const treeStats = computed(() => {
 function onBomSelect(bomId: number | string | null) {
   if (!bomId && bomId !== 0) {
     treeData.value = []
+    costSummary.value = null
     return
   }
   fetchBomTree(bomId)
+  fetchCostSummary(bomId)
 }
 
 /** 获取BOM树 */
@@ -218,6 +246,19 @@ async function fetchBomTree(bomId: number | string) {
   } catch {
     treeData.value = []
     ElMessage.error('获取BOM树失败')
+  }
+}
+
+/** 获取BOM成本汇总 */
+async function fetchCostSummary(bomId: number | string) {
+  loadingCost.value = true
+  try {
+    const res = await api.get(`/bom/${bomId}/cost-summary`)
+    costSummary.value = res.data
+  } catch {
+    costSummary.value = null
+  } finally {
+    loadingCost.value = false
   }
 }
 
@@ -336,5 +377,65 @@ h3 { margin: 0 0 12px; color: #303133; }
 
 .node-type-tag {
   font-size: 11px;
+}
+
+/* ——— 成本汇总样式 ——— */
+.cost-summary-section {
+  margin-top: 16px;
+}
+
+.total-cost-card {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid var(--el-color-primary-light-5);
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.total-cost-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.total-cost-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--el-color-primary);
+  font-family: 'Menlo', 'Consolas', monospace;
+}
+
+.cost-level-row {
+  margin-top: 8px;
+}
+
+.cost-level-card {
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.cost-level-name {
+  font-size: 11px;
+  color: #909399;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.cost-level-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-color-success);
+}
+
+.cost-level-count {
+  font-size: 11px;
+  color: #c0c4cc;
+  margin-top: 2px;
 }
 </style>

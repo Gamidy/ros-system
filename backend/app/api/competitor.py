@@ -89,12 +89,14 @@ def list_competitors(
     market: Optional[str] = Query(None, description="目标市场过滤"),
     brand: Optional[str] = Query(None, description="品牌过滤"),
     capacity: Optional[str] = Query(None, alias="capacity", description="冷量段过滤"),
+    energy_rating: Optional[str] = Query(None, description="能效等级过滤"),
+    product_type: Optional[str] = Query(None, description="产品类型过滤"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=200, description="每页条数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """查询竞品列表，支持 market/brand/capacity 过滤与分页"""
+    """查询竞品列表，支持 market/brand/capacity/energy_rating/product_type 过滤与分页（AND 交叉过滤）"""
     q = db.query(CompetitorModel)
     if market:
         q = q.filter(CompetitorModel.market == market)
@@ -102,6 +104,10 @@ def list_competitors(
         q = q.filter(CompetitorModel.brand == brand)
     if capacity:
         q = q.filter(CompetitorModel.cooling_capacity == capacity)
+    if energy_rating:
+        q = q.filter(CompetitorModel.energy_rating == energy_rating)
+    if product_type:
+        q = q.filter(CompetitorModel.product_type == product_type)
 
     total = q.count()
     items = q.order_by(CompetitorModel.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
