@@ -309,6 +309,7 @@ def submit_proposal(
     db.add(pa)
     db.flush()
     p.is_draft = False
+    p.status = 'submitted'
 
     # ── 6a. 创建对应的 ApprovalRequest（供通用审批列表显示） ──
     proposal_chain = _ensure_proposal_chain(db)

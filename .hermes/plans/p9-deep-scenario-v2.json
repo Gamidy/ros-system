@@ -1,0 +1,78 @@
+{
+  "version": "P9",
+  "title": "PM深度场景v2 — 完整立项流程+年度策划+数据联动",
+  "findings": [
+    {
+      "id": "F9-1",
+      "severity": "CRITICAL",
+      "area": "项目状态",
+      "detail": "PM提交提案后，project.is_draft已设为False，但project.status仍为'draft'。前端PMWorkspace的「已提交」列表中的项目状态显示为'draft'，PM无法判断审批进度。",
+      "impact": "PM看到已提交的提案状态仍为'draft'，不知道审批走到哪一步。"
+    },
+    {
+      "id": "F9-2",
+      "severity": "HIGH",
+      "area": "功能预设",
+      "detail": "GET /api/pm/feature-defaults?market=泰国 返回空列表items=[]。PM在立项时无法从预设中选择功能配置，需手动输入所有内容。",
+      "impact": "PM立项效率低，每次都要从零填写技术指标。"
+    },
+    {
+      "id": "F9-3",
+      "severity": "HIGH",
+      "area": "性能预设",
+      "detail": "GET /api/pm/perf-defaults 额外要求capacity参数。PM不知道需要传什么参数，API返回422错误。应使capacity可选或返回明确提示。",
+      "impact": "PM想查看性能参考值时遇到422错误，操作受阻。"
+    },
+    {
+      "id": "F9-4",
+      "severity": "MEDIUM",
+      "area": "项目→审批联动",
+      "detail": "项目详情(/api/projects/{id})缺少gates和milestones。立项提交后应自动创建项目里程碑和阶段门(gates)，但当前返回空数组。",
+      "impact": "PM提交立项后无法在项目页面看到研发阶段和里程碑。"
+    },
+    {
+      "id": "F9-5",
+      "severity": "MEDIUM",
+      "area": "成本分析",
+      "detail": "BOM成本接口返回各冷量段成本(¥948-2015)，但PMWorkspace立项书的成本Tab没有自动引用这些数据。PM手动填成本与BOM数据脱节。",
+      "impact": "PM填写的目标成本与BOM实际成本可能不一致，影响成本决策准确性。"
+    }
+  ],
+  "stories": [
+    {
+      "id": "US-P9-01",
+      "title": "提案提交后status变更",
+      "priority": "P0",
+      "description": "submit_proposal()中设置project.status='submitted'(非'draft')。前端statusMap增加submitted映射。使PM能区分草稿和已提交。"
+    },
+    {
+      "id": "US-P9-02",
+      "title": "功能/性能预设种子数据",
+      "priority": "P1",
+      "description": "为feature-defaults和perf-defaults填充预设数据。按市场(越南/泰国/印尼/中东)各提供3-5条预设，含冷量段、能效、功能配置等。使PM立项时可选预设。"
+    },
+    {
+      "id": "US-P9-03",
+      "title": "perf-defaults capacity参数改为可选",
+      "priority": "P1",
+      "description": "将perf-defaults的capacity查询参数改为Optional，不传时返回该市场所有预设。同时feature-defaults返回非空数据。"
+    },
+    {
+      "id": "US-P9-04",
+      "title": "提交审批后自动创建gates和milestones",
+      "priority": "P2",
+      "description": "submit_proposal()成功后自动为project创建默认研发阶段gates(6阶段：立项/方案/详细设计/手板/测试/试产)和关键milestones。使项目页面有内容。"
+    },
+    {
+      "id": "US-P9-05",
+      "title": "成本Tab联动BOM数据",
+      "priority": "P2",
+      "description": "PMWorkspace成本Tab增加「引用BOM成本」按钮。选择BOM后自动填充目标成本为BOM总成本，并标注数据来源。"
+    }
+  ],
+  "execution_notes": {
+    "independent_stories": ["US-P9-01", "US-P9-02", "US-P9-03"],
+    "sequential_deps": {},
+    "p0_first": true
+  }
+}

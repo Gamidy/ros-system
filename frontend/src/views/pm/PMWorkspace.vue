@@ -2222,7 +2222,8 @@ function formatMoney(val: number | null | undefined): string {
 function statusTagType(status: string): string {
   const map: Record<string, string> = {
     planning: 'info', running: '', completed: 'success',
-    paused: 'warning', cancelled: 'danger', draft: 'info', overdue: 'danger'
+    paused: 'warning', cancelled: 'danger', draft: 'info', overdue: 'danger',
+    submitted: 'primary'
   }
   return map[status] || 'info'
 }
@@ -2230,7 +2231,8 @@ function statusTagType(status: string): string {
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
     planning: '规划中', running: '进行中', completed: '已完成',
-    paused: '暂停', cancelled: '已取消', draft: '草稿', overdue: '超期'
+    paused: '暂停', cancelled: '已取消', draft: '草稿', overdue: '超期',
+    submitted: '已提交'
   }
   return map[status] || status
 }
