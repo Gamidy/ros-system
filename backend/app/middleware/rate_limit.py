@@ -12,8 +12,8 @@ from app.core.config import settings
 EXEMPT_PATHS = {"/health", "/api/auth/login"}
 
 # 限流配置
-IP_LIMIT = 200       # 每 IP 每分钟最多 200 次请求
-USER_LIMIT = 200     # 每用户每分钟最多 200 次请求
+IP_LIMIT = 999999    # 取消限制
+USER_LIMIT = 999999  # 取消限制
 WINDOW_SECONDS = 60  # 滑动窗口 60 秒
 
 
