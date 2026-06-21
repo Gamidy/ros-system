@@ -28,18 +28,18 @@ def get_db():
         db.close()
 
 
-# Redis connection
-redis_client = None
-
-
-async def get_redis():
-    global redis_client
-    if redis_client is None:
-        redis_client = aioredis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            db=settings.REDIS_DB,
-            password=settings.REDIS_PASSWORD or None,
-            decode_responses=True,
-        )
-    return redis_client
+# Redis connection (预留，当前未使用)
+# import redis.asyncio as aioredis
+# redis_client = None
+#
+# async def get_redis():
+#     global redis_client
+#     if redis_client is None:
+#         redis_client = aioredis.Redis(
+#             host=settings.REDIS_HOST,
+#             port=settings.REDIS_PORT,
+#             db=settings.REDIS_DB,
+#             password=settings.REDIS_PASSWORD or None,
+#             decode_responses=True,
+#         )
+#     return redis_client

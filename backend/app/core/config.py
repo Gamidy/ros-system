@@ -1,4 +1,5 @@
 """ROS 系统配置 - 开发用SQLite"""
+import os
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -33,10 +34,13 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: str = ""
 
-    # JWT
-    SECRET_KEY: str = "ros-secret-key-change-in-production"
+    # JWT — 从环境变量读取，容器内通过 .env 或 docker compose env 注入
+    SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "ros-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
+
+    # CORS — 允许的来源，逗号分隔，默认放开前端地址
+    CORS_ORIGINS: str = "*"
 
     class Config:
         env_file = ".env"

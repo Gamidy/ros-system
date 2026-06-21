@@ -185,7 +185,7 @@ def list_approval_requests(
         if not is_super_role(current_user.role):
             q = q.filter(ApprovalRequest.requester == current_user.username)
     q = q.order_by(ApprovalRequest.created_at.desc())
-    return [_request_to_out(r, db) for r in q.all()]
+    return [_request_to_out(r, db) for r in q.limit(200).all()]
 
 
 @router.get("/requests/pending", response_model=list[ApprovalRequestOut])
@@ -198,7 +198,7 @@ def list_pending_approval_requests(
     _ensure_default_chains(db)
     pending = db.query(ApprovalRequest).filter(
         ApprovalRequest.status == "pending"
-    ).order_by(ApprovalRequest.created_at.desc()).all()
+    ).order_by(ApprovalRequest.created_at.desc()).limit(200).all()
 
     result = []
     for req in pending:

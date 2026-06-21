@@ -7,6 +7,7 @@ from app.core.database import engine, Base
 from app.core.security import csrf_middleware
 from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
 from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel
 from app.models import system_config  # ensure table created
@@ -37,20 +38,34 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS — 从环境变量读取允许的来源，逗号分割
+_cors_origins = settings.CORS_ORIGINS
+if _cors_origins == "*":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    origins = [o.strip() for o in _cors_origins.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Security headers (CSP + other security headers)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # CSRF 纵深防护中间件
 app.middleware("http")(csrf_middleware)
+
+# XSS 响应层防护 — 对所有 JSON 输出做 HTML 转义
+app.add_middleware(XSSProtectionMiddleware)
 
 # 429 限流中间件 — 100req/min per IP, 200/min per user, 豁免 /health 和 /auth/login
 app.add_middleware(RateLimitMiddleware)

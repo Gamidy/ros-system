@@ -32,7 +32,7 @@ def list_notifications(
         q = q.filter(Notification.is_read == is_read)
     if channel:
         q = q.filter(Notification.channel == channel)
-    return q.order_by(Notification.created_at.desc()).all()
+    return q.order_by(Notification.created_at.desc()).limit(200).all()
 
 
 @router.patch("/notifications/{nid}/read")
@@ -68,7 +68,7 @@ def list_alerts(
         q = q.filter(Alert.level == level)
     if alert_type:
         q = q.filter(Alert.alert_type == alert_type)
-    return q.order_by(Alert.created_at.desc()).all()
+    return q.order_by(Alert.created_at.desc()).limit(200).all()
 
 
 # ═══════════════ 预警规则 ═══════════════
