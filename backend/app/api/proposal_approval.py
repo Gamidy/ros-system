@@ -543,7 +543,7 @@ def review_approval(
             _sync_approval_request(db, pa)
 
             project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
-            if project and project.is_draft:
+            if project and project.status != 'planning':
                 import random
                 if not project.code:
                     code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
@@ -690,7 +690,7 @@ def review_approval(
             _sync_approval_request(db, pa)
 
             project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
-            if project and project.is_draft:
+            if project and project.status != 'planning':
                 import random
 
                 # 自动生成项目编号

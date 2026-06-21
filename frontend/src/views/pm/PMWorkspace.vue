@@ -2711,9 +2711,9 @@ function populateFormFromDraft(draft: ProjectItem) {
         certCostTable.length = 0
         parsed.forEach((item: any) => {
           certCostTable.push({
-            cert_name: item.cert_name || '',
+            cert_name: item.cert_name || item.cert_type || '',
             cert_body: item.cert_body || '',
-            cost_wan: item.cost_wan ?? 0,
+            cost_wan: item.cost_wan ?? item.cost ?? 0,
             remark: item.remark || '',
           })
         })
@@ -2724,14 +2724,17 @@ function populateFormFromDraft(draft: ProjectItem) {
   if (draft.labor_costs) {
     try {
       const parsed = JSON.parse(draft.labor_costs)
-      if (Array.isArray(parsed)) {
-        parsed.forEach((item: any) => {
-          const row = laborCostTable.find(r => r.module === item.module)
+      const items: any[] = parsed.items || (Array.isArray(parsed) ? parsed : [])
+      if (Array.isArray(items)) {
+        items.forEach((item: any) => {
+          // DB字段: role/headcount/occupancy(0-1); 前端字段: module/people_count/occupancy_rate(0-100)
+          const row = laborCostTable.find(r => r.module === item.module || item.role?.startsWith(r.module))
           if (row) {
-            row.people_count = item.people_count ?? row.people_count
+            row.people_count = item.people_count ?? item.headcount ?? row.people_count
             row.monthly_salary = item.monthly_salary ?? row.monthly_salary
             row.months = item.months ?? row.months
-            row.occupancy_rate = item.occupancy_rate ?? row.occupancy_rate
+            if (item.occupancy_rate != null) row.occupancy_rate = item.occupancy_rate
+            else if (item.occupancy != null) row.occupancy_rate = item.occupancy * 100
           }
         })
       }
