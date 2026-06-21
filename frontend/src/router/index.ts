@@ -127,7 +127,7 @@ const router = createRouter({
         {
           path: 'competitor-bench',
           name: 'CompetitorBench',
-          component: () => import('../views/pm/CompetitorBench.vue'),
+          component: () => import('../views/pm/CompetitorStandalone.vue'),
           meta: { title: '竞品对标' },
         },
         {

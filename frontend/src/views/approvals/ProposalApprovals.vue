@@ -44,62 +44,69 @@
         </div>
       </div>
 
-      <!-- 列表 -->
-      <el-table :data="items" stripe border max-height="460" v-loading="loading">
-        <template #empty>
-          <el-empty :description="filterMode === 'pending' ? '暂无待审批项目' : '暂无提交记录'" :image-size="80" />
-        </template>
-        <el-table-column prop="title" label="项目名称" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span>
-              <span v-if="isOverdue(row)" class="overdue-dot" title="已逾期超过24小时">🔴</span>
-              {{ row.title }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="提交时间" width="170">
-          <template #default="{ row }">
-            <span :class="{ 'overdue-text': isOverdue(row) }">
-              {{ row.created_at || '-' }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="approvalTagType(row.status)" size="small">
-              {{ approvalLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column v-if="filterMode === 'my'" label="重新提交" width="80">
-          <template #default="{ row }">
-            <span v-if="row.resubmit_count">第{{ row.resubmit_count }}次</span>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <template v-if="canReview(row)">
-              <el-button type="success" size="small" @click="handleApprove(row)">✅ 通过</el-button>
-              <el-button type="danger" size="small" @click="openRejectDialog(row)">❌ 驳回</el-button>
-            </template>
-            <el-button v-else link type="primary" size="small" @click="viewDetail(row)">查看</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination-wrap">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchData"
-          @current-change="fetchData"
-        />
+      <!-- 空状态引导 -->
+      <div v-if="!loading && items.length === 0" class="empty-guide">
+        <div class="empty-guide-icon">📋</div>
+        <h3 class="empty-guide-title">暂无待审批项</h3>
+        <p class="empty-guide-desc">项目提交审批后将在此处显示</p>
+        <router-link to="/pm-workspace" class="empty-guide-btn">前往工作台</router-link>
       </div>
+
+      <!-- 列表 -->
+      <template v-else>
+        <el-table :data="items" stripe border max-height="460" v-loading="loading">
+          <el-table-column prop="title" label="项目名称" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span>
+                <span v-if="isOverdue(row)" class="overdue-dot" title="已逾期超过24小时">🔴</span>
+                {{ row.title }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="提交时间" width="170">
+            <template #default="{ row }">
+              <span :class="{ 'overdue-text': isOverdue(row) }">
+                {{ row.created_at || '-' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="approvalTagType(row.status)" size="small">
+                {{ approvalLabel(row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="filterMode === 'my'" label="重新提交" width="80">
+            <template #default="{ row }">
+              <span v-if="row.resubmit_count">第{{ row.resubmit_count }}次</span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="{ row }">
+              <template v-if="canReview(row)">
+                <el-button type="success" size="small" @click="handleApprove(row)">✅ 通过</el-button>
+                <el-button type="danger" size="small" @click="openRejectDialog(row)">❌ 驳回</el-button>
+              </template>
+              <el-button v-else link type="primary" size="small" @click="viewDetail(row)">查看</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页 -->
+        <div class="pagination-wrap">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchData"
+            @current-change="fetchData"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- 驳回对话框 -->
@@ -510,5 +517,45 @@ onMounted(() => {
   color: #909399;
   padding: 20px;
   text-align: center;
+}
+
+/* ── 空状态引导 (Claude暖纸色风格) ── */
+.empty-guide {
+  text-align: center;
+  padding: 60px 20px;
+  background: #fffdf7;
+  border-radius: 12px;
+  border: 1px dashed #e5e0da;
+}
+.empty-guide-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+.empty-guide-title {
+  font-size: 16px;
+  color: #5e5d59;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.empty-guide-desc {
+  font-size: 13px;
+  color: #87867f;
+  margin: 0 0 20px;
+}
+.empty-guide-btn {
+  display: inline-block;
+  padding: 8px 24px;
+  background: #d97757;
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.2s;
+}
+.empty-guide-btn:hover {
+  background: #c96442;
+  transform: translateY(-1px);
 }
 </style>

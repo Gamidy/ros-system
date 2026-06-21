@@ -6,6 +6,47 @@
       <span class="header-date">{{ currentDate }}</span>
     </div>
 
+    <!-- ═══════════════ 我的提案（顶部横幅） ═══════════════ -->
+    <div class="proposals-section" v-if="myProposals.length > 0">
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <span>📝 我的提案</span>
+            <div class="proposals-filter">
+              <el-radio-group v-model="proposalFilter" size="small" @change="fetchProposals">
+                <el-radio-button value="all">全部 ({{ proposalCounts.all }})</el-radio-button>
+                <el-radio-button value="draft">草稿 ({{ proposalCounts.draft }})</el-radio-button>
+                <el-radio-button value="submitted">已提交 ({{ proposalCounts.submitted }})</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+        </template>
+        <div class="proposals-list">
+          <div
+            v-for="prop in filteredProposals"
+            :key="prop.id"
+            class="proposal-item"
+            @click="openProposal(prop)"
+          >
+            <div class="proposal-item-left">
+              <span class="proposal-name">{{ prop.name }}</span>
+              <span class="proposal-date">{{ formatDate(prop.updated_at || prop.created_at) }}</span>
+            </div>
+            <div class="proposal-item-right">
+              <el-tag v-if="prop.is_draft" type="warning" size="small">草稿</el-tag>
+              <el-tag v-else-if="prop.approval_status" :type="approvalTagType(prop.approval_status)" size="small">
+                {{ approvalLabel(prop.approval_status) }}
+              </el-tag>
+              <el-tag :type="statusTagType(prop.status)" size="small">{{ statusLabel(prop.status) }}</el-tag>
+            </div>
+          </div>
+        </div>
+        <div v-if="filteredProposals.length === 0" class="empty-state">
+          <el-empty description="暂无提案" :image-size="40" />
+        </div>
+      </el-card>
+    </div>
+
     <!-- ═══════════════ 三栏布局 ═══════════════ -->
     <div class="workspace-body">
       <!-- 左栏 (30%)：年度产品规划 -->
@@ -1213,6 +1254,8 @@ interface ProjectItem {
   accessory_config?: string; feature_config?: string
   team_members?: string
   approval_status?: string  // 审批状态: pending/approved/rejected
+  created_at?: string
+  updated_at?: string
 }
 interface CustomerReqRow { category: string; description: string; source: string; tech_impact: string; market_impact: string }
 interface CorePerfRow { param_name: string; baseline: string; target_value: string; aux_competitor: string; tcl_competitor: string; source: string }
@@ -1278,6 +1321,8 @@ const editingPlanId = ref<number | null>(null)
 // 产品/项目
 const products = ref<Product[]>([])
 const myProjects = ref<ProjectItem[]>([])
+const myProposals = ref<ProjectItem[]>([])
+const proposalFilter = ref('all')
 
 // 看板统计
 const stats = computed(() => {
@@ -1286,6 +1331,23 @@ const stats = computed(() => {
   const completed = items.filter(p => p.status === 'completed').length
   const overdue = items.filter(p => p.status === 'overdue').length
   return { running, completed, overdue }
+})
+
+// 提案统计与过滤
+const proposalCounts = computed(() => {
+  const items = myProposals.value
+  return {
+    all: items.length,
+    draft: items.filter(p => p.is_draft).length,
+    submitted: items.filter(p => !p.is_draft).length,
+  }
+})
+
+const filteredProposals = computed(() => {
+  const items = myProposals.value
+  if (proposalFilter.value === 'draft') return items.filter(p => p.is_draft)
+  if (proposalFilter.value === 'submitted') return items.filter(p => !p.is_draft)
+  return items
 })
 
 // 展开的项目ID
@@ -3111,6 +3173,37 @@ async function fetchWorkspaceData() {
   }
 }
 
+async function fetchProposals() {
+  try {
+    const res = await api.get('/pm/proposals', {
+      params: { status: proposalFilter.value }
+    })
+    myProposals.value = res.data.proposals || []
+  } catch {
+    // handled by interceptor
+  }
+}
+
+function openProposal(proposal: ProjectItem) {
+  if (proposal.is_draft) {
+    // 草稿 → 打开抽屉编辑
+    openDrawer(proposal)
+  } else {
+    // 已提交 → 打开抽屉查看/编辑
+    openDrawer(proposal)
+  }
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 async function fetchKbOptions() {
   try {
     const results = await Promise.allSettled(
@@ -3274,6 +3367,7 @@ onMounted(async () => {
   try {
     await fetchSystemConfig()
     await fetchWorkspaceData()
+    await fetchProposals()
     await fetchKbOptions()
     await fetchTeamRoles()
     await fetchAllTeamUsers()
@@ -3686,5 +3780,79 @@ onMounted(async () => {
   justify-content: flex-end;
   gap: 12px;
   padding-top: 8px;
+}
+
+/* ── 我的提案（顶部横幅） ── */
+.proposals-section {
+  margin-bottom: 16px;
+}
+
+.proposals-section .el-card {
+  border: 1px solid #d9ecff;
+  background: #f5f9ff;
+}
+
+.proposals-section .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.proposals-filter {
+  display: flex;
+  align-items: center;
+}
+
+.proposals-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.proposal-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  border: 1px solid #ebeef5;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.proposal-item:hover {
+  border-color: #409eff;
+  background: #ecf5ff;
+}
+
+.proposal-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.proposal-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proposal-date {
+  font-size: 11px;
+  color: #909399;
+}
+
+.proposal-item-right {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 </style>

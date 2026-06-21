@@ -18,7 +18,7 @@
           <el-icon :size="16"><DataAnalysis /></el-icon>
         </div>
         <h2 class="section-title">体系健康度</h2>
-        <span class="section-count">4 项指标</span>
+        <span class="section-count">{{ Object.keys(L1Cards).length }} 项指标</span>
       </div>
       
       <div class="stats-grid">
@@ -42,6 +42,11 @@
             <el-icon :size="14"><ArrowRight /></el-icon>
           </div>
         </div>
+      </div>
+
+      <div v-if="isL1Empty" class="empty-guide-banner">
+        <el-icon :size="20"><InfoFilled /></el-icon>
+        <span>暂无产品数据，👉 <router-link to="/products" class="guide-link">前往产品主线创建</router-link></span>
       </div>
 
       <div class="charts-row">
@@ -84,7 +89,7 @@
           <el-icon :size="16"><TrendCharts /></el-icon>
         </div>
         <h2 class="section-title">项目运营</h2>
-        <span class="section-count">5 项指标</span>
+        <span class="section-count">{{ Object.keys(L2Cards).length }} 项指标</span>
       </div>
       
       <div class="stats-grid">
@@ -163,9 +168,27 @@
           <el-icon :size="16"><Cpu /></el-icon>
         </div>
         <h2 class="section-title">空调研发指标</h2>
-        <span class="section-count">5 项指标</span>
+        <span class="section-count">{{ Object.keys(L3Cards).length }} 项指标</span>
       </div>
-      
+
+      <!-- Error state -->
+      <div v-if="acError" class="empty-state section-empty">
+        <el-icon :size="48" color="var(--c-danger)"><CircleCloseFilled /></el-icon>
+        <p class="empty-title">数据加载失败</p>
+        <p class="empty-desc">无法获取空调研发指标数据，请检查网络连接后重试</p>
+        <button class="action-btn primary" @click="fetchDashboard">重新加载</button>
+      </div>
+
+      <!-- Empty state -->
+      <div v-else-if="isACEmpty && !loading" class="empty-state section-empty">
+        <el-icon :size="48" color="var(--c-text-tertiary)"><InfoFilled /></el-icon>
+        <p class="empty-title">暂无研发指标数据</p>
+        <p class="empty-desc">空调研发指标数据为空，请前往「项目管理」录入研发阶段数据</p>
+        <button class="action-btn primary" @click="router.push('/projects')">前往项目管理</button>
+      </div>
+
+      <!-- Normal -->
+      <template v-else>
       <div class="stats-grid">
         <div 
           v-for="(item, key) in L3Cards" 
@@ -202,6 +225,7 @@
           <LineChart :data="acTrendData" :height="260" />
         </div>
       </div>
+      </template>
     </section>
 
     <!-- L3: Penetration Analysis -->
@@ -216,8 +240,12 @@
       <div class="penetration-card">
         <div v-if="!penetrationData" class="empty-state">
           <el-icon :size="48" color="var(--c-text-tertiary)"><Connection /></el-icon>
-          <p>暂无穿透数据</p>
-          <button class="action-btn" @click="fetchDashboard">刷新数据</button>
+          <p class="empty-title">暂无穿透数据</p>
+          <p class="empty-desc">前往「产品主线」创建产品和版本关联后，即可查看穿透分析链路</p>
+          <div class="empty-actions">
+            <button class="action-btn primary" @click="router.push('/products')">前往产品主线</button>
+            <button class="action-btn" @click="fetchDashboard">刷新数据</button>
+          </div>
         </div>
         <div v-else>
           <TreeChart :data="penetrationTreeData" :height="400" orient="TB" />
@@ -230,7 +258,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh, Cpu } from '@element-plus/icons-vue'
+import { DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh, Cpu, InfoFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
 import BarChart from '../../components/charts/BarChart.vue'
@@ -264,8 +292,28 @@ const L3Cards = {
 const healthData = ref<Record<string, string>>({})
 const opsData = ref<Record<string, string>>({})
 const acMetrics = ref<Record<string, string>>({})
+const acError = ref(false)
 const penetrationData = ref<any>(null)
 const projectList = ref<any[]>([])
+
+const isL1Empty = computed(() => {
+  const keys = Object.keys(L1Cards)
+  if (!healthData.value || Object.keys(healthData.value).length === 0) return true
+  return keys.every(k => {
+    const v = healthData.value[k]
+    return v === undefined || v === null || v === '0' || Number(v) === 0 || v === ''
+  })
+})
+
+const isACEmpty = computed(() => {
+  if (acError.value) return false // error is not "empty"
+  const keys = Object.keys(L3Cards)
+  if (!acMetrics.value || Object.keys(acMetrics.value).length === 0) return true
+  return keys.every(k => {
+    const v = acMetrics.value[k]
+    return v === undefined || v === null || v === '0' || Number(v) === 0 || v === '' || v === '0%' || v === '0.0%'
+  })
+})
 const trendsData = ref<{ name: string; value: number }[]>([])
 const productStatusData = ref<{ name: string; value: number }[]>([])
 const projectStatusData = ref<{ name: string; value: number }[]>([])
@@ -330,6 +378,7 @@ const penetrationChains = computed(() => {
 
 async function fetchDashboard() {
   loading.value = true
+  acError.value = false
   try {
     const res = await api.get('/dashboard/summary')
     const data = res.data
@@ -339,33 +388,20 @@ async function fetchDashboard() {
     penetrationData.value = data.layer3_penetration ?? null
     projectList.value = data.layer2_project_ops?.recent_projects ?? []
     
-    productStatusData.value = data.layer1_system_health?.product_status_distribution ?? [
-      { name: '开发中', value: 12 }, { name: '已发布', value: 8 }, { name: '生产中', value: 15 }, { name: '退役', value: 3 },
-    ]
-    projectStatusData.value = data.layer2_project_ops?.project_status_distribution ?? [
-      { name: '规划中', value: 5 }, { name: '进行中', value: 12 }, { name: '已延期', value: 2 }, { name: '已完成', value: 8 },
-    ]
-    phaseProgressData.value = data.layer4_ac_metrics?.phase_progress ?? [
-      { name: '立项', value: 100 }, { name: '方案', value: 100 }, { name: '详细设计', value: 45 },
-      { name: '手板', value: 0 }, { name: '模具', value: 0 }, { name: '测试', value: 0 }, { name: '试产', value: 0 },
-    ]
+    productStatusData.value = data.layer1_system_health?.product_status_distribution ?? []
+    projectStatusData.value = data.layer2_project_ops?.project_status_distribution ?? []
+    phaseProgressData.value = data.layer4_ac_metrics?.phase_progress ?? []
   } catch {
-    // Error handled by interceptor
-    // Fallback data for AC metrics
-    acMetrics.value = {
-      phase_progress: '45%',
-      test_pass_rate: '82%',
-      issue_close_rate: '78%',
-      cost_execution_rate: '91%',
-      generalization_rate: '76%',
-    }
-    phaseProgressData.value = [
-      { name: '立项', value: 100 }, { name: '方案', value: 100 }, { name: '详细设计', value: 45 },
-      { name: '手板', value: 0 }, { name: '模具', value: 0 }, { name: '测试', value: 0 }, { name: '试产', value: 0 },
-    ]
-    acTrendData.value = [
-      { name: 'W1', value: 75 }, { name: 'W2', value: 78 }, { name: 'W3', value: 82 }, { name: 'W4', value: 80 },
-    ]
+    // API 请求失败：标记错误状态，不使用硬编码 fallback 数据掩盖真实状态
+    acError.value = true
+    acMetrics.value = {}
+    phaseProgressData.value = []
+    productStatusData.value = []
+    projectStatusData.value = []
+    healthData.value = {}
+    opsData.value = {}
+    penetrationData.value = null
+    projectList.value = []
   } finally {
     loading.value = false
   }
@@ -803,6 +839,52 @@ onMounted(() => {
   font-size: 14px;
   margin: 0;
 }
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+  margin: 0;
+}
+.empty-desc {
+  font-size: 13px;
+  color: var(--c-text-secondary);
+  margin: 0;
+  text-align: center;
+  max-width: 360px;
+  line-height: 1.5;
+}
+.empty-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.section-empty {
+  min-height: 260px;
+  border: 1px dashed var(--c-border);
+  border-radius: var(--c-radius-lg);
+  background: var(--c-bg-card);
+}
+.empty-guide-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: var(--c-info-light);
+  border: 1px solid var(--c-info);
+  border-radius: var(--c-radius-md);
+  color: var(--c-info);
+  font-size: 14px;
+}
+.empty-guide-banner .guide-link {
+  color: var(--c-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.empty-guide-banner .guide-link:hover {
+  color: var(--c-accent-hover);
+}
 .empty-state-small {
   text-align: center;
   padding: 32px;
@@ -826,6 +908,15 @@ onMounted(() => {
   border-color: var(--c-accent);
   color: var(--c-accent);
   background: var(--c-accent-light);
+}
+.action-btn.primary {
+  background: var(--c-accent);
+  color: #fff;
+  border-color: var(--c-accent);
+}
+.action-btn.primary:hover {
+  background: var(--c-accent-hover);
+  border-color: var(--c-accent-hover);
 }
 
 /* Responsive */

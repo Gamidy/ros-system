@@ -79,6 +79,8 @@ def _project_to_snapshot(p: Project) -> dict:
         "refrigerant": p.refrigerant,
         "capacity_range": p.capacity_range,
         "voltage_freq": p.voltage_freq,
+        "series_name": p.series_name,
+        "energy_rating": p.energy_rating,
         "ip_ownership": p.ip_ownership,
         "project_duration": p.project_duration,
         "dev_category": p.dev_category,
@@ -111,6 +113,7 @@ def _project_to_snapshot(p: Project) -> dict:
         "mold_costs": p.mold_costs,
         "prototype_costs_detail": p.prototype_costs_detail,
         "test_costs": p.test_costs,
+        "cert_costs": p.cert_costs,
         "labor_costs": p.labor_costs,
         # Sheet 5
         "team_members": p.team_members,
@@ -619,7 +622,7 @@ def create_proposal_draft(
         program_id=payload.get("program_id"),
         product_code=payload.get("product_code"),
         source=payload.get("project_origin") or payload.get("source"),
-        status="planning",
+        status="draft",
         start_date=_parse_date(payload.get("start_date")),
         target_end_date=_parse_date(payload.get("target_end_date")),
         owner=current_user.username,
@@ -684,6 +687,29 @@ def update_proposal_draft(
     p.updated_at = datetime.now()
     db.commit()
     return {"id": p.id, "code": p.code, "name": p.name}
+
+
+# ══════════════════════════════════════════════════════════════════
+# GET /api/pm/proposals/draft — 获取当前用户的草稿列表
+# ══════════════════════════════════════════════════════════════════
+
+@router.get("/pm/proposals/draft")
+def get_proposal_drafts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取当前产品经理的立项草稿列表。查询 projects 表中 status='draft' 且 owner=当前用户的项目。"""
+    drafts = (
+        db.query(Project)
+        .filter(
+            Project.owner == current_user.username,
+            Project.status == "draft",
+            Project.is_deleted == False,
+        )
+        .order_by(Project.updated_at.desc())
+        .all()
+    )
+    return [_project_to_snapshot(p) for p in drafts]
 
 
 def _parse_date(val):

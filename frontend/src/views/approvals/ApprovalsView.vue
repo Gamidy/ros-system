@@ -4,40 +4,48 @@
       <el-tabs v-model="activeTab" @tab-change="onTabChange">
         <!-- 我的审批 -->
         <el-tab-pane label="我的审批" name="pending">
-          <el-table :data="list" stripe border max-height="420" v-loading="loading">
-            <el-table-column prop="id" label="审批编号" width="140" />
-            <el-table-column prop="type" label="类型" width="110">
-              <template #default="{ row }">
-                <el-tag size="small">{{ typeMap[row.type] || row.type }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="applicant" label="申请人" width="100" />
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="submitted_at" label="提交时间" width="170" />
-            <el-table-column label="操作" width="220" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
-                <el-button type="success" size="small" @click="handleApprove(row)">通过</el-button>
-                <el-button type="danger" size="small" @click="handleReject(row)">驳回</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-            <el-pagination
-              v-model:current-page="page"
-              v-model:page-size="pageSize"
-              :total="total"
-              :page-sizes="[10, 20, 50]"
-              layout="total, sizes, prev, pager, next, jumper"
-              @size-change="fetchList"
-              @current-change="fetchList"
-            />
+          <div v-if="!loading && list.length === 0" class="empty-guide">
+            <div class="empty-guide-icon">📋</div>
+            <h3 class="empty-guide-title">暂无待审批项</h3>
+            <p class="empty-guide-desc">项目提交审批后将在此处显示</p>
+            <router-link to="/pm-workspace" class="empty-guide-btn">前往工作台</router-link>
           </div>
+          <template v-else>
+            <el-table :data="list" stripe border max-height="420" v-loading="loading">
+              <el-table-column prop="id" label="审批编号" width="140" />
+              <el-table-column prop="type" label="类型" width="110">
+                <template #default="{ row }">
+                  <el-tag size="small">{{ typeMap[row.type] || row.type }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+              <el-table-column prop="applicant" label="申请人" width="100" />
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="submitted_at" label="提交时间" width="170" />
+              <el-table-column label="操作" width="220" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
+                  <el-button type="success" size="small" @click="handleApprove(row)">通过</el-button>
+                  <el-button type="danger" size="small" @click="handleReject(row)">驳回</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+              <el-pagination
+                v-model:current-page="page"
+                v-model:page-size="pageSize"
+                :total="total"
+                :page-sizes="[10, 20, 50]"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="fetchList"
+                @current-change="fetchList"
+              />
+            </div>
+          </template>
         </el-tab-pane>
 
         <!-- 审批历史 -->
@@ -50,38 +58,45 @@
             </el-select>
             <div></div>
           </div>
-          <el-table :data="list" stripe border max-height="420" v-loading="loading">
-            <el-table-column prop="id" label="审批编号" width="140" />
-            <el-table-column prop="type" label="类型" width="110">
-              <template #default="{ row }">
-                <el-tag size="small">{{ typeMap[row.type] || row.type }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="applicant" label="申请人" width="100" />
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="submitted_at" label="提交时间" width="170" />
-            <el-table-column label="操作" width="100" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="showDetail(row)">查看</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-            <el-pagination
-              v-model:current-page="page"
-              v-model:page-size="pageSize"
-              :total="total"
-              :page-sizes="[10, 20, 50]"
-              layout="total, sizes, prev, pager, next, jumper"
-              @size-change="fetchList"
-              @current-change="fetchList"
-            />
+          <div v-if="!loading && list.length === 0" class="empty-guide">
+            <div class="empty-guide-icon">📋</div>
+            <h3 class="empty-guide-title">暂无审批历史</h3>
+            <p class="empty-guide-desc">完成审批的记录将在此处显示</p>
           </div>
+          <template v-else>
+            <el-table :data="list" stripe border max-height="420" v-loading="loading">
+              <el-table-column prop="id" label="审批编号" width="140" />
+              <el-table-column prop="type" label="类型" width="110">
+                <template #default="{ row }">
+                  <el-tag size="small">{{ typeMap[row.type] || row.type }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+              <el-table-column prop="applicant" label="申请人" width="100" />
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="submitted_at" label="提交时间" width="170" />
+              <el-table-column label="操作" width="100" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="showDetail(row)">查看</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+              <el-pagination
+                v-model:current-page="page"
+                v-model:page-size="pageSize"
+                :total="total"
+                :page-sizes="[10, 20, 50]"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="fetchList"
+                @current-change="fetchList"
+              />
+            </div>
+          </template>
         </el-tab-pane>
 
         <!-- 审批链配置 -->
@@ -361,5 +376,45 @@ onMounted(() => { fetchList(); fetchChains() })
 }
 .page {
   /* ensure consistent layout */
+}
+
+/* ── 空状态引导 (Claude暖纸色风格) ── */
+.empty-guide {
+  text-align: center;
+  padding: 60px 20px;
+  background: #fffdf7;
+  border-radius: 12px;
+  border: 1px dashed #e5e0da;
+}
+.empty-guide-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+.empty-guide-title {
+  font-size: 16px;
+  color: #5e5d59;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.empty-guide-desc {
+  font-size: 13px;
+  color: #87867f;
+  margin: 0 0 20px;
+}
+.empty-guide-btn {
+  display: inline-block;
+  padding: 8px 24px;
+  background: #d97757;
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.2s;
+}
+.empty-guide-btn:hover {
+  background: #c96442;
+  transform: translateY(-1px);
 }
 </style>

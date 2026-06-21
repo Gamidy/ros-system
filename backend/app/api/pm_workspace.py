@@ -241,6 +241,50 @@ def pm_workspace(
 
 
 # ══════════════════════════════════════════════════════════════
+# GET /api/pm/proposals — 我的提案列表
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/proposals")
+def list_my_proposals(
+    status: str = Query("all", description="过滤状态: draft(草稿) / submitted(已提交) / all(全部)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_pm),
+):
+    """返回当前用户的所有提案（含草稿和已提交）
+    
+    - 查询 projects 表: owner=current_user, is_deleted=False
+    - status 参数:
+        - draft: 仅返回 is_draft=True
+        - submitted: 仅返回 is_draft=False
+        - all(默认): 返回全部
+    - 返回格式与 my_projects 一致
+    """
+    owner_name = current_user.username
+
+    query = db.query(Project).filter(
+        Project.owner == owner_name,
+        Project.is_deleted == False,
+    )
+
+    if status == "draft":
+        query = query.filter(Project.is_draft == True)
+    elif status == "submitted":
+        query = query.filter(Project.is_draft == False)
+    # "all" — no additional filter
+
+    proposals_raw = query.order_by(Project.updated_at.desc()).all()
+
+    proposals = [_project_to_dict(p) for p in proposals_raw]
+
+    return {
+        "proposals": proposals,
+        "total": len(proposals),
+        "draft_count": sum(1 for p in proposals_raw if p.is_draft),
+        "submitted_count": sum(1 for p in proposals_raw if not p.is_draft),
+    }
+
+
+# ══════════════════════════════════════════════════════════════
 # 辅助: _apply_project_fields — 将 Body 参数写入 Project 对象
 # ══════════════════════════════════════════════════════════════
 

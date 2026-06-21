@@ -1,0 +1,101 @@
+{
+  "version": "P6",
+  "title": "PM深度体验优化 — 浏览器走查发现问题修复",
+  "pm_perspective": "作为产品经理zhangzhenjie登录ROS系统，通过API直测+代码审查完成的深度体验",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "CRITICAL",
+      "area": "提案草稿",
+      "detail": "GET /api/pm/proposals/draft 返回 405 Method Not Allowed。PM无法在「工作台」看到已保存的草稿，阻塞核心工作流。后端该端点只有POST/PUT，缺少GET。"
+    },
+    {
+      "id": "F2",
+      "severity": "CRITICAL",
+      "area": "竞品对标独立页",
+      "detail": "/competitor-bench 路由加载 CompetitorBench.vue，该组件是内联组件（需要market prop）。作为独立页面缺少市场选择器，展示空白'请先在 Tab1 选择目标市场'。PM无法在该页面独立使用竞品对标功能。"
+    },
+    {
+      "id": "F3",
+      "severity": "HIGH",
+      "area": "仪表盘数据",
+      "detail": "Dashboard layer1 全部为零（platforms=0, products=0, versions=0, active_projects=0），layer3 为 null，layer4 全部为零。PM看到的是一个'空壳'仪表盘，没有任何可指导决策的数据。虽然系统刚搭建，但zero-state应该有更好的引导。"
+    },
+    {
+      "id": "F4",
+      "severity": "HIGH",
+      "area": "提案列表",
+      "detail": "缺少 GET /api/pm/proposals 端点列出PM的所有提案（草稿+已提交）。GET /api/pm/proposals/submit 也不存在。PM提交提案后无法追踪状态。"
+    },
+    {
+      "id": "F5",
+      "severity": "MEDIUM",
+      "area": "仪表盘指标数",
+      "detail": "Dashboard「体系健康度」标题显示'4 项指标'，但实际L2区有5个卡片（project_count, on_time_rate, overdue_count, pending_approvals_count, 再加一个）。数字与视觉不匹配。"
+    },
+    {
+      "id": "F6",
+      "severity": "MEDIUM",
+      "area": "审批工作流",
+      "detail": "系统中有 GET /api/approval/requests 但返回空数组。PM无法验证审批流程。应有一个方式让PM看到'如果项目提交后，审批长什么样'——至少界面不应该是空白。"
+    },
+    {
+      "id": "F7",
+      "severity": "LOW",
+      "area": "BOM数据量",
+      "detail": "BOM只有1条（12000BTU）。PM做竞品对标时需要对比多个冷量段，仅有1条BOM限制了对标能力。"
+    }
+  ],
+  "stories": [
+    {
+      "id": "US-P6-01",
+      "title": "修复提案草稿GET端点",
+      "priority": "P0",
+      "description": "后端新增 GET /api/pm/proposals/draft 返回当前用户的草稿列表。前端PMWorkspace在加载时调用该端点展示草稿。",
+      "acceptance": "PM登录后在工作台看到已保存的草稿列表，草稿可点击进入编辑。"
+    },
+    {
+      "id": "US-P6-02",
+      "title": "竞品对标独立页面重做",
+      "priority": "P0",
+      "description": "新建独立竞品对标页面组件(CompetitorStandalone.vue)，含市场下拉选择器、冷量段过滤、品牌列动态生成、数据矩阵表格。路由/competitor-bench指向新组件。",
+      "acceptance": "PM进入竞品对标页面 → 选择市场 → 看到该市场所有竞品的参数矩阵表格。"
+    },
+    {
+      "id": "US-P6-03",
+      "title": "仪表盘数据增强 + 空状态引导",
+      "priority": "P1",
+      "description": "当数据为空时显示有意义的空状态而不是零。layer1空状态：「暂无产品数据，前往产品主线创建」带链接。layer3空状态：「暂无穿透数据，创建产品+版本+BOM后可查看」。section-count修正为5。",
+      "acceptance": "PM看到友好的空状态提示，点击可跳转到对应功能页。"
+    },
+    {
+      "id": "US-P6-04",
+      "title": "提案列表API",
+      "priority": "P1",
+      "description": "后端新增 GET /api/pm/proposals 返回当前用户的所有提案（含草稿和已提交），支持status筛选。前端PMWorkspace展示提案列表卡片。",
+      "acceptance": "PM在工作台看到「我的提案」列表，包含草稿和已提交项，可点击进入详情。"
+    },
+    {
+      "id": "US-P6-05",
+      "title": "审批管理空状态 + 流程引导",
+      "priority": "P2",
+      "description": "审批页面（/approvals 和 /approvals/proposals）显示空状态引导：「暂无待审批项，项目提交后将在此处显示」。含跳转到工作台的快捷按钮。",
+      "acceptance": "PM进入审批页看到友好提示而非空白表格。"
+    },
+    {
+      "id": "US-P6-06",
+      "title": "后端新增提案列表端点",
+      "priority": "P0",
+      "description": "后端新增 GET /api/pm/proposals 端点，支持查询参数status（draft/submitted/all），返回提案列表。同时新增 GET /api/pm/proposals/submit 端点返回已提交提案。",
+      "acceptance": "curl GET /api/pm/proposals 返回提案列表。",
+      "depends_on": ["US-P6-01"]
+    }
+  ],
+  "execution_notes": {
+    "independent_stories": ["US-P6-01", "US-P6-02", "US-P6-03", "US-P6-05"],
+    "sequential_deps": {"US-P6-04": ["US-P6-01"], "US-P6-06": ["US-P6-01"]},
+    "backend_only": ["US-P6-01", "US-P6-06"],
+    "frontend_only": ["US-P6-02", "US-P6-03", "US-P6-05"],
+    "fullstack": ["US-P6-04"]
+  }
+}
