@@ -928,7 +928,7 @@
             </el-table-column>
             <el-table-column label="单套费用(W)" width="130">
               <template #default="{ row }">
-                <span>{{ row.unit_cost.toFixed(3) }}</span>
+                <el-input-number v-model="row.unit_cost" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
               </template>
             </el-table-column>
             <el-table-column label="合计(W)" width="120">
@@ -955,8 +955,8 @@
             </el-table-column>
             <el-table-column label="人月" width="130">
               <template #default="{ row }">
-                <span class="linked-val">{{ (projectDurationMonths * (row.occupancy_rate || 100) / 100).toFixed(1) }}</span>
-                <div style="font-size:11px;color:#909399">{{ projectDurationMonths }}月 × {{ row.occupancy_rate || 100 }}%</div>
+                <span class="linked-val">{{ (row.months * (row.occupancy_rate || 100) / 100).toFixed(1) }}</span>
+                <div style="font-size:11px;color:#909399">{{ row.months }}月 × {{ row.occupancy_rate || 100 }}%</div>
               </template>
             </el-table-column>
             <el-table-column label="占用度%" width="100">
@@ -964,9 +964,14 @@
                 <el-input-number v-model="row.occupancy_rate" :min="0" :max="100" :step="10" size="small" controls-position="right" style="width:100%" />
               </template>
             </el-table-column>
+            <el-table-column label="人月数" width="80">
+              <template #default="{ row }">
+                <el-input-number v-model="row.months" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
+              </template>
+            </el-table-column>
             <el-table-column label="费用(W)" width="120">
               <template #default="{ row }">
-                {{ (row.people_count * row.monthly_salary * projectDurationMonths * (row.occupancy_rate || 100) / 100).toFixed(1) }}
+                {{ (row.people_count * row.monthly_salary * row.months * (row.occupancy_rate || 100) / 100).toFixed(1) }}
               </template>
             </el-table-column>
           </el-table>
@@ -1501,11 +1506,11 @@ const moldCostTable = reactive<MoldCostRow[]>([
 
 // Tab 4 表格: 试制样机费用 (5行)
 const protoCostTable = reactive<ProtoCostRow[]>([
-  { stage: 'P0', qty: 5, unit_cost: 0 },
-  { stage: 'P1-1', qty: 10, unit_cost: 0 },
-  { stage: 'P1-2', qty: 10, unit_cost: 0 },
-  { stage: 'P2', qty: 20, unit_cost: 0 },
-  { stage: '客户样机', qty: 5, unit_cost: 0 },
+  { stage: 'P0', qty: 5, unit_cost: 0.8 },
+  { stage: 'P1-1', qty: 10, unit_cost: 0.8 },
+  { stage: 'P1-2', qty: 10, unit_cost: 0.8 },
+  { stage: 'P2', qty: 20, unit_cost: 0.6 },
+  { stage: '客户样机', qty: 5, unit_cost: 0.5 },
 ])
 
 // Tab 4 表格: 人工费用 (6行)
@@ -1594,22 +1599,6 @@ const prototypeUnitCost = computed(() => {
   return 0.1 // default
 })
 
-// 项目周期月数 (用于人月计算)
-const projectDurationMonths = computed(() => {
-  const s = projectForm.start_date
-  const e = projectForm.target_end_date
-  if (!s || !e) return 0
-  try {
-    const start = new Date(s)
-    const end = new Date(e)
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
-    const diffMs = end.getTime() - start.getTime()
-    if (diffMs < 0) return 0
-    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-    return Math.floor(days / 30)
-  } catch { return 0 }
-})
-
 // 试制数量 — 按项目等级查表
 const trialQty = computed(() => {
   const dc = projectForm.dev_category
@@ -1672,9 +1661,9 @@ const protoCostTotal = computed(() =>
   protoCostTable.reduce((sum, r) => sum + (r.qty || 0) * (r.unit_cost || 0), 0)
 )
 
-// 人工费用合计 (使用项目周期月数)
+// 人工费用合计 (使用各角色独立月数)
 const laborCostTotal = computed(() =>
-  laborCostTable.reduce((sum, r) => sum + (r.people_count || 0) * (r.monthly_salary || 0) * projectDurationMonths.value * ((r.occupancy_rate || 100) / 100), 0)
+  laborCostTable.reduce((sum, r) => sum + (r.people_count || 0) * (r.monthly_salary || 0) * (r.months || 0) * ((r.occupancy_rate || 100) / 100), 0)
 )
 
 // 测试费用合计

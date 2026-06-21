@@ -135,6 +135,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
     "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
+        "competitor_bench",
     ],
 }
 
