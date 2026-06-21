@@ -100,9 +100,10 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import api from '../../api'
+import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const formRef = ref<FormInstance>()
 const currentYear = computed(() => new Date().getFullYear())
 
@@ -122,10 +123,13 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    const res = await api.post('/auth/login', form)
-    localStorage.setItem('token', res.data.access_token)
+    // 使用 authStore.login() 确保 token ref 与 localStorage 同步
+    await authStore.login(form.username, form.password)
     ElMessage.success({ message: '登录成功', grouping: true })
-    router.push('/dashboard')
+    await router.push('/dashboard').catch(() => {
+      // 导航失败时不清除 token，让用户可手动刷新
+      ElMessage.warning('页面跳转失败，请尝试刷新浏览器')
+    })
   } catch {
     // Error handled by interceptor
   } finally {

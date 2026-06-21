@@ -159,10 +159,17 @@ router.beforeEach(async (to, _from, next) => {
   try {
     if (!authStore.user) await authStore.fetchUser()
   } catch {
+    ElMessage.error('会话验证失败，请重新登录')
     authStore.logout()
     return next('/login')
   }
   if (!authStore.hasRouteAccess(to.path)) {
+    // 防止死循环：如果目标就是 /dashboard 但无权限，说明权限数据异常
+    if (to.path === '/dashboard') {
+      ElMessage.error('账户权限数据异常，请重新登录')
+      authStore.logout()
+      return next('/login')
+    }
     ElMessage.warning('没有访问该页面的权限，已跳转到驾驶舱')
     return next('/dashboard')
   }
