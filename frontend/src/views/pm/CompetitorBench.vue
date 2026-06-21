@@ -94,6 +94,16 @@ const loading = ref(false)
 const adoptedKeys = ref<Set<string>>(new Set())
 const allComplete = ref(false)
 
+// 市场代码/名称映射（从父组件传入的 props.market 可能是代码如"VN"，需转名称如"越南"）
+const marketOptions = ref<Array<{code: string; name: string}>>([])
+
+// 初始化时加载市场选项（代码→名称映射）
+api.get('/kb/items', { params: { category: 'market' } }).then((res: any) => {
+  const data = res.data || res
+  if (Array.isArray(data)) marketOptions.value = data
+  else if (data.data && Array.isArray(data.data)) marketOptions.value = data.data
+}).catch(() => {})
+
 // Compute unique brand names from all rows
 const brands = computed(() => {
   const brandSet = new Set<string>()
@@ -167,7 +177,10 @@ async function fetchBenchmark(market: string) {
   if (!market) return
   loading.value = true
   try {
-    const res = await api.get('/pm/competitors/benchmark', { params: { market } })
+    // 市场代码 → 名称转换
+    const mkt = marketOptions.value.find((m: any) => m.code === market || m.name === market)
+    const marketName = mkt ? mkt.name : market
+    const res = await api.get('/pm/competitors/benchmark', { params: { market: marketName } })
     competitorData.value = res.data.competitors || []
     benchmarkData.value = transformBenchmarkData(res.data)
     // Check completeness

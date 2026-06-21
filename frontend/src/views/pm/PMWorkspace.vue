@@ -2073,7 +2073,10 @@ watch([() => projectForm.target_market, () => projectForm.capacity_range], ([mar
 watch([() => projectForm.target_market, () => projectForm.capacity_range], async ([market, capacity]) => {
   if (market) {
     try {
-      const res = await api.get('/pm/competitors/benchmark', { params: { market } })
+      // 市场代码 → 名称转换
+      const mkt = kbOptions.market.find((m: any) => m.code === market)
+      const marketName = mkt ? mkt.name : market
+      const res = await api.get('/pm/competitors/benchmark', { params: { market: marketName } })
       const comps = res.data?.competitors || []
       if (capacity) {
         quickRefCompetitors.value = comps.filter((c: any) => 
