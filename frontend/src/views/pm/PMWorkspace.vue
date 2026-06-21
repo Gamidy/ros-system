@@ -3610,13 +3610,19 @@ onMounted(async () => {
 
 /* 抽屉 */
 .drawer-tabs {
-  height: calc(100vh - 160px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .drawer-tabs :deep(.el-tabs__content) {
-  height: calc(100vh - 240px);
-  overflow-y: auto;
+  overflow: visible;
+  flex: 1;
   padding: 0 8px;
+}
+
+.drawer-tabs :deep(.el-tabs__header) {
+  flex-shrink: 0;
 }
 
 .section-table {
@@ -3860,5 +3866,11 @@ onMounted(async () => {
 /* ===== 抽屉中 el-select 下拉修复 ===== */
 .drawer-tabs .el-select-dropdown {
   z-index: 9999 !important;
+}
+
+/* 抽屉内容区域滚动 */
+:deep(.el-drawer__body) {
+  overflow-y: auto;
+  padding-bottom: 20px;
 }
 </style>
