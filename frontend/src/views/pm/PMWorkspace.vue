@@ -1961,15 +1961,8 @@ watch(
 // 样板单套费用联动 → 更新protoCostTable的unit_cost
 watch(prototypeUnitCost, (val) => {
   protoCostTable.forEach(r => {
-    if (r.stage !== '客户样机') {
-      r.unit_cost = val
-    }
+    r.unit_cost = val
   })
-  // 客户样机的单套费用是P0~P2阶段的1.2倍
-  const clientRow = protoCostTable.find(r => r.stage === '客户样机')
-  if (clientRow) {
-    clientRow.unit_cost = Math.round(val * 1.2 * 1000) / 1000
-  }
 }, { immediate: true })
 
 // 联动行: 模具→devCostTable[0], 样机(P0~P2)→devCostTable[3], 测试→devCostTable[4]
