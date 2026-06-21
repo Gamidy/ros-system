@@ -278,7 +278,11 @@
               </el-col>
               <el-col :span="6">
                 <el-form-item label="温带">
-                  <el-input v-model="projectForm.climate_zone" placeholder="温带（如 T1/T2/T3）" />
+                  <el-select v-model="projectForm.climate_zone" placeholder="选择温带" clearable style="width:100%">
+                    <el-option label="T1（热带）" value="T1" />
+                    <el-option label="T2（温带）" value="T2" />
+                    <el-option label="T3（寒带）" value="T3" />
+                  </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="6">
