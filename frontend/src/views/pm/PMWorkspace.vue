@@ -3264,7 +3264,7 @@ async function fetchKbOptions() {
       // 过滤掉非国家的旧条目（国内/华东/OEM等仅保留字母代码的）
       kbOptions.market = data
         .filter((m: any) => m.is_active !== 'false' && /^[A-Z]{2}$/.test(m.code))
-        .map((m: any) => ({ code: m.code, name: m.name }))
+        .map((m: any) => ({ id: 0, category: 'market', code: m.code, name: m.name }))
     }
   } catch { /* fallback to kb data */ }
 }
