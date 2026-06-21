@@ -38,6 +38,17 @@
                 {{ approvalLabel(prop.approval_status) }}
               </el-tag>
               <el-tag :type="statusTagType(prop.status)" size="small">{{ statusLabel(prop.status) }}</el-tag>
+              <!-- 撤销按钮：已提交且审批中 -->
+              <el-button
+                v-if="!prop.is_draft && prop.approval_status === 'pending'"
+                type="warning"
+                size="small"
+                link
+                style="margin-left:8px"
+                @click.stop="withdrawProposal(prop)"
+              >
+                ↩️ 撤销
+              </el-button>
             </div>
           </div>
         </div>
@@ -2898,10 +2909,10 @@ async function saveDraft() {
   try {
     const payload = buildProjectPayload()
     if (draftId.value) {
-      await api.put('/pm/proposals/draft', { ...payload, id: draftId.value })
+      await api.put(`/pm/project/draft/${draftId.value}`, payload)
       ElMessage.success('草稿已更新')
     } else {
-      const res = await api.post('/pm/proposals/draft', payload)
+      const res = await api.post('/pm/project/draft', payload)
       if (res.data?.id) draftId.value = res.data.id
       ElMessage.success('草稿已保存')
     }
@@ -2954,6 +2965,21 @@ async function submitProposal() {
     // handled by interceptor
   } finally {
     submitting.value = false
+  }
+}
+
+async function withdrawProposal(proposal: ProjectItem) {
+  try {
+    await ElMessageBox.confirm(
+      `确定撤销「${proposal.name}」的立项申请？撤销后项目将恢复为草稿状态，可重新编辑后再次提交。`,
+      '确认撤销提交',
+      { type: 'warning', confirmButtonText: '确认撤销', cancelButtonText: '取消' }
+    )
+    await api.post(`/pm/proposals/${proposal.id}/withdraw`)
+    ElMessage.success('已撤销提交，项目已恢复为草稿')
+    await fetchWorkspaceData()
+  } catch {
+    // cancelled or error (handled by interceptor)
   }
 }
 
@@ -3161,7 +3187,7 @@ async function fetchWorkspaceData() {
   try {
     const res = await api.get('/pm/workspace')
     const data = res.data
-    planningItems.value = data.planning_items || []
+    planningItems.value = data.annual_plans || []
     products.value = data.products || []
     myProjects.value = data.my_projects || []
     if (data.draft) {
@@ -3255,7 +3281,7 @@ async function fetchUserWorkloads() {
 // 新增：加载角色模板
 async function loadTeamRoleTemplate(projectType: string) {
   try {
-    const res = await api.get('/api/pm/team-role-template', { params: { project_type: projectType } })
+    const res = await api.get('/pm/team-role-template', { params: { project_type: projectType } })
     const items: TeamRoleTemplateItem[] = res.data?.items || res.data || []
     if (items.length > 0) {
       teamTable.length = 0

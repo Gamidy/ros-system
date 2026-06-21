@@ -343,6 +343,7 @@ def _apply_project_fields(
     mold_costs: str | None = None,
     prototype_costs_detail: str | None = None,
     test_costs: str | None = None,
+    cert_costs: str | None = None,
     labor_costs: str | None = None,
     # New fields (Excel alignment)
     customer_name: str | None = None,
@@ -464,6 +465,8 @@ def _apply_project_fields(
         p.prototype_costs_detail = prototype_costs_detail
     if test_costs is not None:
         p.test_costs = test_costs
+    if cert_costs is not None:
+        p.cert_costs = cert_costs
     if labor_costs is not None:
         p.labor_costs = labor_costs
     # Sheet 5
@@ -555,6 +558,8 @@ def pm_create_project(
     economic_indicators: str | None = Body(None),
     mold_costs: str | None = Body(None),
     prototype_costs_detail: str | None = Body(None),
+    test_costs: str | None = Body(None),
+    cert_costs: str | None = Body(None),
     # Sheet 5 - 团队与职责
     team_members: str | None = Body(None),
     db: Session = Depends(get_db),
@@ -730,8 +735,24 @@ def pm_create_draft(
     economic_indicators: str | None = Body(None),
     mold_costs: str | None = Body(None),
     prototype_costs_detail: str | None = Body(None),
+    test_costs: str | None = Body(None),
+    cert_costs: str | None = Body(None),
     # Sheet 5 - 团队与职责
     team_members: str | None = Body(None),
+    # Sheet 4/5 extended - 新Excel字段
+    customer_name: str | None = Body(None, max_length=100),
+    other_requirements: str | None = Body(None),
+    accessory_config: str | None = Body(None),
+    feature_config: str | None = Body(None),
+    fob_price: str | None = Body(None, max_length=50),
+    bom_cost_target: str | None = Body(None, max_length=50),
+    bom_cost_ratio: str | None = Body(None, max_length=50),
+    manufacturing_cost: str | None = Body(None, max_length=50),
+    gross_margin: str | None = Body(None, max_length=50),
+    annual_sales_forecast: str | None = Body(None, max_length=50),
+    product_lifecycle: str | None = Body(None, max_length=50),
+    mold_inner: str | None = Body(None),
+    mold_outer: str | None = Body(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
 ):
@@ -800,6 +821,19 @@ def pm_create_draft(
         mold_costs=mold_costs,
         prototype_costs_detail=prototype_costs_detail,
         team_members=team_members,
+        customer_name=customer_name,
+        other_requirements=other_requirements,
+        accessory_config=accessory_config,
+        feature_config=feature_config,
+        fob_price=fob_price,
+        bom_cost_target=bom_cost_target,
+        bom_cost_ratio=bom_cost_ratio,
+        manufacturing_cost=manufacturing_cost,
+        gross_margin=gross_margin,
+        annual_sales_forecast=annual_sales_forecast,
+        product_lifecycle=product_lifecycle,
+        mold_inner=mold_inner,
+        mold_outer=mold_outer,
     )
 
     # ── 自动计算：制冷量 BTU → 瓦特，注入 core_performance ──
@@ -880,8 +914,24 @@ def pm_update_draft(
     economic_indicators: str | None = Body(None),
     mold_costs: str | None = Body(None),
     prototype_costs_detail: str | None = Body(None),
+    test_costs: str | None = Body(None),
+    cert_costs: str | None = Body(None),
     # Sheet 5 - 团队与职责
     team_members: str | None = Body(None),
+    # Sheet 4/5 extended - 新Excel字段
+    customer_name: str | None = Body(None, max_length=100),
+    other_requirements: str | None = Body(None),
+    accessory_config: str | None = Body(None),
+    feature_config: str | None = Body(None),
+    fob_price: str | None = Body(None, max_length=50),
+    bom_cost_target: str | None = Body(None, max_length=50),
+    bom_cost_ratio: str | None = Body(None, max_length=50),
+    manufacturing_cost: str | None = Body(None, max_length=50),
+    gross_margin: str | None = Body(None, max_length=50),
+    annual_sales_forecast: str | None = Body(None, max_length=50),
+    product_lifecycle: str | None = Body(None, max_length=50),
+    mold_inner: str | None = Body(None),
+    mold_outer: str | None = Body(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
 ):
@@ -945,7 +995,22 @@ def pm_update_draft(
             economic_indicators=economic_indicators,
             mold_costs=mold_costs,
             prototype_costs_detail=prototype_costs_detail,
+            test_costs=test_costs,
+            cert_costs=cert_costs,
             team_members=team_members,
+            customer_name=customer_name,
+            other_requirements=other_requirements,
+            accessory_config=accessory_config,
+            feature_config=feature_config,
+            fob_price=fob_price,
+            bom_cost_target=bom_cost_target,
+            bom_cost_ratio=bom_cost_ratio,
+            manufacturing_cost=manufacturing_cost,
+            gross_margin=gross_margin,
+            annual_sales_forecast=annual_sales_forecast,
+            product_lifecycle=product_lifecycle,
+            mold_inner=mold_inner,
+            mold_outer=mold_outer,
         )
 
         # ── 自动计算：制冷量 BTU → 瓦特 ──

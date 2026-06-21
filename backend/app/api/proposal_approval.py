@@ -476,6 +476,7 @@ def _sync_approval_request(db: Session, pa: ProposalApproval):
         "pending_director": "pending",
         "approved": "approved",
         "rejected": "rejected",
+        "withdrawn": "withdrawn",
     }
     new_status = status_map.get(pa.status, "pending")
     if ar.status != new_status:
@@ -612,9 +613,12 @@ def review_approval(
             raise HTTPException(status_code=400, detail="您已审批过该申请")
 
         # 更新当前审批人状态
-        pa.parallel_reviewers[reviewer_index]["status"] = action
-        pa.parallel_reviewers[reviewer_index]["reason"] = reason or ""
-        pa.parallel_reviewers[reviewer_index]["reviewed_at"] = str(now)
+        import copy
+        reviewers = copy.deepcopy(pa.parallel_reviewers)  # deep copy to force SQLAlchemy change detection
+        reviewers[reviewer_index]["status"] = action
+        reviewers[reviewer_index]["reason"] = reason or ""
+        reviewers[reviewer_index]["reviewed_at"] = str(now)
+        pa.parallel_reviewers = reviewers
 
         if action == "rejected":
             # 驳回 → 整个审批结束
@@ -916,3 +920,91 @@ def _apply_payload(p: Project, payload: dict):
     for key in ["start_date", "target_end_date"]:
         if key in payload:
             setattr(p, key, _parse_date(payload[key]))
+
+
+# ══════════════════════════════════════════════════════════════════
+# POST /api/pm/proposals/{project_id}/withdraw — 撤销提交
+# ══════════════════════════════════════════════════════════════════
+
+@router.post("/pm/proposals/{project_id}/withdraw")
+def withdraw_proposal(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """产品经理撤销已提交的立项审批
+
+    前提条件:
+    - 项目属于当前用户
+    - 项目已提交（非草稿）
+    - ProposalApproval 状态为 pending_parallel 或 pending_director
+
+    效果:
+    - 项目恢复为草稿状态 (is_draft=True, status='draft')
+    - ProposalApproval 标记为 withdrawn
+    - ApprovalRequest 标记为 withdrawn
+    - 通知并行审批人和研发总监
+    """
+    # ── 1. 校验项目 ──
+    p = db.query(Project).filter(Project.id == project_id, Project.is_deleted == False).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    if p.owner != current_user.username:
+        raise HTTPException(status_code=403, detail="仅项目负责人可撤销立项申请")
+
+    # ── 2. 查找进行中的审批 ──
+    pa = (
+        db.query(ProposalApproval)
+        .filter(
+            ProposalApproval.proposal_id == project_id,
+            ProposalApproval.status.in_(["pending_parallel", "pending_director"]),
+        )
+        .first()
+    )
+    if not pa:
+        raise HTTPException(status_code=400, detail="该项目没有进行中的审批，无法撤销")
+
+    # ── 3. 恢复项目为草稿 ──
+    p.is_draft = True
+    p.status = "draft"
+
+    # ── 4. 标记审批为撤销 ──
+    pa.status = "withdrawn"
+
+    # ── 5. 同步 ApprovalRequest ──
+    ar = db.query(ApprovalRequest).filter(
+        ApprovalRequest.request_type == "proposal",
+        ApprovalRequest.request_id == pa.id,
+    ).first()
+    if ar:
+        ar.status = "withdrawn"
+
+    # ── 6. 通知并行审批人 ──
+    reviewers = pa.parallel_reviewers or []
+    for reviewer in reviewers:
+        if reviewer.get("user_id"):
+            _create_notification(
+                db,
+                target_user_id=reviewer["user_id"],
+                title=f"立项审批已撤销: {pa.title}",
+                content=f"产品经理 {current_user.username} 撤销了项目「{pa.title}」的立项申请。",
+            )
+
+    # ── 7. 通知研发总监 ──
+    if pa.director_reviewer_id:
+        _create_notification(
+            db,
+            target_user_id=pa.director_reviewer_id,
+            title=f"立项审批已撤销: {pa.title}",
+            content=f"产品经理 {current_user.username} 撤销了项目「{pa.title}」的立项申请。",
+        )
+
+    db.commit()
+    db.refresh(pa)
+
+    return {
+        "message": "已撤销提交，项目恢复为草稿状态",
+        "project_id": p.id,
+        "project_status": p.status,
+        "approval_status": pa.status,
+    }

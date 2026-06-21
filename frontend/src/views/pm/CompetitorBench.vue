@@ -13,8 +13,16 @@
 
     <!-- Data available -->
     <template v-else-if="benchmarkData.length > 0">
+      <!-- 完整性提示 -->
+      <div v-if="!allComplete" style="margin-bottom:12px;padding:8px 12px;background:#fdf6ec;border-radius:6px;font-size:13px;color:#e6a23c;border:1px solid #faecd8;">
+        ⚠️ 部分竞品数据不完整，请在「竞品对标」页面补全数据
+      </div>
+      <div v-else style="margin-bottom:12px;padding:8px 12px;background:#f0f9eb;border-radius:6px;font-size:13px;color:#67c23a;border:1px solid #e1f3d8;">
+        ✅ 所有竞品数据完整
+      </div>
+
       <el-table :data="benchmarkData" border size="small" class="bench-table">
-        <el-table-column prop="param_name" label="参数" width="100" />
+        <el-table-column prop="param_name" label="参数" width="110" />
         <el-table-column prop="our_target" label="我方目标" width="100">
           <template #default="{ row }">
             <strong>{{ row.our_target }}</strong>
@@ -24,7 +32,7 @@
           v-for="brand in brands"
           :key="brand"
           :label="brand"
-          min-width="150"
+          min-width="130"
         >
           <template #default="{ row }">
             <div
@@ -69,7 +77,7 @@ const emit = defineEmits<{
 }>()
 
 interface CompetitorEntry {
-  value: number
+  value: number | string
   model?: string
 }
 
@@ -80,9 +88,11 @@ interface BenchmarkRow {
   competitors: Record<string, CompetitorEntry>
 }
 
+const competitorData = ref<any[]>([])
 const benchmarkData = ref<BenchmarkRow[]>([])
 const loading = ref(false)
 const adoptedKeys = ref<Set<string>>(new Set())
+const allComplete = ref(false)
 
 // Compute unique brand names from all rows
 const brands = computed(() => {
@@ -111,12 +121,11 @@ function handleAdopt(row: BenchmarkRow, brand: string) {
 
   const key = `${row.param_key}|${brand}`
   adoptedKeys.value.add(key)
-  // Trigger reactivity
   adoptedKeys.value = new Set(adoptedKeys.value)
 
   emit('adopt', {
     paramKey: row.param_key,
-    value: entry.value,
+    value: typeof entry.value === 'number' ? entry.value : parseFloat(String(entry.value)) || 0,
     brand: brand,
   })
 }
@@ -128,12 +137,6 @@ function transformBenchmarkData(raw: any): BenchmarkRow[] {
   const competitors = raw.competitors as any[]
   const paramNames = raw.param_names as Array<{ key: string; label: string; unit: string }>
 
-  // 收集所有品牌名
-  const brandSet = new Set<string>()
-  for (const c of competitors) {
-    if (c.brand) brandSet.add(c.brand)
-  }
-
   return paramNames.map((p) => {
     const row: BenchmarkRow = {
       param_key: p.key,
@@ -143,9 +146,16 @@ function transformBenchmarkData(raw: any): BenchmarkRow[] {
     }
 
     for (const c of competitors) {
-      const val = c[p.key]
+      let val: any = c[p.key]
+      // 对能效字段做市场适配
+      if (val === undefined || val === null) {
+        // 如果是EER字段且不存在，尝试用 cspf/iseer/seer
+        if (p.key === 'eer') {
+          val = c.cspf ?? c.iseer ?? c.seer
+        }
+      }
       if (val !== undefined && val !== null) {
-        row.competitors[c.brand] = { value: Number(val), model: c.model || '' }
+        row.competitors[c.brand] = { value: Number(val) || val, model: c.model || '' }
       }
     }
 
@@ -158,8 +168,10 @@ async function fetchBenchmark(market: string) {
   loading.value = true
   try {
     const res = await api.get('/pm/competitors/benchmark', { params: { market } })
+    competitorData.value = res.data.competitors || []
     benchmarkData.value = transformBenchmarkData(res.data)
-    // Reset adopted state when market changes
+    // Check completeness
+    allComplete.value = competitorData.value.every((c: any) => c.is_complete)
     adoptedKeys.value = new Set()
   } catch {
     benchmarkData.value = []
@@ -182,25 +194,21 @@ watch(() => props.market, (newMarket) => {
 .competitor-bench {
   margin-top: 16px;
 }
-
 .bench-table {
   margin-top: 8px;
 }
-
 .competitor-cell {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 2px 0;
 }
-
 .competitor-cell--adopted {
   background-color: #f0f9eb;
   border: 1px solid #67c23a;
   border-radius: 4px;
   padding: 4px 8px;
 }
-
 .cell-value {
   font-variant-numeric: tabular-nums;
 }

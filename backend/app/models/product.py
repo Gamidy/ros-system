@@ -88,9 +88,12 @@ class Market(Base):
     """市场字典表"""
     __tablename__ = "markets"
 
-    code = Column(String(20), primary_key=True, comment="市场代码: EU/VN/TW/JP/KR/...")
+    code = Column(String(20), primary_key=True, comment="市场代码: VN/TH/ID/SA/AE/..." )
     name = Column(String(100), nullable=False, comment="市场名称")
-    region = Column(String(50), nullable=True, comment="区域: EU/SEA/EA/NA/...")
+    region = Column(String(50), nullable=True, comment="区域: SEA/GCC/ME/...")
+    energy_standard = Column(String(20), nullable=True, comment="能效标准代码: cspf/iseer/seer/eer")
+    energy_label = Column(String(20), nullable=True, comment="能效标准显示名: CSPF/ISEER/SEER/EER")
+    energy_unit = Column(String(20), nullable=True, comment="能效单位: W/W/BTU/Wh")
     is_active = Column(String(5), default="true")
 
     products = relationship("Product", secondary="product_markets",

@@ -131,6 +131,12 @@ const router = createRouter({
           meta: { title: '竞品对标' },
         },
         {
+          path: 'market-mgmt',
+          name: 'MarketMgmt',
+          component: () => import('../views/pm/MarketMgmt.vue'),
+          meta: { title: '市场管理' },
+        },
+        {
           path: 'admin-config',
           name: 'AdminConfig',
           component: () => import('../views/admin/AdminConfig.vue'),
