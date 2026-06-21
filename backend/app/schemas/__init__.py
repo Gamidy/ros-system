@@ -151,9 +151,23 @@ class MarketCreate(BaseModel):
     code: str = Field(min_length=1, max_length=20)
     name: str
     region: Optional[str] = None
+    energy_standard: Optional[str] = None
+    energy_label: Optional[str] = None
+    energy_unit: Optional[str] = None
+    energy_standard_detail: Optional[str] = Field(None, max_length=100)
+    national_standard: Optional[str] = Field(None, max_length=100)
+    voltage_freq: Optional[str] = Field(None, max_length=50)
+    cooling_max_temp: Optional[float] = None
+    heating_min_temp: Optional[float] = None
+    structure_type: Optional[str] = Field(None, max_length=100)
+    main_selling_model: Optional[str] = Field(None, max_length=200)
+    refrigerant: Optional[str] = Field(None, max_length=50)
+    refrigerant_charge: Optional[float] = None
+    is_active: Optional[str] = "true"
 
 class MarketOut(MarketCreate):
-    is_active: str = "true"
+    code: str
+    name: str
     class Config: from_attributes = True
 
 class ProductMarketAssign(BaseModel):

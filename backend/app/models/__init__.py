@@ -8,7 +8,7 @@ from app.models.alert import AlertRule, Alert, Notification
 from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalRecord
 from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.audit import AuditLog
-from app.models.pm_config import CertStandard, PerfDefault
+from app.models.pm_config import CertStandard, PerfDefault, MarketCertification, MarketCompressor
 from app.models.pm_accessory import AccessoryDefault, FeatureDefault
 from app.models.competitor import CompetitorModel
 from app.models.proposal_approval import ProposalApproval
@@ -30,7 +30,7 @@ __all__ = [
     "ApprovalChain", "ApprovalStep", "ApprovalRequest", "ApprovalRecord",
     "PurchaseOrder", "PurchaseOrderItem", "Supplier",
     "AuditLog",
-    "CertStandard", "PerfDefault",
+    "CertStandard", "PerfDefault", "MarketCertification", "MarketCompressor",
     "CompetitorModel",
     "AccessoryDefault", "FeatureDefault",
     "ProposalApproval",

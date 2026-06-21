@@ -1,5 +1,5 @@
 """产品主线模型: Platform → Product → Version + ManufacturingVariant"""
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum as SAEnum, Table, func
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, Table, func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 import enum
@@ -94,6 +94,17 @@ class Market(Base):
     energy_standard = Column(String(20), nullable=True, comment="能效标准代码: cspf/iseer/seer/eer")
     energy_label = Column(String(20), nullable=True, comment="能效标准显示名: CSPF/ISEER/SEER/EER")
     energy_unit = Column(String(20), nullable=True, comment="能效单位: W/W/BTU/Wh")
+    # ── 新增国家级参数（PR-12: 市场级别竞品对标参数） ──
+    energy_standard_detail = Column(String(100), nullable=True, comment="能效标准细分（如 2025新标准/MEPS等级）")
+    national_standard = Column(String(100), nullable=True, comment="国家标准编号，如 GB/T 7725")
+    voltage_freq = Column(String(50), nullable=True, comment="电压/频率，如 220V/50Hz")
+    cooling_max_temp = Column(Float, nullable=True, comment="制冷最高环境温度 °C")
+    heating_min_temp = Column(Float, nullable=True, comment="制热最低环境温度 °C")
+    structure_type = Column(String(100), nullable=True, comment="机型结构（分体壁挂/天花/风管/柜机）")
+    main_selling_model = Column(String(200), nullable=True, comment="主销机型描述")
+    refrigerant = Column(String(50), nullable=True, comment="主要制冷剂，如 R32/R410A/R290")
+    refrigerant_charge = Column(Float, nullable=True, comment="标准制冷剂灌注量 g")
+    # ── 结束新增 ──
     is_active = Column(String(5), default="true")
 
     products = relationship("Product", secondary="product_markets",

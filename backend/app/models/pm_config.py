@@ -17,6 +17,35 @@ class CertStandard(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class MarketCertification(Base):
+    """市场认证要求表（国家级认证要求：安规/能效/EMC/环保）"""
+    __tablename__ = "market_certifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    market_code = Column(String(20), nullable=False, index=True, comment="关联市场代码")
+    cert_type = Column(String(30), nullable=False, comment="认证类型: safety/energy/emc/environmental")
+    cert_standard = Column(String(200), nullable=False, comment="认证标准/要求")
+    description = Column(String(500), nullable=True, comment="详细说明")
+    is_required = Column(String(5), default="true", comment="是否强制")
+    sort_order = Column(Integer, default=0, comment="排序")
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+
+class MarketCompressor(Base):
+    """市场压缩机信息表（国家级压缩机厂家/型号配置）"""
+    __tablename__ = "market_compressors"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    market_code = Column(String(20), nullable=False, index=True, comment="关联市场代码")
+    manufacturer = Column(String(100), nullable=False, comment="压缩机制造商")
+    model = Column(String(100), nullable=True, comment="压缩机型号")
+    capacity_range = Column(String(50), nullable=True, comment="适用冷量段")
+    notes = Column(String(500), nullable=True, comment="备注")
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+
 class PerfDefault(Base):
     """性能默认参数配置表"""
     __tablename__ = "perf_defaults"
