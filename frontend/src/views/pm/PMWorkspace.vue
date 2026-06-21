@@ -1043,12 +1043,6 @@
           <div v-else class="cost-summary" style="color:#909399">暂无认证费用（请在Tab3填写安全合规标准后自动生成）</div>
           <div v-if="certCostTable.length > 0" class="cost-summary">认证费用合计: <strong>¥{{ certCostTotal.toFixed(1) }} 万元</strong></div>
 
-          <!-- 九、间接成本 -->
-          <el-divider content-position="left">九、间接成本</el-divider>
-          <div class="cost-summary" style="background:#f5f7fa;padding:10px 16px;border-radius:6px">
-            间接成本（管理/场地/水电等）: <strong>¥{{ indirectCost.toFixed(0) }} 元</strong>
-            <span style="font-size:12px;color:#909399;margin-left:8px">（管理员配置，不可修改）</span>
-          </div>
         </el-tab-pane>
 
         <!-- ═══════════ Tab 5: 团队与职责 ═══════════ -->
@@ -1631,16 +1625,6 @@ const trialQty = computed(() => {
   return map[dc] ?? map['C'] ?? 1
 })
 
-// 间接成本 — 管理员配置
-const indirectCost = computed(() => {
-  const raw = systemConfig.value.indirect_cost
-  if (raw) {
-    const n = Number(raw)
-    if (!isNaN(n)) return n
-  }
-  return 5000
-})
-
 // 制造费用+人工 - 按冷量
 const manufacturingCost = computed(() => {
   const cr = projectForm.capacity_range
@@ -1757,7 +1741,7 @@ function refreshDevCostRemarks() {
 const devCostGrandTotal = computed(() => {
   const sumFirst7 = devCostTable.slice(0, 7).reduce((s, r) => s + (Number(r.budget) || 0), 0)
   // 总预算 = 前7项 + 认证费用合计 + 间接成本
-  return sumFirst7 + certCostTotal.value + indirectCost.value / 10000
+  return sumFirst7 + certCostTotal.value
 })
 
 // BOM成本占比

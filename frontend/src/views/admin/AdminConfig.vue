@@ -143,17 +143,7 @@
       </el-table>
     </el-card>
 
-    <!-- 间接成本 -->
-    <el-card shadow="never" class="config-section">
-      <template #header><span>💰 间接成本（万元）</span></template>
-      <el-form label-width="120px" size="small">
-        <el-form-item label="默认间接成本">
-          <el-input-number v-model="indirectCostVal" :min="0" :step="0.1" size="small" />
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 试制数量按项目等级 -->
+    <!-- 试制数量 -->
     <el-card shadow="never" class="config-section">
       <template #header><span>🔧 试制数量（按项目等级）</span></template>
       <el-table :data="trialQtyRows" border size="small">
@@ -255,10 +245,7 @@ function addFeatureDefault() {
   featureDefaultRows.push({ market: '', name: '', default_selection: '选配' })
 }
 
-// 间接成本
-const indirectCostVal = ref(0.5)
-
-// 试制数量
+// 试制数量（按项目等级）
 interface TrialQtyRow { class: string; qty: number }
 const trialQtyRows = reactive<TrialQtyRow[]>([
   { class: 'T', qty: 5 },
@@ -321,7 +308,6 @@ async function loadConfig() {
         parsed.forEach((item: any) => featureDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
       }
     }
-    if (data.indirect_cost) indirectCostVal.value = Number(data.indirect_cost)
     if (data.trial_qty_per_class) {
       const parsed = JSON.parse(data.trial_qty_per_class)
       trialQtyRows.length = 0
@@ -360,7 +346,6 @@ async function saveAll() {
       feature_defaults: JSON.stringify(
         featureDefaultRows.map(r => ({ market: r.market, name: r.name, default_selection: r.default_selection }))
       ),
-      indirect_cost: String(indirectCostVal.value),
       trial_qty_per_class: JSON.stringify(
         Object.fromEntries(trialQtyRows.map(r => [r.class, r.qty]))
       ),
