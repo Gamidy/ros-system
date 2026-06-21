@@ -21,7 +21,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.project import Project, ProjectGate
-from app.models.proposal_approval import ProposalApproval
+from app.models.proposal_approval import ProposalApproval, ProposalParallelReviewer
 from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest
 from app.models.alert import Notification
 
@@ -43,6 +43,53 @@ _PARALLEL_ROLES = [
     "electrical_control_engineer",
     "electrical_engineer",
 ]
+
+
+# ══════════════════════════════════════════════════════════════════
+# 辅助: 校验审批人配置（提交前预检，也便于系统设置页面复用）
+# ══════════════════════════════════════════════════════════════════
+
+def _validate_approver_config(db: Session) -> list[str]:
+    """校验每个并行审批角色和研发总监必须恰好有1个在职用户
+
+    Returns:
+        list[str] — 问题描述列表，空列表表示校验通过
+    """
+    errors: list[str] = []
+
+    # 校验4个并行审批角色
+    for role in _PARALLEL_ROLES:
+        users = db.query(User).filter(User.role == role, User.is_active == True).all()
+        label = _ROLE_LABEL.get(role, role)
+        count = len(users)
+        if count == 0:
+            errors.append(f"无法提交：以下角色未配置审批人：{label}（{count}人）")
+        elif count > 1:
+            errors.append(f"无法提交：以下角色配置了多个审批人：{label}（{count}人）")
+
+    # 校验研发总监
+    director = db.query(User).filter(User.role == "rd_director", User.is_active == True).all()
+    d_label = _ROLE_LABEL.get("rd_director", "研发总监")
+    d_count = len(director)
+    if d_count == 0:
+        errors.append(f"无法提交：以下角色未配置审批人：{d_label}（{d_count}人）")
+    elif d_count > 1:
+        errors.append(f"无法提交：以下角色配置了多个审批人：{d_label}（{d_count}人）")
+
+    return errors
+
+
+# ══════════════════════════════════════════════════════════════════
+# 辅助: 状态变更 + 同步通用审批表（绑定在一起，杜绝遗漏）
+# ══════════════════════════════════════════════════════════════════
+
+def _change_status(db: Session, pa: ProposalApproval, new_status: str):
+    """变更 ProposalApproval 状态并同步 ApprovalRequest
+
+    禁止在业务代码中直接写 pa.status = "..."，必须通过本函数。
+    """
+    pa.status = new_status
+    _sync_approval_request(db, pa)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -141,13 +188,15 @@ def _project_to_snapshot(p: Project) -> dict:
 
 def _proposal_to_out(pa: ProposalApproval) -> dict:
     """将 ProposalApproval ORM 对象转为输出 dict"""
+    # 从独立表加载并行审批人数据（旧 JSON 列仅做兼容读取）
+    parallel_reviewers = _load_parallel_reviewers(pa)
     return {
         "id": pa.id,
         "proposal_id": pa.proposal_id,
         "proposer_id": pa.proposer_id,
         "title": pa.title,
         "status": pa.status,
-        "parallel_reviewers": pa.parallel_reviewers,
+        "parallel_reviewers": parallel_reviewers,
         "director_reviewer_id": pa.director_reviewer_id,
         "director_status": pa.director_status,
         "director_reason": pa.director_reason,
@@ -160,6 +209,37 @@ def _proposal_to_out(pa: ProposalApproval) -> dict:
         "created_at": str(pa.created_at) if pa.created_at else None,
         "updated_at": str(pa.updated_at) if pa.updated_at else None,
     }
+
+
+def _load_parallel_reviewers(pa: ProposalApproval) -> list[dict]:
+    """从独立表或旧 JSON 列加载并行审批人列表"""
+    from app.core.database import SessionLocal
+    # 优先从新表读取
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(ProposalParallelReviewer)
+            .filter(ProposalParallelReviewer.approval_id == pa.id)
+            .order_by(ProposalParallelReviewer.id)
+            .all()
+        )
+        if rows:
+            result = []
+            for r in rows:
+                result.append({
+                    "user_id": r.user_id,
+                    "username": r.username or "",
+                    "role": r.role or "",
+                    "status": r.status,
+                    "reason": r.reason or "",
+                    "reviewed_at": str(r.reviewed_at) if r.reviewed_at else None,
+                })
+            return result
+    finally:
+        db.close()
+
+    # fallback: 旧 JSON 列（兼容旧数据）
+    return pa.parallel_reviewers or []
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -265,23 +345,24 @@ def submit_proposal(
         previous_snapshot = previous_rejected.snapshot
         resubmit_count = (previous_rejected.resubmit_count or 0) + 1
 
+    # ── 2b. 校验审批人配置：每个并行角色+总监必须恰好1人 ──
+    config_errors = _validate_approver_config(db)
+    if config_errors:
+        raise HTTPException(status_code=400, detail="；".join(config_errors))
+
     # ── 3. 查找并行审批人 (4个角色) ──
     parallel_reviewers = []
     for role in _PARALLEL_ROLES:
-        users = db.query(User).filter(User.role == role, User.is_active == True).all()
-        for u in users:
+        user = db.query(User).filter(User.role == role, User.is_active == True).first()
+        if user:
             parallel_reviewers.append({
-                "user_id": u.id,
-                "username": u.username,
+                "user_id": user.id,
+                "username": user.username,
                 "role": _ROLE_LABEL.get(role, role),
                 "status": "pending",
                 "reason": "",
                 "reviewed_at": None,
             })
-
-    if not parallel_reviewers:
-        # 如果系统中没有这些角色的用户，至少需要研发总监
-        pass  # 继续执行，研发总监审批依然有效
 
     # ── 4. 查找研发总监 ──
     director = (
@@ -300,13 +381,27 @@ def submit_proposal(
         proposer_id=current_user.id,
         title=p.name or "",
         status="pending_parallel",
-        parallel_reviewers=parallel_reviewers if parallel_reviewers else None,
+        parallel_reviewers=None,  # 不再写入 JSON 列
         director_reviewer_id=director_id,
         snapshot=snapshot,
         previous_snapshot=previous_snapshot,
         resubmit_count=resubmit_count,
     )
     db.add(pa)
+    db.flush()
+
+    # ── 6a. 插入并行审批人独立表 ──
+    for reviewer in parallel_reviewers:
+        pr = ProposalParallelReviewer(
+            approval_id=pa.id,
+            user_id=reviewer["user_id"],
+            username=reviewer["username"],
+            role=reviewer["role"],
+            status="pending",
+            reason="",
+            reviewed_at=None,
+        )
+        db.add(pr)
     db.flush()
     p.is_draft = False
     p.status = 'submitted'
@@ -396,6 +491,16 @@ def list_pending_approvals(
         if is_admin:
             results.append(_proposal_to_out(pa))
             continue
+        # 从独立表查询并行审批人
+        reviewer_rows = db.query(ProposalParallelReviewer).filter(
+            ProposalParallelReviewer.approval_id == pa.id,
+            ProposalParallelReviewer.user_id == user_id,
+            ProposalParallelReviewer.status == "pending",
+        ).all()
+        if reviewer_rows:
+            results.append(_proposal_to_out(pa))
+            continue
+        # fallback: 旧 JSON 列兼容
         reviewers = pa.parallel_reviewers or []
         for r in reviewers:
             if r.get("user_id") == user_id and r.get("status") == "pending":
@@ -513,12 +618,22 @@ def review_approval(
     is_parallel = False
     reviewer_index = -1
 
-    if not is_admin and pa.parallel_reviewers:
-        for i, r in enumerate(pa.parallel_reviewers):
-            if r.get("user_id") == user_id:
-                is_parallel = True
-                reviewer_index = i
-                break
+    if not is_admin:
+        # 从独立表查询并行审批人身份
+        reviewer_row = db.query(ProposalParallelReviewer).filter(
+            ProposalParallelReviewer.approval_id == pa.id,
+            ProposalParallelReviewer.user_id == user_id,
+        ).first()
+        if reviewer_row:
+            is_parallel = True
+            reviewer_index = -1  # not needed for atomic update
+        elif pa.parallel_reviewers:
+            # fallback: 旧 JSON 列兼容
+            for i, r in enumerate(pa.parallel_reviewers):
+                if r.get("user_id") == user_id:
+                    is_parallel = True
+                    reviewer_index = i
+                    break
 
     if not is_admin and not is_parallel and not is_director:
         raise HTTPException(status_code=403, detail="您不是该审批的审批人")
@@ -529,8 +644,7 @@ def review_approval(
             raise HTTPException(status_code=400, detail="当前不在审批阶段")
 
         if action == "rejected":
-            pa.status = "rejected"
-            _sync_approval_request(db, pa)
+            _change_status(db, pa, "rejected")
             _create_notification(
                 db,
                 target_user_id=pa.proposer_id,
@@ -539,8 +653,7 @@ def review_approval(
                         + (f"原因: {reason}" if reason else ""),
             )
         else:  # approved
-            pa.status = "approved"
-            _sync_approval_request(db, pa)
+            _change_status(db, pa, "approved")
 
             project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
             if project and project.status != 'planning':
@@ -609,21 +722,37 @@ def review_approval(
         if pa.status != "pending_parallel":
             raise HTTPException(status_code=400, detail="当前不在并行审批阶段")
 
-        if pa.parallel_reviewers[reviewer_index].get("status") != "pending":
-            raise HTTPException(status_code=400, detail="您已审批过该申请")
-
-        # 更新当前审批人状态
-        import copy
-        reviewers = copy.deepcopy(pa.parallel_reviewers)  # deep copy to force SQLAlchemy change detection
-        reviewers[reviewer_index]["status"] = action
-        reviewers[reviewer_index]["reason"] = reason or ""
-        reviewers[reviewer_index]["reviewed_at"] = str(now)
-        pa.parallel_reviewers = reviewers
+        # 原子更新：仅当该行 status='pending' 时才更新（防止并发覆盖）
+        from sqlalchemy import update as sa_update
+        stmt = (
+            sa_update(ProposalParallelReviewer)
+            .where(
+                ProposalParallelReviewer.approval_id == pa.id,
+                ProposalParallelReviewer.user_id == user_id,
+                ProposalParallelReviewer.status == "pending",
+            )
+            .values(
+                status=action,
+                reason=reason or "",
+                reviewed_at=now,
+            )
+        )
+        result = db.execute(stmt)
+        if result.rowcount == 0:
+            # 检查是否已审批过（而不是 pending 被并发抢走导致 rowcount=0）
+            existing = db.query(ProposalParallelReviewer).filter(
+                ProposalParallelReviewer.approval_id == pa.id,
+                ProposalParallelReviewer.user_id == user_id,
+            ).first()
+            if existing and existing.status != "pending":
+                raise HTTPException(status_code=400, detail="您已审批过该申请")
+            else:
+                raise HTTPException(status_code=400, detail="审批状态异常，请重试")
+        db.flush()
 
         if action == "rejected":
             # 驳回 → 整个审批结束
-            pa.status = "rejected"
-            _sync_approval_request(db, pa)
+            _change_status(db, pa, "rejected")
 
             # 通知产品经理
             _create_notification(
@@ -636,12 +765,14 @@ def review_approval(
         else:
             # 检查是否全部通过
             all_approved = all(
-                r.get("status") == "approved" for r in pa.parallel_reviewers
+                r.status == "approved" for r in
+                db.query(ProposalParallelReviewer)
+                .filter(ProposalParallelReviewer.approval_id == pa.id)
+                .all()
             )
             if all_approved:
                 # 全部通过 → 进入研发总监审批
-                pa.status = "pending_director"
-                _sync_approval_request(db, pa)
+                _change_status(db, pa, "pending_director")
 
                 # 通知研发总监
                 if pa.director_reviewer_id:
@@ -674,8 +805,7 @@ def review_approval(
 
         if action == "rejected":
             # 驳回
-            pa.status = "rejected"
-            _sync_approval_request(db, pa)
+            _change_status(db, pa, "rejected")
 
             _create_notification(
                 db,
@@ -686,9 +816,7 @@ def review_approval(
             )
         else:
             # 通过 → 自动创建项目 (草稿 → 正式)
-            pa.status = "approved"
-            _sync_approval_request(db, pa)
-
+            # 注意：状态赋值在所有副作用代码之后，commit() 之前
             project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
             if project and project.status != 'planning':
                 import random
@@ -752,6 +880,9 @@ def review_approval(
                 title=f"立项审批已通过: {pa.title}",
                 content=f"您的项目「{pa.title}」已通过全部审批，现已正式立项。",
             )
+
+            # 状态赋值放在所有副作用代码之后，commit() 之前最后一步
+            _change_status(db, pa, "approved")
 
         db.commit()
         db.refresh(pa)
@@ -969,7 +1100,7 @@ def withdraw_proposal(
     p.status = "draft"
 
     # ── 4. 标记审批为撤销 ──
-    pa.status = "withdrawn"
+    _change_status(db, pa, "withdrawn")
 
     # ── 5. 同步 ApprovalRequest ──
     ar = db.query(ApprovalRequest).filter(
@@ -979,16 +1110,29 @@ def withdraw_proposal(
     if ar:
         ar.status = "withdrawn"
 
-    # ── 6. 通知并行审批人 ──
-    reviewers = pa.parallel_reviewers or []
-    for reviewer in reviewers:
-        if reviewer.get("user_id"):
+    # ── 6. 通知并行审批人（从独立表或旧JSON列查询） ──
+    reviewer_rows = db.query(ProposalParallelReviewer).filter(
+        ProposalParallelReviewer.approval_id == pa.id,
+    ).all()
+    if reviewer_rows:
+        for r in reviewer_rows:
             _create_notification(
                 db,
-                target_user_id=reviewer["user_id"],
+                target_user_id=r.user_id,
                 title=f"立项审批已撤销: {pa.title}",
                 content=f"产品经理 {current_user.username} 撤销了项目「{pa.title}」的立项申请。",
             )
+    else:
+        # fallback: 旧 JSON 列
+        reviewers = pa.parallel_reviewers or []
+        for reviewer in reviewers:
+            if reviewer.get("user_id"):
+                _create_notification(
+                    db,
+                    target_user_id=reviewer["user_id"],
+                    title=f"立项审批已撤销: {pa.title}",
+                    content=f"产品经理 {current_user.username} 撤销了项目「{pa.title}」的立项申请。",
+                )
 
     # ── 7. 通知研发总监 ──
     if pa.director_reviewer_id:
