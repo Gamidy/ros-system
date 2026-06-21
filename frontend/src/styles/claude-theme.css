@@ -316,3 +316,96 @@ html, body, #app {
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
+
+/* ═══════════════════════════════════════════
+   📱 Mobile Responsive Global Overrides
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* ── Tables: horizontal scroll on mobile ── */
+  .el-table {
+    width: 100% !important;
+    overflow-x: auto !important;
+    display: block;
+  }
+  .el-table__body-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Force table cells to not shrink below content */
+  .el-table .el-table__cell {
+    white-space: nowrap;
+  }
+  
+  /* ── Cards: full width stack ── */
+  .el-card {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  /* ── Form: full width ── */
+  .el-form-item {
+    display: flex !important;
+    flex-wrap: wrap;
+  }
+  .el-form-item__content {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+  .el-input, .el-select, .el-date-editor, .el-autocomplete {
+    width: 100% !important;
+  }
+  
+  /* ── Dialog: full screen on mobile ── */
+  .el-dialog {
+    width: calc(100% - 32px) !important;
+    max-width: 100% !important;
+    margin: 16px auto !important;
+    border-radius: 16px !important;
+  }
+  .el-dialog.is-fullscreen {
+    border-radius: 0 !important;
+  }
+  
+  /* ── Page padding override ── */
+  .layout-main {
+    padding: 12px !important;
+  }
+  
+  /* ── Grid/Flex wrapping ── */
+  .el-row {
+    flex-wrap: wrap !important;
+  }
+  [class*="el-col-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+  
+  /* ── Dashboard cards ── */
+  .dashboard-grid, .stat-cards, .metric-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* ── Buttons: full width on mobile for primary actions ── */
+  .el-button--primary {
+    padding: 12px 20px;
+  }
+  
+  /* ── Hide decorative elements on mobile ── */
+  .bg-decoration, .bg-circles {
+    display: none !important;
+  }
+}
+
+/* ── Small tablets (768-1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  [class*="el-col-md-"] {
+    width: 50% !important;
+    max-width: 50% !important;
+    flex: 0 0 50% !important;
+  }
+  .claude-content {
+    padding: 16px;
+  }
+}

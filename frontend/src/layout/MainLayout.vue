@@ -1,12 +1,15 @@
 <template>
   <div class="claude-layout">
+    <!-- Sidebar Overlay (mobile only) -->
+    <div class="sidebar-overlay" v-if="mobileOpen" @click="mobileOpen = false"></div>
+    
     <!-- Sidebar -->
-    <aside class="claude-sidebar" :class="{ collapsed: isCollapse }">
+    <aside class="claude-sidebar" :class="{ collapsed: isCollapse, 'mobile-open': mobileOpen }">
       <div class="sidebar-brand" @click="router.push('/dashboard')">
         <div class="brand-mark">
           <span class="brand-icon">R</span>
         </div>
-        <span class="brand-text" v-show="!isCollapse">ROS</span>
+        <span class="brand-text" v-show="!isCollapse || mobileOpen">ROS</span>
       </div>
       
       <nav class="sidebar-nav">
@@ -16,6 +19,7 @@
           :to="menu.path"
           class="nav-item"
           :class="{ active: route.path === menu.path }"
+          @click="mobileOpen = false"
         >
           <el-badge v-if="menu.path.includes('approval') && pendingApprovalCount > 0" 
             :value="pendingApprovalCount" :max="99" class="nav-badge">
@@ -26,19 +30,27 @@
           <el-icon v-else class="nav-icon">
             <component :is="menu.icon" />
           </el-icon>
-          <span class="nav-label" v-show="!isCollapse">{{ menu.title }}</span>
+          <span class="nav-label" v-show="!isCollapse || mobileOpen">{{ menu.title }}</span>
         </router-link>
       </nav>
     </aside>
 
     <!-- Main Content -->
-    <div class="claude-main">
+    <div class="claude-main" :class="{ 'menu-open': mobileOpen }">
       <!-- Header -->
       <header class="claude-header">
         <div class="header-left">
-          <button class="collapse-btn" @click="isCollapse = !isCollapse">
+          <!-- Desktop collapse button -->
+          <button class="collapse-btn desktop-only" @click="isCollapse = !isCollapse">
             <el-icon :size="18">
               <Fold v-if="!isCollapse" />
+              <Expand v-else />
+            </el-icon>
+          </button>
+          <!-- Mobile hamburger button -->
+          <button class="mobile-menu-btn mobile-only" @click="toggleMobileSidebar">
+            <el-icon :size="20">
+              <Fold v-if="mobileOpen" />
               <Expand v-else />
             </el-icon>
           </button>
@@ -80,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
@@ -92,12 +104,23 @@ const authStore = useAuthStore()
 const isCollapse = ref(false)
 const pendingApprovalCount = ref(0)
 
-const userInitial = computed(() => {
-  const name = authStore.user?.username || 'U'
-  return name.charAt(0).toUpperCase()
-})
+// ── Mobile responsive state ──
+const isMobile = ref(window.innerWidth < 768)
+const mobileOpen = ref(false)
+
+function checkMobile() {
+  isMobile.value = window.innerWidth < 768
+  if (!isMobile.value) {
+    mobileOpen.value = false
+  }
+}
+
+function toggleMobileSidebar() {
+  mobileOpen.value = !mobileOpen.value
+}
 
 onMounted(async () => {
+  window.addEventListener('resize', checkMobile)
   if (!authStore.user) {
     try {
       await authStore.init()
@@ -112,6 +135,15 @@ onMounted(async () => {
   } catch {
     // Silently ignore
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+
+const userInitial = computed(() => {
+  const name = authStore.user?.username || 'U'
+  return name.charAt(0).toUpperCase()
 })
 
 function handleLogout() {
@@ -406,25 +438,101 @@ function handleLogout() {
   background: var(--c-danger-light);
 }
 
+/* ── Sidebar Overlay (mobile) ── */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: var(--c-z-modal);
+  display: none;
+}
+
+/* ── Desktop/Mobile visibility ── */
+@media (min-width: 769px) {
+  .mobile-only { display: none !important; }
+}
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  .sidebar-overlay {
+    display: block;
+  }
+  
   .claude-sidebar {
     position: fixed;
-    z-index: var(--c-z-modal);
+    top: 0;
+    left: 0;
+    z-index: calc(var(--c-z-modal) + 1);
     height: 100vh;
     transform: translateX(-100%);
+    width: 280px;
+    transition: transform 0.3s ease;
   }
-  .claude-sidebar:not(.collapsed) {
+  .claude-sidebar.mobile-open {
     transform: translateX(0);
   }
+  /* On mobile, collapsed state doesn't apply (use mobile-open instead) */
+  .claude-sidebar.collapsed.mobile-open {
+    width: 280px;
+  }
+  
   .claude-main {
     margin-left: 0;
+    width: 100%;
   }
+  
   .claude-content {
-    padding: 16px;
+    padding: 12px;
   }
+  
   .user-name {
     display: none;
+  }
+  
+  /* Mobile menu button - always visible on mobile */
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--c-radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--c-text-tertiary);
+    cursor: pointer;
+    transition: all var(--c-transition-fast);
+  }
+  .mobile-menu-btn:hover {
+    background: var(--c-bg-hover);
+    color: var(--c-text-primary);
+  }
+  
+  /* Breadcrumb text smaller on mobile */
+  .breadcrumb {
+    font-size: 13px;
+  }
+  .breadcrumb-current {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Tiny screens (≤400px) - even tighter */
+@media (max-width: 400px) {
+  .claude-content {
+    padding: 8px;
+  }
+  .header-right {
+    gap: 4px;
   }
 }
 </style>

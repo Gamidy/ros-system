@@ -1,4 +1,5 @@
 """审计日志中间件 — 记录所有 /api/ 的 CUD (POST/PUT/PATCH/DELETE) 操作"""
+import logging
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request
 from jose import jwt, JWTError
@@ -6,6 +7,8 @@ from app.core.database import SessionLocal
 from app.core.config import settings
 from app.models.audit import AuditLog
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 CUD_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -49,7 +52,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         # 获取客户端 IP
         ip_address = request.client.host if request.client else None
 
-        # 写入审计日志
+        # 写入审计日志（失败不阻塞请求）
         db = SessionLocal()
         try:
             audit = AuditLog(
@@ -62,8 +65,9 @@ class AuditMiddleware(BaseHTTPMiddleware):
             )
             db.add(audit)
             db.commit()
-        except Exception:
+        except Exception as exc:
             db.rollback()
+            logger.warning("审计日志写入失败: %s %s — %s", request.method, request.url.path, exc)
         finally:
             db.close()
 

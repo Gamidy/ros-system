@@ -184,236 +184,20 @@
               ⚙️ 技术要求
             </span>
           </template>
-
-          <!-- 流程引导 el-steps -->
-          <el-steps :active="techStep" finish-status="success" align-center style="margin-bottom:20px;cursor:pointer">
-            <el-step title="性能指标" description="核心性能参数" @click="techStep = 0" />
-            <el-step title="安全合规" description="法规标准要求" @click="techStep = 1" />
-            <el-step title="物料部件" description="关键物料与部件" @click="techStep = 2" />
-            <el-step title="附件/功能配置" description="配件与功能选配" @click="techStep = 3" />
-          </el-steps>
-
-          <!-- Step ❶: 性能指标 -->
-          <template v-if="techStep === 0">
-            <el-divider content-position="left">❶ 核心性能参数</el-divider>
-            <el-table :data="corePerfTable" border size="small" class="section-table">
-              <el-table-column prop="param_name" label="参数名称" width="130">
-                <template #default="{ row }">
-                  <el-input v-model="row.param_name" size="small" placeholder="如: 制冷量(W)" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="baseline" label="基准值" width="140">
-                <template #default="{ row }">
-                  <el-input
-                    v-if="row.source === 'auto' || row.source === 'market_config'"
-                    :model-value="row.baseline"
-                    size="small"
-                    disabled
-                  />
-                  <el-input v-else v-model="row.baseline" size="small" placeholder="手动填写" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="target_value" label="目标值" width="140">
-                <template #default="{ row }">
-                  <el-input v-model="row.target_value" size="small" placeholder="如: 3500W" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="aux_competitor" label="AUX竞品" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.aux_competitor" size="small" placeholder="AUX对应值" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="tcl_competitor" label="TCL竞品" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.tcl_competitor" size="small" placeholder="TCL对应值" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="source" label="来源" width="100">
-                <template #default="{ row }">
-                  <el-tag v-if="row.source === 'auto'" type="success" size="small">自动</el-tag>
-                  <el-tag v-else-if="row.source === 'market_config'" type="primary" size="small">市场配置</el-tag>
-                  <el-tag v-else type="info" size="small">手动</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="70">
-                <template #default="{ $index }">
-                  <el-button link type="danger" size="small" @click="removeCorePerfRow($index)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <el-button size="small" style="margin-top:8px" @click="addCorePerfRow">+ 添加行</el-button>
-          </template>
-
-          <!-- Step ❷: 安全合规 -->
-          <template v-if="techStep === 1">
-            <el-divider content-position="left">❷ 安全与合规要求</el-divider>
-            <div v-if="safetyComplianceTable.length === 0" style="color:#909399;font-size:13px;padding:20px 0">
-              请在「项目概述与市场」中选择目标市场以加载安全合规标准
-            </div>
-            <el-table v-else :data="safetyComplianceTable" border size="small" class="section-table">
-              <el-table-column prop="standard" label="法规标准" width="160">
-                <template #default="{ row }">
-                  <span class="linked-val">{{ row.standard }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="applicable_market" label="适用市场" width="100">
-                <template #default="{ row }">
-                  <span class="linked-val">{{ row.applicable_market }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="key_requirement" label="关键要求" min-width="140">
-                <template #default="{ row }">
-                  <span class="linked-val">{{ row.key_requirement }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="verification_method" label="验证方式" width="120">
-                <template #default="{ row }">
-                  <span class="linked-val">{{ row.verification_method }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="involved_parts" label="涉及零部件" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.involved_parts" size="small" placeholder="如: 压缩机/电控板" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="cert_cycle" label="认证周期" width="100">
-                <template #default="{ row }">
-                  <el-input v-model="row.cert_cycle" size="small" placeholder="如: 45天" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="remark" label="备注" width="140">
-                <template #default="{ row }">
-                  <el-input v-model="row.remark" size="small" placeholder="如: 需第三方检测" />
-                </template>
-              </el-table-column>
-            </el-table>
-          </template>
-
-          <!-- Step ❸: 物料部件 -->
-          <template v-if="techStep === 2">
-            <el-divider content-position="left">❸ 物料与部件清单</el-divider>
-            <el-table :data="materialComponentTable" border size="small" class="section-table">
-              <el-table-column prop="type" label="类型" width="90">
-                <template #default="{ row }">
-                  <el-select v-model="row.type" size="small" style="width:100%">
-                    <el-option label="物料" value="物料" />
-                    <el-option label="部件" value="部件" />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <el-table-column prop="name" label="名称" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.name" size="small" placeholder="如: 蒸发器" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="spec" label="规格" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.spec" size="small" placeholder="如: Φ7×0.25 双排" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="qty" label="数量" width="80">
-                <template #default="{ row }">
-                  <el-input-number v-model="row.qty" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="unit" label="单位" width="70">
-                <template #default="{ row }">
-                  <el-input v-model="row.unit" size="small" placeholder="如: 个/套/m" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="usage" label="用途" width="100">
-                <template #default="{ row }">
-                  <el-input v-model="row.usage" size="small" placeholder="如: 换热核心部件" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="supplier" label="供应商" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.supplier" size="small" placeholder="如: 美的/格力" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="delivery_cycle" label="交期" width="90">
-                <template #default="{ row }">
-                  <el-input v-model="row.delivery_cycle" size="small" placeholder="如: 30天" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="unit_price" label="单价(¥)" width="100">
-                <template #default="{ row }">
-                  <el-input-number v-model="row.unit_price" :min="0" :step="0.01" size="small" controls-position="right" style="width:100%" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="subtotal" label="小计(¥)" width="100">
-                <template #default="{ row }">
-                  <span>{{ ((row.qty || 0) * (row.unit_price || 0)).toFixed(2) }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="candidate_vendors" label="候选厂家" min-width="160">
-                <template #default="{ row }">
-                  <el-input v-model="row.candidate_vendors" type="textarea" :rows="2" size="small" placeholder="一行一个厂家" />
-                </template>
-              </el-table-column>
-              <el-table-column prop="remark" label="备注" width="120">
-                <template #default="{ row }">
-                  <el-input v-model="row.remark" size="small" placeholder="如: 长周期物料(8周)" />
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="70" fixed="right">
-                <template #default="{ $index }">
-                  <el-button link type="danger" size="small" @click="removeMaterialComponentRow($index)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <el-button size="small" style="margin-top:8px" @click="addMaterialComponentRow">+ 添加行</el-button>
-          </template>
-
-          <!-- Step ❹: 附件/功能配置 -->
-          <template v-if="techStep === 3">
-            <el-divider content-position="left">❹ 附件配置</el-divider>
-            <el-table :data="accessoryConfigTable" border size="small" class="section-table">
-              <el-table-column prop="name" label="配件名称" min-width="160">
-                <template #default="{ row }">
-                  <span>{{ row.name }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="selection" label="选配情况" min-width="160">
-                <template #default="{ row }">
-                  <el-select v-model="row.selection" size="small" style="width:100%">
-                    <el-option label="标配" value="标配" />
-                    <el-option label="选配" value="选配" />
-                    <el-option label="不配" value="不配" />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <el-table-column label="" width="90">
-                <template #default="{ row }">
-                  <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
-                </template>
-              </el-table-column>
-            </el-table>
-
-            <el-divider content-position="left" style="margin-top:20px">❹ 功能配置</el-divider>
-            <el-table :data="featureConfigTable" border size="small" class="section-table">
-              <el-table-column prop="name" label="功能名称" min-width="160">
-                <template #default="{ row }">
-                  <span>{{ row.name }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="selection" label="选配情况" min-width="160">
-                <template #default="{ row }">
-                  <el-select v-model="row.selection" size="small" style="width:100%">
-                    <el-option label="标配" value="标配" />
-                    <el-option label="选配" value="选配" />
-                    <el-option label="不配" value="不配" />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <el-table-column label="" width="90">
-                <template #default="{ row }">
-                  <span v-if="row.selection !== row._original" style="color:#e6a23c;font-size:12px">✏️ 已调整</span>
-                </template>
-              </el-table-column>
-            </el-table>
-          </template>
-
+          <ProposalTechSpec
+            :tab-status="tabStatus"
+            :tech-step="techStep"
+            :core-perf-table="corePerfTable"
+            :safety-compliance-table="safetyComplianceTable"
+            :material-component-table="materialComponentTable"
+            :accessory-config-table="accessoryConfigTable"
+            :feature-config-table="featureConfigTable"
+            @update:tech-step="techStep = $event"
+            @add-core-perf-row="addCorePerfRow"
+            @remove-core-perf-row="removeCorePerfRow"
+            @add-material-row="addMaterialComponentRow"
+            @remove-material-row="removeMaterialComponentRow"
+          />
         </el-tab-pane>
 
         <!-- ═══════════ Tab 4: 成本核算 ═══════════ -->
@@ -425,263 +209,18 @@
               💰 成本核算
             </span>
           </template>
-          <!-- 一、项目开发费用 -->
-          <el-divider content-position="left">一、项目开发费用</el-divider>
-          <el-table :data="devCostTable" border size="small" class="section-table">
-            <el-table-column prop="item" label="费用项目" width="140" />
-            <el-table-column label="预算(W)" width="140">
-              <template #default="{ row }">
-                <template v-if="row.item === '委外开发费用'">
-                  <el-input-number
-                    v-if="projectForm.has_outsourcing"
-                    v-model="row.budget"
-                    :min="0" :step="0.1" size="small" controls-position="right" style="width:100%"
-                  />
-                  <span v-else class="linked-val">0.0</span>
-                </template>
-                <template v-else>
-                  <el-input-number
-                    v-if="!row.linked"
-                    v-model="row.budget"
-                    :min="0" :step="0.1" size="small" controls-position="right" style="width:100%"
-                  />
-                  <span v-else class="linked-val">{{ row.budget.toFixed(1) }}</span>
-                </template>
-              </template>
-            </el-table-column>
-            <el-table-column label="占比%" width="100">
-              <template #default="{ row }">
-                {{ devCostGrandTotal > 0 ? ((row.budget / devCostGrandTotal) * 100).toFixed(1) : '0.0' }}%
-              </template>
-            </el-table-column>
-            <el-table-column prop="remark" label="说明" min-width="280">
-              <template #default="{ row }">
-                <span class="linked-val">{{ row.remark }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="cost-summary">开发费用合计: <strong>¥{{ devCostGrandTotal.toFixed(1) }} 万元</strong></div>
-          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
-            <el-switch v-model="projectForm.has_outsourcing" size="small" active-text="有委外开发" inactive-text="无委外开发" />
-          </div>
-
-          <!-- 二、经济指标分析 -->
-          <el-divider content-position="left">二、经济指标分析</el-divider>
-          <el-row :gutter="16">
-            <el-col :span="8">
-              <el-form-item label="目标出厂价FOB($)(美元)" label-width="150px" size="small">
-                <el-input-number v-model="projectForm.fob_price" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="汇率(USD/CNY)" label-width="130px" size="small">
-                <el-input :model-value="exchangeRate.toFixed(2)" disabled size="small" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="目标BOM成本(￥)(人民币)" label-width="140px" size="small">
-                <el-input-number v-model="projectForm.bom_cost_target" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="16">
-            <el-col :span="8">
-              <el-form-item label-width="150px" size="small">
-                <template #label>
-                  BOM成本占比
-                  <el-tooltip content="BOM成本占出厂价的比例，计算公式: BOM成本÷(FOB价格×汇率)×100%" placement="top">
-                    <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </template>
-                <el-input :model-value="bomCostRatioText" disabled size="small" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label-width="130px" size="small">
-                <template #label>
-                  制造费用+人工(￥)
-                  <el-tooltip content="制造费用和人工成本合计(万元)，由系统按配置自动计算" placement="top">
-                    <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </template>
-                <el-input :model-value="manufacturingCost.toFixed(0)" disabled size="small" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label-width="140px" size="small">
-                <template #label>
-                  毛利(￥)
-                  <el-tooltip content="毛利 = 出厂价 - BOM成本 - 制造费用 - 人工费用，反映项目盈利能力" placement="top">
-                    <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </template>
-                <el-input :model-value="grossMarginText" disabled size="small" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="16">
-            <el-col :span="12">
-              <el-form-item label="年销量预测(首年)(台)" label-width="140px" size="small">
-                <el-input-number v-model="projectForm.annual_sales_forecast" :min="0" :step="1000" size="small" controls-position="right" style="width:100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="产品生命周期" label-width="120px" size="small">
-                <el-input v-model="projectForm.product_lifecycle" size="small" placeholder="如: 5年" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <!-- 三、模具/工装费用初步核算 -->
-          <el-divider content-position="left">三、模具/工装费用初步核算</el-divider>
-          <div style="margin-bottom:8px">
-            <el-button size="small" @click="addMoldRow">+ 添加行</el-button>
-          </div>
-          <el-table :data="moldCostTable" border size="small" class="section-table">
-            <el-table-column label="模具名称" min-width="160">
-              <template #default="{ row }">
-                <el-input v-model="row.name" size="small" placeholder="模具名称" />
-              </template>
-            </el-table-column>
-            <el-table-column label="数量(副)" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.qty" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="合计(W)" width="130">
-              <template #default="{ row }">
-                <el-input-number v-model="row.total" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="备注" min-width="160">
-              <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" placeholder="备注" />
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="70">
-              <template #default="{ $index }">
-                <el-button link type="danger" size="small" @click="removeMoldRow($index)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="cost-summary">模具/工装合计: <strong>¥{{ moldCostTotal.toFixed(1) }} 万元</strong></div>
-
-          <!-- 四、试制费用（按项目等级确定数量） -->
-          <el-divider content-position="left">四、试制费用</el-divider>
-          <div class="cost-summary" style="background:#f0f9eb;padding:10px 16px;border-radius:6px;margin-bottom:8px">
-            试制数量: <strong>{{ trialQty }}台</strong>（按项目等级「{{ projectForm.dev_category || '未设置' }}」自动确定）
-            <el-tooltip content="全新开发≥20台，派生≥10台，降本优化≥5台，高难度/高复杂度项目可适当上浮" placement="top">
-              <el-icon style="margin-left:4px;cursor:help;color:#909399"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            <span v-if="trialQty > 20" style="color:#e6a23c;margin-left:8px">⚠ 建议分批试制</span>
-          </div>
-
-          <!-- 五、试制样机费用 -->
-          <el-divider content-position="left">五、试制样机费用</el-divider>
-          <el-table :data="protoCostTable" border size="small" class="section-table">
-            <el-table-column prop="stage" label="阶段" width="80" />
-            <el-table-column label="数量(台)" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.qty" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="单套费用(W)" width="130">
-              <template #default="{ row }">
-                <el-input-number v-model="row.unit_cost" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="合计(W)" width="120">
-              <template #default="{ row }">
-                {{ (row.qty * row.unit_cost).toFixed(2) }}
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="cost-summary">样机合计: P0~P2 <strong>¥{{ protoDevTotal.toFixed(2) }} 万元</strong> | 客户样机: <strong>¥{{ clientSampleCost.toFixed(2) }} 万元</strong> | 总计: <strong>¥{{ protoCostTotal.toFixed(2) }} 万元</strong></div>
-
-          <!-- 六、人工费用初步核算 -->
-          <el-divider content-position="left">六、人工费用初步核算</el-divider>
-          <el-table :data="laborCostTable" border size="small" class="section-table">
-            <el-table-column prop="module" label="模块" width="100" />
-            <el-table-column label="人数(人)" width="80">
-              <template #default="{ row }">
-                <el-input-number v-model="row.people_count" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="月薪(W)" width="110">
-              <template #default="{ row }">
-                <el-input-number v-model="row.monthly_salary" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="人月" width="130">
-              <template #default="{ row }">
-                <span class="linked-val">{{ (row.months * (row.occupancy_rate || 100) / 100).toFixed(1) }}</span>
-                <div style="font-size:11px;color:#909399">{{ row.months }}月 × {{ row.occupancy_rate || 100 }}%</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="占用度%" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.occupancy_rate" :min="0" :max="100" :step="10" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="人月数" width="80">
-              <template #default="{ row }">
-                <el-input-number v-model="row.months" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="费用(W)" width="120">
-              <template #default="{ row }">
-                {{ (row.people_count * row.monthly_salary * row.months * (row.occupancy_rate || 100) / 100).toFixed(1) }}
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="cost-summary">人工费用合计: <strong>¥{{ laborCostTotal.toFixed(1) }} 万元</strong></div>
-
-          <!-- 七、测试费用 -->
-          <el-divider content-position="left">七、测试费用</el-divider>
-          <el-table :data="testCostTable" border size="small" class="section-table">
-            <el-table-column prop="stage" label="阶段" width="80" />
-            <el-table-column label="天数(天)" width="100">
-              <template #default="{ row }">
-                <el-input-number v-model="row.days" :min="0" :step="1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column label="单价(W)" width="120">
-              <template #default="{ row }">
-                <span>{{ row.unit_price.toFixed(3) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="合计(W)" width="120">
-              <template #default="{ row }">
-                {{ (row.days * row.unit_price).toFixed(2) }}
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="cost-summary">测试费用合计: <strong>¥{{ testCostTotal.toFixed(2) }} 万元</strong></div>
-
-          <!-- 八、认证费用（从Tab3安全合规自动生成） -->
-          <el-divider content-position="left">
-            八、认证费用（从Tab3安全合规自动生成）
-            <el-tooltip content="认证费用从Tab3安全合规标准自动映射，在Tab3填写标准后此处自动生成费用项，可手动调整金额" placement="top">
-              <el-icon style="margin-left:6px;cursor:help;color:#909399;font-size:14px"><QuestionFilled /></el-icon>
-            </el-tooltip>
-          </el-divider>
-          <el-table v-if="certCostTable.length > 0" :data="certCostTable" border size="small" class="section-table">
-            <el-table-column prop="cert_name" label="标准名" width="100" />
-            <el-table-column prop="cert_body" label="认证机构" width="100" />
-            <el-table-column label="费用(W)" width="130">
-              <template #default="{ row }">
-                <el-input-number v-model="row.cost_wan" :min="0" :step="0.1" size="small" controls-position="right" style="width:100%" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="160">
-              <template #default="{ row }">
-                <el-input v-model="row.remark" size="small" placeholder="备注" />
-              </template>
-            </el-table-column>
-          </el-table>
-          <div v-else class="cost-summary" style="color:#909399">暂无认证费用（请在Tab3填写安全合规标准后自动生成）</div>
-          <div v-if="certCostTable.length > 0" class="cost-summary">认证费用合计: <strong>¥{{ certCostTotal.toFixed(1) }} 万元</strong></div>
-
+          <ProposalCosting
+            :tab-status="tabStatus"
+            :dev-cost-table="devCostTable"
+            :mold-cost-table="moldCostTable"
+            :proto-cost-table="protoCostTable"
+            :labor-cost-table="laborCostTable"
+            :test-cost-table="testCostTable"
+            :cert-cost-table="certCostTable"
+            :project-form="projectForm"
+            :exchange-rate="exchangeRate"
+            :system-config="systemConfig"
+          />
         </el-tab-pane>
 
         <!-- ═══════════ Tab 5: 团队与职责 ═══════════ -->
@@ -693,158 +232,16 @@
               👥 团队与职责
             </span>
           </template>
-          <div class="team-section">
-            <!-- 项目类型选择（与Tab1 dev_category同步） -->
-            <div class="team-toolbar">
-              <el-form-item label="项目类型" label-width="80px" size="small" style="margin-bottom:0">
-                <el-select v-model="selectedProjectType" placeholder="选择项目类型加载角色模板" clearable @change="onProjectTypeChange" style="width:180px">
-                  <el-option label="全新开发" value="全新开发" />
-                  <el-option label="派生" value="派生" />
-                  <el-option label="降本优化" value="降本优化" />
-                </el-select>
-              </el-form-item>
-              <el-button type="primary" size="small" @click="addTeamRow">添加成员</el-button>
-              <span class="team-hint">选择项目类型自动加载预设角色模板</span>
-            </div>
-
-            <!-- 团队摘要面板 -->
-            <div class="team-summary" v-if="teamTable.length > 0">
-              <el-tag size="small" type="info">总角色: {{ teamSummary.totalRoles }}</el-tag>
-              <el-tag size="small" type="info">总人数: {{ teamSummary.totalSlots }}</el-tag>
-              <el-tag size="small" :type="teamSummary.unfilled === 0 ? 'success' : 'warning'">已分配: {{ teamSummary.filled }}</el-tag>
-              <el-tag size="small" :type="teamSummary.unfilled > 0 ? 'danger' : 'success'">未分配: {{ teamSummary.unfilled }}</el-tag>
-              <span class="team-summary-roles">
-                <span v-for="sr in teamSummary.roleSummaries" :key="sr.role" class="summary-role-item">
-                  {{ sr.role }} {{ sr.headcount }}
-                  <span v-if="sr.filled === sr.headcount">✅</span>
-                  <span v-else>⚠{{ sr.filled }}/{{ sr.headcount }}</span>
-                </span>
-              </span>
-            </div>
-
-            <el-table :data="teamTable" border size="small" class="section-table" row-key="seq">
-              <!-- 序号 -->
-              <el-table-column label="序号" width="55" align="center">
-                <template #default="{ $index }">{{ $index + 1 }}</template>
-              </el-table-column>
-              <!-- 角色 -->
-              <el-table-column width="140">
-                <template #header>
-                  角色
-                  <el-tooltip content="选择项目类型后自动加载预设角色模板，可自行调整人数和分配人员。14种标准角色覆盖研发全流程" placement="top">
-                    <el-icon style="margin-left:4px;cursor:help;color:#909399;font-size:13px"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </template>
-                <template #default="{ row, $index }">
-                  <el-select v-model="row.role" size="small" placeholder="选择角色" @change="onTeamRoleChange($index)" style="width:100%">
-                    <el-option v-for="r in teamRoles" :key="r.value" :label="r.label" :value="r.value" />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <!-- 人数 -->
-              <el-table-column label="人数" width="65" align="center">
-                <template #default="{ row, $index }">
-                  <el-input-number v-model="row.headcount" :min="1" :max="10" size="small" controls-position="right" @change="onHeadcountChange($index)" style="width:60px" />
-                </template>
-              </el-table-column>
-              <!-- 姓名（支持槽位展开） -->
-              <el-table-column label="姓名" min-width="200">
-                <template #default="{ row, $index }">
-                  <!-- headcount=1: 直接显示 -->
-                  <template v-if="row.headcount <= 1">
-                    <el-select v-model="row.user_id" size="small" placeholder="选择人员" filterable @change="onTeamUserChange($index, 0)" style="width:100%">
-                      <el-option
-                        v-for="u in getUsersByRole(row.role)"
-                        :key="u.id"
-                        :label="getUserOptionLabel(u)"
-                        :value="u.id"
-                      >
-                        <div class="user-option">
-                          <span>{{ u.full_name || u.username }}</span>
-                          <span v-if="getWorkloadBadge(u.id)" class="workload-badge" :style="{color: getWorkloadBadge(u.id)?.color}">
-                            {{ getWorkloadBadge(u.id)?.text }}
-                          </span>
-                        </div>
-                      </el-option>
-                    </el-select>
-                  </template>
-                  <!-- headcount>1: 弹出槽位编辑 -->
-                  <template v-else>
-                    <el-popover placement="bottom" :width="320" trigger="click">
-                      <template #reference>
-                        <el-tag
-                          :type="getSlotFillStatus(row) === 'full' ? 'success' : getSlotFillStatus(row) === 'partial' ? 'warning' : 'info'"
-                          style="cursor:pointer"
-                        >
-                          {{ getSlotSummary(row) }}
-                        </el-tag>
-                      </template>
-                      <div class="slot-editor">
-                        <div v-for="(slot, si) in row.slots" :key="slot.slot_id" class="slot-row">
-                          <span class="slot-label">槽{{ slot.slot_id }}</span>
-                          <el-select v-model="slot.user_id" size="small" placeholder="选择人员" filterable @change="onSlotUserChange($index, si)" style="width:180px">
-                            <el-option
-                              v-for="u in getUsersByRole(row.role)"
-                              :key="u.id"
-                              :label="getUserOptionLabel(u)"
-                              :value="u.id"
-                            >
-                              <div class="user-option">
-                                <span>{{ u.full_name || u.username }}</span>
-                                <span v-if="getWorkloadBadge(u.id)" class="workload-badge" :style="{color: getWorkloadBadge(u.id)?.color}">
-                                  {{ getWorkloadBadge(u.id)?.text }}
-                                </span>
-                              </div>
-                            </el-option>
-                          </el-select>
-                          <span v-if="slot.department" class="slot-dept">{{ slot.department }}</span>
-                        </div>
-                      </div>
-                    </el-popover>
-                  </template>
-                </template>
-              </el-table-column>
-              <!-- 部门 -->
-              <el-table-column label="部门" width="120">
-                <template #default="{ row }">
-                  <el-tooltip
-                    v-if="row._departmentFailed && !row.department"
-                    content="该用户未设置部门信息，请手动填写"
-                    placement="top"
-                    :disabled="!row._departmentFailed"
-                  >
-                    <el-input v-model="row.department" size="small" :disabled="!row._departmentFailed && !row._departmentManual" placeholder="自动填充" />
-                  </el-tooltip>
-                  <el-input v-else v-model="row.department" size="small" :disabled="!row._departmentManual" placeholder="自动填充" />
-                </template>
-              </el-table-column>
-              <!-- 上级（汇报关系） -->
-              <el-table-column label="上级" width="140">
-                <template #default="{ row, $index }">
-                  <el-select v-model="row.superior_id" size="small" placeholder="选择上级" clearable filterable style="width:100%">
-                    <el-option
-                      v-for="s in getSuperiorOptions($index)"
-                      :key="s.id"
-                      :label="s.label"
-                      :value="s.id"
-                    />
-                  </el-select>
-                </template>
-              </el-table-column>
-              <!-- 核心职责 -->
-              <el-table-column label="核心职责" min-width="180">
-                <template #default="{ row }">
-                  <el-input v-model="row.responsibility" size="small" placeholder="核心职责描述（可从模板自动填充）" />
-                </template>
-              </el-table-column>
-              <!-- 操作 -->
-              <el-table-column label="操作" width="70">
-                <template #default="{ $index }">
-                  <el-button link type="danger" size="small" @click="removeTeamRow($index)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+          <ProposalTeam
+            :tab-status="tabStatus"
+            :team-table="teamTable"
+            :project-form="projectForm"
+            :team-roles="teamRoles"
+            :all-team-users="allTeamUsers"
+            :role-mappings="roleMappings"
+            :user-workloads="userWorkloads"
+            @project-type-change="onProjectTypeChange"
+          />
         </el-tab-pane>
       </el-tabs>
 
@@ -862,7 +259,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { QuestionFilled } from '@element-plus/icons-vue'
 import api from '../../api'
 
 // 子组件 - 拆分后的功能模块
@@ -870,6 +266,9 @@ import ProposalListPanel from './proposal/ProposalListPanel.vue'
 import PlanCalendarPanel from './proposal/PlanCalendarPanel.vue'
 import ProductInitiation from './proposal/ProductInitiation.vue'
 import ProposalOverview from './proposal/ProposalOverview.vue'
+import ProposalTechSpec from './proposal/ProposalTechSpec.vue'
+import ProposalCosting from './proposal/ProposalCosting.vue'
+import ProposalTeam from './proposal/ProposalTeam.vue'
 
 interface KbOption { id: number; category: string; code: string; name: string }
 interface PlanningItem {
@@ -1254,37 +653,6 @@ const prototypeUnitCost = computed(() => {
   return 0.1 // default
 })
 
-// 试制数量 — 按项目等级查表
-const trialQty = computed(() => {
-  const dc = projectForm.dev_category
-  if (!dc) return 5
-  const raw = systemConfig.value.trial_qty_per_class
-  const map: Record<string, number> = (() => {
-    if (raw) { try { return JSON.parse(raw) } catch {} }
-    return { 'T': 5, 'A': 3, 'B': 2, 'C': 1 }
-  })()
-  return map[dc] ?? map['C'] ?? 1
-})
-
-// 制造费用+人工 - 按冷量
-const manufacturingCost = computed(() => {
-  const cr = projectForm.capacity_range
-  const thresholds: Array<{max_kw: number; cost: number}> = (() => {
-    const raw = systemConfig.value.mfg_cost_threshold
-    if (raw) { try { return JSON.parse(raw) } catch {} }
-    return [{max_kw: 12, cost: 50}, {max_kw: 999, cost: 60}]
-  })()
-  if (!cr) return thresholds[0]?.cost || 50
-  const upper = cr.toUpperCase()
-  const kwMatch = upper.match(/(\d+)K/)
-  if (!kwMatch) return thresholds[0]?.cost || 50
-  const kw = parseInt(kwMatch[1])
-  for (const t of thresholds) {
-    if (kw <= t.max_kw) return t.cost
-  }
-  return thresholds[thresholds.length - 1]?.cost || 60
-})
-
 // 模具费用合计
 const moldCostTotal = computed(() =>
   moldCostTable.reduce((sum, r) => sum + (r.total || 0), 0)
@@ -1301,10 +669,6 @@ const clientSampleCost = computed(() => {
   return row ? (row.qty || 0) * (row.unit_cost || 0) : 0
 })
 
-// 样机总费用
-const protoCostTotal = computed(() =>
-  protoCostTable.reduce((sum, r) => sum + (r.qty || 0) * (r.unit_cost || 0), 0)
-)
 
 // 人工费用合计 (使用各角色独立月数)
 const laborCostTotal = computed(() =>
@@ -1383,29 +747,6 @@ const devCostGrandTotal = computed(() => {
   const sumFirst7 = devCostTable.slice(0, 7).reduce((s, r) => s + (Number(r.budget) || 0), 0)
   // 总预算 = 前7项 + 认证费用合计 + 间接成本
   return sumFirst7 + certCostTotal.value
-})
-
-// BOM成本占比
-const bomCostRatioText = computed(() => {
-  const fob = Number(projectForm.fob_price) || 0
-  const bom = Number(projectForm.bom_cost_target) || 0
-  const rate = Number(exchangeRate.value) || 7.2
-  if (fob <= 0 || rate <= 0) return '-'
-  const fobCny = fob * rate
-  return ((bom / fobCny) * 100).toFixed(1) + '%'
-})
-
-// 毛利率
-const grossMarginText = computed(() => {
-  const fob = Number(projectForm.fob_price) || 0
-  const bom = Number(projectForm.bom_cost_target) || 0
-  const rate = Number(exchangeRate.value) || 7.2
-  const mfg = manufacturingCost.value
-  if (fob <= 0 || rate <= 0) return '-'
-  const fobCny = fob * rate
-  const totalCost = bom + mfg
-  const gross = fobCny - totalCost
-  return '¥' + gross.toFixed(0) + ' (' + (fobCny > 0 ? ((gross / fobCny) * 100).toFixed(1) : '0.0') + '%)'
 })
 
 // 系统配置中的产品类型简写映射
@@ -1860,136 +1201,6 @@ function progressColor(progress: number): string {
 // Tab 5 计算属性
 // ═══════════════════════════════════════════════
 
-// 团队摘要
-const teamSummary = computed(() => {
-  const totalRoles = teamTable.length
-  let totalSlots = 0
-  let filled = 0
-  const roleSummaries: { role: string; headcount: number; filled: number }[] = []
-  
-  for (const row of teamTable) {
-    const hc = row.headcount || 1
-    totalSlots += hc
-    let rowFilled = 0
-    if (hc <= 1) {
-      if (row.user_id != null) rowFilled = 1
-    } else {
-      rowFilled = row.slots.filter(s => s.user_id != null).length
-    }
-    filled += rowFilled
-    roleSummaries.push({ role: row.role, headcount: hc, filled: rowFilled })
-  }
-  return {
-    totalRoles,
-    totalSlots,
-    filled,
-    unfilled: totalSlots - filled,
-    roleSummaries,
-  }
-})
-
-// ═══════════════════════════════════════════════
-// 团队按角色过滤（多岗位映射）
-// ═══════════════════════════════════════════════
-
-function getUsersByRole(role: string): UserInfo[] {
-  if (!role) return allTeamUsers.value
-  // 先查项目角色→系统岗位映射表
-  const mapping = roleMappings.value.find(m => m.project_role === role)
-  if (mapping && mapping.sys_roles.length > 0) {
-    // 多岗位：用户role字段或job_title字段包含任一映射值即可
-    return allTeamUsers.value.filter(u => {
-      const userRole = u.role || ''
-      const userTitle = u.job_title || ''
-      return mapping.sys_roles.some(sr =>
-        userRole === sr || userTitle.includes(sr) || userRole.includes(sr)
-      )
-    })
-  }
-  // fallback: 沿用旧的 sys_role 映射
-  const roleMap: Record<string, string> = {}
-  teamRoles.value.forEach(r => { roleMap[r.value] = r.sys_role })
-  const sysRole = roleMap[role]
-  if (!sysRole) return allTeamUsers.value
-  return allTeamUsers.value.filter(u => u.role === sysRole)
-}
-
-// 用户选项标签（含负载badge文本）
-function getUserOptionLabel(u: UserInfo): string {
-  const wl = getWorkloadInfo(u.id)
-  if (wl) {
-    return `${u.full_name || u.username} · ${wl.project_count}个项目 · 负载${wl.workload_pct}%`
-  }
-  return u.full_name || u.username
-}
-
-// 获取负载badge信息（颜色 + 文本）
-function getWorkloadBadge(userId: number): { text: string; color: string } | null {
-  const wl = getWorkloadInfo(userId)
-  if (!wl) return null
-  const pct = wl.workload_pct
-  let color = '#67c23a' // green: <50%
-  if (pct >= 80) color = '#f56c6c'      // red: >80%
-  else if (pct >= 50) color = '#e6a23c' // yellow: 50-80%
-  return { text: `负载${pct}%`, color }
-}
-
-function getWorkloadInfo(userId: number): UserWorkload | undefined {
-  return userWorkloads.value.find(w => w.user_id === userId)
-}
-
-// 槽位填充状态
-function getSlotFillStatus(row: TeamMemberRow): 'full' | 'partial' | 'empty' {
-  if (row.headcount <= 1) {
-    return row.user_id != null ? 'full' : 'empty'
-  }
-  const filled = row.slots.filter(s => s.user_id != null).length
-  if (filled === row.headcount) return 'full'
-  if (filled > 0) return 'partial'
-  return 'empty'
-}
-
-// 槽位摘要文本
-function getSlotSummary(row: TeamMemberRow): string {
-  if (row.headcount <= 1) {
-    return row.full_name || '未分配'
-  }
-  const filled = row.slots.filter(s => s.user_id != null).length
-  const names = row.slots.filter(s => s.full_name).map(s => s.full_name).join(', ')
-  return names || `${filled}/${row.headcount} 已分配`
-}
-
-// 上级选项：从teamTable中已选人员过滤（排除自己）
-function getSuperiorOptions(excludeIndex: number): { id: number; label: string }[] {
-  const options: { id: number; label: string }[] = []
-  const excludeIds = new Set<number>()
-  
-  // 收集当前行的所有user_id，排除自己
-  const row = teamTable[excludeIndex]
-  if (row) {
-    if (row.headcount <= 1) {
-      if (row.user_id != null) excludeIds.add(row.user_id)
-    } else {
-      row.slots.forEach(s => { if (s.user_id != null) excludeIds.add(s.user_id) })
-    }
-  }
-
-  for (let i = 0; i < teamTable.length; i++) {
-    const r = teamTable[i]
-    if (r.headcount <= 1) {
-      if (r.user_id != null && !excludeIds.has(r.user_id)) {
-        options.push({ id: r.user_id, label: r.full_name || `成员#${r.user_id}` })
-      }
-    } else {
-      for (const slot of r.slots) {
-        if (slot.user_id != null && !excludeIds.has(slot.user_id)) {
-          options.push({ id: slot.user_id, label: slot.full_name || `成员#${slot.user_id}` })
-        }
-      }
-    }
-  }
-  return options
-}
 
 // ═══════════════════════════════════════════════
 // 年度规划相关
@@ -2578,11 +1789,6 @@ async function withdrawProposal(proposal: ProjectItem) {
 // 表格增删行函数
 // ═══════════════════════════════════════════════
 
-function addMoldRow() {
-  moldCostTable.push({ name: '', qty: 0, total: 0, remark: '' })
-}
-function removeMoldRow(index: number) { moldCostTable.splice(index, 1) }
-
 function addCustomerReqRow() {
   customerReqTable.push({ category: '', description: '', source: '', tech_impact: '', market_impact: '' })
 }
@@ -2598,90 +1804,9 @@ function addMaterialComponentRow() {
 }
 function removeMaterialComponentRow(index: number) { materialComponentTable.splice(index, 1) }
 
-function addTeamRow() {
-  const seq = teamTable.length > 0 ? Math.max(...teamTable.map(r => r.seq || 0)) + 1 : 1
-  teamTable.push(createTeamRow('', 1, '', seq))
-}
-function removeTeamRow(index: number) { teamTable.splice(index, 1) }
-
-function onTeamRoleChange(index: number) {
-  const row = teamTable[index]
-  if (!row) return
-  row.user_id = null
-  row.full_name = ''
-  row.department = ''
-  row._departmentManual = false
-  row._departmentFailed = false
-  row.slots.forEach(s => { s.user_id = null; s.full_name = ''; s.department = '' })
-}
-
-function onHeadcountChange(index: number) {
-  const row = teamTable[index]
-  if (!row) return
-  const newHc = row.headcount || 1
-  // Adjust slots array
-  while (row.slots.length < newHc) {
-    row.slots.push(createEmptySlot(row.slots.length + 1))
-  }
-  while (row.slots.length > newHc) {
-    row.slots.pop()
-  }
-  // If headcount becomes 1, copy first slot data to row-level fields
-  if (newHc === 1 && row.slots.length > 0) {
-    row.user_id = row.slots[0].user_id
-    row.full_name = row.slots[0].full_name
-    row.department = row.slots[0].department
-  } else {
-    row.user_id = null
-    row.full_name = ''
-  }
-}
-
-function onTeamUserChange(index: number, _slotIndex: number = 0) {
-  const row = teamTable[index]
-  if (!row) return
-  
-  if (row.headcount <= 1) {
-    // Direct user assignment
-    const user = allTeamUsers.value.find(u => u.id === row.user_id)
-    if (user) {
-      row.full_name = user.full_name || user.username
-      if (user.department) {
-        row.department = user.department
-        row._departmentFailed = false
-        row._departmentManual = false
-      } else {
-        row.department = ''
-        row._departmentFailed = true
-        row._departmentManual = true // allow manual input
-      }
-    }
-  }
-  // Slot-level changes are handled by onSlotUserChange
-}
-
-function onSlotUserChange(rowIndex: number, slotIndex: number) {
-  const row = teamTable[rowIndex]
-  if (!row || !row.slots[slotIndex]) return
-  const slot = row.slots[slotIndex]
-  const user = allTeamUsers.value.find(u => u.id === slot.user_id)
-  if (user) {
-    slot.full_name = user.full_name || user.username
-    slot.department = user.department || ''
-  }
-  // Sync row-level for headcount=1
-  if (row.headcount === 1 && row.slots.length > 0) {
-    row.user_id = row.slots[0].user_id
-    row.full_name = row.slots[0].full_name
-    row.department = row.slots[0].department
-  }
-  // Update row department from all slots
-  if (row.headcount > 1) {
-    const depts = row.slots.filter(s => s.department).map(s => s.department)
-    row.department = [...new Set(depts)].join('/')
-    row._departmentFailed = depts.length < row.slots.length
-  }
-}
+// ═══════════════════════════════════════════════
+// API调用
+// ═══════════════════════════════════════════════
 
 // 项目类型变更 → 加载角色模板
 async function onProjectTypeChange(projectType: string) {

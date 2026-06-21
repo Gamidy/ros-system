@@ -18,12 +18,34 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 # ── Token 黑名单（登出失效） ─────────────────────────────────────
-TOKEN_BLACKLIST: set = set()
+# dict: token → expiry_timestamp (UTC)
+TOKEN_BLACKLIST: dict[str, float] = {}
+
+# 清理阈值：每检查多少次 token 触发一次过期清理
+_BLACKLIST_CLEANUP_COUNTER = 0
+_BLACKLIST_CLEANUP_INTERVAL = 100
 
 
 def invalidate_token(token: str) -> None:
     """将 token 加入黑名单，使其立即失效"""
-    TOKEN_BLACKLIST.add(token)
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM],
+            options={"verify_exp": False},  # 允许解析已过期 token
+        )
+        exp = payload.get("exp", 0)
+    except JWTError:
+        exp = 0
+    TOKEN_BLACKLIST[token] = exp
+
+
+def cleanup_blacklist() -> int:
+    """清理黑名单中已过期的 token，返回清理数量"""
+    now = datetime.now(timezone.utc).timestamp()
+    expired = [t for t, exp in TOKEN_BLACKLIST.items() if exp > 0 and exp < now]
+    for t in expired:
+        TOKEN_BLACKLIST.pop(t, None)
+    return len(expired)
 
 
 # ── XSS 防护 ──────────────────────────────────────────────────────────
@@ -119,6 +141,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    global _BLACKLIST_CLEANUP_COUNTER
+    # 惰性清理：每 N 次检查触发一次过期 token 清理
+    _BLACKLIST_CLEANUP_COUNTER += 1
+    if _BLACKLIST_CLEANUP_COUNTER >= _BLACKLIST_CLEANUP_INTERVAL:
+        _BLACKLIST_CLEANUP_COUNTER = 0
+        cleanup_blacklist()
+
     # 检查 token 是否已被登出（黑名单）
     if token in TOKEN_BLACKLIST:
         raise HTTPException(status_code=401, detail="Token 已失效，请重新登录")

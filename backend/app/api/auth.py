@@ -171,18 +171,22 @@ def change_password(
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    """忘记密码 — 通过手机号+真实姓名验证后重置密码"""
+    """忘记密码 — 通过手机号+真实姓名验证后重置密码
+
+    验证通过后生成新密码，仅返回成功提示（不返回密码明文）。
+    密码将通过短信/邮件发送（待对接）。
+    """
     user = db.query(User).filter(User.phone == req.phone).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="未找到该手机号对应的账户")
-    if user.full_name != req.full_name:
-        raise HTTPException(status_code=400, detail="姓名验证失败")
+    if not user or user.full_name != req.full_name:
+        # 统一返回 200，不区分手机号/姓名错误，防止枚举
+        return {"message": "验证通过后密码已重置，请联系管理员获取新密码"}
     # 生成12位随机密码
     alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
     new_password = ''.join(secrets.choice(alphabet) for _ in range(12))
     user.hashed_password = get_password_hash(new_password)
     db.commit()
-    return {"message": "密码已重置", "new_password": new_password, "username": user.username}
+    # TODO: 对接短信/邮件发送 new_password
+    return {"message": "密码已重置，请查收短信或联系管理员"}
 
 
 @router.get("/users", response_model=list[UserOut])
