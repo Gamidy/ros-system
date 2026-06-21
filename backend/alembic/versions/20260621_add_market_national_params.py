@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision: str = '20260621_add_market_national_params'
-down_revision: Union[str, None] = '20260619_015807'
+down_revision: Union[str, None] = '20260621_bom_cost'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

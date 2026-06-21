@@ -583,11 +583,6 @@
               </el-table-column>
             </el-table>
             <el-button size="small" style="margin-top:8px" @click="addCorePerfRow">+ 添加行</el-button>
-            <CompetitorBench 
-              :market="projectForm.target_market"
-              :coolingCapacity="projectForm.capacity_range"
-              @adopt="onAdoptCompetitor"
-            />
           </template>
 
           <!-- Step ❷: 安全合规 -->
@@ -760,22 +755,6 @@
             </el-table>
           </template>
 
-          <!-- 竞品快速参考 -->
-          <el-divider content-position="left">🔍 竞品快速参考</el-divider>
-          <el-collapse v-model="competitorRefActive" style="margin-top:8px">
-            <el-collapse-item title="展开竞品数据对比（根据已选目标市场和冷量段自动过滤）" name="ref">
-              <el-table :data="quickRefCompetitors" border size="small" max-height="300">
-                <el-table-column prop="brand" label="品牌" width="80" />
-                <el-table-column prop="model" label="型号" width="140" />
-                <el-table-column prop="cooling_capacity" label="冷量" width="70" />
-                <el-table-column prop="energy_rating" label="能效" width="60" />
-                <el-table-column prop="cooling_w" label="制冷(W)" width="80" />
-                <el-table-column prop="eer" label="EER" width="60" />
-                <el-table-column prop="noise_indoor_db" label="噪音(dB)" width="80" />
-                <el-table-column prop="factory_price" label="出厂价" width="90" />
-              </el-table>
-            </el-collapse-item>
-          </el-collapse>
         </el-tab-pane>
 
         <!-- ═══════════ Tab 4: 成本核算 ═══════════ -->
@@ -1227,7 +1206,6 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Link, Edit, Delete, QuestionFilled } from '@element-plus/icons-vue'
 import api from '../../api'
-import CompetitorBench from './CompetitorBench.vue'
 
 // ═══════════════════════════════════════════════
 // 类型定义
@@ -1463,11 +1441,7 @@ const corePerfTable = reactive<CorePerfRow[]>([
 // Tab 3: 技术步骤导航
 const techStep = ref(0)
 
-// 竞品快速参考
-const competitorRefActive = ref<string[]>([])
-const quickRefCompetitors = ref<any[]>([])
-
-// Tab 3 表格: 物料与部件清单
+// 工艺辅助
 const materialComponentTable = reactive<MaterialComponentRow[]>([
   { type: '物料', name: '', spec: '', qty: 1, unit: '个', usage: '', supplier: '', delivery_cycle: '', unit_price: 0, candidate_vendors: '', remark: '' },
 ])
@@ -2066,26 +2040,6 @@ watch(() => projectForm.target_market, (market) => {
 watch([() => projectForm.target_market, () => projectForm.capacity_range], ([market, capacity]) => {
   if (market && capacity) {
     fetchPerfDefaults(market, capacity)
-  }
-})
-
-// 目标市场或冷量段变化 → 加载竞品快速参考数据
-watch([() => projectForm.target_market, () => projectForm.capacity_range], async ([market, capacity]) => {
-  if (market) {
-    try {
-      // 市场代码 → 名称转换
-      const mkt = kbOptions.market.find((m: any) => m.code === market)
-      const marketName = mkt ? mkt.name : market
-      const res = await api.get('/pm/competitors/benchmark', { params: { market: marketName } })
-      const comps = res.data?.competitors || []
-      if (capacity) {
-        quickRefCompetitors.value = comps.filter((c: any) => 
-          (c.cooling_capacity || '').includes(capacity.replace('K',''))
-        ).slice(0, 10)
-      } else {
-        quickRefCompetitors.value = comps.slice(0, 10)
-      }
-    } catch { quickRefCompetitors.value = [] }
   }
 })
 
@@ -3370,42 +3324,6 @@ async function fetchSystemConfig() {
       testCostTable.forEach(r => { r.unit_price = tp })
     }
   } catch { /* use defaults */ }
-}
-
-// ═══════════════════════════════════════════════
-// 竞品对标：采纳竞品参数
-// ═══════════════════════════════════════════════
-// paramKey → corePerfTable.param_name 映射表
-const PARAM_KEY_MAP: Record<string, string> = {
-  cooling_w: '制冷量(W)',
-  cspf: 'CSPF(W/W)',
-  energy_grade: '能效等级',
-  tolerance: '容差(%)',
-  air_flow: '出风量(m³/h)',
-  noise_indoor: '室内噪音dB(A)',
-  noise_outdoor: '室外噪音dB(A)',
-  pipe_size: '接管尺寸',
-  refrigerant: '制冷剂',
-  net_weight_indoor: '内机净重(kg)',
-  net_weight_outdoor: '外机净重(kg)',
-  dimension_indoor: '内机尺寸(mm)',
-  dimension_outdoor: '外机尺寸(mm)',
-}
-
-function onAdoptCompetitor({ paramKey, value, brand }: { paramKey: string; value: number; brand: string }) {
-  const paramName = PARAM_KEY_MAP[paramKey]
-  if (!paramName) {
-    ElMessage.warning(`未知参数: ${paramKey}`)
-    return
-  }
-  const row = corePerfTable.find(r => r.param_name === paramName)
-  if (!row) {
-    ElMessage.warning(`核心性能表中未找到参数: ${paramName}`)
-    return
-  }
-  row.target_value = String(value)
-  row.source = brand
-  ElMessage.success(`已采纳 ${brand} 的 ${paramName} 值: ${value}`)
 }
 
 // ═══════════════════════════════════════════════
