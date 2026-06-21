@@ -1,7 +1,8 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h1 class="login-title">ROS 研发运营系统</h1>
+      <div class="login-logo">ROS</div>
+      <h1 class="login-title">研发运营系统</h1>
       <p class="login-subtitle">R&amp;D Operations System</p>
       <el-form
         ref="formRef"
@@ -140,41 +141,83 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   height: 100vh;
-  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  background: #f5f4ed;
+  position: relative;
+}
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #d97757, #e89b7a, #d97757);
 }
 .login-card {
   width: 400px;
-  padding: 40px;
+  padding: 48px 40px 40px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e0da;
+  position: relative;
+}
+.login-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #d97757;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  letter-spacing: 1px;
 }
 .login-title {
   text-align: center;
   margin: 0 0 4px;
-  color: #1a73e8;
-  font-size: 24px;
+  color: #1a1917;
+  font-size: 22px;
+  font-weight: 600;
 }
 .login-subtitle {
   text-align: center;
-  color: #999;
+  color: #87867f;
   margin-bottom: 32px;
-  font-size: 14px;
+  font-size: 13px;
 }
 .login-btn {
   width: 100%;
+  --el-button-bg-color: #d97757;
+  --el-button-border-color: #d97757;
+  --el-button-hover-bg-color: #c96442;
+  --el-button-hover-border-color: #c96442;
+}
+.login-btn:hover {
+  opacity: 0.95;
 }
 .login-footer {
   text-align: center;
-  margin-top: 16px;
-  font-size: 14px;
-  color: #666;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #87867f;
 }
 .register-link {
-  color: #1a73e8;
+  color: #d97757;
   text-decoration: none;
+  font-weight: 500;
 }
 .register-link:hover {
+  color: #c96442;
   text-decoration: underline;
+}
+.el-form-item {
+  margin-bottom: 20px;
+}
+.el-input {
+  --el-input-focus-border-color: #d97757;
 }
 </style>
