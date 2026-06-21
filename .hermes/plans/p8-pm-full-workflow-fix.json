@@ -1,0 +1,69 @@
+{
+  "version": "P8",
+  "title": "PM全流程深度体验 — 提交审批+成本+状态追踪修复",
+  "pm_journey": "PM登录→创建提案→填写5Tab→保存草稿→提交审批→查看审批状态→对比竞品→分析BOM成本→仪表盘监控",
+
+  "findings": [
+    {
+      "id": "F8-1",
+      "severity": "CRITICAL",
+      "area": "审批列表",
+      "detail": "PM提交提案后，后端返回'立项审批已提交'(approval id=1)，但 GET /api/approval/requests 返回空数组[]。PM无法看到自己提交的审批进度。",
+      "impact": "PM提交后不知道审批走到哪一步，核心工作流断裂。"
+    },
+    {
+      "id": "F8-2",
+      "severity": "CRITICAL", 
+      "area": "BOM成本",
+      "detail": "P7新增的3个BOM(9000/18000/24000BTU)成本全为¥0.0。迁移脚本只给原12000BTU的17个节点设了价格，新BOM的物料节点unit_price=NULL。",
+      "impact": "PM对比不同冷量段BOM成本时看到¥0，无法做成本决策。"
+    },
+    {
+      "id": "F8-3",
+      "severity": "HIGH",
+      "area": "提案状态",
+      "detail": "提交审批后，GET /api/pm/proposals 返回 drafts=2, submitted=0。已提交的提案仍被计为draft，提交后没有状态变更。",
+      "impact": "PM无法区分草稿和已提交提案。"
+    },
+    {
+      "id": "F8-4",
+      "severity": "MEDIUM",
+      "area": "仪表盘",
+      "detail": "Layer1全零(products=0/platforms=0)，L3穿透NULL，L4全零。虽然有空状态引导，但PM没有任何可用的KPI。",
+      "impact": "仪表盘对PM没有决策价值。"
+    }
+  ],
+
+  "stories": [
+    {
+      "id": "US-P8-01",
+      "title": "修复审批列表不显示已提交审批",
+      "priority": "P0",
+      "description": "排查 GET /api/approval/requests 端点为何不返回刚提交的审批。可能是角色过滤条件过严（PM不是审批人所以看不到自己提交的？），或查询条件status不符合。修复后端使PM能看到自己提交的审批进度。"
+    },
+    {
+      "id": "US-P8-02",
+      "title": "新BOM成本数据填充",
+      "priority": "P0",
+      "description": "为BOM#2(9000BTU)、#3(18000BTU)、#4(24000BTU)的物料节点设置unit_price。参考12000BTU价格按冷量比例调整。在服务器上执行SQL UPDATE。"
+    },
+    {
+      "id": "US-P8-03",
+      "title": "提案提交后状态变更",
+      "priority": "P1",
+      "description": "提交审批成功后，将project的is_draft设为False、status改为'submitted'或保持审批状态。使proposals API的submitted_count能正确计数。"
+    },
+    {
+      "id": "US-P8-04",
+      "title": "仪表盘种子数据",
+      "priority": "P2",
+      "description": "为PM的仪表盘注入少量种子数据让仪表盘有内容可看：创建1个platform+1个product+1个version，使Layer1有数据；利用已有项目填充L4指标。"
+    }
+  ],
+
+  "execution_notes": {
+    "independent_stories": ["US-P8-01", "US-P8-02", "US-P8-04"],
+    "sequential_deps": {"US-P8-03": ["US-P8-01"]},
+    "backend_only": ["US-P8-01", "US-P8-02", "US-P8-03", "US-P8-04"]
+  }
+}

@@ -41,6 +41,16 @@ DEFAULT_CHAINS = [
         ],
     },
     {
+        "name": "立项审批",
+        "code": "proposal",
+        "description": "产品立项审批流程（并行审批 + 研发总监终审）",
+        "steps": [
+            {"seq": 1, "role": "产品经理", "name": "产品经理提交"},
+            {"seq": 2, "role": "并行审批人", "name": "模块经理/工程师并行审批"},
+            {"seq": 3, "role": "研发总监", "name": "研发总监终审"},
+        ],
+    },
+    {
         "name": "采购审批",
         "code": "purchase",
         "description": "采购申请审批流程",

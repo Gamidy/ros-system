@@ -60,7 +60,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
     ],
     "product_manager": [
         "dashboard", "products", "bom", "projects",
-        "certifications", "alerts", "pm-workspace",
+        "certifications", "alerts", "approvals", "pm-workspace",
         "competitor_bench",
     ],
     "systems_engineer": [

@@ -22,6 +22,7 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.project import Project, ProjectGate
 from app.models.proposal_approval import ProposalApproval
+from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest
 from app.models.alert import Notification
 
 router = APIRouter(tags=["项目立项审批"])
@@ -184,6 +185,32 @@ def _create_notification(
 
 
 # ══════════════════════════════════════════════════════════════════
+# 辅助: 确保立项审批链存在
+# ══════════════════════════════════════════════════════════════════
+
+def _ensure_proposal_chain(db: Session) -> ApprovalChain:
+    """确保 'proposal' 审批链存在，不存在则创建"""
+    chain = db.query(ApprovalChain).filter(ApprovalChain.code == "proposal").first()
+    if not chain:
+        chain = ApprovalChain(
+            name="立项审批",
+            code="proposal",
+            description="产品立项审批流程（并行审批 + 研发总监终审）",
+        )
+        db.add(chain)
+        db.flush()
+        steps_def = [
+            {"seq": 1, "role": "产品经理", "name": "产品经理提交"},
+            {"seq": 2, "role": "并行审批人", "name": "模块经理/工程师并行审批"},
+            {"seq": 3, "role": "研发总监", "name": "研发总监终审"},
+        ]
+        for s in steps_def:
+            db.add(ApprovalStep(chain_id=chain.id, seq=s["seq"], role=s["role"], name=s["name"]))
+        db.flush()
+    return chain
+
+
+# ══════════════════════════════════════════════════════════════════
 # POST /api/pm/proposals/submit — 提交立项审批
 # ══════════════════════════════════════════════════════════════════
 
@@ -280,6 +307,21 @@ def submit_proposal(
         resubmit_count=resubmit_count,
     )
     db.add(pa)
+    db.flush()
+    p.is_draft = False
+
+    # ── 6a. 创建对应的 ApprovalRequest（供通用审批列表显示） ──
+    proposal_chain = _ensure_proposal_chain(db)
+    approval_req = ApprovalRequest(
+        chain_id=proposal_chain.id,
+        request_type="proposal",
+        request_id=pa.id,  # 关联 ProposalApproval 的 ID
+        title=p.name or "",
+        requester=current_user.username,
+        status="pending",  # 映射: pending_parallel → pending
+        current_step=1,
+    )
+    db.add(approval_req)
     db.flush()
 
     # ── 7. 通知并行审批人 ──
@@ -409,6 +451,26 @@ def get_approval_detail(
 # POST /api/approvals/{id}/review — 审批操作
 # ══════════════════════════════════════════════════════════════════
 
+
+def _sync_approval_request(db: Session, pa: ProposalApproval):
+    """同步 ApprovalRequest 状态（供通用审批列表查询）"""
+    ar = db.query(ApprovalRequest).filter(
+        ApprovalRequest.request_type == "proposal",
+        ApprovalRequest.request_id == pa.id,
+    ).first()
+    if not ar:
+        return
+    # 映射 ProposalApproval 状态到 ApprovalRequest 状态
+    status_map = {
+        "pending_parallel": "pending",
+        "pending_director": "pending",
+        "approved": "approved",
+        "rejected": "rejected",
+    }
+    new_status = status_map.get(pa.status, "pending")
+    if ar.status != new_status:
+        ar.status = new_status
+
 @router.post("/approvals/{approval_id}/review")
 def review_approval(
     approval_id: int,
@@ -464,6 +526,7 @@ def review_approval(
         if action == "rejected":
             # 驳回 → 整个审批结束
             pa.status = "rejected"
+            _sync_approval_request(db, pa)
 
             # 通知产品经理
             _create_notification(
@@ -481,6 +544,7 @@ def review_approval(
             if all_approved:
                 # 全部通过 → 进入研发总监审批
                 pa.status = "pending_director"
+                _sync_approval_request(db, pa)
 
                 # 通知研发总监
                 if pa.director_reviewer_id:
@@ -514,6 +578,7 @@ def review_approval(
         if action == "rejected":
             # 驳回
             pa.status = "rejected"
+            _sync_approval_request(db, pa)
 
             _create_notification(
                 db,
@@ -525,6 +590,7 @@ def review_approval(
         else:
             # 通过 → 自动创建项目 (草稿 → 正式)
             pa.status = "approved"
+            _sync_approval_request(db, pa)
 
             project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
             if project and project.is_draft:

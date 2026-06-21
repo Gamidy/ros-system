@@ -13,9 +13,9 @@
           <template v-else>
             <el-table :data="list" stripe border max-height="420" v-loading="loading">
               <el-table-column prop="id" label="审批编号" width="140" />
-              <el-table-column prop="type" label="类型" width="110">
+              <el-table-column prop="request_type" label="类型" width="110">
                 <template #default="{ row }">
-                  <el-tag size="small">{{ typeMap[row.type] || row.type }}</el-tag>
+                  <el-tag size="small">{{ typeMap[row.request_type] || row.request_type }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
@@ -29,8 +29,11 @@
               <el-table-column label="操作" width="220" fixed="right">
                 <template #default="{ row }">
                   <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
-                  <el-button type="success" size="small" @click="handleApprove(row)">通过</el-button>
-                  <el-button type="danger" size="small" @click="handleReject(row)">驳回</el-button>
+                  <template v-if="row.request_type !== 'proposal'">
+                    <el-button type="success" size="small" @click="handleApprove(row)">通过</el-button>
+                    <el-button type="danger" size="small" @click="handleReject(row)">驳回</el-button>
+                  </template>
+                  <el-button v-else link type="primary" size="small" @click="goToProposal(row)">查看审批</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -66,9 +69,9 @@
           <template v-else>
             <el-table :data="list" stripe border max-height="420" v-loading="loading">
               <el-table-column prop="id" label="审批编号" width="140" />
-              <el-table-column prop="type" label="类型" width="110">
+              <el-table-column prop="request_type" label="类型" width="110">
                 <template #default="{ row }">
-                  <el-tag size="small">{{ typeMap[row.type] || row.type }}</el-tag>
+                  <el-tag size="small">{{ typeMap[row.request_type] || row.request_type }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
@@ -194,8 +197,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+
+const router = useRouter()
 
 interface ChainForm {
   name: string
@@ -214,7 +220,7 @@ const statusFilter = ref('')
 
 const statusMap: Record<string, string> = { pending: '待审批', approved: '已通过', rejected: '已驳回' }
 const statusType: Record<string, string> = { pending: 'warning', approved: 'success', rejected: 'danger' }
-const typeMap: Record<string, string> = { ecr: 'ECR变更', ecn: 'ECN变更', bom: 'BOM变更', certification: '认证' }
+const typeMap: Record<string, string> = { ecr: 'ECR变更', ecn: 'ECN变更', bom: 'BOM变更', certification: '认证', proposal: '立项审批' }
 
 // Detail dialog
 const detailVisible = ref(false)
@@ -307,6 +313,10 @@ async function doReject() {
     window.dispatchEvent(new CustomEvent('approval-updated'))
   } catch { ElMessage.error('驳回操作失败') }
   finally { rejecting.value = false }
+}
+
+function goToProposal(_row: any) {
+  router.push('/approvals/proposals')
 }
 
 // 审批链管理

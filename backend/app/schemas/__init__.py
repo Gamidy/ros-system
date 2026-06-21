@@ -405,7 +405,7 @@ class ApprovalChainOut(BaseModel):
 
 class ApprovalRequestCreate(BaseModel):
     chain_id: int
-    request_type: str = Field(pattern="^(ecr|purchase|register)$")
+    request_type: str = Field(pattern="^(ecr|purchase|register|proposal)$")
     request_id: Optional[int] = None
     title: str = Field(min_length=1, max_length=200)
     requester: Optional[str] = None
