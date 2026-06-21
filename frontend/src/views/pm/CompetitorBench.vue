@@ -98,11 +98,20 @@ const allComplete = ref(false)
 const marketOptions = ref<Array<{code: string; name: string}>>([])
 
 // 初始化时加载市场选项（代码→名称映射）
-api.get('/kb/items', { params: { category: 'market' } }).then((res: any) => {
-  const data = res.data || res
-  if (Array.isArray(data)) marketOptions.value = data
-  else if (data.data && Array.isArray(data.data)) marketOptions.value = data.data
-}).catch(() => {})
+api.get('/pm/markets/all').then((res: any) => {
+  const data = res.data
+  if (Array.isArray(data)) {
+    marketOptions.value = data
+      .filter((m: any) => m.is_active !== 'false' && /^[A-Z]{2}$/.test(m.code))
+      .map((m: any) => ({ code: m.code, name: m.name }))
+  }
+}).catch(() => {
+  // 回退：从知识库加载
+  api.get('/kb/items', { params: { category: 'market' } }).then((res2: any) => {
+    const data = res2.data
+    if (Array.isArray(data)) marketOptions.value = data
+  }).catch(() => {})
+})
 
 // Compute unique brand names from all rows
 const brands = computed(() => {

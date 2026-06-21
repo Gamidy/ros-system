@@ -3256,6 +3256,17 @@ async function fetchKbOptions() {
       }
     })
   } catch { /* non-critical */ }
+  // ⭐ 目标市场改用数据库中的详细国家列表（替代知识库中的中东/南美等区域）
+  try {
+    const res = await api.get('/pm/markets/all')
+    const data = res.data
+    if (Array.isArray(data) && data.length > 0) {
+      // 过滤掉非国家的旧条目（国内/华东/OEM等仅保留字母代码的）
+      kbOptions.market = data
+        .filter((m: any) => m.is_active !== 'false' && /^[A-Z]{2}$/.test(m.code))
+        .map((m: any) => ({ code: m.code, name: m.name }))
+    }
+  } catch { /* fallback to kb data */ }
 }
 
 async function fetchTeamRoles() {
