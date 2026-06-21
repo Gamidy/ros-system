@@ -379,6 +379,9 @@ def list_pending_approvals(
     # mode=pending: 待我审批
     results = []
 
+    from app.core.permissions import is_super_role
+    is_admin = is_super_role(current_user.role)
+
     # ── 并行审批: pending_parallel 状态 ──
     parallel_query = db.query(ProposalApproval).filter(
         ProposalApproval.status == "pending_parallel"
@@ -390,6 +393,9 @@ def list_pending_approvals(
     parallel_pending = parallel_query.all()
 
     for pa in parallel_pending:
+        if is_admin:
+            results.append(_proposal_to_out(pa))
+            continue
         reviewers = pa.parallel_reviewers or []
         for r in reviewers:
             if r.get("user_id") == user_id and r.get("status") == "pending":
@@ -400,8 +406,11 @@ def list_pending_approvals(
     if not status or status == "pending_director":
         director_query = db.query(ProposalApproval).filter(
             ProposalApproval.status == "pending_director",
-            ProposalApproval.director_reviewer_id == user_id,
         )
+        if not is_admin:
+            director_query = director_query.filter(
+                ProposalApproval.director_reviewer_id == user_id,
+            )
         if keyword:
             director_query = director_query.filter(ProposalApproval.title.ilike(f"%{keyword}%"))
         director_pending = director_query.all()
@@ -497,19 +506,102 @@ def review_approval(
     now = datetime.now()
 
     # ── 判断当前用户身份 ──
-    is_director = pa.director_reviewer_id == user_id
+    from app.core.permissions import is_super_role
+    is_admin = is_super_role(current_user.role)
+    is_director = (pa.director_reviewer_id == user_id) and not is_admin
     is_parallel = False
     reviewer_index = -1
 
-    if pa.parallel_reviewers:
+    if not is_admin and pa.parallel_reviewers:
         for i, r in enumerate(pa.parallel_reviewers):
             if r.get("user_id") == user_id:
                 is_parallel = True
                 reviewer_index = i
                 break
 
-    if not is_parallel and not is_director:
+    if not is_admin and not is_parallel and not is_director:
         raise HTTPException(status_code=403, detail="您不是该审批的审批人")
+
+    # ═══════════════════════ 管理员操作（可审批任意阶段）═══════════════════════
+    if is_admin:
+        if pa.status not in ("pending_parallel", "pending_director"):
+            raise HTTPException(status_code=400, detail="当前不在审批阶段")
+
+        if action == "rejected":
+            pa.status = "rejected"
+            _sync_approval_request(db, pa)
+            _create_notification(
+                db,
+                target_user_id=pa.proposer_id,
+                title=f"立项审批被管理员驳回: {pa.title}",
+                content=f"管理员 {current_user.username} 驳回了项目「{pa.title}」的立项申请。"
+                        + (f"原因: {reason}" if reason else ""),
+            )
+        else:  # approved
+            pa.status = "approved"
+            _sync_approval_request(db, pa)
+
+            project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
+            if project and project.is_draft:
+                import random
+                if not project.code:
+                    code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
+                    while db.query(Project).filter(Project.code == code, Project.is_deleted == False).first():
+                        code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
+                    project.code = code
+                project.is_draft = False
+                project.status = "planning"
+
+                existing_gates = (
+                    db.query(ProjectGate)
+                    .filter(ProjectGate.project_id == pa.proposal_id)
+                    .count()
+                )
+                if existing_gates == 0:
+                    from app.api.projects import _get_gate_template
+                    project_class = project.project_class or "B"
+                    template = _get_gate_template(project_class)
+                    for gate_def in template:
+                        db.add(
+                            ProjectGate(
+                                project_id=project.id,
+                                gate_code=gate_def["code"],
+                                gate_name=gate_def["name"],
+                                seq=gate_def["seq"],
+                                decision_level=gate_def["decision_level"],
+                                is_high_risk_zone=gate_def["is_high_risk_zone"],
+                                is_hidden=gate_def["is_hidden"],
+                            )
+                        )
+                db.flush()
+
+                team_members_str = project.team_members or "[]"
+                try:
+                    team_members = json.loads(team_members_str)
+                except (json.JSONDecodeError, TypeError):
+                    team_members = []
+                for member in team_members:
+                    if isinstance(member, dict) and member.get("user_id"):
+                        _create_notification(
+                            db,
+                            target_user_id=member["user_id"],
+                            title=f"项目已立项: {pa.title}",
+                            content=f"项目「{pa.title}」已通过立项审批，现已正式进入研发阶段。",
+                        )
+
+            _create_notification(
+                db,
+                target_user_id=pa.proposer_id,
+                title=f"立项审批已通过: {pa.title}",
+                content=f"您的项目「{pa.title}」已通过管理员审批，现已正式立项。",
+            )
+
+        db.commit()
+        db.refresh(pa)
+        return {
+            "message": "审批操作成功",
+            "approval": _proposal_to_out(pa),
+        }
 
     # ═══════════════════════ 并行审批人操作 ═══════════════════════
     if is_parallel:

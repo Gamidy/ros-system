@@ -1,0 +1,64 @@
+{
+  "version": "P10",
+  "title": "PM深度v3 — 审批流转修复+项目结构+数据决策",
+  "findings": [
+    {
+      "id": "F10-1",
+      "severity": "CRITICAL",
+      "area": "审批流转",
+      "detail": "PM提交5个提案后，admin(GET /api/approval/requests/pending)返回0条。GET /api/approvals/proposals也返回0。审批记录存在(approval_requests表)但不被approvals API返回。审批工作流完全断裂。",
+      "impact": "PM提交后审批人看不到，整个审批流程形同虚设。"
+    },
+    {
+      "id": "F10-2",
+      "severity": "CRITICAL",
+      "area": "旧提案状态",
+      "detail": "P9前提交的4个提案status仍为'draft'(未改为'submitted')。只有P9修复后新提交的才正确。需要在DB中批量UPDATE旧记录。",
+      "impact": "PM看到4个已提交提案显示'draft'状态，数据不一致。"
+    },
+    {
+      "id": "F10-3",
+      "severity": "HIGH",
+      "area": "项目结构",
+      "detail": "所有项目的gates/milestones/risks/tasks均为0。提交后无自动创建项目阶段结构。PM无法在项目详情页看到研发进度。",
+      "impact": "PM提交立项后项目页面是空的，无法跟踪研发阶段。"
+    },
+    {
+      "id": "F10-4",
+      "severity": "MEDIUM",
+      "area": "仪表盘数据",
+      "detail": "L4指标全零(passrate/closerate/genrate/costrate=0%)。L2的ontime_rate/overdue等也全零。仪表盘缺少可指导决策的指标。",
+      "impact": "PM看仪表盘得不到任何KPI洞见。"
+    }
+  ],
+  "stories": [
+    {
+      "id": "US-P10-01",
+      "title": "修复审批流转 — admin可看到待审批",
+      "priority": "P0",
+      "description": "排查GET /api/approvals/proposals和GET /api/approval/requests/pending为何返回空。P8新增了ProposalApproval→ApprovalRequest同步，但可能是查询条件或角色过滤问题。修复使admin角色能看到待审批的立项提案。"
+    },
+    {
+      "id": "US-P10-02",
+      "title": "批量修复旧提案status",
+      "priority": "P0",
+      "description": "在服务器上执行SQL: UPDATE projects SET status='submitted' WHERE is_draft=0 AND status='draft'。修复P9前提交的4个提案状态。"
+    },
+    {
+      "id": "US-P10-03",
+      "title": "提交审批后自动创建项目结构",
+      "priority": "P1",
+      "description": "submit_proposal()成功后自动创建默认项目结构: 6个研发阶段gates(立项→方案→设计→手板→测试→试产) + 3个关键milestones(方案评审/样机完成/试产评审)。"
+    },
+    {
+      "id": "US-P10-04",
+      "title": "仪表盘L4指标修复",
+      "priority": "P2",
+      "description": "利用已有项目数据计算L4指标: test_pass_rate从tests表、issue_close_rate从quality表、cost_execution_rate从project budget字段。如果无真实数据则用合理默认值而非0%。"
+    }
+  ],
+  "execution_notes": {
+    "independent_stories": ["US-P10-01", "US-P10-02"],
+    "sequential_deps": {"US-P10-03": ["US-P10-01"]}
+  }
+}

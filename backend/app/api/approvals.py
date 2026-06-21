@@ -174,14 +174,16 @@ def list_approval_requests(
     current_user: User = Depends(require_menu("approvals")),
 ):
     """列出审批请求，支持按status/requester过滤"""
+    from app.core.permissions import is_super_role
     q = db.query(ApprovalRequest)
     if status:
         q = q.filter(ApprovalRequest.status == status)
     if requester:
         q = q.filter(ApprovalRequest.requester == requester)
     elif not status and not requester:
-        # 默认只看自己的
-        q = q.filter(ApprovalRequest.requester == current_user.username)
+        # admin/general_manager 默认查看全部，其他角色默认只看自己的
+        if not is_super_role(current_user.role):
+            q = q.filter(ApprovalRequest.requester == current_user.username)
     q = q.order_by(ApprovalRequest.created_at.desc())
     return [_request_to_out(r, db) for r in q.all()]
 
@@ -192,6 +194,7 @@ def list_pending_approval_requests(
     current_user: User = Depends(require_menu("approvals")),
 ):
     """待我审批的列表（按当前用户角色匹配当前步骤的角色）"""
+    from app.core.permissions import is_super_role
     _ensure_default_chains(db)
     pending = db.query(ApprovalRequest).filter(
         ApprovalRequest.status == "pending"
@@ -199,6 +202,10 @@ def list_pending_approval_requests(
 
     result = []
     for req in pending:
+        # admin/general_manager 可以看到所有待审批项
+        if is_super_role(current_user.role):
+            result.append(_request_to_out(req, db))
+            continue
         steps = db.query(ApprovalStep).filter(
             ApprovalStep.chain_id == req.chain_id,
             ApprovalStep.seq == req.current_step,
@@ -324,19 +331,28 @@ def _make_decision(
     current_user: User,
 ) -> dict:
     """执行审批决策（通过/驳回）"""
+    from app.core.permissions import is_super_role
     req = db.query(ApprovalRequest).filter(ApprovalRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="审批请求不存在")
     if req.status != "pending":
         raise HTTPException(status_code=400, detail="该请求已审批完成")
 
-    # 检查当前用户角色是否匹配当前步骤的角色
-    steps = db.query(ApprovalStep).filter(
-        ApprovalStep.chain_id == req.chain_id,
-        ApprovalStep.seq == req.current_step,
-    ).all()
-    if not any(s.role == current_user.role for s in steps):
-        raise HTTPException(status_code=403, detail="您不是当前审批步骤的审批人")
+    # admin/general_manager 可以审批任意步骤
+    if not is_super_role(current_user.role):
+        # 检查当前用户角色是否匹配当前步骤的角色
+        steps = db.query(ApprovalStep).filter(
+            ApprovalStep.chain_id == req.chain_id,
+            ApprovalStep.seq == req.current_step,
+        ).all()
+        if not any(s.role == current_user.role for s in steps):
+            raise HTTPException(status_code=403, detail="您不是当前审批步骤的审批人")
+    else:
+        # 超级角色也需要查询 steps 用于 step_id
+        steps = db.query(ApprovalStep).filter(
+            ApprovalStep.chain_id == req.chain_id,
+            ApprovalStep.seq == req.current_step,
+        ).all()
 
     step_id = steps[0].id if steps else None
 
