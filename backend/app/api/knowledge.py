@@ -1,9 +1,12 @@
 """知识库API — 立项书下拉选项数据源"""
+import logging
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.knowledge import KnowledgeItem
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/kb", tags=["知识库"])
 
@@ -56,7 +59,8 @@ def get_exchange_rate():
         resp = urllib.request.urlopen(req, timeout=5)
         data = json.loads(resp.read())
         rate = data["rates"].get("CNY", 7.2)
-    except:
+    except Exception as e:
+        logger.warning("汇率API请求失败: %s", e)
         rate = 7.2  # fallback
     return {"rate": round(rate, 4), "currency_pair": "USD/CNY", "source": "中国银行参考"}
 

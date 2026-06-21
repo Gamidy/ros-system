@@ -1,0 +1,46 @@
+=== DOCKER ===
+CONTAINER ID   IMAGE                           COMMAND                   CREATED       STATUS       PORTS                      NAMES
+b281c893c364   ros-system-ros-backend:latest   "uvicorn app.main:ap…"   3 hours ago   Up 2 hours                              ros-backend
+b98ea8049ba5   php81-hvac                      "docker-php-entrypoi…"   5 weeks ago   Up 5 weeks   127.0.0.1:9001->9000/tcp   php81-fpm
+
+=== DOCKER_IMAGES ===
+REPOSITORY               TAG              IMAGE ID       CREATED        SIZE
+ros-system-ros-backend   latest           38868dd0853b   3 hours ago    418MB
+<none>                   <none>           336fb391a5fa   3 hours ago    417MB
+<none>                   <none>           a69b05f3d9e8   3 hours ago    417MB
+<none>                   <none>           53ab7ec208c5   3 hours ago    417MB
+<none>                   <none>           67f3dd922e2e   3 hours ago    417MB
+<none>                   <none>           a10e5cf7a6b9   3 hours ago    417MB
+<none>                   <none>           430495e2797d   3 hours ago    417MB
+<none>                   <none>           ae434598b396   3 hours ago    417MB
+<none>                   <none>           1a4806e52058   11 hours ago   414MB
+<none>                   <none>           8e37dbdae89e   11 hours ago   414MB
+<none>                   <none>           ff809c06ac56   11 hours ago   414MB
+<none>                   <none>           bffb14a63a43   11 hours ago   414MB
+<none>                   <none>           241ffe9d8e6c   11 hours ago   416MB
+<none>                   <none>           f37d15fdd7ae   11 hours ago   416MB
+<none>                   <none>           544c11c8e4e1   12 hours ago   416MB
+<none>                   <none>           4c0edb33f28e   12 hours ago   416MB
+<none>                   <none>           0b23e769f58f   12 hours ago   416MB
+<none>                   <none>           048c19b64e25   12 hours ago   416MB
+<none>                   <none>           d7ab4b9b188a   31 hours ago   411MB
+<none>                   <none>           c714c19e7375   31 hours ago   411MB
+<none>                   <none>           158015931d73   3 days ago     416MB
+<none>                   <none>           d07db57b98a9   3 days ago     416MB
+<none>                   <none>           84726df3a350   3 days ago     416MB
+<none>                   <none>           0960a280f7ba   3 days ago     416MB
+<none>                   <none>           180f441e1a6d   5 days ago     413MB
+<none>                   <none>           b23ce93a0466   5 days ago     413MB
+<none>                   <none>           d4ed43d76d04   5 days ago     412MB
+ros-backend              latest           a35b96282049   5 days ago     411MB
+<none>                   <none>           ce9fbbc15ff0   5 days ago     409MB
+<none>                   <none>           a249cf74ed6e   6 days ago     404MB
+<none>                   <none>           dd935779649d   6 days ago     232MB
+<none>                   <none>           5db8c8397a92   6 days ago     232MB
+<none>                   <none>           8fc3513c5d56   6 days ago     232MB
+<none>                   <none>           daa3aa53ef04   6 days ago     232MB
+<none>                   <none>           6b99bdad1889   6 days ago     232MB
+php81-hvac               latest           dde08d133c9b   5 weeks ago    111MB
+php                      8.1-fpm-alpine   5a0461761b05   6 months ago   79.8MB
+
+=== DOCKER_INSPECT ===
