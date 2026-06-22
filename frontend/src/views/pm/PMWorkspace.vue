@@ -2365,8 +2365,15 @@ onMounted(async () => {
 }
 
 /* 抽屉 */
+:deep(.el-drawer__body) {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 20px;
+}
+
 .drawer-tabs {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -2374,6 +2381,7 @@ onMounted(async () => {
 .drawer-tabs :deep(.el-tabs__content) {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   padding: 0 8px;
 }
 
@@ -2624,9 +2632,5 @@ onMounted(async () => {
   z-index: 9999 !important;
 }
 
-/* 抽屉内容区域滚动 */
-:deep(.el-drawer__body) {
-  overflow-y: auto;
-  padding-bottom: 20px;
-}
+
 </style>
