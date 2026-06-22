@@ -351,3 +351,123 @@ def _ensure_proposal_chain(db):
             db.add(ApprovalStep(chain_id=chain.id, seq=s["seq"], role=s["role"], name=s["name"]))
         db.flush()
     return chain
+
+
+# ═════════════════════════════════════════════════
+# 新增: 撤回 + 边界场景
+# ═════════════════════════════════════════════════
+
+class TestWithdraw:
+    """验证撤回功能"""
+
+    @pytest.fixture(autouse=True)
+    def setup_approval(self):
+        db = SessionLocal()
+        try:
+            self.pm_id = _create_user(db, "pmuser", "product_manager")
+            self.pid = _create_project(db, "pmuser")
+            for uname, urole in [("struct_mgr", "module_manager_struct"),
+                                  ("sys_mgr", "module_manager_sys"),
+                                  ("elec_ctrl", "electrical_control_engineer"),
+                                  ("elec_eng", "electrical_engineer")]:
+                _create_user(db, uname, urole)
+            _create_user(db, "director1", "rd_director")
+            _ensure_proposal_chain(db)
+            db.commit()
+        finally:
+            db.close()
+        headers = _login("pmuser")
+        r = client.post("/api/pm/proposals/submit", json={"project_id": self.pid}, headers=headers)
+        assert r.status_code == 200
+        self.approval_id = r.json()["approval"]["id"]
+        yield
+
+    def test_withdraw_pending_parallel_succeeds(self):
+        """并行审批中撤回成功"""
+        headers = _login("pmuser")
+        r = client.post(f"/api/pm/proposals/{self.pid}/withdraw", headers=headers)
+        assert r.status_code == 200
+        data = r.json()
+        # 返回格式可能是 message 或 detail
+        assert data.get("message") or data.get("detail"), f"Unexpected response: {data}"
+
+    def test_withdraw_by_non_owner_returns_403(self):
+        """非项目负责人撤回返回403"""
+        headers = _login("director1")
+        r = client.post(f"/api/pm/proposals/{self.pid}/withdraw", headers=headers)
+        assert r.status_code == 403
+
+    def test_withdraw_after_approval_returns_400(self):
+        """已通过的审批不能撤回"""
+        # 先全部通过
+        for uname in ["struct_mgr", "sys_mgr", "elec_ctrl", "elec_eng"]:
+            h = _login(uname)
+            cr = client.post(f"/api/approvals/{self.approval_id}/review",
+                             json={"action": "approved"}, headers=h)
+            assert cr.status_code == 200, f"Parallel review failed for {uname}: {cr.text}"
+        h = _login("director1")
+        r2 = client.post(f"/api/approvals/{self.approval_id}/review",
+                         json={"action": "approved"}, headers=h)
+        assert r2.status_code == 200, f"Director review failed: {r2.text}"
+
+        # 再尝试撤回
+        headers = _login("pmuser")
+        r = client.post(f"/api/pm/proposals/{self.pid}/withdraw", headers=headers)
+        assert r.status_code == 400
+
+
+class TestErrorPaths:
+    """异常路径覆盖"""
+
+    def test_submit_invalid_project_returns_404(self):
+        """提交不存在的项目返回404"""
+        db = SessionLocal()
+        try:
+            pm_id = _create_user(db, "pmuser", "product_manager")
+            db.commit()
+        finally:
+            db.close()
+        headers = _login("pmuser")
+        r = client.post("/api/pm/proposals/submit", json={"project_id": 99999}, headers=headers)
+        assert r.status_code == 404
+
+    def test_review_invalid_approval_returns_404(self):
+        """审批不存在的记录返回404"""
+        db = SessionLocal()
+        try:
+            _ensure_proposal_chain(db)
+            _create_user(db, "struct1", "module_manager_struct")
+            db.commit()
+        finally:
+            db.close()
+        headers = _login("struct1")
+        r = client.post("/api/approvals/99999/review", json={"action": "approved"}, headers=headers)
+        assert r.status_code == 404
+
+    def test_review_with_invalid_action_returns_400(self):
+        """审批传入无效action返回400"""
+        db = SessionLocal()
+        try:
+            pm_id = _create_user(db, "pmuser2", "product_manager")
+            pid = _create_project(db, "pmuser2")
+            for uname, urole in [("struct_mgr2", "module_manager_struct"),
+                                  ("sys_mgr2", "module_manager_sys"),
+                                  ("elec_ctrl2", "electrical_control_engineer"),
+                                  ("elec_eng2", "electrical_engineer")]:
+                _create_user(db, uname, urole)
+            _create_user(db, "director2", "rd_director")
+            _ensure_proposal_chain(db)
+            db.commit()
+        finally:
+            db.close()
+        headers = _login("pmuser2")
+        r1 = client.post("/api/pm/proposals/submit", json={"project_id": pid}, headers=headers)
+        assert r1.status_code == 200
+        approval_id = r1.json()["approval"]["id"]
+
+        h = _login("struct_mgr2")
+        r = client.post(f"/api/approvals/{approval_id}/review",
+                        json={"action": "invalid_action"}, headers=h)
+        # Pydantic pattern validation rejects invalid action at 422
+        assert r.status_code in (400, 422), f"Expected 400 or 422, got {r.status_code}"
+
