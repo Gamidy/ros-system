@@ -81,6 +81,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'alerts', 'approvals', 'rd_dashboard', 'purchases',
         'pm-workspace', 'competitor_bench', 'proposal_approvals',
         'product-plans', 'verification-requirements', 'gate-rules',
+        'risk-dashboard', 'event-timeline',
         'target-markets', 'test-executions',
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
@@ -100,21 +101,34 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
         "verification-requirements", "test-executions",
+        "target-markets",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "structural_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
         "verification-requirements", "test-executions",
+        "target-markets",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "electrical_control_engineer": [
         "dashboard", "products", "bom", "projects",
-        "tests", "prototypes", "changes",
+        "tests", "prototypes", "changes", "certifications",
         "verification-requirements", "test-executions",
+        "target-markets",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "electrical_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes", "certifications",
         "verification-requirements", "test-executions",
+        "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
@@ -131,6 +145,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "tests", "quality", "alerts", "certifications",
         "prototypes", "changes",
         "verification-requirements", "test-executions",
+        "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
@@ -139,6 +154,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "certifications", "alerts",
         "verification-requirements", "test-executions",
+        "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
@@ -204,7 +220,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
     "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
-        "competitor_bench",
+        "competitor_bench", "target-markets",
         "verification-requirements", "test-executions",
     ],
 }

@@ -239,7 +239,7 @@ function gateStatusColor(s: string) { return { pending: 'info', passed: 'success
 
 async function fetchAll() {
   try {
-    const [pg, pj] = await Promise.all([api.get('/projects/programs'), api.get('/projects')])
+    const [pg, pj] = await Promise.all([api.get('/programs'), api.get('/projects')])
     programs.value = pg.data
     projects.value = pj.data
   } catch {}
@@ -255,7 +255,7 @@ async function onTabChange(name: string) {
 }
 
 async function saveProgram() {
-  try { await api.post('/projects/programs', pgForm.value); ElMessage.success('成功'); showProgramDialog.value = false; await fetchAll() } catch {}
+  try { await api.post('/programs', pgForm.value); ElMessage.success('成功'); showProgramDialog.value = false; await fetchAll() } catch {}
 }
 
 async function saveProject() {

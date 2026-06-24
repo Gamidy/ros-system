@@ -410,7 +410,7 @@ async function fetchDashboard() {
 async function fetchTrends() {
   try {
     const res = await api.get('/dashboard/trends')
-    const data = res.data ?? []
+    const data = Array.isArray(res.data) ? res.data : []
     trendsData.value = data.map((d: any) => ({ name: d.date, value: d.value }))
   } catch {
     trendsData.value = [

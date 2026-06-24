@@ -33,7 +33,7 @@ const option = computed<EChartsOption>(() => {
     grid: { left: '3%', right: '4%', bottom: '3%', top: props.title ? 48 : 24, containLabel: true },
     xAxis: {
       type: 'category',
-      data: props.data.map(d => d.name),
+      data: (props.data || []).map(d => d.name),
       boundaryGap: false,
       axisLine: { lineStyle: { color: '#e0e0e0' } },
       axisLabel: { color: '#86868b', fontSize: 12 },
@@ -48,7 +48,7 @@ const option = computed<EChartsOption>(() => {
     series: [
       {
         type: 'line',
-        data: props.data.map(d => d.value),
+        data: (props.data || []).map(d => d.value),
         smooth: props.smooth ?? true,
         symbol: 'circle',
         symbolSize: 6,

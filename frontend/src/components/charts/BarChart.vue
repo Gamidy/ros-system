@@ -39,14 +39,14 @@ const option = computed<EChartsOption>(() => {
     grid: { left: '3%', right: '4%', bottom: '3%', top: props.title ? 48 : 24, containLabel: true },
     xAxis: {
       type: props.horizontal ? 'value' : 'category',
-      data: props.horizontal ? undefined : props.data.map(d => d.name),
+      data: props.horizontal ? undefined : (props.data || []).map(d => d.name),
       axisLine: { lineStyle: { color: '#e0e0e0' } },
       axisLabel: { color: '#86868b', fontSize: 12 },
       splitLine: { show: props.horizontal, lineStyle: { color: '#f0f0f0' } },
     },
     yAxis: {
       type: props.horizontal ? 'category' : 'value',
-      data: props.horizontal ? props.data.map(d => d.name) : undefined,
+      data: props.horizontal ? (props.data || []).map(d => d.name) : undefined,
       axisLine: { show: false },
       axisTick: { show: false },
       axisLabel: { color: '#86868b', fontSize: 12 },
@@ -55,7 +55,7 @@ const option = computed<EChartsOption>(() => {
     series: [
       {
         type: 'bar',
-        data: props.data.map(d => d.value),
+        data: (props.data || []).map(d => d.value),
         barWidth: props.barWidth || (props.horizontal ? 16 : 24),
         itemStyle: {
           color: gradient,
