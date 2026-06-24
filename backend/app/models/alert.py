@@ -42,18 +42,18 @@ class Alert(Base):
 
 
 class Notification(Base):
-    """通知记录（当前仅系统内通知，未接入钉钉/飞书等外部渠道）
+    """通知记录
 
-    TODO: 接入外部通知渠道（webhook/webhook）：
-      - dingtalk: 群机器人 webhook → 发送 markdown 消息
-      - feishu: 群机器人 webhook → 发送富文本消息
+    当前状态：
+      - system: 已实现，写入 notifications 表，前端可查 ✅
+      - dingtalk/feishu/email: 尚未接入（预留 webhook 扩展点）
     """
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=True)
     target_user = Column(String(100), nullable=False, comment="通知目标用户")
-    channel = Column(String(20), default="feishu", comment="feishu/email/sms")
+    channel = Column(String(20), default="system", comment="system(已实现) / dingtalk/feishu/email(预留)")
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
     is_sent = Column(Boolean, default=False)

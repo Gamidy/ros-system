@@ -264,11 +264,12 @@ def _create_notification(
     content: str,
     channel: str = "system",
 ):
-    """创建系统内通知记录（当前仅写入 notifications 表，未接入钉钉/飞书等外部渠道）
+    """创建系统内通知记录
 
-    TODO: 如需外部通知，在写入后添加 webhook 调用：
-      - dingtalk: httpx.post(webhook_url, json={"msgtype": "markdown", ...})
-      - feishu: httpx.post(webhook_url, json={"msg_type": "post", ...})
+    当前仅写入 notifications 表(system 渠道)，前端通知中心可查。
+    dingtalk/feishu/email 渠道为预留扩展点，接入时：
+      - 查询 WebhookConfig 表获取 webhook_url
+      - 用 httpx.post 发送对应格式消息
     """
     notif = Notification(
         target_user=str(target_user_id),

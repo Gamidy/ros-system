@@ -11,7 +11,6 @@ from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.test import TestRequest, TestResult, MQVerification
 from app.services.state_machine import assert_transition, get_valid_transitions
-from app.models.alert import Alert
 from app.schemas import (
     TestRequestCreate, TestRequestOut,
     TestResultCreate, TestResultOut,
@@ -32,18 +31,6 @@ def _gen_mq_no() -> str:
     return f"MQ-{date.today().strftime('%Y%m%d')}-{uuid4().hex[:4].upper()}"
 
 
-
-def _create_test_ng_alert(test: TestRequest, db: Session) -> None:
-    """当测试完成且不合格项>0时，自动创建test_ng预警记录"""
-    alert = Alert(
-        target_type="test",
-        target_id=test.id,
-        title=f"测试不合格: {test.title}",
-        level=2,
-        alert_type="test_ng",
-        message=f"测试 [{test.request_no}] {test.title} 已完成，不合格项数: {test.ng_count}",
-    )
-    db.add(alert)
 
 
 # ═══════════════ 测试申请 ═══════════════
@@ -117,11 +104,11 @@ def update_test(
         r.result_summary = result_summary
     if ng_count is not None:
         r.ng_count = ng_count
-    # 当状态变为done且ng_count>0时，自动创建test_ng预警记录
+    # 当状态变为done且ng_count>0时，触发测试完成NG事件
+    # （事件处理器 on_test_done_with_ng 负责创建预警 + 阈值检查）
     if status == "done" and old_status != "done" and r.ng_count > 0:
-        _create_test_ng_alert(r, db)
         # ── 触发测试完成NG事件 ──
-        bus.emit(EventTypes.TEST_DONE_WITH_NG, test_id=r.id, request_no=r.request_no, ng_count=r.ng_count)
+        bus.emit(EventTypes.TEST_DONE_WITH_NG, test_id=r.id, request_no=r.request_no, ng_count=r.ng_count, project_code=r.project_code)
     r.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(r)
