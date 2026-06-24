@@ -102,6 +102,19 @@ def batch_update_capacity_unit_costs(
 
 # ── Indirect Cost Route ──────────────────────────────────────────────
 
+@router.get("/indirect-cost/current", response_model=IndirectCostOut)
+def get_current_indirect_cost(
+    db: Session = Depends(get_db),
+):
+    """查询当前间接成本配置（默认key='default'）"""
+    cost = db.query(IndirectCostConfig).filter(
+        IndirectCostConfig.key == "default"
+    ).first()
+    if not cost:
+        return IndirectCostOut(id=0, key="default", amount=0, description=None)
+    return cost
+
+
 @router.post("/indirect-cost")
 def update_indirect_cost(
     data: IndirectCostUpdate,

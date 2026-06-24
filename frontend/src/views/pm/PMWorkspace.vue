@@ -685,6 +685,19 @@ const certCostTotal = computed(() =>
   certCostTable.reduce((sum, r) => sum + (Number(r.cost_wan) || 0), 0)
 )
 
+// 间接成本（从后端获取，单位：元 → 转为万元）
+const indirectCostAmount = ref(0)
+
+async function fetchIndirectCost() {
+  try {
+    const res = await api.get('/admin/indirect-cost/current')
+    // amount 单位是"元"，grand total 单位是"万元"
+    indirectCostAmount.value = (Number(res.data.amount) || 0) / 10000
+  } catch {
+    indirectCostAmount.value = 0
+  }
+}
+
 // 说明自动生成
 // 每行说明独立刷新
 function refreshDevCostRemarks() {
@@ -746,7 +759,7 @@ function refreshDevCostRemarks() {
 const devCostGrandTotal = computed(() => {
   const sumFirst7 = devCostTable.slice(0, 7).reduce((s, r) => s + (Number(r.budget) || 0), 0)
   // 总预算 = 前7项 + 认证费用合计 + 间接成本
-  return sumFirst7 + certCostTotal.value
+  return sumFirst7 + certCostTotal.value + indirectCostAmount.value
 })
 
 // 系统配置中的产品类型简写映射
@@ -2084,6 +2097,7 @@ onMounted(async () => {
     await fetchUserWorkloads()
     await fetchPrograms()
     await fetchExchangeRate()
+    await fetchIndirectCost()
     // 加载默认角色模板（如果没有项目类型则用默认值）
     if (projectForm.dev_category) {
       selectedProjectType.value = projectForm.dev_category

@@ -945,6 +945,10 @@ def pm_update_draft(
     if p.owner != current_user.username:
         raise HTTPException(status_code=403, detail="仅项目负责人可更新此项目")
 
+    # 只有草稿状态的项目才能编辑（防覆盖已提交的项目）
+    if not p.is_draft:
+        raise HTTPException(status_code=400, detail="已提交或审批中的项目不可编辑，如需修改请撤回审批")
+
     try:
         # 使用 is not None 判断 (而非真值判断) 以支持清空字段
         _apply_project_fields(
@@ -1139,6 +1143,10 @@ def pm_update_project(
     # 验证当前用户是项目 owner
     if p.owner != current_user.username:
         raise HTTPException(status_code=403, detail="仅项目负责人可更新此项目")
+
+    # 只有草稿状态的项目才能编辑（防覆盖已提交的项目）
+    if not p.is_draft:
+        raise HTTPException(status_code=400, detail="已提交或审批中的项目不可编辑，如需修改请撤回审批")
 
     try:
         if description is not None:

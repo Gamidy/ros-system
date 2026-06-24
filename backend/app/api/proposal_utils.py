@@ -77,12 +77,22 @@ def _validate_approver_config(db: Session) -> list[str]:
 # ══════════════════════════════════════════════════════════════════
 
 def _change_status(db: Session, pa: ProposalApproval, new_status: str):
-    """变更 ProposalApproval 状态并同步 ApprovalRequest
+    """变更 ProposalApproval 状态并同步 ApprovalRequest + Project.approval_status
 
     禁止在业务代码中直接写 pa.status = "..."，必须通过本函数。
     """
     pa.status = new_status
     _sync_approval_request(db, pa)
+
+    # 同步 Project.approval_status（死字段修复）
+    p: Project | None = db.query(Project).filter(Project.id == pa.proposal_id).first()
+    if p:
+        if new_status in (ProposalStatus.PENDING_PARALLEL, ProposalStatus.PENDING_DIRECTOR):
+            p.approval_status = "pending"
+        elif new_status == ProposalStatus.APPROVED:
+            p.approval_status = "approved"
+        elif new_status == ProposalStatus.REJECTED:
+            p.approval_status = "rejected"
 
 
 # ══════════════════════════════════════════════════════════════════

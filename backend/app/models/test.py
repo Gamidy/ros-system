@@ -6,6 +6,15 @@ from app.core.database import Base
 
 # ==== 测试/实验 ====
 
+_VALID_TRANSITIONS: dict[str, list[str]] = {
+    "draft": ["submitted", "cancelled"],
+    "submitted": ["testing", "draft"],
+    "testing": ["done", "cancelled"],
+    "done": [],
+    "cancelled": [],
+}
+
+
 class TestRequest(Base):
     """测试申请"""
     __tablename__ = "test_requests"
