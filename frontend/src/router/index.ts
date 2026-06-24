@@ -137,6 +137,18 @@ const router = createRouter({
           meta: { title: '市场管理' },
         },
         {
+          path: 'product-plans',
+          name: 'ProductPlanningCenter',
+          component: () => import('../views/pm/ProductPlanningCenter.vue'),
+          meta: { title: '产品策划', menu: 'product-plans' },
+        },
+        {
+          path: 'product-plans/:id',
+          name: 'ProductPlanDetail',
+          component: () => import('../views/pm/ProductPlanDetail.vue'),
+          meta: { title: '策划详情', menu: 'product-plans' },
+        },
+        {
           path: 'admin-config',
           name: 'AdminConfig',
           component: () => import('../views/admin/AdminConfig.vue'),

@@ -19,6 +19,7 @@ from app.models.capacity_unit_cost import CapacityUnitCost
 from app.models.indirect_cost_config import IndirectCostConfig
 from app.models.trial_qty_config import TrialQtyConfig
 from app.models.annual_plan import AnnualPlan
+from app.models.product_plan import ProductPlan, Cost, ProductPlanStage, CostType, BOMType
 
 __all__ = [
     "User",
@@ -41,4 +42,5 @@ __all__ = [
     "IndirectCostConfig",
     "TrialQtyConfig",
     "AnnualPlan",
+    "ProductPlan", "Cost", "ProductPlanStage", "CostType", "BOMType",
 ]

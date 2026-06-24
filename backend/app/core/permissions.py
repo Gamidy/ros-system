@@ -47,6 +47,7 @@ ALL_MENUS = [
     "proposal_approvals", # 产品立项审批
     "purchases",        # 采购
     "rd_dashboard",     # 研发总监
+    "product-plans",     # 产品策划
     "mm",               # 模块管理
     "admin-config",     # 系统设置（仅admin）
 ]
@@ -58,13 +59,15 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
     "rd_director": [
         "dashboard", "products", "bom", "projects", "tests",
         "certifications", "prototypes", "quality", "changes",
-        "alerts", "approvals", "rd_dashboard", "purchases",
-        "pm-workspace", "competitor_bench", "proposal_approvals",
+        'alerts', 'approvals', 'rd_dashboard', 'purchases',
+        'pm-workspace', 'competitor_bench', 'proposal_approvals',
+        'product-plans',
     ],
     "product_manager": [
         "dashboard", "products", "bom", "projects",
-        "certifications", "alerts", "approvals", "pm-workspace",
-        "competitor_bench", "market_mgmt", "proposal_approvals",
+        'certifications', 'alerts', 'approvals', 'pm-workspace',
+        'competitor_bench', 'market_mgmt', 'proposal_approvals',
+        'product-plans',
     ],
     "systems_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -180,6 +183,7 @@ MENU_PATH_MAP: dict[str, str] = {
     "competitor_bench": "/competitor-bench",
     "market_mgmt": "/market-mgmt",
     "proposal_approvals": "/approvals/proposals",
+    "product-plans": "/product-plans",
     "admin-config": "/admin-config",
 }
 
