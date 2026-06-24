@@ -1,7 +1,7 @@
 """安规管理模块 — 种子数据（幂等可重复执行）"""
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.core.database import SessionLocal
 from app.models.safety import (

@@ -24,16 +24,6 @@ from app.models.purchase import Supplier
 
 router = APIRouter(prefix="/api/safety", tags=["安规管理"])
 
-ALLOWED_ROLES = ["admin", "general_manager", "quality_engineer", "certification_engineer",
-                  "procurement", "rd_director", "product_manager", "systems_engineer",
-                  "electrical_control_engineer", "electrical_engineer", "structural_engineer",
-                  "process_engineer", "project_admin", "security_officer",
-                  "module_manager", "module_manager_struct", "module_manager_sys"]
-
-
-def _get_current_user(current_user: User = Depends(get_current_user)) -> User:
-    return current_user
-
 
 # ═══════════════ 安全标准库 CRUD ═══════════════
 
@@ -46,7 +36,7 @@ def list_standards(
     status: Optional[str] = Query(None, description="状态: active/draft/obsolete"),
     applicable_market: Optional[str] = Query(None, description="适用市场"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """获取安全标准库分页列表"""
     query = db.query(SafetyStandard)
@@ -78,7 +68,7 @@ def list_standards(
 
 @router.get("/standards/{sid}", response_model=SafetyStandardOut)
 def get_standard(sid: int, db: Session = Depends(get_db),
-                 current_user: User = Depends(_get_current_user)):
+                 current_user: User = Depends(get_current_user)):
     """获取安全标准详情"""
     item = db.query(SafetyStandard).options(
         joinedload(SafetyStandard.inspection_items)
@@ -93,7 +83,7 @@ def get_standard(sid: int, db: Session = Depends(get_db),
 @router.post("/standards", response_model=SafetyStandardOut,
              dependencies=[Depends(require_role("admin", "quality_engineer", "certification_engineer"))])
 def create_standard(data: SafetyStandardCreate, db: Session = Depends(get_db),
-                     current_user: User = Depends(_get_current_user)):
+                     current_user: User = Depends(get_current_user)):
     """创建安全标准"""
     item = SafetyStandard(**data.model_dump())
     db.add(item)
@@ -105,7 +95,7 @@ def create_standard(data: SafetyStandardCreate, db: Session = Depends(get_db),
 @router.put("/standards/{sid}", response_model=SafetyStandardOut,
             dependencies=[Depends(require_role("admin", "quality_engineer", "certification_engineer"))])
 def update_standard(sid: int, data: SafetyStandardUpdate, db: Session = Depends(get_db),
-                     current_user: User = Depends(_get_current_user)):
+                     current_user: User = Depends(get_current_user)):
     """更新安全标准"""
     item = db.query(SafetyStandard).filter(SafetyStandard.id == sid).first()
     if not item:
@@ -120,7 +110,7 @@ def update_standard(sid: int, data: SafetyStandardUpdate, db: Session = Depends(
 
 @router.delete("/standards/{sid}", dependencies=[Depends(require_role("admin"))])
 def delete_standard(sid: int, db: Session = Depends(get_db),
-                     current_user: User = Depends(_get_current_user)):
+                     current_user: User = Depends(get_current_user)):
     """删除安全标准（物理删除，仅admin）"""
     item = db.query(SafetyStandard).filter(SafetyStandard.id == sid).first()
     if not item:
@@ -133,7 +123,7 @@ def delete_standard(sid: int, db: Session = Depends(get_db),
 @router.put("/standards/{sid}/archive", response_model=SafetyStandardOut,
             dependencies=[Depends(require_role("admin", "quality_engineer", "certification_engineer"))])
 def archive_standard(sid: int, db: Session = Depends(get_db),
-                      current_user: User = Depends(_get_current_user)):
+                      current_user: User = Depends(get_current_user)):
     """归档安全标准（软删除：状态设为obsolete）"""
     item = db.query(SafetyStandard).filter(SafetyStandard.id == sid).first()
     if not item:
@@ -155,7 +145,7 @@ def list_inspection_items(
     keyword: Optional[str] = Query(None, description="搜索关键词"),
     status: Optional[str] = Query(None, description="状态"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """获取安规检测项分页列表"""
     query = db.query(SafetyInspectionItem).options(
@@ -188,7 +178,7 @@ def list_inspection_items(
 
 @router.get("/inspection-items/{iid}", response_model=SafetyInspectionItemOut)
 def get_inspection_item(iid: int, db: Session = Depends(get_db),
-                         current_user: User = Depends(_get_current_user)):
+                         current_user: User = Depends(get_current_user)):
     """获取安规检测项详情"""
     item = db.query(SafetyInspectionItem).options(
         joinedload(SafetyInspectionItem.standard)
@@ -204,7 +194,7 @@ def get_inspection_item(iid: int, db: Session = Depends(get_db),
 @router.post("/inspection-items", response_model=SafetyInspectionItemOut,
              dependencies=[Depends(require_role("admin", "quality_engineer", "certification_engineer"))])
 def create_inspection_item(data: SafetyInspectionItemCreate, db: Session = Depends(get_db),
-                            current_user: User = Depends(_get_current_user)):
+                            current_user: User = Depends(get_current_user)):
     """创建安规检测项"""
     # 验证标准存在
     std = db.query(SafetyStandard).filter(SafetyStandard.id == data.standard_id).first()
@@ -222,7 +212,7 @@ def create_inspection_item(data: SafetyInspectionItemCreate, db: Session = Depen
 @router.put("/inspection-items/{iid}", response_model=SafetyInspectionItemOut,
             dependencies=[Depends(require_role("admin", "quality_engineer", "certification_engineer"))])
 def update_inspection_item(iid: int, data: SafetyInspectionItemUpdate, db: Session = Depends(get_db),
-                            current_user: User = Depends(_get_current_user)):
+                            current_user: User = Depends(get_current_user)):
     """更新安规检测项"""
     item = db.query(SafetyInspectionItem).options(
         joinedload(SafetyInspectionItem.standard)
@@ -246,7 +236,7 @@ def update_inspection_item(iid: int, data: SafetyInspectionItemUpdate, db: Sessi
 
 @router.delete("/inspection-items/{iid}", dependencies=[Depends(require_role("admin"))])
 def delete_inspection_item(iid: int, db: Session = Depends(get_db),
-                            current_user: User = Depends(_get_current_user)):
+                            current_user: User = Depends(get_current_user)):
     """删除安规检测项（仅admin）"""
     item = db.query(SafetyInspectionItem).filter(SafetyInspectionItem.id == iid).first()
     if not item:
@@ -260,7 +250,7 @@ def delete_inspection_item(iid: int, db: Session = Depends(get_db),
 def batch_import_inspection_items(
     items: list[SafetyInspectionItemCreate] = Body(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """批量导入安规检测项"""
     created = 0
@@ -293,7 +283,7 @@ def list_supplier_qualifications(
     expiry_soon: Optional[int] = Query(None, description="N天内到期预警"),
     keyword: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """获取供应商安规资质列表"""
     query = db.query(SupplierSafetyQualification).options(
@@ -334,7 +324,7 @@ def list_supplier_qualifications(
 
 @router.get("/supplier-qualifications/{qid}", response_model=SupplierSafetyQualificationOut)
 def get_supplier_qualification(qid: int, db: Session = Depends(get_db),
-                                current_user: User = Depends(_get_current_user)):
+                                current_user: User = Depends(get_current_user)):
     """获取供应商安规资质详情"""
     item = db.query(SupplierSafetyQualification).options(
         joinedload(SupplierSafetyQualification.audit_records)
@@ -352,7 +342,7 @@ def get_supplier_qualification(qid: int, db: Session = Depends(get_db),
              dependencies=[Depends(require_role("admin", "procurement", "quality_engineer"))])
 def create_supplier_qualification(data: SupplierSafetyQualificationCreate,
                                    db: Session = Depends(get_db),
-                                   current_user: User = Depends(_get_current_user)):
+                                   current_user: User = Depends(get_current_user)):
     """创建供应商安规资质"""
     # 验证供应商存在
     supplier = db.query(Supplier).filter(Supplier.id == data.supplier_id).first()
@@ -378,7 +368,7 @@ def create_supplier_qualification(data: SupplierSafetyQualificationCreate,
             dependencies=[Depends(require_role("admin", "procurement", "quality_engineer"))])
 def update_supplier_qualification(qid: int, data: SupplierSafetyQualificationUpdate,
                                    db: Session = Depends(get_db),
-                                   current_user: User = Depends(_get_current_user)):
+                                   current_user: User = Depends(get_current_user)):
     """更新供应商安规资质"""
     item = db.query(SupplierSafetyQualification).filter(
         SupplierSafetyQualification.id == qid).first()
@@ -399,7 +389,7 @@ def update_supplier_qualification(qid: int, data: SupplierSafetyQualificationUpd
 @router.delete("/supplier-qualifications/{qid}",
                dependencies=[Depends(require_role("admin"))])
 def delete_supplier_qualification(qid: int, db: Session = Depends(get_db),
-                                   current_user: User = Depends(_get_current_user)):
+                                   current_user: User = Depends(get_current_user)):
     """删除供应商安规资质（仅admin）"""
     item = db.query(SupplierSafetyQualification).filter(
         SupplierSafetyQualification.id == qid).first()
@@ -414,7 +404,7 @@ def delete_supplier_qualification(qid: int, db: Session = Depends(get_db),
 
 @router.get("/supplier-qualifications/{qid}/audit-records", response_model=list[SafetyAuditRecordOut])
 def list_audit_records(qid: int, db: Session = Depends(get_db),
-                        current_user: User = Depends(_get_current_user)):
+                        current_user: User = Depends(get_current_user)):
     """获取供应商安规审核记录列表"""
     records = db.query(SupplierSafetyAuditRecord).filter(
         SupplierSafetyAuditRecord.qualification_id == qid
@@ -425,7 +415,7 @@ def list_audit_records(qid: int, db: Session = Depends(get_db),
 @router.post("/audit-records", response_model=SafetyAuditRecordOut,
              dependencies=[Depends(require_role("admin", "quality_engineer"))])
 def create_audit_record(data: SafetyAuditRecordCreate, db: Session = Depends(get_db),
-                         current_user: User = Depends(_get_current_user)):
+                         current_user: User = Depends(get_current_user)):
     """创建安规审核记录"""
     qual = db.query(SupplierSafetyQualification).filter(
         SupplierSafetyQualification.id == data.qualification_id).first()
@@ -452,7 +442,7 @@ def get_safety_alerts(
     days: int = Query(30, ge=1, le=365, description="预警提前天数"),
     severity: Optional[str] = Query(None, description="筛选严重等级: critical/warning/info"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """获取安规预警信息（证书到期、资质到期、标准变更）"""
     today = date.today()
