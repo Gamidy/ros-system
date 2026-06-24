@@ -367,6 +367,9 @@ def _make_decision(
             meta = _get_step_meta(req, req.current_step)
             if not meta or current_user.role not in meta.get("required_roles", []):
                 raise HTTPException(status_code=403, detail="您不是当前并行审批步骤的审批人")
+            # 检查是否已审批过（防止同一人多次操作）
+            if current_user.username in (meta.get("decisions") or {}):
+                raise HTTPException(status_code=400, detail="您已审批过该申请")
         else:
             # 顺序步骤：检查用户角色是否匹配步骤角色
             if not any(s.role == current_user.role for s in steps):
@@ -394,25 +397,24 @@ def _make_decision(
         meta["decisions"][current_user.username] = {
             "decision": action,
             "comment": decision.comment,
+            "role": current_user.role,
         }
         _set_step_meta(req, req.current_step, meta)
 
         if action == "rejected":
             req.status = "rejected"
         else:
-            # 检查所有 required_roles 是否都已 approved
-            all_approved = True
-            for role in meta.get("required_roles", []):
-                role_approved = any(
+            # 检查所有 required_roles 是否都已 approved（按角色过滤）
+            all_approved = all(
+                any(
                     d.get("decision") == "approved"
-                    for d in meta["decisions"].values()
+                    for d in meta.get("decisions", {}).values()
+                    if d.get("role") == role
                 )
-                if not role_approved:
-                    all_approved = False
-                    break
-            if all_approved and len(meta["decisions"]) >= len(meta.get("required_roles", [])):
+                for role in meta.get("required_roles", [])
+            )
+            if all_approved:
                 _advance_to_next_step(req, db)
-            # 否则继续等待（status 保持 pending）
     else:
         # ── 顺序步骤处理（原有逻辑）──
         if action == "rejected":

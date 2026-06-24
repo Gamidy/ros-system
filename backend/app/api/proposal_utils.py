@@ -3,7 +3,8 @@
 导出:
     _validate_approver_config, _change_status, _project_to_snapshot,
     _proposal_to_out, _load_parallel_reviewers, _create_notification,
-    _ensure_proposal_chain, _sync_approval_request, _parse_date, _apply_payload
+    _ensure_proposal_chain, _sync_approval_request, _parse_date, _apply_payload,
+    _sync_pa_from_ar
 """
 from datetime import datetime
 
@@ -16,7 +17,7 @@ from app.models.proposal_approval import (
     ProposalApproval, ProposalParallelReviewer,
     ProposalStatus, ReviewStatus, ApprovalRequestStatus,
 )
-from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest
+from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalRecord
 from app.models.alert import Notification
 from app.services.events import bus, EventTypes
 
@@ -297,7 +298,7 @@ def _ensure_proposal_chain(db: Session) -> ApprovalChain:
         steps_def = [
             {"seq": 1, "role": "产品经理", "name": "产品经理提交", "step_type": "sequential"},
             {"seq": 2, "role": "并行审批人", "name": "模块经理/工程师并行审批", "step_type": "parallel"},
-            {"seq": 3, "role": "研发总监", "name": "研发总监终审", "step_type": "sequential"},
+            {"seq": 3, "role": "rd_director", "name": "研发总监终审", "step_type": "sequential"},
         ]
         for s in steps_def:
             db.add(ApprovalStep(chain_id=chain.id, seq=s["seq"], role=s["role"], name=s["name"], step_type=s["step_type"]))
@@ -383,3 +384,59 @@ def _apply_payload(p: Project, payload: dict):
     for key in ["start_date", "target_end_date"]:
         if key in payload:
             setattr(p, key, _parse_date(payload[key]))
+
+
+# ══════════════════════════════════════════════════════════════════
+# 辅助: 从 ApprovalRequest 镜像状态到 ProposalApproval（双写）
+# ══════════════════════════════════════════════════════════════════
+
+def _sync_pa_from_ar(db: Session, pa: ProposalApproval, ar: ApprovalRequest, action: str, current_user: User):
+    """从 ApprovalRequest 镜像状态到 ProposalApproval（双写）
+
+    用于新审批路径：review_approval 将决策委托给 _make_decision 后，
+    将 ApprovalRequest 的最新状态同步回 ProposalApproval 表，
+    保证现有 list/detail 接口通过 ProposalApproval 查询不受影响。
+    """
+    now = datetime.now()
+
+    # ── 1. 同步 ProposalApproval 状态 ──
+    if ar.status == ApprovalRequestStatus.REJECTED:
+        pa.status = ProposalStatus.REJECTED
+    elif ar.status == ApprovalRequestStatus.APPROVED:
+        pa.status = ProposalStatus.APPROVED
+    elif ar.status == ApprovalRequestStatus.WITHDRAWN:
+        pa.status = ProposalStatus.WITHDRAWN
+    else:  # pending
+        if ar.current_step == 2:
+            pa.status = ProposalStatus.PENDING_PARALLEL
+        elif ar.current_step == 3:
+            pa.status = ProposalStatus.PENDING_DIRECTOR
+
+    # ── 2. 查找当前用户的最新审批记录 ──
+    record = db.query(ApprovalRecord).filter(
+        ApprovalRecord.request_id == ar.id,
+        ApprovalRecord.approver == current_user.username,
+    ).order_by(ApprovalRecord.decided_at.desc()).first()
+
+    if not record:
+        return
+
+    # ── 3. 根据步骤类型同步到对应字段 ──
+    step = db.query(ApprovalStep).filter(ApprovalStep.id == record.step_id).first()
+    step_type = step.step_type if step else "sequential"
+
+    if step_type == "parallel":
+        # 并行审批：同步到 ProposalParallelReviewer 表
+        reviewer_row = db.query(ProposalParallelReviewer).filter(
+            ProposalParallelReviewer.approval_id == pa.id,
+            ProposalParallelReviewer.user_id == current_user.id,
+        ).first()
+        if reviewer_row:
+            reviewer_row.status = action
+            reviewer_row.reason = record.comment or ""
+            reviewer_row.reviewed_at = record.decided_at or now
+    else:
+        # 顺序步骤（研发总监终审）：同步到 director 字段
+        pa.director_status = action
+        pa.director_reason = record.comment or ""
+        pa.director_reviewed_at = record.decided_at or now

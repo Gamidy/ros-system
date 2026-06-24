@@ -34,6 +34,10 @@ from .proposal_utils import (
     _ensure_proposal_chain, _sync_approval_request, _parse_date, _apply_payload,
     _ROLE_LABEL, _PARALLEL_ROLES,
 )
+from .proposal_utils import _sync_pa_from_ar
+from app.schemas import ApprovalDecision
+from app.api.approvals import _make_decision
+from app.services.events import bus, EventTypes
 
 router = APIRouter(tags=["项目立项审批"])
 
@@ -159,11 +163,17 @@ def submit_proposal(
     approval_req = ApprovalRequest(
         chain_id=proposal_chain.id,
         request_type="proposal",
-        request_id=pa.id,  # 关联 ProposalApproval 的 ID
+        request_id=pa.id,
         title=p.name or "",
         requester=current_user.username,
-        status=ApprovalRequestStatus.PENDING,  # 映射: pending_parallel → pending
-        current_step=1,
+        status=ApprovalRequestStatus.PENDING,
+        current_step=2,
+        step_meta={
+            "2": {
+                "required_roles": _PARALLEL_ROLES,
+                "decisions": {},
+            }
+        },
     )
     db.add(approval_req)
     db.flush()
@@ -335,6 +345,39 @@ def review_approval(
     if not pa:
         raise HTTPException(status_code=404, detail="审批记录不存在")
 
+    # ── 新路：查找对应的 ApprovalRequest（如存在则委托通用审批引擎）──
+    ar = db.query(ApprovalRequest).filter(
+        ApprovalRequest.request_type == "proposal",
+        ApprovalRequest.request_id == pa.id,
+    ).first()
+
+    if ar:
+        # 新路：委托 _make_decision 处理审批决策
+        decision = ApprovalDecision(comment=reason or "")
+        result = _make_decision(ar.id, action, decision, db, current_user)
+
+        # 双写：同步 ProposalApproval 状态
+        _sync_pa_from_ar(db, pa, ar, action, current_user)
+
+        # 审批通过时发射事件（事件处理器处理项目状态变更等副作用）
+        if ar.status == "approved":
+            project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
+            bus.emit(
+                EventTypes.PROPOSAL_APPROVED,
+                project_id=pa.proposal_id,
+                project_name=project.name if project else pa.title,
+                project_code=project.code if project else "",
+                proposer_id=pa.proposer_id,
+            )
+
+        db.commit()
+        db.refresh(pa)
+        return {
+            "message": "审批操作成功",
+            "approval": _proposal_to_out(pa),
+        }
+
+    # 旧路：走现有逻辑（无关联 ApprovalRequest 的存量数据）
     user_id = current_user.id
     now = datetime.now()
 
