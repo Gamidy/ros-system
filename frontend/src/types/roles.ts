@@ -81,6 +81,9 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/competitor-bench',   title: '竞品对标',     icon: DataAnalysis },
   { path: '/market-mgmt',        title: '市场管理',     icon: Stamp },
   { path: '/product-plans',      title: '产品策划',     icon: DataAnalysis },
+  { path: '/event-timeline',    title: '事件时间线',    icon: DataAnalysis },
+  { path: '/saga-viewer',      title: 'Saga事务',      icon: Select },
+  { path: '/risk-dashboard',  title: '智能决策看板',  icon: DataAnalysis },
   { path: '/rd-dashboard',   title: '研发总监',       icon: DataAnalysis },
   { path: '/admin-config',   title: '系统设置',       icon: Setting },
 ]

@@ -149,6 +149,30 @@ const router = createRouter({
           meta: { title: '策划详情', menu: 'product-plans' },
         },
         {
+          path: 'event-timeline',
+          name: 'EventTimeline',
+          component: () => import('../views/pm/EventTimelineView.vue'),
+          meta: { title: '事件时间线' },
+        },
+        {
+          path: 'event-timeline/detail/:planId',
+          name: 'EventTimelineDetail',
+          component: () => import('../views/pm/EventTimelineDetail.vue'),
+          meta: { title: '事件详情' },
+        },
+        {
+          path: 'saga-viewer',
+          name: 'SagaChainViewer',
+          component: () => import('../views/pm/SagaChainViewer.vue'),
+          meta: { title: 'Saga事务' },
+        },
+        {
+          path: 'risk-dashboard',
+          name: 'RiskDashboard',
+          component: () => import('../views/risk/RiskDashboard.vue'),
+          meta: { title: '智能决策看板' },
+        },
+        {
           path: 'admin-config',
           name: 'AdminConfig',
           component: () => import('../views/admin/AdminConfig.vue'),
