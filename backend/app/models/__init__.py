@@ -40,6 +40,10 @@ from app.models.change_impact import ChangeImpactRule, ChangeImpactRecord
 from app.models.cert_gate_rule import CertificationGateRule
 from app.models.cert_auto_gen import CertAutoGenLog
 from app.models.ecr_eco import ECRAttachment, ECRRequest, ECO, ECOItem
+from app.models.safety import (
+    SafetyStandard, SafetyInspectionItem,
+    SupplierSafetyQualification, SupplierSafetyAuditRecord,
+)
 
 __all__ = [
     "User",
@@ -84,4 +88,8 @@ __all__ = [
     "ECRRequest",
     "ECO",
     "ECOItem",
+    "SafetyStandard",
+    "SafetyInspectionItem",
+    "SupplierSafetyQualification",
+    "SupplierSafetyAuditRecord",
 ]

@@ -14,6 +14,7 @@ from app.api import verification_requirements, prototypes, test_executions, gate
 from app.api import s2_cert_requirements, s2_cert_projects, s2_cert_samples, s2_cert_executions, s2_cert_results, s2_certificates, s2_gate_rules, s2_change_impact
 from app.api import ecr, eco
 from app.api import audit_logs
+from app.api import safety
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -125,6 +126,7 @@ app.include_router(s2_certificates.router)
 app.include_router(s2_gate_rules.router)
 app.include_router(s2_change_impact.router)
 app.include_router(alerts.router, prefix="/api")
+app.include_router(safety.router)
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")
 app.include_router(purchases.router, prefix="/api")

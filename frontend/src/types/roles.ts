@@ -89,6 +89,11 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/admin-config',   title: '系统设置',       icon: Setting },
   { path: '/admin/tenants',   title: '多租户管理',     icon: OfficeBuilding },
   { path: '/admin/my-org',    title: '我的组织',       icon: User },
+  // P0-6 安规管理
+  { path: '/safety/standards',  title: '安全标准库',       icon: Document },
+  { path: '/safety/inspection-items', title: '安规检测项', icon: Document },
+  { path: '/safety/supplier-qualifications', title: '供应商安规', icon: ShoppingCart },
+  { path: '/safety/alerts',     title: '安规预警',         icon: WarningFilled },
 ]
 
 /**

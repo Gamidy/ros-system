@@ -1,0 +1,249 @@
+{
+  "meta": {
+    "module_name": "P0-6 安规管理模块 (Safety Compliance Management)",
+    "project": "ROS — 空调(AC)产品研发全生命周期管理平台",
+    "tech_stack": "FastAPI + SQLAlchemy + Vue3 + Element Plus + TypeScript",
+    "author": "ROS Agent"
+  },
+  "current_state_summary": {
+    "existing_assets": [
+      "CertStandard 模型 (pm_config.py) — 安规标准配置表，当前只读",
+      "MarketCertification 模型 (pm_config.py) — 市场认证要求映射表，当前只读",
+      "GET /api/pm/cert-standards API — 仅支持按市场查询",
+      "backend/seed_s2.py — 已有 CertStandard + MarketCertification 种子数据",
+      "Frontend MarketMgmt.vue — 已有 '安规 Safety' 选项标签",
+      "Alert / AlertRule 模型 — 支持 alert_type='cdf_expiry' 等预警类型",
+      "Certificate 模型 — 证书信息含 expiry_date",
+      "Supplier 模型 (purchase.py) — 供应商基础信息"
+    ],
+    "gaps": [
+      "CertStandard 只读，无完整 CRUD 管理界面",
+      "无安规检测项管理模块 (SafetyInspectionItem)",
+      "无供应商安规资质审核功能 (SupplierSafetyQualification)",
+      "无证书到期预警机制（虽有Alert模型但未配置安规预警规则）",
+      "无标准更新通知功能",
+      "前端无独立安规管理页面/路由",
+      "后端无独立 safety.py 模块"
+    ]
+  },
+  "phase_tasks": [
+    {
+      "id": "t1",
+      "title": "安全标准库管理 — 后端模型 & Schema",
+      "description": "创建 backend/app/models/safety.py, 定义 SafetyStandard (安全标准库) 模型：包含标准编号、标准名称(中/英)、发布机构、适用市场/国家、标准类型(安规/能效/EMC/环保)、版本号、发布日期、生效日期、废止日期、标准摘要、标准文件附件(URL)、状态(active/draft/obsolete)、org_id。注意：CertStandard 为只读参考表不应混用，新模型独立存在，后续可通过迁移脚本将 CertStandard 种子数据导入本表。同时创建 backend/app/schemas/safety.py 中对应的 Pydantic schema：SafetyStandardCreate / SafetyStandardUpdate / SafetyStandardOut。",
+      "domain_tags": ["python", "fastapi", "safety", "sqlalchemy", "pydantic"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "depends_on": []
+    },
+    {
+      "id": "t2",
+      "title": "安全标准库管理 — 后端 CRUD API",
+      "description": "创建 backend/app/api/safety.py (≤600行), 路由前缀 /api/safety。实现接口：GET /standards (分页+过滤：market/standard_type/status/keyword), GET /standards/{id}, POST /standards (Create), PUT /standards/{id} (Update), DELETE /standards/{id} (软删除/禁用), POST /standards/{id}/archive (归档)。权限控制用 require_role(['admin','certification_engineer','quality_engineer'])。返回类型用 Pydantic response_model。所有接口支持 org_id 多租户过滤。",
+      "domain_tags": ["python", "fastapi", "safety", "crud"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "depends_on": ["t1"]
+    },
+    {
+      "id": "t3",
+      "title": "安全标准库管理 — 前端页面",
+      "description": "创建 frontend/src/views/safety/SafetyStandardView.vue。功能：el-table 展示标准列表（含搜索/分页/过滤器），el-dialog 创建/编辑标准表单（标准编号、名称、发布机构、适用市场、标准类型下拉选择、版本号、日期选择器、状态切换、富文本摘要），删除确认弹窗，归档操作。集成到 router：添加 /safety/standards 路由（菜单名'安全标准'）。注册侧边栏菜单到 types/roles.ts（如已有 certifications 菜单，可在其下加子菜单或独立菜单项）。API层：创建 frontend/src/api/safety.ts。",
+      "domain_tags": ["vue3", "typescript", "element-plus", "frontend"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "depends_on": ["t2"]
+    },
+    {
+      "id": "t4",
+      "title": "安规检测项管理 — 后端模型 & Schema",
+      "description": "在 models/safety.py 添加 SafetyInspectionItem 模型：检测项名称、检测项编码、所属安全标准ID(FK→safety_standards.id)、检测类别(电气安全/机械安全/防火/EMC/化学等)、检测参数名、标准值(下限/上限/标称值)、单位、适用产品类别、检测方法描述、参考标准条款、排序、状态(active/inactive)、org_id。同时在 schemas/safety.py 添加对应的 Pydantic schema (Create/Update/Out)。考虑使用 JSON 字段表示多项标准值（如电压范围 220V±10% 需拆解最小/最大/标称）。",
+      "domain_tags": ["python", "fastapi", "safety", "sqlalchemy"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "depends_on": ["t1"]
+    },
+    {
+      "id": "t5",
+      "title": "安规检测项管理 — 后端 CRUD API",
+      "description": "在 api/safety.py 添加检测项接口（注意行数≤600，超限则拆分到 api/safety_items.py）。GET /inspection-items (分页+过滤：standard_id/category/product_type/status/keyword), GET /inspection-items/{id}, POST /inspection-items, PUT /inspection-items/{id}, DELETE /inspection-items/{id}, POST /inspection-items/batch-import (批量导入标准检测项，支持从 Excel/CSV 模板导入)。权限：require_role(['admin','certification_engineer','quality_engineer','test_engineer'])。",
+      "domain_tags": ["python", "fastapi", "safety", "crud"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "depends_on": ["t4"]
+    },
+    {
+      "id": "t6",
+      "title": "安规检测项管理 — 前端页面",
+      "description": "创建 frontend/src/views/safety/SafetyInspectionItemView.vue。功能：按安全标准筛选检测项列表页，表格展示（编码/名称/类别/标准值/单位/状态），内嵌按标准分组的层级视图（el-tree-table 或分组 el-table）。创建/编辑表单（选择关联标准、类别下拉、参数名、标准值输入框、单位、检测方法文本域）。批量导入按钮（上传 Excel 模板）。路由：/safety/inspection-items，菜单名'安规检测项'。",
+      "domain_tags": ["vue3", "typescript", "element-plus", "frontend"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "depends_on": ["t5"]
+    },
+    {
+      "id": "t7",
+      "title": "供应商安规资质管理 — 后端模型 & Schema",
+      "description": "在 models/safety.py 添加 3 个模型：(1) SupplierSafetyQualification — 供应商安规资质表：supplier_id(FK→suppliers.id), qualification_type(ISO9001/UL认证/CCC/CE等), cert_no, issuing_body, issue_date, expiry_date, attachments(JSON), status(active/expired/revoked), audit_status(pending/approved/rejected), audit_comment, org_id。(2) SupplierSafetyAuditRecord — 审核记录表：qualification_id(FK), audit_date, auditor, result(pass/fail/conditional), findings(JSON), attachments(JSON), next_audit_date, org_id。(3) SupplierSafetyRiskLevel — 供应商安规风险等级配置表：supplier_id(FK), risk_level(high/medium/low), last_assessment_date, assessor, risk_factors(JSON), org_id。Schemas 对应在 schemas/safety.py 中。",
+      "domain_tags": ["python", "fastapi", "safety", "sqlalchemy", "supplier"],
+      "risk_level": "high",
+      "estimated_complexity": 4,
+      "depends_on": ["t1"],
+      "rationale": "涉及多表关联(Supplier+审核记录+风险等级)，数据模型较复杂，需谨慎设计外键和级联关系。同时供应商数据为业务关键数据，需确保 data integrity。"
+    },
+    {
+      "id": "t8",
+      "title": "供应商安规资质管理 — 后端 CRUD API",
+      "description": "在 api/safety.py (或 api/safety_supplier.py 若超行数) 实现接口：GET /supplier-qualifications (分页+filter: supplier_id/qualification_type/status/audit_status/expiry_soon), GET /supplier-qualifications/{id}, POST /supplier-qualifications, PUT /supplier-qualifications/{id}, DELETE /supplier-qualifications/{id}, POST /supplier-qualifications/{id}/audit (提交审核), GET /supplier-qualifications/{id}/audit-records, POST /supplier-audit-records, PUT /supplier-audit-records/{id}, GET /supplier-risk-levels, POST /supplier-risk-levels, PUT /supplier-risk-levels/{id}, GET /suppliers/{id}/safety-summary (聚合供应商安规全景视图)。权限：require_role(['admin','procurement','certification_engineer','quality_engineer'])。",
+      "domain_tags": ["python", "fastapi", "safety", "crud", "supplier"],
+      "risk_level": "high",
+      "estimated_complexity": 4,
+      "depends_on": ["t7"]
+    },
+    {
+      "id": "t9",
+      "title": "供应商安规资质管理 — 前端页面",
+      "description": "创建 frontend/src/views/safety/SupplierSafetyView.vue 和 SupplierSafetyAuditView.vue。(1) 供应商安规资质总览页：el-table 供应商列表+资质卡片视图，展示资质类型/编号/有效期/状态/审核状态。可切换'到期预警'视图过滤近30/60/90天到期资质。点击展开资质详情 + 审核记录时间线。(2) 审核页：审核表单（审核人/日期/结果/发现项/附件上传/下次审核日期）。路由：/safety/supplier-qualifications、/safety/supplier-audit。菜单名：'供应商安规'。在供应商详情页(SDM)嵌入安规资质 Tab。",
+      "domain_tags": ["vue3", "typescript", "element-plus", "frontend", "supplier"],
+      "risk_level": "high",
+      "estimated_complexity": 4,
+      "depends_on": ["t8"]
+    },
+    {
+      "id": "t10",
+      "title": "安规证书到期预警 — 预警规则配置 & 预警计算服务",
+      "description": "(1) 后端服务：创建 backend/app/services/safety_alert_service.py。实现：a) 安规证书到期检查 — 每日定时任务扫描 Certificate.expiry_date (30天内到期→预警，7天内→紧急预警，已过期→紧急预警); b) 供应商资质到期检查 — 扫描 SupplierSafetyQualification.expiry_date 同上述逻辑; c) 标准更新通知 — 监听 SafetyStandard 标准版本变更，当标准版本号更新时通知引用该标准的产品/项目团队; d) 标准废止通知 — 当标准状态变为 obsolete 时触发通知。(2) 预警规则自动注册：在 AlertRule 表中创建安规相关预警规则（alert_rules.target_type='safety_cert'/'safety_qual'/'safety_standard'）。(3) 预警记录写入 Alert 表，复用现有通知体系。(4) 配置预警提前天数参数（系统配置表 system_config）。",
+      "domain_tags": ["python", "fastapi", "safety", "scheduler", "alert"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "depends_on": ["t1", "t7"],
+      "rationale": "虽逻辑不复杂，但涉及定时任务调度、历史数据迁移、多类型预警聚合，且预警精准度直接影响业务信任度。"
+    },
+    {
+      "id": "t11",
+      "title": "安规证书到期预警 — 前端预警展示",
+      "description": "在仪表盘/预警页展示安规预警：a) 改造 frontend/src/views/alerts/ (或新增 SafetyAlertPanel.vue) 展示安规专属预警面板，按紧急/警告/提示分级显示; b) 在证书详情页(CertificateDetail.vue)添加到期倒计时组件; c) 在供应商安规页添加资质到期批注; d) 驾驶舱 Dashboard 新增安规预警卡片（数量徽标+快捷跳转）; e) 预警通知支持飞书/邮件通知（复用现有 notify_channels）。路由嵌入现有预警体系(/alerts)或新增 /safety/alerts。",
+      "domain_tags": ["vue3", "typescript", "element-plus", "frontend", "alert"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "depends_on": ["t10"]
+    },
+    {
+      "id": "t12",
+      "title": "数据迁移 & 种子数据 — 历史数据导入",
+      "description": "(1) 编写迁移脚本 backend/scripts/migrate_cert_standards_to_safety.py：将现有 CertStandard 表中的14条种子数据迁移到新的 SafetyStandard 表，保留关联关系; (2) 扩展 seed_safety.py 种子脚本：补充更多安规标准（GB/T 7725 中国、GB 4706 系列、IEC 60335-2-40 详细条款、UL 484/1995 详细条款、AS/NZS 60335 等）; (3) 安规检测项种子数据：为常用标准预填典型检测项（如 IEC 60335-1 的接地电阻≤0.1Ω、泄漏电流≤0.75mA、介电强度 1250V/1min 等）; (4) 预置预警规则种子数据。注意：所有迁移应幂等可重复执行。",
+      "domain_tags": ["python", "sql", "migration", "safety"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "depends_on": ["t1", "t4"]
+    },
+    {
+      "id": "t13",
+      "title": "权限集成 & 菜单注册",
+      "description": "(1) 在 backend/app/core/permissions.py 的 ALL_MENUS 列表添加安规管理相关菜单标识: 'safety-standards', 'safety-inspection-items', 'safety-supplier-qual', 'safety-alerts'; (2) 在 ROLE_MENU_MAP 中为相关角色（admin/general_manager/rd_director/product_manager/quality_engineer/certification_engineer等）配置安规菜单访问权限; (3) 在 frontend/src/types/roles.ts 中 ALL_MENUS 添加对应路由路径和图标; (4) 在 frontend router 中注册新路由并配置权限守卫; (5) 确保后端 require_role 装饰器中的角色与现有13种角色+新增角色匹配; (6) 如安规管理需要新角色（如 certification_engineer），可能需在 ALL_ROLES 添加并更新 ROLE_LABELS。",
+      "domain_tags": ["python", "vue3", "typescript", "rbac", "permissions"],
+      "risk_level": "medium",
+      "estimated_complexity": 2,
+      "depends_on": ["t3", "t6", "t9", "t11"]
+    },
+    {
+      "id": "t14",
+      "title": "后端模型注册 & 路由注册 & 数据库迁移",
+      "description": "(1) 在 backend/app/models/__init__.py 注册 SafetyStandard, SafetyInspectionItem, SupplierSafetyQualification, SupplierSafetyAuditRecord, SupplierSafetyRiskLevel; (2) 在 backend/app/main.py 注册 safety.router (prefix=/api/safety); (3) 生成 Alembic 迁移文件（或手动创建迁移 SQL）；(4) 执行迁移创建 safety 相关表；(5) 运行种子数据脚本填充初始数据；(6) 验证所有表结构和关系正确。",
+      "domain_tags": ["python", "sqlalchemy", "migration", "alembic", "safety"],
+      "risk_level": "high",
+      "estimated_complexity": 2,
+      "depends_on": ["t1", "t4", "t7", "t12"],
+      "rationale": "涉及数据库表结构变更，需协调迁移顺序避免 FK 冲突，且迁移需幂等可回滚。"
+    },
+    {
+      "id": "t15",
+      "title": "集成测试 & API 文档 & 部署检查",
+      "description": "(1) 为 safety 模块编写集成测试（backend/tests/test_safety.py）：测试所有 CRUD 接口、权限控制、多租户过滤、预警触发逻辑; (2) 确保 FastAPI 自动生成的 OpenAPI 文档完整（添加 description/tags）; (3) 检查 API 文件行数≤600行约束，若超限则拆分子模块; (4) 模型文件行数≤500行约束检查; (5) 检查所有 Pydantic response_model 配置正确; (6) 验证前端构建无 TS 报错; (7) 最终部署检查清单：迁移脚本、种子数据、容器重启、nginx 更新（如有必要）。",
+      "domain_tags": ["python", "testing", "pytest", "deployment", "quality"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "depends_on": ["t2", "t5", "t8", "t10", "t14"]
+    }
+  ],
+  "recommended_execution_order": {
+    "phase_1_core_models_and_migration": ["t1", "t4", "t7", "t14"],
+    "phase_2_seed_data_migration": ["t12"],
+    "phase_3_backend_apis": ["t2", "t5", "t8"],
+    "phase_4_frontend_pages": ["t3", "t6", "t9"],
+    "phase_5_alert_service": ["t10", "t11"],
+    "phase_6_permissions_and_integration": ["t13"],
+    "phase_7_testing_and_deployment": ["t15"]
+  },
+  "reasoning": "任务按依赖关系分层编排：Phase 1 建立核心数据模型（SafetyStandard→SafetyInspectionItem→SupplierSafetyQualification 三条主线），同时完成数据库迁移注册。Phase 2 填充历史种子数据确保环境就绪。Phase 3 逐个开发后端 CRUD API（从独立简单的标准库→检测项→最复杂的供应商安规）。Phase 4 对应开发前端页面。Phase 5 开发预警服务（依赖已有模型和 Alert 系统），与前端预警展示配合。Phase 6 权限集成作为收尾工作，确保所有菜单/路由/角色正确。Phase 7 测试+部署验证。各阶段可部分并行：例如 Phase 1 的 3 个模型可同时开发，Phase 4 的 3 个前端页面也可部分并行。风险最高的是 t7（供应商安规，多表关联复杂）和 t14（数据库迁移，需协调 FK 依赖），建议优先安排且留足时间。",
+  "risk_assessment": {
+    "t1": "low",
+    "t2": "low",
+    "t3": "medium",
+    "t4": "low",
+    "t5": "medium",
+    "t6": "medium",
+    "t7": "high",
+    "t8": "high",
+    "t9": "high",
+    "t10": "medium",
+    "t11": "low",
+    "t12": "medium",
+    "t13": "medium",
+    "t14": "high",
+    "t15": "medium"
+  },
+  "high_risk_mitigation": {
+    "t7_t8_t9_supplier_safety": [
+      "提前评审供应商数据模型，确保与现有 Supplier 模型的外键关系正确",
+      "SupplierSafetyQualification 使用 supplier_id+qualification_type 唯一索引防重复",
+      "审核历史使用独立表而非在 qualification 表加 JSON 字段，保持可查询性",
+      "前端分步实现：先资质列表+CRUD，再审核工作流，最后风险评级"
+    ],
+    "t14_migration": [
+      "先创建无 FK 的表（SafetyStandard），再创建依赖表（SafetyInspectionItem → SafetyStandard），最后创建有多表关联的表（SupplierSafetyQualification）",
+      "迁移前备份数据库",
+      "使用事务性迁移，失败可回滚"
+    ],
+    "t10_alert_service": [
+      "预警服务用后台定时任务（APScheduler 或系统 cron），非阻塞主进程",
+      "预警阈值（到期提前天数）做成可配置参数存入 system_config 表",
+      "首次上线时扫描历史数据一次性生成初始预警记录，避免遗漏"
+    ]
+  },
+  "file_creation_plan": {
+    "new_files_backend": [
+      "backend/app/models/safety.py",
+      "backend/app/schemas/safety.py",
+      "backend/app/api/safety.py",
+      "backend/app/services/safety_alert_service.py",
+      "backend/scripts/migrate_cert_standards_to_safety.py",
+      "backend/seed_safety.py",
+      "backend/app/tests/test_safety.py"
+    ],
+    "modified_files_backend": [
+      "backend/app/models/__init__.py",
+      "backend/app/main.py",
+      "backend/app/core/permissions.py"
+    ],
+    "new_files_frontend": [
+      "frontend/src/api/safety.ts",
+      "frontend/src/views/safety/SafetyStandardView.vue",
+      "frontend/src/views/safety/SafetyInspectionItemView.vue",
+      "frontend/src/views/safety/SupplierSafetyView.vue",
+      "frontend/src/views/safety/SupplierSafetyAuditView.vue",
+      "frontend/src/views/safety/SafetyAlertPanel.vue"
+    ],
+    "modified_files_frontend": [
+      "frontend/src/types/roles.ts",
+      "frontend/src/router/index.ts (待确认路径)"
+    ]
+  },
+  "total_estimated_effort": {
+    "task_count": 15,
+    "total_complexity_score": 45,
+    "estimated_person_days": "15-20 (单人) / 8-12 (双人并行)",
+    "parallelizable_stages": ["phase_1_models", "phase_2_seed", "phase_3_apis_can_parallel_with_phase_4_frontend"],
+    "critical_path": ["t1 → t4 → t7 → t14 → t8 → t9 → t13 → t15"]
+  }
+}

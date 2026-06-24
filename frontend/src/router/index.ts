@@ -306,6 +306,31 @@ const router = createRouter({
           component: () => import('../views/changes/ECOChDashboard.vue'),
           meta: { title: '变更看板', menu: 'changes' },
         },
+        // P0-6 安规管理
+        {
+          path: 'safety/standards',
+          name: 'SafetyStandards',
+          component: () => import('../views/safety/SafetyStandardTab.vue'),
+          meta: { title: '安全标准库', menu: 'safety-standards' },
+        },
+        {
+          path: 'safety/inspection-items',
+          name: 'SafetyInspectionItems',
+          component: () => import('../views/safety/SafetyInspectionTab.vue'),
+          meta: { title: '安规检测项', menu: 'safety-inspection-items' },
+        },
+        {
+          path: 'safety/supplier-qualifications',
+          name: 'SupplierSafety',
+          component: () => import('../views/safety/SupplierSafetyTab.vue'),
+          meta: { title: '供应商安规', menu: 'safety-supplier-qual' },
+        },
+        {
+          path: 'safety/alerts',
+          name: 'SafetyAlerts',
+          component: () => import('../views/safety/SafetyAlertTab.vue'),
+          meta: { title: '安规预警', menu: 'safety-alerts' },
+        },
       ],
     },
   ],

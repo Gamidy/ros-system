@@ -72,6 +72,11 @@ ALL_MENUS = [
     # Phase 6 S3 — ECR/ECO 工程变更控制
     "ecr",                     # ECR变更申请
     "eco",                     # ECO变更指令
+    # P0-6 — 安规管理
+    "safety-standards",        # 安全标准库
+    "safety-inspection-items", # 安规检测项
+    "safety-supplier-qual",    # 供应商安规
+    "safety-alerts",           # 安规预警
 ]
 
 # 角色 → 菜单 映射表
@@ -91,6 +96,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
  # S3 ECR/ECO
  'ecr', 'eco',
+ # P0-6 安规管理
+ 'safety-standards', 'safety-inspection-items', 'safety-supplier-qual', 'safety-alerts',
  ],
  "product_manager": [
         "dashboard", "products", "bom", "projects",
@@ -112,6 +119,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
     ],
     "structural_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -134,6 +143,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
     ],
     "electrical_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -145,6 +156,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items', 'safety-supplier-qual',
     ],
     "procurement": [
         "dashboard", "bom", "purchases", "alerts", "projects",
@@ -164,6 +177,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -195,6 +210,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
     ],
     "module_manager_struct": [  # 结构模块经理 — 侧重结构
         "dashboard", "products", "bom", "projects",
@@ -217,6 +234,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
     ],
     "finance_manager": [  # 财务经理 — 成本核算
         "dashboard", "products", "bom",
@@ -241,6 +260,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
     ],  # IT安全员 — 裁剪权限（去掉 purchases, rd_dashboard, mm）
     "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
         "dashboard", "products", "bom", "projects",
@@ -249,6 +270,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "verification-requirements", "test-executions",
         # S3 ECR/ECO
         'ecr', 'eco',
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
     ],
 }
 
@@ -310,6 +333,11 @@ MENU_PATH_MAP: dict[str, str] = {
     # Phase 6 S3 — ECR/ECO
     "ecr": "/ecr",
     "eco": "/eco",
+    # P0-6 安规管理
+    "safety-standards": "/safety/standards",
+    "safety-inspection-items": "/safety/inspection-items",
+    "safety-supplier-qual": "/safety/supplier-qualifications",
+    "safety-alerts": "/safety/alerts",
 }
 
 
