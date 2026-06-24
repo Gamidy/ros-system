@@ -27,57 +27,82 @@ logger = logging.getLogger(__name__)
 def on_proposal_approved(project_id: int, project_name: str, **kwargs):
     """立项审批通过后处理
 
-    1. 在 ProjectGate 表中创建默认 M1~M9 Gate 计划
-       (planned_date = T+30 天为基准, 每 Gate 间隔约 2 周)
-    2. 创建占位 TestRequest（草稿状态，关联 project_code）
+    1. 更新项目状态（核准 → planning）
+    2. 生成项目编号（如空）
+    3. 通知团队成员
+    4. 创建默认 M1~M9 Gate 计划
+    5. 创建占位 TestRequest
     """
     db: Session = SessionLocal()
     try:
-        project_code = kwargs.get("project_code", str(project_id))
-        base_date = datetime.now().date() + timedelta(days=30)
+        from app.models.project import Project
+        from app.models.user import User
 
-        # ── M1~M9 默认 Gate ──
+        project_code = kwargs.get("project_code", "")
+        proposer_id = kwargs.get("proposer_id")
+        team_members = kwargs.get("team_members", "")
+
+        # ── 1. 更新项目状态 ──
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if project:
+            if not project.code and not project_code:
+                import random
+                project.code = f"P-{datetime.now().strftime('%y%m%d')}-{random.randint(1000,9999)}"
+            project.is_draft = False
+            project.status = "planning"
+            project.approval_status = "approved"
+            db.flush()
+
+        # ── 2. 通知团队成员 ──
+        if proposer_id:
+            proposer = db.query(User).filter(User.id == proposer_id).first()
+            if proposer:
+                from app.models.alert import Notification
+                notification = Notification(
+                    target_user=proposer.username,
+                    channel="system",
+                    title=f"立项审批通过: {project_name}",
+                    content=(
+                        f"您的项目「{project_name}」({project_code or project.code}) "
+                        f"审批已通过，项目已自动创建。"
+                    ),
+                )
+                db.add(notification)
+
+        # ── 3. M1~M9 默认 Gate ──
+        base_date = datetime.now().date() + timedelta(days=30)
         default_gates = [
-            ("M1", "项目启动", 1),
-            ("M2", "需求确认", 2),
-            ("M3", "方案设计评审", 3),
-            ("M4", "详细设计评审", 4),
-            ("M5", "样机评审", 5),
-            ("M6", "试产评审", 6),
-            ("M7", "认证评审", 7),
-            ("M8", "试产验证", 8),
+            ("M1", "项目启动", 1), ("M2", "需求确认", 2),
+            ("M3", "方案设计评审", 3), ("M4", "详细设计评审", 4),
+            ("M5", "样机评审", 5), ("M6", "试产评审", 6),
+            ("M7", "认证评审", 7), ("M8", "试产验证", 8),
             ("M9", "量产放行", 9),
         ]
-
         for code, name, seq in default_gates:
             gate = ProjectGate(
                 project_id=project_id,
-                gate_code=code,
-                gate_name=name,
-                seq=seq,
+                gate_code=code, gate_name=name, seq=seq,
                 planned_date=base_date + timedelta(days=(seq - 1) * 14),
                 status="pending",
             )
             db.add(gate)
 
-        # ── 占位 TestRequest（草稿状态） ──
+        # ── 4. 占位 TestRequest ──
         now_str = datetime.now().strftime("%Y%m%d%H%M%S")
         test_req = TestRequest(
             request_no=f"TR-AUTO-{project_id}-{now_str}",
             title=f"{project_name} — 常规测试申请（自动创建）",
-            project_code=project_code,
-            test_type="常规",
-            trigger_mode="auto",
-            requester="system",
-            status="draft",
+            project_code=project_code or (project.code if project else ""),
+            test_type="常规", trigger_mode="auto",
+            requester="system", status="draft",
         )
         db.add(test_req)
 
         db.commit()
         logger.info(
-            "on_proposal_approved 完成: "
-            "project_id=%s, project_name=%s, gates=9, draft_test=1",
-            project_id, project_name,
+            "on_proposal_approved 完成: project_id=%s, status=planning, "
+            "gates=9, draft_test=1, notified=%s",
+            project_id, proposer_id,
         )
 
     except Exception as e:
