@@ -275,4 +275,122 @@ def register_all_handlers():
     bus.on("proposal.approved", on_proposal_approved)
     bus.on("test.done_with_ng", on_test_done_with_ng)
     bus.on("alert.overdue_found", on_alert_overdue_found)
-    logger.info("所有事件处理器已注册: proposal.approved, test.done_with_ng, alert.overdue_found")
+
+    # ── ProductPlan 事件处理器 ──
+    bus.on("plan.approved", on_plan_approved)
+    bus.on("plan.competitor_done", on_plan_side_effect)
+    bus.on("plan.definition_done", on_plan_side_effect)
+    bus.on("plan.costing_done", on_plan_side_effect)
+    bus.on("plan.tech_input_done", on_plan_side_effect)
+    bus.on("plan.project_init_done", on_plan_side_effect)
+    bus.on("plan.released", on_plan_side_effect)
+    logger.info(
+        "所有事件处理器已注册: proposal.approved, test.done_with_ng, "
+        "alert.overdue_found, plan.* (7 handlers)"
+    )
+
+
+# ════════════════════════════════════════════════════════
+# ProductPlan 事件处理器
+# ════════════════════════════════════════════════════════
+
+
+def on_plan_approved(plan_id: str, plan_name: str, project_id: int, **kwargs):
+    """ProductPlan 批准事件处理器
+
+    1. 在 project_gates 表中创建 G0 Gate 记录
+    2. 通知PM：「项目已自动创建」
+    3. emit PLAN_PROJECT_CREATED 系统事件
+    """
+    db: Session = SessionLocal()
+    try:
+        # ── 1. 创建 G0 Gate 记录 ──
+        gate = ProjectGate(
+            project_id=project_id,
+            gate_code="G0",
+            gate_name="策划立项",
+            seq=0,
+            status="passed",  # 策划批准即 G0 通过
+            passed_at=datetime.now(),
+        )
+        db.add(gate)
+
+        # ── 2. 通知 PM ──
+        from app.models.alert import Notification
+        notif = Notification(
+            target_user=kwargs.get("created_by", "system"),
+            channel="system",
+            title=f"✅ 策划已批准: {plan_name}",
+            content=(
+                f"产品策划「{plan_name}」已批准，"
+                f"关联项目(ID={project_id})已自动创建，"
+                f"请进入项目管理推进后续 Gate 评审。"
+            ),
+        )
+        db.add(notif)
+        db.commit()
+
+        logger.info(
+            "on_plan_approved 完成: plan_id=%s, project_id=%s, G0 created",
+            plan_id, project_id,
+        )
+
+        # ── 3. 发射系统事件：Project 已创建 ──
+        bus.emit(
+            EventTypes.PLAN_PROJECT_CREATED,
+            plan_id=plan_id,
+            project_id=project_id,
+            plan_name=plan_name,
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error("on_plan_approved 处理失败: %s", e)
+    finally:
+        db.close()
+
+
+def on_plan_side_effect(**kwargs):
+    """通用 ProductPlan 副作用处理器
+
+    每个阶段推进时执行:
+    1. 写入审计日志
+    2. 通知PM
+    """
+    db: Session = SessionLocal()
+    try:
+        plan_id = kwargs.get("plan_id", "")
+        plan_name = kwargs.get("plan_name", "")
+        new_stage = kwargs.get("new_stage", "")
+        username = kwargs.get("username", "system")
+
+        from app.models.audit import AuditLog
+        from app.models.alert import Notification
+
+        # 审计日志
+        audit = AuditLog(
+            action=f"plan.advance:{new_stage}",
+            target_type="product_plan",
+            target_id=plan_id,
+            operator=username,
+            detail=f"产品策划「{plan_name}」推进到阶段: {new_stage}",
+        )
+        db.add(audit)
+
+        # 通知PM
+        notif = Notification(
+            target_user=username,
+            channel="system",
+            title=f"🔄 策划阶段更新: {plan_name}",
+            content=f"产品策划「{plan_name}」已推进到「{new_stage}」阶段",
+        )
+        db.add(notif)
+        db.commit()
+
+        logger.info("plan side_effect 完成: plan_id=%s, stage=%s", plan_id, new_stage)
+
+    except Exception as e:
+        db.rollback()
+        logger.error("on_plan_side_effect 处理失败: %s", e)
+    finally:
+        db.close()

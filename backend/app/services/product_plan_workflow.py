@@ -8,10 +8,14 @@
 """
 from datetime import datetime
 import json
+import logging
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
 from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType
 from app.models.project import Project
+from app.services.events import bus, EventTypes
 
 
 # ── 阶段转换规则 ──
@@ -61,6 +65,17 @@ STAGE_LABELS: dict[ProductPlanStage, str] = {
     ProductPlanStage.PROJECT_INIT: "立项审批",
     ProductPlanStage.APPROVED: "已批准",
     ProductPlanStage.RELEASED: "已发布",
+}
+
+# ── 阶段→业务事件映射 ──
+STAGE_TO_EVENT: dict[ProductPlanStage, str] = {
+    ProductPlanStage.COMPETITOR: EventTypes.PLAN_COMPETITOR_DONE,
+    ProductPlanStage.DEFINITION: EventTypes.PLAN_DEFINITION_DONE,
+    ProductPlanStage.COSTING: EventTypes.PLAN_COSTING_DONE,
+    ProductPlanStage.TECH_INPUT: EventTypes.PLAN_TECH_INPUT_DONE,
+    ProductPlanStage.PROJECT_INIT: EventTypes.PLAN_PROJECT_INIT_DONE,
+    ProductPlanStage.APPROVED: EventTypes.PLAN_APPROVED,
+    ProductPlanStage.RELEASED: EventTypes.PLAN_RELEASED,
 }
 
 
@@ -125,6 +140,28 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
 
     db.commit()
     db.refresh(plan)
+
+    # ── 事件发射 ──
+    try:
+        event_type = STAGE_TO_EVENT.get(target)
+        if event_type:
+            event_kwargs = {
+                "plan_id": plan.id,
+                "plan_name": plan.name,
+                "username": username,
+                "new_stage": STAGE_LABELS.get(target, target.value),
+            }
+            if target == ProductPlanStage.APPROVED:
+                event_kwargs["project_id"] = plan.project_id
+                event_kwargs["created_by"] = plan.created_by
+            # 发射业务事件 (独立 try/except, 不阻断主流程)
+            bus.emit(event_type, **event_kwargs)
+            # 发射副作用事件 (审计+通知)
+            bus.emit(EventTypes.PLAN_AUDIT_LOG, **event_kwargs)
+            bus.emit(EventTypes.PLAN_NOTIFY_PM, **event_kwargs)
+    except Exception as e:
+        logger.error("advance_stage 事件发射失败: %s", e, exc_info=True)
+
     return plan
 
 

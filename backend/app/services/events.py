@@ -26,12 +26,36 @@ EventHandler = Callable[..., None]
 
 
 class EventTypes:
-    """事件类型常量"""
+    """事件类型常量
 
+    三层事件分级:
+    - Business Event (业务事件): 流程/业务含义的事件
+    - System Event (系统事件): 系统自动触发的动作事件
+    - Side Effect Event (副作用): 通知/审计等非核心事件
+    """
+
+    # ── 已有事件 ──
     PROPOSAL_APPROVED = "proposal.approved"
     TEST_DONE_WITH_NG = "test.done_with_ng"
     NG_THRESHOLD_REACHED = "test.ng_threshold_reached"
     ALERT_OVERDUE_FOUND = "alert.overdue_found"
+
+    # ── ███  Business Events — ProductPlan 流程事件 ███ ──
+    PLAN_COMPETITOR_DONE = "plan.competitor_done"       # 竞品分析完成
+    PLAN_DEFINITION_DONE = "plan.definition_done"       # 产品定义完成
+    PLAN_COSTING_DONE = "plan.costing_done"             # 成本目标完成
+    PLAN_TECH_INPUT_DONE = "plan.tech_input_done"       # 技术方案完成
+    PLAN_PROJECT_INIT_DONE = "plan.project_init_done"   # 立项审批完成
+    PLAN_APPROVED = "plan.approved"                     # 策划批准
+    PLAN_RELEASED = "plan.released"                     # 策划发布
+
+    # ── ███  System Events — 系统自动动作 ███ ──
+    PLAN_PROJECT_CREATED = "plan.project_created"       # Project 自动创建
+    PLAN_BOM_INITIALIZED = "plan.bom_initialized"       # BOM 初始化
+
+    # ── ███  Side Effect Events — 通知/审计 ███ ──
+    PLAN_NOTIFY_PM = "plan.notify_pm"                   # 通知产品经理
+    PLAN_AUDIT_LOG = "plan.audit_log"                   # 审计日志
 
 
 class EventBus:
