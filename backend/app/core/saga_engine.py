@@ -225,13 +225,36 @@ class SagaCoordinator:
 def _action_create_project(plan_id: str, plan_name: str, **kwargs) -> Tuple[bool, dict]:
     """创建项目（正向操作）"""
     from app.models.project import Project
-    from app.services.product_plan_workflow import create_project_from_plan
+    from app.models.product_plan import ProductPlan
+    from datetime import datetime
+    import random
 
     db = SessionLocal()
     try:
-        project = create_project_from_plan(db, plan_id, plan_name)
-        db.commit()
-        return True, {"project_id": project.id, "project_code": project.code}
+        # 生成项目编号
+        code = f"PLAN-{datetime.now().strftime('%y%m%d')}-{random.randint(100,999)}"
+
+        # 读取 ProductPlan 信息
+        plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+        plan_name_clean = plan_name or (plan.name if plan else "未命名策划")
+
+        project = Project(
+            code=code,
+            name=plan_name_clean,
+            project_class="B",  # 默认 B 级
+            status="planning",
+            is_draft=False,
+        )
+        db.add(project)
+        db.flush()
+        project_id = project.id
+
+        # 关联 plan 到 project
+        if plan:
+            plan.project_id = project_id
+
+        logger.info("Saga: 项目已创建: id=%s, code=%s, name=%s", project_id, code, plan_name_clean)
+        return True, {"project_id": project_id, "project_code": code}
     except Exception as e:
         db.rollback()
         logger.error("Saga action create_project 失败: %s", e)
