@@ -49,6 +49,9 @@ ALL_MENUS = [
     "rd_dashboard",     # 研发总监
     "product-plans",     # 产品策划
     "mm",               # 模块管理
+    "event-timeline",   # 事件时间线
+    "saga-viewer",      # Saga事务
+    "risk-dashboard",   # 智能决策看板
     "admin-config",     # 系统设置（仅admin）
 ]
 
@@ -184,6 +187,9 @@ MENU_PATH_MAP: dict[str, str] = {
     "market_mgmt": "/market-mgmt",
     "proposal_approvals": "/approvals/proposals",
     "product-plans": "/product-plans",
+    "event-timeline": "/event-timeline",
+    "saga-viewer": "/saga-viewer",
+    "risk-dashboard": "/risk-dashboard",
     "admin-config": "/admin-config",
 }
 
