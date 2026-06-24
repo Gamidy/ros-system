@@ -295,12 +295,12 @@ def _ensure_proposal_chain(db: Session) -> ApprovalChain:
         db.add(chain)
         db.flush()
         steps_def = [
-            {"seq": 1, "role": "产品经理", "name": "产品经理提交"},
-            {"seq": 2, "role": "并行审批人", "name": "模块经理/工程师并行审批"},
-            {"seq": 3, "role": "研发总监", "name": "研发总监终审"},
+            {"seq": 1, "role": "产品经理", "name": "产品经理提交", "step_type": "sequential"},
+            {"seq": 2, "role": "并行审批人", "name": "模块经理/工程师并行审批", "step_type": "parallel"},
+            {"seq": 3, "role": "研发总监", "name": "研发总监终审", "step_type": "sequential"},
         ]
         for s in steps_def:
-            db.add(ApprovalStep(chain_id=chain.id, seq=s["seq"], role=s["role"], name=s["name"]))
+            db.add(ApprovalStep(chain_id=chain.id, seq=s["seq"], role=s["role"], name=s["name"], step_type=s["step_type"]))
         db.flush()
     return chain
 

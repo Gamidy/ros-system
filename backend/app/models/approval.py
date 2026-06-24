@@ -29,6 +29,7 @@ class ApprovalStep(Base):
     seq = Column(Integer, nullable=False, comment="步骤序号")
     role = Column(String(50), nullable=False, comment="审批角色: admin/研发总监/模块经理/总经理/采购/工程师/个人")
     name = Column(String(100), nullable=False, comment="步骤名称")
+    step_type = Column(String(20), default="sequential", comment="步骤类型: sequential/parallel/or")
     created_at = Column(DateTime, server_default=func.now())
 
     chain = relationship("ApprovalChain", back_populates="step_items")
@@ -40,12 +41,13 @@ class ApprovalRequest(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     chain_id = Column(Integer, ForeignKey("approval_chains.id"), nullable=False)
-    request_type = Column(String(50), nullable=False, comment="请求类型: ecr/purchase/register")
+    request_type = Column(String(50), nullable=False, comment="请求类型: ecr/purchase/register/proposal")
     request_id = Column(Integer, nullable=True, comment="关联业务记录ID")
     title = Column(String(200), nullable=False, comment="审批标题")
     requester = Column(String(100), nullable=False, comment="申请人")
     status = Column(String(20), default="pending", comment="pending/approved/rejected")
     current_step = Column(Integer, default=1, comment="当前步骤序号")
+    step_meta = Column(JSON, nullable=True, comment="并行步骤状态快照（审批人决策记录）")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

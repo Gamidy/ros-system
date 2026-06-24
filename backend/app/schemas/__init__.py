@@ -395,6 +395,7 @@ class ApprovalStepCreate(BaseModel):
     seq: int
     role: str
     name: str
+    step_type: str = "sequential"
 
 class ApprovalStepOut(ApprovalStepCreate):
     id: int
@@ -433,6 +434,7 @@ class ApprovalRequestOut(BaseModel):
     requester: str
     status: str
     current_step: int
+    step_meta: Optional[dict] = None
     steps: list[ApprovalStepOut] = []
     records: list["ApprovalRecordOut"] = []
     created_at: datetime

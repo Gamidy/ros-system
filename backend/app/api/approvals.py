@@ -1,4 +1,5 @@
 """审批流API: 审批链管理 + 审批请求提交流程"""
+import copy
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -45,9 +46,9 @@ DEFAULT_CHAINS = [
         "code": "proposal",
         "description": "产品立项审批流程（并行审批 + 研发总监终审）",
         "steps": [
-            {"seq": 1, "role": "产品经理", "name": "产品经理提交"},
-            {"seq": 2, "role": "并行审批人", "name": "模块经理/工程师并行审批"},
-            {"seq": 3, "role": "研发总监", "name": "研发总监终审"},
+            {"seq": 1, "role": "产品经理", "name": "产品经理提交", "step_type": "sequential"},
+            {"seq": 2, "role": "并行审批人", "name": "模块经理/工程师并行审批", "step_type": "parallel"},
+            {"seq": 3, "role": "研发总监", "name": "研发总监终审", "step_type": "sequential"},
         ],
     },
     {
@@ -81,6 +82,7 @@ def _ensure_default_chains(db: Session):
                     seq=step["seq"],
                     role=step["role"],
                     name=step["name"],
+                    step_type=step.get("step_type", "sequential"),
                 ))
     db.commit()
 
@@ -121,6 +123,7 @@ def create_approval_chain(
             seq=step.seq,
             role=step.role,
             name=step.name,
+            step_type=step.step_type or "sequential",
         ))
     db.commit()
     db.refresh(chain)
@@ -212,6 +215,11 @@ def list_pending_approval_requests(
         ).all()
         if any(s.role == current_user.role for s in steps):
             result.append(_request_to_out(req, db))
+            continue
+        # 并行步骤：检查 step_meta 中的 required_roles
+        meta = _get_step_meta(req, req.current_step)
+        if meta and current_user.role in meta.get("required_roles", []):
+            result.append(_request_to_out(req, db))
     return result
 
 
@@ -268,6 +276,7 @@ def _chain_to_out(chain: ApprovalChain) -> dict:
                 "seq": s.seq,
                 "role": s.role,
                 "name": s.name,
+                "step_type": s.step_type or "sequential",
                 "created_at": s.created_at,
             }
             for s in sorted(chain.step_items or [], key=lambda x: x.seq)
@@ -295,6 +304,7 @@ def _request_to_out(req: ApprovalRequest, db: Session) -> dict:
         "requester": req.requester,
         "status": req.status,
         "current_step": req.current_step,
+        "step_meta": req.step_meta,
         "steps": [
             {
                 "id": s.id,
@@ -302,6 +312,7 @@ def _request_to_out(req: ApprovalRequest, db: Session) -> dict:
                 "seq": s.seq,
                 "role": s.role,
                 "name": s.name,
+                "step_type": s.step_type or "sequential",
                 "created_at": s.created_at,
             }
             for s in steps
@@ -330,7 +341,7 @@ def _make_decision(
     db: Session,
     current_user: User,
 ) -> dict:
-    """执行审批决策（通过/驳回）"""
+    """执行审批决策（通过/驳回）—— 支持 sequential 和 parallel 步骤类型"""
     from app.core.permissions import is_super_role
     req = db.query(ApprovalRequest).filter(ApprovalRequest.id == request_id).first()
     if not req:
@@ -338,21 +349,28 @@ def _make_decision(
     if req.status != "pending":
         raise HTTPException(status_code=400, detail="该请求已审批完成")
 
-    # admin/general_manager 可以审批任意步骤
+    # 查询当前步骤
+    steps = db.query(ApprovalStep).filter(
+        ApprovalStep.chain_id == req.chain_id,
+        ApprovalStep.seq == req.current_step,
+    ).all()
+    if not steps:
+        raise HTTPException(status_code=400, detail="当前步骤配置不存在")
+
+    current_step_obj = steps[0]
+    step_type = current_step_obj.step_type or "sequential"
+
+    # 检查权限（超级角色可以审批任意步骤）
     if not is_super_role(current_user.role):
-        # 检查当前用户角色是否匹配当前步骤的角色
-        steps = db.query(ApprovalStep).filter(
-            ApprovalStep.chain_id == req.chain_id,
-            ApprovalStep.seq == req.current_step,
-        ).all()
-        if not any(s.role == current_user.role for s in steps):
-            raise HTTPException(status_code=403, detail="您不是当前审批步骤的审批人")
-    else:
-        # 超级角色也需要查询 steps 用于 step_id
-        steps = db.query(ApprovalStep).filter(
-            ApprovalStep.chain_id == req.chain_id,
-            ApprovalStep.seq == req.current_step,
-        ).all()
+        if step_type == "parallel":
+            # 并行步骤：检查用户角色是否在 step_meta 的 required_roles 中
+            meta = _get_step_meta(req, req.current_step)
+            if not meta or current_user.role not in meta.get("required_roles", []):
+                raise HTTPException(status_code=403, detail="您不是当前并行审批步骤的审批人")
+        else:
+            # 顺序步骤：检查用户角色是否匹配步骤角色
+            if not any(s.role == current_user.role for s in steps):
+                raise HTTPException(status_code=403, detail="您不是当前审批步骤的审批人")
 
     step_id = steps[0].id if steps else None
 
@@ -366,20 +384,70 @@ def _make_decision(
     )
     db.add(record)
 
-    if action == "rejected":
-        # 驳回：整个请求结束
-        req.status = "rejected"
-    else:
-        # 通过：检查是否还有下一步
-        next_step = db.query(ApprovalStep).filter(
-            ApprovalStep.chain_id == req.chain_id,
-            ApprovalStep.seq == req.current_step + 1,
-        ).first()
-        if next_step:
-            req.current_step = next_step.seq
+    if step_type == "parallel":
+        # ── 并行步骤处理 ──
+        meta = _get_step_meta(req, req.current_step)
+        if meta is None:
+            meta = {}
+        if "decisions" not in meta:
+            meta["decisions"] = {}
+        meta["decisions"][current_user.username] = {
+            "decision": action,
+            "comment": decision.comment,
+        }
+        _set_step_meta(req, req.current_step, meta)
+
+        if action == "rejected":
+            req.status = "rejected"
         else:
-            req.status = "approved"
+            # 检查所有 required_roles 是否都已 approved
+            all_approved = True
+            for role in meta.get("required_roles", []):
+                role_approved = any(
+                    d.get("decision") == "approved"
+                    for d in meta["decisions"].values()
+                )
+                if not role_approved:
+                    all_approved = False
+                    break
+            if all_approved and len(meta["decisions"]) >= len(meta.get("required_roles", [])):
+                _advance_to_next_step(req, db)
+            # 否则继续等待（status 保持 pending）
+    else:
+        # ── 顺序步骤处理（原有逻辑）──
+        if action == "rejected":
+            req.status = "rejected"
+        else:
+            _advance_to_next_step(req, db)
 
     db.commit()
     db.refresh(req)
     return _request_to_out(req, db)
+
+
+def _advance_to_next_step(req: ApprovalRequest, db: Session):
+    """将审批流转到下一步，或标记为通过"""
+    next_step = db.query(ApprovalStep).filter(
+        ApprovalStep.chain_id == req.chain_id,
+        ApprovalStep.seq == req.current_step + 1,
+    ).first()
+    if next_step:
+        req.current_step = next_step.seq
+    else:
+        req.status = "approved"
+
+
+def _get_step_meta(req: ApprovalRequest, step_seq: int) -> dict | None:
+    """获取指定步骤的并行审批元数据"""
+    if not req.step_meta:
+        return None
+    return req.step_meta.get(str(step_seq))
+
+
+def _set_step_meta(req: ApprovalRequest, step_seq: int, meta: dict):
+    """设置指定步骤的并行审批元数据（深拷贝触发 SQLAlchemy dirty flag）"""
+    if not req.step_meta:
+        req.step_meta = {}
+    modified = copy.deepcopy(req.step_meta)
+    modified[str(step_seq)] = meta
+    req.step_meta = modified
