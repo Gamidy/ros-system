@@ -327,58 +327,48 @@ register_all_handlers = _register_all_events
 
 
 def on_plan_approved(plan_id: str, plan_name: str, project_id: int, **kwargs):
-    """ProductPlan 批准事件处理器
+    """ProductPlan 批准事件处理器 (Phase 4: Saga 事务封装)
 
-    1. 在 project_gates 表中创建 G0 Gate 记录
-    2. 通知PM：「项目已自动创建」
-    3. emit PLAN_PROJECT_CREATED 系统事件
+    这是一个兼容层:
+    - 如果 Celery/Redis 在线 → 事件已通过 Celery 任务处理
+    - 如果 Celery 不可用 → 用 Saga 直接同步执行
     """
-    db: Session = SessionLocal()
-    try:
-        # ── 1. 创建 G0 Gate 记录 ──
-        gate = ProjectGate(
-            project_id=project_id,
-            gate_code="G0",
-            gate_name="策划立项",
-            seq=0,
-            status="passed",  # 策划批准即 G0 通过
-            passed_at=datetime.now(),
-        )
-        db.add(gate)
+    from app.core.saga_engine import saga_coordinator, create_product_plan_saga
 
-        # ── 2. 通知 PM ──
-        from app.models.alert import Notification
-        notif = Notification(
-            target_user=kwargs.get("created_by", "system"),
-            channel="system",
-            title=f"✅ 策划已批准: {plan_name}",
-            content=(
-                f"产品策划「{plan_name}」已批准，"
-                f"关联项目(ID={project_id})已自动创建，"
-                f"请进入项目管理推进后续 Gate 评审。"
-            ),
-        )
-        db.add(notif)
-        db.commit()
+    # 检查是否已通过 Celery 处理（避免重复）
+    if kwargs.get("_from_celery"):
+        logger.debug("Saga already handled by Celery, skipping sync handler")
+        return
 
-        logger.info(
-            "on_plan_approved 完成: plan_id=%s, project_id=%s, G0 created",
-            plan_id, project_id,
-        )
+    # threading/同步模式 — 用 Saga 保证事务一致性
+    saga_id = saga_coordinator.create_saga(plan_id=plan_id, context={
+        "plan_id": plan_id,
+        "plan_name": plan_name,
+        "project_id": project_id,
+        "created_by": kwargs.get("created_by", "system"),
+    })
 
-        # ── 3. 发射系统事件：Project 已创建 ──
-        bus.emit(
+    steps = create_product_plan_saga()
+    result = saga_coordinator.execute(saga_id, steps, context={
+        "plan_id": plan_id,
+        "plan_name": plan_name,
+        "project_id": project_id,
+        "created_by": kwargs.get("created_by", "system"),
+    })
+
+    if result.status == "completed":
+        logger.info("Saga 完成: plan=%s, project=%s, saga=%s", plan_id, project_id, saga_id)
+        # 发射系统事件
+        bus.emit_async(
             EventTypes.PLAN_PROJECT_CREATED,
             plan_id=plan_id,
             project_id=project_id,
             plan_name=plan_name,
         )
+    else:
+        logger.error("Saga 失败: plan=%s, error=%s", plan_id, result.error)
 
-    except Exception as e:
-        db.rollback()
-        logger.error("on_plan_approved 处理失败: %s", e)
-    finally:
-        db.close()
+    saga_coordinator.cleanup(saga_id)
 
 
 def on_plan_side_effect(**kwargs):

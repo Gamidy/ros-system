@@ -1,4 +1,4 @@
-"""ROS 主应用入口"""
+"""ROS 主应用入口 — Phase 4: Event Infrastructure"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -12,6 +12,10 @@ from app.api import knowledge
 from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
 
@@ -34,12 +38,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "0"  # 由 CSP 替代，禁用旧版浏览器 XSS filter
+        response.headers["X-XSS-Protection"] = "0"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
 
 
-# CORS — 从环境变量读取允许的来源，逗号分割
+# CORS
 _cors_origins = settings.CORS_ORIGINS
 if _cors_origins == "*":
     app.add_middleware(
@@ -59,19 +63,10 @@ else:
         allow_headers=["*"],
     )
 
-# Security headers (CSP + other security headers)
 app.add_middleware(SecurityHeadersMiddleware)
-
-# CSRF 纵深防护中间件
 app.middleware("http")(csrf_middleware)
-
-# XSS 响应层防护 — 对所有 JSON 输出做 HTML 转义
 app.add_middleware(XSSProtectionMiddleware)
-
-# 429 限流中间件 — 100req/min per IP, 200/min per user, 豁免 /health 和 /auth/login
 app.add_middleware(RateLimitMiddleware)
-
-# 审计日志中间件 — 记录所有 /api/ CUD 操作
 app.add_middleware(AuditMiddleware)
 
 # Register routers
@@ -106,10 +101,78 @@ app.include_router(rd_panel.router, prefix="/api")
 app.include_router(state_machine_api.router, prefix="/api")
 
 
+# ── Phase 4: 事件基础设施启动 ──
+
+_celery_thread = None
+
+
+def _start_celery_worker():
+    """在后台线程启动 Celery Worker
+
+    使用 subprocess 运行 `celery -A app.workers.celery_app worker`，
+    独立进程不阻塞 API server。
+    """
+    global _celery_thread
+    import subprocess
+    import sys
+    import os
+
+    try:
+        # 先验证 Redis 可用
+        import redis
+        r = redis.Redis(host="127.0.0.1", port=6379, socket_connect_timeout=1)
+        r.ping()
+        logger.info("Redis 连接确认: OK")
+    except Exception as e:
+        logger.warning("Redis 不可用，Celery worker 不启动: %s", e)
+        return
+
+    # 启动 Celery worker（后台子进程）
+    try:
+        proc = subprocess.Popen(
+            [
+                sys.executable, "-m", "celery",
+                "-A", "app.workers.celery_app",
+                "worker",
+                "--loglevel=info",
+                "--concurrency=2",
+                "--pool=solo",  # solo 模式，兼容 asyncio
+                "-Q", "critical,default,side_effect",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
+        logger.info("Celery worker 已启动 (PID=%s)", proc.pid)
+    except Exception as e:
+        logger.warning("Celery worker 启动失败（不影响API）: %s", e)
+
+
+def _init_phase4():
+    """Phase 4 初始化：Event Store + Celery + MQ/MRC/CDF"""
+    # 1. Event Store 表结构检查（自动建列）
+    from app.core.event_store import EventStore
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        EventStore._ensure_columns(db)
+        logger.info("Event Store 初始化: OK")
+    except Exception as e:
+        logger.warning("Event Store 初始化异常: %s", e)
+    finally:
+        db.close()
+
+    # 2. 启动 Celery worker
+    _start_celery_worker()
+
+    # 3. 注册 Phase 4 健康检查
+    logger.info("Phase 4 Infrastructure 初始化完成")
+
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
-    # ── 启动审批催办定时任务 (每30分钟扫描一次) ──
+    # ── 启动审批催办定时任务 ──
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from app.services.approval_reminder import scan_and_remind
@@ -117,15 +180,107 @@ def on_startup():
         scheduler = BackgroundScheduler()
         scheduler.add_job(scan_and_remind, "interval", minutes=30, id="approval_reminder")
         scheduler.start()
-        import logging
-        logging.getLogger(__name__).info("审批催办定时任务已启动 (每30分钟)")
+        logger.info("审批催办定时任务已启动 (每30分钟)")
     except ImportError:
-        pass  # apscheduler not installed, skip
+        pass
 
     # ── 注册事件总线处理器 ──
     register_all_handlers()
+
+    # ── Phase 4 初始化 ──
+    _init_phase4()
 
 
 @app.get("/health")
 def health():
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+
+
+# ── Phase 4: 基础设施健康检查 ──
+
+
+@app.get("/api/v2/infra/health")
+def infra_health():
+    """Phase 4 基础设施健康检查"""
+    checks = {"redis": False, "celery": False, "event_store": False}
+
+    # Redis
+    try:
+        import redis
+        r = redis.Redis(host="127.0.0.1", port=6379, socket_connect_timeout=2)
+        r.ping()
+        checks["redis"] = True
+    except Exception:
+        pass
+
+    # Event Store
+    try:
+        from app.core.event_store import EventStore
+        from app.core.database import SessionLocal
+        db = SessionLocal()
+        EventStore._ensure_columns(db)
+        checks["event_store"] = True
+        db.close()
+    except Exception:
+        pass
+
+    # Celery ping
+    try:
+        from app.workers.celery_app import celery_app
+        result = celery_app.control.ping(timeout=1)
+        checks["celery"] = len(result) > 0 if result else False
+    except Exception:
+        pass
+
+    all_ok = all(checks.values())
+    status_code = 200 if all_ok else 503
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "healthy" if all_ok else "degraded",
+            "phase": 4,
+            "checks": checks,
+        },
+    )
+
+
+@app.post("/api/v2/events/replay/{plan_id}")
+def replay_plan_events(plan_id: str):
+    """重放 ProductPlan 事件，重建当前状态"""
+    from app.core.event_store import EventStore
+    success, state = EventStore.replay(plan_id)
+    if success:
+        return {"success": True, "state": state}
+    return {"success": False, "error": state.get("error")}
+
+
+@app.get("/api/v2/events/timeline/{plan_id}")
+def get_plan_timeline(plan_id: str):
+    """获取 ProductPlan 事件时间线"""
+    from app.core.event_store import EventStore
+    timeline = EventStore.get_timeline(plan_id)
+    return {"plan_id": plan_id, "events": timeline, "count": len(timeline)}
+
+
+@app.post("/api/v2/saga/execute")
+def execute_saga(plan_id: str, plan_name: str, project_id: int):
+    """手动执行 ProductPlan Saga 事务（调试用）"""
+    from app.core.saga_engine import saga_coordinator, create_product_plan_saga
+
+    saga_id = saga_coordinator.create_saga(plan_id=plan_id)
+    steps = create_product_plan_saga()
+    result = saga_coordinator.execute(saga_id, steps, context={
+        "plan_id": plan_id,
+        "plan_name": plan_name,
+        "project_id": project_id,
+        "created_by": "debug_api",
+    })
+    saga_coordinator.cleanup(saga_id)
+
+    return {
+        "saga_id": saga_id,
+        "status": result.status.value,
+        "steps": {k: v.value for k, v in result.steps.items()},
+        "error": result.error,
+    }

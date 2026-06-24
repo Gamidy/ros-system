@@ -1,22 +1,53 @@
-"""事件总线 — 同步/异步 Observer 模式 + Event Store + 版本化
+"""事件总线 — Redis/Celery 异步 + 同步 Observer 模式 (Phase 4)
 
 三层架构:
 1. EventBus: 事件发布/订阅核心（同步模式）
-2. AsyncQueue: 异步分发（非阻塞 handler 执行）
+2. Redis Queue (Celery): 异步任务分发（替换 Phase 3 threading）
 3. Event Store: 所有事件自动落库
 
 事件版本化:
     plan.approved.v1 — 通过 EventTypes.v() 方法生成
     默认版本 v1，向后兼容
+
+迁移路径:
+    Phase 3: threading.Thread → emit_async
+    Phase 4: Redis/Celery → emit_async (无 threading 依赖)
+    降级: 如果 Celery 不可用，自动 fallback 到 threading
 """
 import json
 import logging
-import threading
 from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 EventHandler = Callable[..., None]
+
+# ── Celery 可用性检测（惰性导入，避免没装 celery 时崩溃） ──
+_has_celery = False
+_celery_checked = False
+
+
+def _check_celery() -> bool:
+    """检测 Celery Redis 是否可用"""
+    global _has_celery, _celery_checked
+    if _celery_checked:
+        return _has_celery
+    _celery_checked = True
+    try:
+        import redis
+        r = redis.Redis(host="127.0.0.1", port=6379, socket_connect_timeout=1)
+        r.ping()
+        _has_celery = True
+        logger.info("Celery/Redis 连接成功，将使用 Redis 异步队列")
+    except Exception:
+        _has_celery = False
+        logger.warning("Redis 不可用，emit_async 将使用 threading fallback")
+    return _has_celery
+
+
+# ════════════════════════════════════════════════════════
+# 事件类型定义
+# ════════════════════════════════════════════════════════
 
 
 class EventTypes:
@@ -66,20 +97,22 @@ class EventTypes:
 
     @classmethod
     def v(cls, event_type: str) -> str:
-        """获取带版本号的事件类型字符串
-
-        如 EventTypes.v(EventTypes.PLAN_APPROVED) → "plan.approved.v1"
-        """
+        """获取带版本号的事件类型字符串"""
         version = cls._VERSIONS.get(event_type, "v1")
         return f"{event_type}.{version}"
 
 
-class EventBus:
-    """同步事件总线（单例）+ 异步模式
+# ════════════════════════════════════════════════════════
+# Event Bus — 同步 + 异步（Redis/Threading）
+# ════════════════════════════════════════════════════════
 
-    管理事件订阅和分发。
-    同步模式: handler 在 emit() 调用线程中依次执行
-    异步模式: handler 在独立线程中执行
+
+class EventBus:
+    """事件总线（单例）
+
+    同步模式: emit() — 当前线程直接调用 handler
+    异步模式: emit_async() — Redis/Celery 优先，threading fallback
+
     每个 handler 在独立 try/except 中执行，单 handler 失败不阻断其他。
     """
 
@@ -95,7 +128,7 @@ class EventBus:
         if not hasattr(self, "_handlers"):
             self._handlers = {}
 
-    # ----- 公开 API -----
+    # ----- 同步模式 -----
 
     def on(self, event_type: str, handler: EventHandler) -> None:
         """注册事件处理器"""
@@ -107,8 +140,8 @@ class EventBus:
     def emit(self, event_type: str, **kwargs) -> None:
         """触发事件（同步模式）
 
-        依次调用所有注册的 handler。
-        每个 handler 在独立 try/except 中执行。
+        当前线程直接调用所有 handler。
+        适合需要立即生效的场景（如状态更新）。
         """
         handlers = self._handlers.get(event_type, [])
         if not handlers:
@@ -122,18 +155,71 @@ class EventBus:
             except Exception:
                 logger.exception("Handler %s failed for event '%s'", _handler_name(handler), event_type)
 
+    # ----- 异步模式（Phase 4: Redis/Celery + Threading fallback） -----
+
     def emit_async(self, event_type: str, **kwargs) -> None:
         """触发事件（异步模式 — 非阻塞）
 
-        handler 在后台线程中执行，不阻塞主流程。
-        调用后立即返回。
+        Phase 4 升级:
+        1. 尝试 Redis/Celery 队列（生产级）
+        2. 如果不可用 → threading fallback（开发兼容）
         """
         handlers = self._handlers.get(event_type, [])
         if not handlers:
             logger.debug("No handlers for event '%s' (async), skipped", event_type)
             return
 
-        logger.info("Async emitting event '%s' to %d handler(s)", event_type, len(handlers))
+        logger.info("Async emit: '%s' to %d handler(s)", event_type, len(handlers))
+
+        if _check_celery():
+            self._emit_via_celery(event_type, handlers, kwargs)
+        else:
+            self._emit_via_threading(event_type, handlers, kwargs)
+
+    def _emit_via_celery(self, event_type: str, handlers: List[EventHandler], kwargs: dict) -> None:
+        """通过 Celery 任务异步分发（生产级）"""
+        try:
+            from app.workers.plan_worker import (
+                process_plan_approved,
+                process_plan_side_effect,
+                process_store_event,
+            )
+
+            # 根据事件类型选择对应 Celery 任务
+            event_base = event_type.split(".")[0] + "." + event_type.split(".")[1] if "." in event_type else event_type
+
+            if event_type == "plan.approved" or event_type.startswith("plan.approved"):
+                # critical 队列 — 需要 Saga 保证
+                process_plan_approved.delay(**kwargs)
+            elif event_type in ("plan.audit_log", "plan.notify_pm"):
+                # side_effect 队列 — 可延迟
+                process_store_event.delay(
+                    event_type=event_type,
+                    payload=kwargs,
+                    plan_id=kwargs.get("plan_id"),
+                )
+                process_plan_side_effect.delay(**kwargs)
+            elif event_type.startswith("plan."):
+                # default 队列 — 普通业务事件
+                process_store_event.delay(
+                    event_type=event_type,
+                    payload=kwargs,
+                    plan_id=kwargs.get("plan_id"),
+                )
+                process_plan_side_effect.delay(**kwargs)
+            else:
+                # 通用 fallback — 直接调 threading
+                self._emit_via_threading(event_type, handlers, kwargs)
+
+            logger.debug("Celery task dispatched: %s", event_type)
+
+        except Exception as e:
+            logger.warning("Celery 分发失败 (%s)，fallback 到 threading: %s", event_type, e)
+            self._emit_via_threading(event_type, handlers, kwargs)
+
+    def _emit_via_threading(self, event_type: str, handlers: List[EventHandler], kwargs: dict) -> None:
+        """通过 threading 异步分发（开发兼容 / fallback）"""
+        import threading
 
         def _run():
             for handler in handlers:
@@ -145,8 +231,14 @@ class EventBus:
                         _handler_name(handler), event_type,
                     )
 
-        t = threading.Thread(target=_run, daemon=True, name=f"evt-{event_type.replace('.','-')}")
+        t = threading.Thread(
+            target=_run, daemon=True,
+            name=f"evt-{event_type.replace('.','-')}",
+        )
         t.start()
+        logger.debug("Threading fallback used: %s", event_type)
+
+    # ----- 生命周期管理 -----
 
     def off(self, event_type: str, handler: EventHandler) -> None:
         """注销事件处理器"""
@@ -182,28 +274,26 @@ bus = EventBus()
 
 
 def store_event(event_type: str, **kwargs) -> None:
-    """Event Store 处理器 — 自动记录事件到 event_logs 表
-
-    注册方式: bus.on(ANY_EVENT, store_event) — 在 register_all_handlers 中调用
-    """
+    """Event Store 处理器 — 自动记录事件到 event_logs 表"""
     from app.core.database import SessionLocal
-    from app.models.event_log import EventLog
+    from app.core.event_store import event_store
 
     db = SessionLocal()
     try:
-        # 构建 payload（排除敏感字段）
         payload = {k: str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
                    for k, v in kwargs.items()}
 
-        log = EventLog(
+        event_store.store(
+            db=db,
             event_type=event_type,
             event_version=EventTypes._VERSIONS.get(event_type, "v1"),
-            payload=json.dumps(payload, ensure_ascii=False, default=str),
-            status="emitted",
+            payload=payload,
+            plan_id=kwargs.get("plan_id"),
+            saga_id=kwargs.get("saga_id"),
         )
-        db.add(log)
         db.commit()
     except Exception as e:
+        db.rollback()
         logger.error("Event Store 写入失败: event_type=%s, error=%s", event_type, e)
     finally:
         db.close()
