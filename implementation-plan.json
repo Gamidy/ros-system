@@ -1,0 +1,405 @@
+{
+  "meta": {
+    "title": "ROS系统 建议①(事件总线) + 建议②(统一状态机) 实施计划",
+    "date": "2026-06-24",
+    "version": "1.0",
+    "author": "Hermes Agent",
+    "base_path": "/Users/gamidy/ros-source/ros-system/backend/app"
+  },
+
+  "overview": {
+    "suggestion_1": "事件总线 — 轻量级 publish/subscribe 模式，解耦业务逻辑的副作用反应",
+    "suggestion_2": "统一状态机 — 集中管理所有模型的状态转换定义和校验，消除散落的裸字符串校验",
+    "interplay": "事件总线监听状态变更事件，触发自动操作（如审批通过→建Gate、测试NG→写Alert、≥3次NG→品质整改单）"
+  },
+
+  "建议②_统一状态机": {
+    "objective": "将所有领域模型的状态转换规则收敛到 services/state_machine.py，提供统一的 assert_transition() 校验函数，让所有API路由通过单入口校验状态跳转合法性。前端通过 API 动态获取当前状态的可转换目标列表。",
+
+    "file_清单": [
+      {
+        "file": "services/state_machine.py",
+        "action": "CREATE",
+        "description": "统一状态机定义文件，包含所有模型的 Transitions 配置和 assert_transition() 函数",
+        "workload": "中",
+        "dependencies": []
+      },
+      {
+        "file": "models/test.py",
+        "action": "MODIFY",
+        "description": "将 _VALID_TRANSITIONS 迁移到 state_machine.py，保留兼容引用或直接删除",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/tests.py",
+        "action": "MODIFY",
+        "description": "将 validate_transition() 改为从 state_machine 导入 assert_transition()",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/projects.py",
+        "action": "MODIFY",
+        "description": "Project.status 和 Program.status 改用 assert_transition() 校验",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/certifications.py",
+        "action": "MODIFY",
+        "description": "Certification.status / QualityIssue.status / ECR.status / ECN.status 均改用 assert_transition()",
+        "workload": "中",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/bom.py",
+        "action": "MODIFY",
+        "description": "BOM.status 改用 assert_transition()",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/purchases.py",
+        "action": "MODIFY",
+        "description": "PurchaseOrder.status 和 OutsourceRequest.status 改用 assert_transition()",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/proposal_utils.py",
+        "action": "MODIFY",
+        "description": "_change_status() 中的 ProposalApproval 状态变更校验接入统一状态机",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/pm_proposal_api.py / pm_proposal_utils.py",
+        "action": "MODIFY",
+        "description": "检查是否有直接状态赋值，接入统一校验",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "api/alerts.py",
+        "action": "MODIFY",
+        "description": "check_overdue 增加事件触发（见建议①）",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py", "services/events.py"]
+      },
+      {
+        "file": "schemas/__init__.py",
+        "action": "MODIFY",
+        "description": "新增 get_state_transitions() 对应的 API Response Schema（如果有独立端点）",
+        "workload": "小",
+        "dependencies": ["services/state_machine.py"]
+      },
+      {
+        "file": "main.py",
+        "action": "MODIFY",
+        "description": "注册新的 API router（如果有 /state-machines 端点）",
+        "workload": "小",
+        "dependencies": []
+      }
+    ],
+
+    "services_state_machine_py_设计": {
+      "结构概要": [
+        "1. Transitions 字典：key = 模型名，value = { state: [允许的下一状态列表] }",
+        "2. assert_transition(model_name: str, current: str, target: str) → None 或 raise HTTPException",
+        "3. get_valid_transitions(model_name: str, current: str) → list[str] （供前端动态下拉）",
+        "4. 注册 _VALIDATE_REGISTRY 装饰器：允许模型侧用装饰器注册自定义校验钩子"
+      ],
+      "需要纳入的模型清单": [
+        {"model": "Program",       "states": "active/completed/cancelled",                      "field": "status"},
+        {"model": "Project",       "states": "planning/running/completed/paused/cancelled",    "field": "status"},
+        {"model": "Project.approval", "states": "pending/approved/rejected",                    "field": "approval_status"},
+        {"model": "TestRequest",   "states": "draft/submitted/testing/done/cancelled",         "field": "status"},
+        {"model": "MQVerification","states": "pending/testing/pass/fail",                       "field": "status"},
+        {"model": "Certification", "states": "planning/preparing/testing/submitted/approved/rejected/expiring", "field": "status"},
+        {"model": "Prototype",     "states": "producing/testing/done/scrapped",                 "field": "status"},
+        {"model": "QualityIssue",  "states": "open/analyzing/fixing/verified/closed",           "field": "status"},
+        {"model": "ECR",           "states": "draft/submitted/approved/rejected/implemented",   "field": "status"},
+        {"model": "ECN",           "states": "draft/released/implemented",                       "field": "status"},
+        {"model": "PurchaseOrder", "states": "draft/pending_approval/approved/ordered/received/cancelled", "field": "status"},
+        {"model": "OutsourceRequest","states": "pending/approved/rejected/completed",            "field": "status"},
+        {"model": "Supplier",      "states": "active/inactive",                                 "field": "status"},
+        {"model": "Part.lifecycle","states": "developing/trial/production/discontinued/obsolete", "field": "lifecycle"},
+        {"model": "ProjectGate",   "states": "pending/passed/failed/skipped",                   "field": "status"},
+        {"model": "Task",          "states": "todo/in_progress/done/blocked",                   "field": "status"},
+        {"model": "Milestone",     "states": "pending/achieved/delayed",                        "field": "status"},
+        {"model": "Risk",          "states": "open/monitoring/resolved",                        "field": "status"},
+        {"model": "ProposalApproval","states": "pending_parallel/pending_director/approved/rejected/withdrawn", "field": "status"}
+      ],
+      "风险点": [
+        {"risk": "部分模型（如 QualityIssue）已有独立的 VALID_STATUSES 集合，需统一替换", "mitigation": "逐步迁移，先加 assert_transition，后删旧校验，不破坏现有逻辑"},
+        {"risk": "ProposalApproval 的 _change_status() 涉及多表联动，需确保不遗漏", "mitigation": "提取纯校验逻辑，联动逻辑保留在 proposal_utils.py，不混入状态机"},
+        {"risk": "前端原有下拉框硬编码了所有状态值，需要统一改为调用 API", "mitigation": "新增 GET /api/v1/state-transitions?model=xxx&current=xxx 端点，前端逐步替换"}
+      ]
+    },
+
+    "前端配合": {
+      "新增API端点": [
+        {
+          "method": "GET",
+          "path": "/api/v1/state-transitions",
+          "params": "model (str), current (str)",
+          "response": "list[str] 可转换目标状态",
+          "workload": "小"
+        }
+      ],
+      "前端改造": [
+        {
+          "文件": "所有用到状态下拉的 *.vue 文件",
+          "改动": "将 el-select 的 options 从硬编码列表改为调用 stateMachineApi.getValidTransitions()",
+          "workload": "大（约15-20个文件）",
+          "备注": "按模块逐一改造，优先级：tests > projects > bom > certifications > purchases"
+        }
+      ]
+    }
+  },
+
+  "建议①_事件总线": {
+    "objective": "创建服务端轻量级事件总线，解耦业务逻辑的副作用操作。核心模型状态变更时 publish 事件，订阅者自动执行相应操作（建Gate、写Alert、创建品质整改单、升级预警等）。",
+
+    "file_清单": [
+      {
+        "file": "services/events.py",
+        "action": "CREATE",
+        "description": "事件总线核心：EventBus 单例，支持 on() / off() / emit()，以及标准事件类型枚举",
+        "workload": "中",
+        "dependencies": []
+      },
+      {
+        "file": "services/event_handlers.py",
+        "action": "CREATE",
+        "description": "所有事件处理器的注册入口，按业务域拆分 handler 函数，在应用启动时注册到 EventBus",
+        "workload": "中",
+        "dependencies": ["services/events.py"]
+      },
+      {
+        "file": "main.py",
+        "action": "MODIFY",
+        "description": "应用启动时调用 event_handlers.register_all_handlers() 注册所有订阅者",
+        "workload": "小",
+        "dependencies": ["services/event_handlers.py"]
+      },
+      {
+        "file": "api/tests.py",
+        "action": "MODIFY",
+        "description": "测试状态变更时 emit('test.status_changed')，替代直接调用 _create_test_ng_alert()",
+        "workload": "小",
+        "dependencies": ["services/events.py"]
+      },
+      {
+        "file": "api/projects.py",
+        "action": "MODIFY",
+        "description": "项目状态变更和Gate状态变更时 emit 事件",
+        "workload": "小",
+        "dependencies": ["services/events.py"]
+      },
+      {
+        "file": "api/proposal_utils.py",
+        "action": "MODIFY",
+        "description": "审批通过时 emit('proposal.approved')，触发建Gate和测试申请单（占位）",
+        "workload": "小",
+        "dependencies": ["services/events.py"]
+      },
+      {
+        "file": "api/proposal_approval.py",
+        "action": "MODIFY",
+        "description": "审批其他状态变更 emit 事件",
+        "workload": "小",
+        "dependencies": ["services/events.py"]
+      },
+      {
+        "file": "api/alerts.py",
+        "action": "MODIFY",
+        "description": "check_overdue 扫描后 emit('alert.overdue_found') 触发催办升级",
+        "workload": "小",
+        "dependencies": ["services/events.py"]
+      },
+      {
+        "file": "api/certifications.py",
+        "action": "MODIFY",
+        "description": "认证状态变更时 emit('certification.status_changed')",
+        "workload": "小",
+        "dependencies": ["services/events.py"]
+      },
+      {
+        "file": "api/bom.py",
+        "action": "MODIFY",
+        "description": "BOM状态变更时 emit('bom.status_changed')",
+        "workload": "小",
+        "dependencies": ["services/events.py"]
+      }
+    ],
+
+    "services_events_py_设计": {
+      "核心接口": [
+        "class EventTypes: 枚举所有事件类型常量",
+        "class EventBus: Singleton，内部 dict[str, list[callable]]",
+        "  - on(event: str, handler: callable): 注册监听",
+        "  - off(event: str, handler: callable): 取消监听",
+        "  - emit(event: str, **kwargs): 触发事件，同步调用所有 handler",
+        "bus = EventBus()  # 模块级单例"
+      ],
+      "事件类型清单": [
+        "test.status_changed       — 测试申请状态变更，payload: {test_id, old_status, new_status, ng_count}",
+        "test.done_with_ng         — 测试完成且NG>0，payload: {test_id, ng_count}",
+        "proposal.approved         — 立项审批通过，payload: {project_id, approval_id}",
+        "proposal.rejected         — 立项审批驳回",
+        "project.status_changed    — 项目状态变更",
+        "project.gate_passed       — Gate通过，payload: {project_id, gate_code}",
+        "alert.overdue_found       — 超期扫描发现新超期，payload: {target_type, target_id, alert_id}",
+        "alert.resolved            — 预警解除",
+        "certification.status_changed — 认证状态变更",
+        "bom.status_changed        — BOM状态变更"
+      ],
+      "不依赖外部消息队列": "当前规模纯同步调用即可，如需异步可后期替换为 Celery/Redis PubSub"
+    },
+
+    "services_event_handlers_py_设计": {
+      "handler_审批通过_自动建Gate": {
+        "触发事件": "proposal.approved",
+        "逻辑": "查询对应Project → 确保其第一个Gate(M1或M2)自动设为pending并可操作 → 创建自动测试申请单（占位，状态draft）",
+        "备注": "Gate已由项目创建时自动生成，此处只需设置gate.planned_date和发通知"
+      },
+      "handler_审批通过_自动建测试申请": {
+        "触发事件": "proposal.approved",
+        "逻辑": "自动创建 TestRequest（草案，trigger_mode='auto'，标题=项目名+'_立项测试申请'）",
+        "备注": "占位创建，确保审批通过后测试流程不遗漏"
+      },
+      "handler_测试完成NG_写预警": {
+        "触发事件": "test.done_with_ng",
+        "逻辑": "创建Alert记录（level=2, alert_type='test_ng'），累加项目的 ng_count",
+        "备注": "这是现有 _create_test_ng_alert() 的升级版，用事件解耦"
+      },
+      "handler_NG_ge_3_自动品质整改": {
+        "触发事件": "test.done_with_ng",
+        "逻辑": "检查该测试申请累计 ng_count ≥ 3 → 自动创建 QualityIssue 记录（状态 open, severity='B', source='测试NG'）+ 升级 Alert level 至 1",
+        "备注": "新增核心业务逻辑，需与品质团队确认阈值"
+      },
+      "handler_超期预警_审批催办升级": {
+        "触发事件": "alert.overdue_found",
+        "逻辑": "如果 target_type='approval' → 调用审批催办逻辑（参考 approval_reminder.py）",
+        "备注": "现在的 check_overdue 只扫 project/test/cert，扩展支持 approval 超期触发升级"
+      }
+    },
+
+    "风险点": [
+      {"risk": "事件总线引入同步调用链，可能拖慢API响应", "mitigation": "初期用同步模式，性能瓶颈后再引入异步任务队列；每个 handler 控制执行时间 < 50ms"},
+      {"risk": "审批通过自动建Gate和测试申请单的逻辑需与业务确认", "mitigation": "先创建占位记录（trigger_mode='auto'），用户可手动编辑"},
+      {"risk": "NG≥3自动建品质整改单可能造成重复创建", "mitigation": "每次 emit 前检查是否已有同源未关闭的 QualityIssue（防重逻辑）"},
+      {"risk": "事件回滚问题：handler执行失败但主事务已提交", "mitigation": "所有 handler 内独立 try/except + logging，不抛出异常阻断主流程；后期可引入 outbox pattern"}
+    ]
+  },
+
+  "依赖顺序与分期": {
+    "phase_1_基础建设": {
+      "顺序": 1,
+      "描述": "创建核心基础设施，不修改现有API行为",
+      "工期": "1-2天",
+      "文件": [
+        "services/state_machine.py (CREATE)",
+        "services/events.py (CREATE)",
+        "services/event_handlers.py (CREATE)"
+      ],
+      "验证": "单元测试覆盖所有状态转换规则 + 事件 publish/subscribe 基本链路"
+    },
+    "phase_2_状态机接入": {
+      "顺序": 2,
+      "描述": "将所有模型的状态变更接入统一 assert_transition()",
+      "工期": "3-5天",
+      "文件": [
+        "api/tests.py (MODIFY: 改用 assert_transition)",
+        "api/projects.py (MODIFY: Program/Project/Task/Risk/Milestone 状态校验)",
+        "api/certifications.py (MODIFY: Certification/QualityIssue/ECR/ECN 状态校验)",
+        "api/bom.py (MODIFY: BOM.status 校验)",
+        "api/purchases.py (MODIFY: PurchaseOrder/OutsourceRequest/Supplier 校验)",
+        "api/proposal_utils.py (MODIFY: ProposalApproval 状态校验)",
+        "api/pm_proposal_api.py (审查)"
+      ],
+      "验证": "回归测试所有状态变更API，确保行为一致"
+    },
+    "phase_3_前端动态下拉": {
+      "顺序": 3,
+      "描述": "前后端配合，前端下拉框从硬编码改为动态获取",
+      "工期": "2-3天",
+      "文件": [
+        "新增 API 端点",
+        "逐个改造 Vue 组件中的 el-select"
+      ],
+      "验证": "每个状态下拉菜单只显示合法的可转换目标"
+    },
+    "phase_4_事件处理器注册": {
+      "顺序": 4,
+      "描述": "在现有 API 中插入 emit() 调用，不改变现有业务逻辑",
+      "工期": "1天",
+      "文件": [
+        "api/tests.py (emit test.done_with_ng)",
+        "api/proposal_utils.py (emit proposal.approved)",
+        "api/alerts.py (emit alert.overdue_found)"
+      ],
+      "验证": "事件被正确触发但不影响API返回值"
+    },
+    "phase_5_事件处理器实现": {
+      "顺序": 5,
+      "描述": "实现 event_handlers.py 中的各个 handler 业务逻辑",
+      "工期": "2-3天",
+      "文件": [
+        "services/event_handlers.py (实现: 审批通过→建Gate+测试申请)",
+        "services/event_handlers.py (实现: NG≥3→品质整改单)",
+        "services/event_handlers.py (实现: 超期→催办升级)"
+      ],
+      "验证": "端到端测试：审批通过→Gate自动点亮；测试NG≥3→品质整改单自动创建"
+    },
+    "phase_6_整合测试与部署": {
+      "顺序": 6,
+      "描述": "全链路回归测试、文档更新、部署上线",
+      "工期": "1-2天",
+      "验证": "前后端联调通过后部署"
+    }
+  },
+
+  "工作量汇总": {
+    "新建文件": ["services/state_machine.py", "services/events.py", "services/event_handlers.py"],
+    "修改文件": [
+      "api/tests.py",
+      "api/projects.py",
+      "api/certifications.py",
+      "api/bom.py",
+      "api/purchases.py",
+      "api/proposal_utils.py",
+      "api/proposal_approval.py",
+      "api/pm_proposal_api.py",
+      "api/pm_proposal_utils.py",
+      "api/alerts.py",
+      "main.py",
+      "schemas/__init__.py",
+      "models/test.py (可选: 删除 _VALID_TRANSITIONS)"
+    ],
+    "前端文件(影响范围)": [
+      "views/tests/TestsView.vue",
+      "views/projects/ProjectsView.vue",
+      "views/bom/BOMView.vue",
+      "views/certifications/CertificationsView.vue",
+      "views/quality/QualityIssuesView.vue",
+      "views/purchases/PurchasesView.vue",
+      "views/prototypes/PrototypesView.vue",
+      "views/changes/ChangesView.vue",
+      "views/approvals/ApprovalsView.vue",
+      "views/alerts/AlertsView.vue"
+    ],
+    "总工期估算": "10-15人天（后端6-8天 + 前端4-7天）",
+    "风险等级": "中（主要风险来自业务逻辑确认和前端改造范围大）"
+  },
+
+  "关键设计决策": {
+    "decision_1": "状态机用纯字典配置而非DB驱动，降低复杂度，规则变更需走代码部署",
+    "decision_2": "事件总线用同步单例模式，不使用消息队列，避免基础设施依赖",
+    "decision_3": "assert_transition 不自动写库，只做校验，状态写入由调用方负责",
+    "decision_4": "事件 handler 内异常不影响主流程，独立 try/except + logging",
+    "decision_5": "状态机配置支持额外钩子（before_transition / after_transition），方便扩展自定义校验"
+  }
+}

@@ -9,8 +9,9 @@ from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api
 from app.models import system_config  # ensure table created
+from app.services.event_handlers import register_all_handlers
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
 
@@ -99,6 +100,7 @@ app.include_router(admin_cost_configs.router)
 app.include_router(proposal_approval.router, prefix="/api")
 app.include_router(pm_proposal_api.router, prefix="/api")
 app.include_router(rd_panel.router, prefix="/api")
+app.include_router(state_machine_api.router, prefix="/api")
 
 
 @app.on_event("startup")
@@ -116,6 +118,9 @@ def on_startup():
         logging.getLogger(__name__).info("审批催办定时任务已启动 (每30分钟)")
     except ImportError:
         pass  # apscheduler not installed, skip
+
+    # ── 注册事件总线处理器 ──
+    register_all_handlers()
 
 
 @app.get("/health")

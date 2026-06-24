@@ -18,6 +18,7 @@ from app.models.proposal_approval import (
 )
 from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest
 from app.models.alert import Notification
+from app.services.events import bus, EventTypes
 
 
 # ── 角色 → 中文名称映射 ─────────────────────────────────────────────
@@ -91,6 +92,13 @@ def _change_status(db: Session, pa: ProposalApproval, new_status: str):
             p.approval_status = "pending"
         elif new_status == ProposalStatus.APPROVED:
             p.approval_status = "approved"
+            # ── 触发立项审批通过事件 ──
+            bus.emit(
+                EventTypes.PROPOSAL_APPROVED,
+                project_id=pa.proposal_id,
+                project_name=p.name or pa.title,
+                project_code=p.code or "",
+            )
         elif new_status == ProposalStatus.REJECTED:
             p.approval_status = "rejected"
 

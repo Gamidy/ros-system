@@ -9,13 +9,15 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.core.permissions import require_menu
 from app.models.user import User
-from app.models.test import TestRequest, TestResult, MQVerification, _VALID_TRANSITIONS
+from app.models.test import TestRequest, TestResult, MQVerification
+from app.services.state_machine import assert_transition, get_valid_transitions
 from app.models.alert import Alert
 from app.schemas import (
     TestRequestCreate, TestRequestOut,
     TestResultCreate, TestResultOut,
     MQVerificationCreate, MQVerificationOut,
 )
+from app.services.events import bus, EventTypes
 
 router = APIRouter(prefix="/tests", tags=["测试实验"])
 
@@ -29,17 +31,6 @@ def _gen_request_no() -> str:
 def _gen_mq_no() -> str:
     return f"MQ-{date.today().strftime('%Y%m%d')}-{uuid4().hex[:4].upper()}"
 
-
-def validate_transition(current: str, target: str) -> None:
-    """校验状态转换是否合法，非法则抛出 HTTPException"""
-    valid_targets = _VALID_TRANSITIONS.get(current)
-    if valid_targets is None:
-        raise HTTPException(status_code=400, detail=f"未知当前状态: {current}")
-    if target not in valid_targets:
-        raise HTTPException(
-            status_code=400,
-            detail=f"非法状态转换: {current} → {target}，允许的目标状态: {'、'.join(valid_targets) if valid_targets else '无'}"
-        )
 
 
 def _create_test_ng_alert(test: TestRequest, db: Session) -> None:
@@ -113,7 +104,10 @@ def update_test(
         raise HTTPException(status_code=404, detail="测试申请不存在")
     old_status = r.status
     if status:
-        validate_transition(old_status, status)
+        try:
+            assert_transition('TestRequest', old_status, status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"非法状态转换: {old_status}→{status}")
         r.status = status
         if status == "done":
             r.completed_date = date.today()
@@ -126,6 +120,8 @@ def update_test(
     # 当状态变为done且ng_count>0时，自动创建test_ng预警记录
     if status == "done" and old_status != "done" and r.ng_count > 0:
         _create_test_ng_alert(r, db)
+        # ── 触发测试完成NG事件 ──
+        bus.emit(EventTypes.TEST_DONE_WITH_NG, test_id=r.id, request_no=r.request_no, ng_count=r.ng_count)
     r.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(r)
