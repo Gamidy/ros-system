@@ -50,7 +50,25 @@ const router = createRouter({
           path: 'tests',
           name: 'Tests',
           component: () => import('../views/tests/TestsView.vue'),
-          meta: { title: '实验与测试' },
+          meta: { title: '实验与测试', menu: 'tests' },
+        },
+        {
+          path: 'tests/verification-requirements',
+          name: 'VerificationRequirements',
+          component: () => import('../views/tests/VerificationRequirementView.vue'),
+          meta: { title: '验证需求', menu: 'tests' },
+        },
+        {
+          path: 'tests/gate-rules',
+          name: 'GateRules',
+          component: () => import('../views/tests/GateRuleView.vue'),
+          meta: { title: 'Gate规则引擎', menu: 'tests' },
+        },
+        {
+          path: 'tests/target-markets',
+          name: 'TargetMarkets',
+          component: () => import('../views/tests/TargetMarketView.vue'),
+          meta: { title: '目标市场配置', menu: 'tests' },
         },
         {
           path: 'alerts',

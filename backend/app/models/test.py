@@ -2,6 +2,12 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Date, Float, Boolean, func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.core.enums import (
+    TestRequestStatus, TestResultStatus, TestExecutionStatus,
+    PrototypeType, PrototypeStatus, PrototypeResult,
+    VerificationRequirementCategory, VerificationRequirementSource,
+    GateCode, GateRuleStatus, GateEvalResult,
+)
 
 
 # ==== 测试/实验 ====
@@ -36,12 +42,20 @@ class TestRequest(Base):
     completed_date = Column(Date, nullable=True)
     ng_count = Column(Integer, default=0, comment="不合格项数")
     result_summary = Column(Text, nullable=True)
+    # ---- Phase 6 增强字段 ----
+    vr_id = Column(Integer, ForeignKey("verification_requirements.id"), nullable=True, comment="关联验证需求")
+    prototype_id = Column(Integer, ForeignKey("prototypes.id"), nullable=True, comment="关联样机")
+    test_category = Column(String(30), nullable=True, comment=f"实验分类: {[e.value for e in VerificationRequirementCategory]}")
     # ---- 多租户 ----
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    results = relationship("TestResult", back_populates="test_request", cascade="all, delete-orphan")
+    results = relationship("TestResult", back_populates="test_request", cascade="all, delete-orphan",
+                           foreign_keys="TestResult.test_request_id")
+    executions = relationship("TestExecution", back_populates="test_request", cascade="all, delete-orphan")
+    verification_requirement = relationship("VerificationRequirement", back_populates="test_requests",
+                                            foreign_keys="TestRequest.vr_id")
 
 
 class TestResult(Base):
@@ -53,7 +67,13 @@ class TestResult(Base):
     item_name = Column(String(200), nullable=False, comment="测试项目")
     standard_value = Column(String(100), nullable=True, comment="标准值")
     actual_value = Column(String(100), nullable=True, comment="实测值")
-    is_pass = Column(Boolean, nullable=True, comment="是否合格")
+    is_pass = Column(Boolean, nullable=True, comment="是否合格(旧字段，兼容)")
+    # ---- Phase 6 增强字段 ----
+    prototype_id = Column(Integer, ForeignKey("prototypes.id"), nullable=True, comment="关联样机版本")
+    execution_id = Column(Integer, ForeignKey("test_executions.id"), nullable=True, comment="关联执行记录")
+    result = Column(String(10), nullable=True, comment=f"判定结果: {[e.value for e in TestResultStatus]}")
+    judgment_data = Column(Text, nullable=True, comment="判定数据JSON, 如{合格偏差:0.5, 结论:'OK'}")
+    # ----
     remark = Column(Text, nullable=True)
     tested_by = Column(String(50), nullable=True)
     tested_at = Column(DateTime, nullable=True)
@@ -61,6 +81,10 @@ class TestResult(Base):
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
 
     test_request = relationship("TestRequest", back_populates="results")
+    execution = relationship("TestExecution", back_populates="results",
+                             foreign_keys="TestResult.execution_id")
+    prototype = relationship("Prototype", back_populates="test_results",
+                             foreign_keys="TestResult.prototype_id")
 
 
 # ==== MQ (新物料验证) ====
@@ -122,8 +146,15 @@ class Prototype(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     proto_no = Column(String(50), unique=True, index=True, nullable=False, comment="样机编号")
     product_code = Column(String(50), nullable=False, comment="关联产品")
-    project_code = Column(String(50), nullable=True, comment="关联项目")
+    project_code = Column(String(50), nullable=True, comment="关联项目(旧字段)")
     proto_type = Column(String(20), nullable=False, comment="样机类型: hand_sample/模具首样/工程样机/小批样机/认证样机")
+    # ---- Phase 6 增强字段 ----
+    version = Column(String(10), nullable=True, comment=f"版本标识: {[e.value for e in PrototypeType]}")
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True, comment="关联项目")
+    parent_prototype_id = Column(Integer, ForeignKey("prototypes.id"), nullable=True, comment="父样机(版本树)")
+    bom_version = Column(String(50), nullable=True, comment="关联BOM版本")
+    firmware_version = Column(String(50), nullable=True, comment="固件版本")
+    # ----)
     stage = Column(String(20), nullable=True, comment="阶段: M4/M5/M6/M7/M8")
     status = Column(String(20), default="producing", comment="producing/testing/done/scrapped")
     quantity = Column(Integer, default=1)
@@ -136,6 +167,15 @@ class Prototype(Base):
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    # Phase 6 关系
+    project = relationship("Project", back_populates="prototypes", foreign_keys="Prototype.project_id")
+    parent_prototype = relationship("Prototype", remote_side="Prototype.id", back_populates="child_prototypes",
+                                    foreign_keys="Prototype.parent_prototype_id")
+    child_prototypes = relationship("Prototype", back_populates="parent_prototype",
+                                     foreign_keys="Prototype.parent_prototype_id")
+    test_results = relationship("TestResult", back_populates="prototype",
+                                 foreign_keys="TestResult.prototype_id")
 
 
 # ==== 品质整改 ====

@@ -1,5 +1,5 @@
 """ROS 全模块 Schema: 认证 + Product + BOM + 项目 + 测试/认证/样机/品质"""
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import Optional
 from datetime import date, datetime
 
@@ -651,6 +651,11 @@ class TestResultCreate(BaseModel):
     standard_value: Optional[str] = None
     actual_value: Optional[str] = None
     is_pass: Optional[bool] = None
+    # Phase 6 增强字段
+    prototype_id: Optional[int] = None
+    execution_id: Optional[int] = None
+    result: Optional[str] = None
+    judgment_data: Optional[str] = None
     remark: Optional[str] = None
     tested_by: Optional[str] = None
 
@@ -674,6 +679,10 @@ class TestRequestCreate(BaseModel):
     sample_info: Optional[str] = None
     priority: str = "medium"
     target_date: Optional[date] = None
+    # Phase 6 增强字段
+    vr_id: Optional[int] = None
+    prototype_id: Optional[int] = None
+    test_category: Optional[str] = None
 
 
 class TestRequestOut(TestRequestCreate):
@@ -738,6 +747,12 @@ class PrototypeCreate(BaseModel):
     stage: Optional[str] = None
     quantity: int = 1
     remark: Optional[str] = None
+    # Phase 6 增强字段
+    version: Optional[str] = None
+    project_id: Optional[int] = None
+    parent_prototype_id: Optional[int] = None
+    bom_version: Optional[str] = None
+    firmware_version: Optional[str] = None
 
 
 class PrototypeOut(PrototypeCreate):
@@ -1120,3 +1135,159 @@ class OutsourceRequestOut(OutsourceRequestCreate):
     created_at: datetime
     updated_at: Optional[datetime] = None
     class Config: from_attributes = True
+
+
+# ═══════════════ Phase 6 S1 — VerificationRequirement ═══════════════
+
+class VerificationRequirementCreate(BaseModel):
+    title: str
+    category: str
+    target_value: str | None = None
+    unit: str | None = None
+    source_type: str
+    source_id: str | None = None
+    source_detail: str | None = None
+    project_id: int | None = None
+    product_plan_id: int | None = None
+    gate_code: str | None = None
+    remark: str | None = None
+
+
+class VerificationRequirementOut(VerificationRequirementCreate):
+    id: int
+    vr_code: str
+    status: str
+    org_id: int | None = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VerificationRequirementGenerateRequest(BaseModel):
+    product_plan_id: int
+    auto_generate: bool = True
+
+
+# ═══════════════ Phase 6 S1 — TestExecution ═══════════════
+
+class TestExecutionCreate(BaseModel):
+    test_request_id: int
+    lab: str | None = None
+    equipment: str | None = None
+    operator: str | None = None
+    start_time: datetime | None = None
+    notes: str | None = None
+
+
+class TestExecutionOut(TestExecutionCreate):
+    id: int
+    end_time: datetime | None = None
+    duration_minutes: int | None = None
+    status: str
+    org_id: int | None = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ═══════════════ Phase 6 S1 — GateRule ═══════════════
+
+class GateRuleItemCreate(BaseModel):
+    required_vr_category: str
+    required_prototype_type: str | None = None
+    is_required: bool = True
+    sort_order: int = 0
+
+
+class GateRuleCreate(BaseModel):
+    name: str
+    description: str | None = None
+    product_line: str | None = None
+    customer: str | None = None
+    gate_code: str
+    all_pass: bool = True
+    auto_block: bool = False
+    priority: int = 100
+    items: list[GateRuleItemCreate] = []
+
+
+class GateRuleItemOut(GateRuleItemCreate):
+    id: int
+    rule_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GateRuleOut(GateRuleCreate):
+    id: int
+    status: str
+    created_by: str | None = None
+    org_id: int | None = None
+    created_at: datetime
+    updated_at: datetime
+    items: list[GateRuleItemOut] = []
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GateRuleEvalRequest(BaseModel):
+    project_id: int
+    gate_code: str
+    product_line: str | None = None
+    customer: str | None = None
+
+
+# ═══════════════ Phase 6 S1 — TargetMarket ═══════════════
+
+class RequiredTestCreate(BaseModel):
+    test_category: str
+    standard: str | None = None
+    is_required: bool = True
+    sort_order: int = 0
+
+
+class RequiredCertificationCreate(BaseModel):
+    cert_type: str
+    cert_body: str | None = None
+    is_mandatory: bool = True
+    sort_order: int = 0
+
+
+class RequiredStandardCreate(BaseModel):
+    standard_code: str
+    standard_name: str | None = None
+    is_core: bool = True
+    sort_order: int = 0
+
+
+class TargetMarketCreate(BaseModel):
+    market_code: str
+    market_name: str
+    description: str | None = None
+
+
+class RequiredTestOut(RequiredTestCreate):
+    id: int
+    target_market_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RequiredCertificationOut(RequiredCertificationCreate):
+    id: int
+    target_market_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RequiredStandardOut(RequiredStandardCreate):
+    id: int
+    target_market_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TargetMarketOut(TargetMarketCreate):
+    id: int
+    org_id: int | None = None
+    created_at: datetime
+    updated_at: datetime
+    required_tests: list[RequiredTestOut] = []
+    required_certifications: list[RequiredCertificationOut] = []
+    required_standards: list[RequiredStandardOut] = []
+    model_config = ConfigDict(from_attributes=True)

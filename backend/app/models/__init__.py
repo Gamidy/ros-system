@@ -23,6 +23,10 @@ from app.models.trial_qty_config import TrialQtyConfig
 from app.models.annual_plan import AnnualPlan
 from app.models.product_plan import ProductPlan, Cost, ProductPlanStage, CostType, BOMType
 from app.models.event_log import EventLog
+from app.models.verification_requirement import VerificationRequirement
+from app.models.test_execution import TestExecution
+from app.models.gate_rule import GateRule, GateRuleItem, GateEvalRecord
+from app.models.target_market import TargetMarket, RequiredTest, RequiredCertification, RequiredStandard
 
 __all__ = [
     "User",
@@ -48,4 +52,8 @@ __all__ = [
     "TrialQtyConfig",
     "AnnualPlan",
     "ProductPlan", "Cost", "ProductPlanStage", "CostType", "BOMType",
+    "VerificationRequirement",
+    "TestExecution",
+    "GateRule", "GateRuleItem", "GateEvalRecord",
+    "TargetMarket", "RequiredTest", "RequiredCertification", "RequiredStandard",
 ]

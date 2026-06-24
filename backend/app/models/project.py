@@ -141,6 +141,10 @@ class Project(Base):
     milestones = relationship("Milestone", back_populates="project", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     risks = relationship("Risk", back_populates="project", cascade="all, delete-orphan")
+    verification_requirements = relationship("VerificationRequirement", back_populates="project",
+                                              foreign_keys="VerificationRequirement.project_id")
+    prototypes = relationship("Prototype", back_populates="project",
+                               foreign_keys="Prototype.project_id")
 
 
 class ProjectGate(Base):

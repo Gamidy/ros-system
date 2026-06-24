@@ -10,6 +10,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
 from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks
+from app.api import verification_requirements, prototypes, test_executions, gate_rules, target_markets
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -106,6 +107,11 @@ app.include_router(projects.program_router, prefix="/api")
 app.include_router(projects.project_router, prefix="/api")
 app.include_router(tests.router, prefix="/api")
 app.include_router(certifications.router, prefix="/api")
+app.include_router(verification_requirements.router)
+app.include_router(prototypes.router)
+app.include_router(test_executions.router)
+app.include_router(gate_rules.router)
+app.include_router(target_markets.router)
 app.include_router(alerts.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")

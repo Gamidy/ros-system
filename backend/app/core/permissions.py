@@ -57,6 +57,10 @@ ALL_MENUS = [
     "saga-viewer",      # Saga事务
     "risk-dashboard",   # 智能决策看板
     "admin-config",     # 系统设置（仅admin）
+    "verification-requirements",  # 验证需求
+    "gate-rules",       # Gate规则引擎
+    "target-markets",   # 目标市场
+    "test-executions",  # 实验执行
 ]
 
 # 角色 → 菜单 映射表
@@ -68,29 +72,35 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "certifications", "prototypes", "quality", "changes",
         'alerts', 'approvals', 'rd_dashboard', 'purchases',
         'pm-workspace', 'competitor_bench', 'proposal_approvals',
-        'product-plans',
+        'product-plans', 'verification-requirements', 'gate-rules',
+        'target-markets', 'test-executions',
     ],
     "product_manager": [
         "dashboard", "products", "bom", "projects",
         'certifications', 'alerts', 'approvals', 'pm-workspace',
         'competitor_bench', 'market_mgmt', 'proposal_approvals',
-        'product-plans',
+        'product-plans', 'target-markets', 'gate-rules',
+        'verification-requirements', 'test-executions',
     ],
     "systems_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
+        "verification-requirements", "test-executions",
     ],
     "structural_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
+        "verification-requirements", "test-executions",
     ],
     "electrical_control_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
+        "verification-requirements", "test-executions",
     ],
     "electrical_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes", "certifications",
+        "verification-requirements", "test-executions",
     ],
     "procurement": [
         "dashboard", "bom", "purchases", "alerts", "projects",
@@ -100,14 +110,17 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects",
         "tests", "quality", "alerts", "certifications",
         "prototypes", "changes",
+        "verification-requirements", "test-executions",
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "certifications", "alerts",
+        "verification-requirements", "test-executions",
     ],
     "project_admin": [
         "dashboard", "projects", "alerts", "changes",
         "products", "bom", "tests", "prototypes", "approvals",
+        "verification-requirements", "test-executions",
     ],
     "production": [
         "dashboard", "bom", "quality", "alerts", "projects",
@@ -117,16 +130,19 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects",
         "prototypes", "quality", "alerts", "approvals",
         "tests", "certifications", "changes", "mm",
+        "verification-requirements", "test-executions",
     ],
     "module_manager_struct": [  # 结构模块经理 — 侧重结构
         "dashboard", "products", "bom", "projects",
         "prototypes", "quality", "alerts", "approvals",
         "tests", "certifications", "changes",
+        "verification-requirements", "test-executions",
     ],
     "module_manager_sys": [  # 系统模块经理 — 侧重系统性能
         "dashboard", "products", "bom", "projects", "tests",
         "prototypes", "quality", "alerts", "approvals",
         "certifications", "changes",
+        "verification-requirements", "test-executions",
     ],
     "finance_manager": [  # 财务经理 — 成本核算
         "dashboard", "products", "bom",
@@ -135,10 +151,12 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
     "process_manager": [  # 工艺经理 — 管理工艺+审批
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "approvals",
+        "verification-requirements", "test-executions",
     ],
     "procurement_director": [  # 采购总监 — 管理采购+审批
         "dashboard", "bom", "purchases", "alerts", "approvals", "projects",
         "products", "prototypes", "tests",
+        "verification-requirements", "test-executions",
     ],
     "security_officer": [
         "dashboard", "alerts", "approvals",
@@ -149,6 +167,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
         "competitor_bench",
+        "verification-requirements", "test-executions",
     ],
 }
 
@@ -195,6 +214,10 @@ MENU_PATH_MAP: dict[str, str] = {
     "saga-viewer": "/saga-viewer",
     "risk-dashboard": "/risk-dashboard",
     "admin-config": "/admin-config",
+    "verification-requirements": "/verification-requirements",
+    "gate-rules": "/gate-rules",
+    "target-markets": "/target-markets",
+    "test-executions": "/test-executions",
 }
 
 
@@ -219,6 +242,11 @@ API_MENU_MAP: dict[str, str] = {
     "approval": "approvals",
     "purchases": "purchases",
     "dashboard": "dashboard",
+    "prototypes": "prototypes",
+    "verification-requirements": "verification-requirements",
+    "gate-rules": "gate-rules",
+    "target-markets": "target-markets",
+    "test-executions": "test-executions",
 }
 
 def require_menu(menu_name: str):
