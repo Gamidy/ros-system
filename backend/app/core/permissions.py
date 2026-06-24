@@ -61,6 +61,14 @@ ALL_MENUS = [
     "gate-rules",       # Gate规则引擎
     "target-markets",   # 目标市场
     "test-executions",  # 实验执行
+    # Phase 6 S2 — 认证中心菜单
+    "cert-requirements",       # 认证需求
+    "cert-projects",           # 认证项目
+    "cert-samples",            # 认证样机
+    "cert-executions",         # 认证执行
+    "cert-results",            # 认证结果
+    "certificates",            # 证书管理
+    "cert-gate-rules",         # 认证门禁规则
 ]
 
 # 角色 → 菜单 映射表
@@ -74,6 +82,9 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'pm-workspace', 'competitor_bench', 'proposal_approvals',
         'product-plans', 'verification-requirements', 'gate-rules',
         'target-markets', 'test-executions',
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "product_manager": [
         "dashboard", "products", "bom", "projects",
@@ -81,6 +92,9 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'competitor_bench', 'market_mgmt', 'proposal_approvals',
         'product-plans', 'target-markets', 'gate-rules',
         'verification-requirements', 'test-executions',
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "systems_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -101,21 +115,33 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes", "certifications",
         "verification-requirements", "test-executions",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "procurement": [
         "dashboard", "bom", "purchases", "alerts", "projects",
         "products", "certifications",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "quality_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "quality", "alerts", "certifications",
         "prototypes", "changes",
         "verification-requirements", "test-executions",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "certifications", "alerts",
         "verification-requirements", "test-executions",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "project_admin": [
         "dashboard", "projects", "alerts", "changes",
@@ -131,18 +157,27 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "prototypes", "quality", "alerts", "approvals",
         "tests", "certifications", "changes", "mm",
         "verification-requirements", "test-executions",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "module_manager_struct": [  # 结构模块经理 — 侧重结构
         "dashboard", "products", "bom", "projects",
         "prototypes", "quality", "alerts", "approvals",
         "tests", "certifications", "changes",
         "verification-requirements", "test-executions",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "module_manager_sys": [  # 系统模块经理 — 侧重系统性能
         "dashboard", "products", "bom", "projects", "tests",
         "prototypes", "quality", "alerts", "approvals",
         "certifications", "changes",
         "verification-requirements", "test-executions",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],
     "finance_manager": [  # 财务经理 — 成本核算
         "dashboard", "products", "bom",
@@ -162,6 +197,9 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "alerts", "approvals",
         "products", "bom", "projects", "tests",
         "certifications", "prototypes", "quality", "changes",
+        # S2 认证中心
+        'cert-requirements', 'cert-projects', 'cert-samples',
+        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
     ],  # IT安全员 — 裁剪权限（去掉 purchases, rd_dashboard, mm）
     "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
         "dashboard", "products", "bom", "projects",
@@ -218,6 +256,14 @@ MENU_PATH_MAP: dict[str, str] = {
     "gate-rules": "/gate-rules",
     "target-markets": "/target-markets",
     "test-executions": "/test-executions",
+    # Phase 6 S2 — 认证中心
+    "cert-requirements": "/cert-requirements",
+    "cert-projects": "/cert-projects",
+    "cert-samples": "/cert-samples",
+    "cert-executions": "/cert-executions",
+    "cert-results": "/cert-results",
+    "certificates": "/certificates",
+    "cert-gate-rules": "/cert-gate-rules",
 }
 
 
@@ -247,6 +293,14 @@ API_MENU_MAP: dict[str, str] = {
     "gate-rules": "gate-rules",
     "target-markets": "target-markets",
     "test-executions": "test-executions",
+    # Phase 6 S2 — 认证中心
+    "s2/certification-requirements": "cert-requirements",
+    "s2/certification-projects": "cert-projects",
+    "s2/certification-samples": "cert-samples",
+    "s2/certification-executions": "cert-executions",
+    "s2/certification-results": "cert-results",
+    "s2/certificates": "certificates",
+    "s2/gate-rules": "cert-gate-rules",
 }
 
 def require_menu(menu_name: str):

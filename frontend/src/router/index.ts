@@ -82,6 +82,73 @@ const router = createRouter({
           component: () => import('../views/certifications/CertificationsView.vue'),
           meta: { title: '认证管理' },
         },
+        // S2 认证中心路由
+        {
+          path: 's2/dashboard',
+          name: 'S2Dashboard',
+          component: () => import('../views/s2/S2DashboardView.vue'),
+          meta: { title: '认证中心', menu: 'certifications' },
+        },
+        {
+          path: 's2/requirements',
+          name: 'S2Requirements',
+          component: () => import('../views/s2/S2RequirementView.vue'),
+          meta: { title: '认证需求', menu: 'certifications' },
+        },
+        {
+          path: 's2/projects',
+          name: 'S2Projects',
+          component: () => import('../views/s2/S2CertProjectView.vue'),
+          meta: { title: '认证项目', menu: 'certifications' },
+        },
+        {
+          path: 's2/projects/:id',
+          name: 'S2ProjectDetail',
+          component: () => import('../views/s2/S2CertProjectDetail.vue'),
+          meta: { title: '认证项目详情', menu: 'certifications' },
+        },
+        {
+          path: 's2/samples',
+          name: 'S2Samples',
+          component: () => import('../views/s2/S2CertSampleView.vue'),
+          meta: { title: '认证样机', menu: 'certifications' },
+        },
+        {
+          path: 's2/executions',
+          name: 'S2Executions',
+          component: () => import('../views/s2/S2CertExecutionView.vue'),
+          meta: { title: '认证执行', menu: 'certifications' },
+        },
+        {
+          path: 's2/results',
+          name: 'S2Results',
+          component: () => import('../views/s2/S2CertResultView.vue'),
+          meta: { title: '认证结果', menu: 'certifications' },
+        },
+        {
+          path: 's2/certificates',
+          name: 'S2Certificates',
+          component: () => import('../views/s2/S2CertificateView.vue'),
+          meta: { title: '证书管理', menu: 'certifications' },
+        },
+        {
+          path: 's2/certificates/:id',
+          name: 'S2CertificateDetail',
+          component: () => import('../views/s2/S2CertificateDetail.vue'),
+          meta: { title: '证书详情', menu: 'certifications' },
+        },
+        {
+          path: 's2/gate-rules',
+          name: 'S2GateRules',
+          component: () => import('../views/s2/S2GateRulesView.vue'),
+          meta: { title: '认证门禁规则', menu: 'certifications' },
+        },
+        {
+          path: 's2/impact',
+          name: 'S2Impact',
+          component: () => import('../views/s2/S2ImpactView.vue'),
+          meta: { title: '变更影响分析', menu: 'certifications' },
+        },
         {
           path: 'prototypes',
           name: 'Prototypes',

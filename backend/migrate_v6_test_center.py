@@ -258,6 +258,20 @@ def run_migration():
                 conn.execute(text("ALTER TABLE prototypes ADD COLUMN firmware_version VARCHAR(50) NULL"))
                 print("✅ prototypes 新增 firmware_version")
 
+            # 子表 org_id 补齐（原CREATE中遗漏）
+            if not _has_column("gate_rule_items", "org_id"):
+                conn.execute(text("ALTER TABLE gate_rule_items ADD COLUMN org_id INTEGER NULL"))
+                print("✅ gate_rule_items 新增 org_id")
+            if not _has_column("required_tests", "org_id"):
+                conn.execute(text("ALTER TABLE required_tests ADD COLUMN org_id INTEGER NULL"))
+                print("✅ required_tests 新增 org_id")
+            if not _has_column("required_certifications", "org_id"):
+                conn.execute(text("ALTER TABLE required_certifications ADD COLUMN org_id INTEGER NULL"))
+                print("✅ required_certifications 新增 org_id")
+            if not _has_column("required_standards", "org_id"):
+                conn.execute(text("ALTER TABLE required_standards ADD COLUMN org_id INTEGER NULL"))
+                print("✅ required_standards 新增 org_id")
+
             trans.commit()
             print("=" * 50)
             print("✅ Phase 6 S1 数据库迁移完成!")

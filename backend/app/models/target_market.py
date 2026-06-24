@@ -45,7 +45,7 @@ class RequiredTest(Base):
     standard = Column(String(100), nullable=True, comment="测试标准: 如 EN 14511")
     is_required = Column(Boolean, default=True, comment="是否强制")
     sort_order = Column(Integer, default=0, comment="排序")
-
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     target_market = relationship("TargetMarket", back_populates="required_tests")
 
 
@@ -59,7 +59,7 @@ class RequiredCertification(Base):
     cert_body = Column(String(100), nullable=True, comment="认证机构")
     is_mandatory = Column(Boolean, default=True, comment="是否强制")
     sort_order = Column(Integer, default=0, comment="排序")
-
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     target_market = relationship("TargetMarket", back_populates="required_certifications")
 
 
@@ -73,5 +73,5 @@ class RequiredStandard(Base):
     standard_name = Column(String(200), nullable=True, comment="标准名称")
     is_core = Column(Boolean, default=True, comment="是否核心标准")
     sort_order = Column(Integer, default=0, comment="排序")
-
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     target_market = relationship("TargetMarket", back_populates="required_standards")

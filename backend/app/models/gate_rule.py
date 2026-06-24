@@ -67,11 +67,10 @@ class GateRuleItem(Base):
     # 要求的实验分类
     required_vr_category = Column(String(30), nullable=False, comment="要求的验证需求分类（如 performance）")
     required_prototype_type = Column(String(10), nullable=True, comment="要求的样机类型（如 P2）")
+    required_cert_type = Column(String(20), nullable=True, comment="必需的认证类型（CE/CB/UL/SAA）")
     is_required = Column(Boolean, default=True, comment="是否强制要求")
-
-    # 排序
     sort_order = Column(Integer, default=0, comment="排序")
-
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     # 关系
     rule = relationship("GateRule", back_populates="items")
 

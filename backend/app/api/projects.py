@@ -338,6 +338,15 @@ def create_project(
 
         db.commit()
         db.refresh(p)
+
+        # 如果设置了 target_market，自动触发认证需求生成
+        if p.target_market:
+            try:
+                from app.services.cert_auto_gen import CertAutoGenService
+                service = CertAutoGenService(db)
+                service.generate_from_project(p.id)
+            except Exception:
+                pass  # 认证需求生成是辅助功能，不应阻塞项目创建
     except Exception:
         db.rollback()
         raise

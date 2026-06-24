@@ -98,8 +98,42 @@ def patch_prototype_status(
     proto = db.query(Prototype).filter(Prototype.id == pid).first()
     if not proto:
         raise HTTPException(status_code=404, detail="样机不存在")
+    old_status = proto.status
     proto.status = status
     proto.updated_at = datetime.now(timezone.utc)
+    db.flush()
+
+    # 当 Prototype 状态变为 done 且 version=P2 时，自动创建 CertificationSample
+    if status == "done" and proto.version == "P2" and old_status != "done":
+        try:
+            from app.models.certification import CertificationProject, CertificationSample
+            from app.core.enums_s2 import CertSampleStatus
+            from uuid import uuid4
+
+            # 查找该 prototype 所属项目下的认证项目
+            cert_projects = db.query(CertificationProject).filter(
+                CertificationProject.project_id == proto.project_id
+            ).all()
+            for cp in cert_projects:
+                # 检查是否已存在关联的认证样机
+                existing = db.query(CertificationSample).filter(
+                    CertificationSample.prototype_id == pid,
+                    CertificationSample.cert_project_id == cp.id,
+                ).first()
+                if existing:
+                    continue
+                sample = CertificationSample(
+                    cert_project_id=cp.id,
+                    prototype_id=pid,
+                    cert_type="CE",  # 默认认证类型，后续可由用户编辑
+                    sample_no=f"CS-{date.today().strftime('%Y%m%d')}-{uuid4().hex[:4].upper()}",
+                    status=CertSampleStatus.PENDING.value,
+                    org_id=getattr(proto, "org_id", None),
+                )
+                db.add(sample)
+        except Exception:
+            pass  # 自动创建认证样机是辅助功能，不应阻塞状态更新
+
     db.commit()
     return {"ok": True, "status": proto.status}
 

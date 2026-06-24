@@ -27,6 +27,18 @@ from app.models.verification_requirement import VerificationRequirement
 from app.models.test_execution import TestExecution
 from app.models.gate_rule import GateRule, GateRuleItem, GateEvalRecord
 from app.models.target_market import TargetMarket, RequiredTest, RequiredCertification, RequiredStandard
+from app.models.certification import (
+    CertificationRequirement,
+    CertificationProject,
+    CertificationSample,
+    CertificationExecution,
+    CertificationResult,
+    Certificate,
+    CertificateVersion,
+)
+from app.models.change_impact import ChangeImpactRule, ChangeImpactRecord
+from app.models.cert_gate_rule import CertificationGateRule
+from app.models.cert_auto_gen import CertAutoGenLog
 
 __all__ = [
     "User",
@@ -56,4 +68,15 @@ __all__ = [
     "TestExecution",
     "GateRule", "GateRuleItem", "GateEvalRecord",
     "TargetMarket", "RequiredTest", "RequiredCertification", "RequiredStandard",
+    "CertificationRequirement",
+    "CertificationProject",
+    "CertificationSample",
+    "CertificationExecution",
+    "CertificationResult",
+    "Certificate",
+    "CertificateVersion",
+    "ChangeImpactRule",
+    "ChangeImpactRecord",
+    "CertificationGateRule",
+    "CertAutoGenLog",
 ]
