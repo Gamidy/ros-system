@@ -24,7 +24,7 @@
             <el-button
               type="primary"
               size="small"
-              :disabled="!selectedBomId"
+              :disabled="selectedBomId == null"
               :loading="loadingCost"
               @click="refreshCost"
             >
@@ -268,16 +268,17 @@ async function fetchCostSummary(bomId: number | string) {
     costSummary.value = res.data
   } catch {
     costSummary.value = null
+    ElMessage.error('获取成本数据失败')
   } finally {
     loadingCost.value = false
   }
 }
 
 /** 手动刷新物料成本（拉取最新成本数据） */
-function refreshCost() {
-  if (!selectedBomId.value) return
+async function refreshCost() {
+  if (selectedBomId.value == null) return
   ElMessage.info('正在拉取物料成本...')
-  fetchCostSummary(selectedBomId.value)
+  await fetchCostSummary(selectedBomId.value)
 }
 
 /** 树节点点击 */
