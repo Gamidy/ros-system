@@ -171,10 +171,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise HTTPException(status_code=401, detail="无效凭证")
     user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="用户不存在")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="账户已禁用")
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="无效凭证")
     return user
 
 
