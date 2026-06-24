@@ -252,7 +252,7 @@ def _action_create_project(plan_id: str, plan_name: str, **kwargs) -> Tuple[bool
         # 关联 plan 到 project
         if plan:
             plan.project_id = project_id
-
+        db.commit()
         logger.info("Saga: 项目已创建: id=%s, code=%s, name=%s", project_id, code, plan_name_clean)
         return True, {"project_id": project_id, "project_code": code}
     except Exception as e:
