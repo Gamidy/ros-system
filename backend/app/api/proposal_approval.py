@@ -392,6 +392,7 @@ def review_approval(
                     project.code = code
                 project.is_draft = False
                 project.status = "planning"
+                project.approval_status = pa.status  # BUGFIX: 同步审批状态到Project表
 
                 existing_gates = (
                     db.query(ProjectGate)
@@ -557,6 +558,7 @@ def review_approval(
 
                 project.is_draft = False
                 project.status = "planning"
+                project.approval_status = pa.status  # BUGFIX: 同步审批状态到Project表
 
                 # 自动生成 Gate 模板
                 existing_gates = (

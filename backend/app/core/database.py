@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.core.config import settings
 import json
-import redis.asyncio as aioredis
+# Redis 暂未使用 — import 已注释
 
 engine = create_engine(
     settings.db_url,
