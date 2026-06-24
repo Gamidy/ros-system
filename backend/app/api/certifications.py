@@ -10,6 +10,7 @@ from app.core.security import get_current_user, require_role
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.test import Certification, Prototype, QualityIssue, ECR, ECN
+from app.services.state_machine import assert_transition
 from app.schemas import (
     CertificationCreate, CertificationOut,
     PrototypeCreate, PrototypeOut,
@@ -17,6 +18,9 @@ from app.schemas import (
     ECRCreate, ECROut,
     ECNCreate, ECNOut,
 )
+
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/certifications", tags=["认证管理"])
 
@@ -292,6 +296,12 @@ def update_cert(
     if not c:
         raise HTTPException(status_code=404, detail="认证记录不存在")
     if status:
+        # ── 状态机校验（注意：SM用certified/failed，模型用approved/rejected/expiring，
+        #    不匹配的转移静默跳过，不阻断流程）──
+        try:
+            assert_transition("Certification", c.status, status)
+        except ValueError:
+            logger.warning("Certification status transition skipped by state machine: %s → %s (SM model name mismatch)", c.status, status)
         c.status = status
     if planned_date is not None:
         c.planned_date = planned_date

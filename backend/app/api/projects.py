@@ -8,6 +8,7 @@ from app.core.security import get_current_user, require_role
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
+from app.services.state_machine import assert_transition
 from app.schemas import (
     ProgramCreate, ProjectCreate, ProjectUpdate, ProjectOut, TaskCreate, RiskCreate,
     MilestoneCreate, GateStatusUpdate,
@@ -435,6 +436,11 @@ def update_project(
     if body.status is not None:
         if body.status not in ("planning", "running", "completed", "paused", "cancelled"):
             raise HTTPException(status_code=400, detail=f"无效状态: {body.status}")
+        # ── 状态机校验 ──
+        try:
+            assert_transition("Project", p.status, body.status)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         p.status = body.status
         if body.status == "completed":
             p.actual_end_date = body.actual_end_date or date.today()

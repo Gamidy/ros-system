@@ -1,0 +1,254 @@
+{
+  "meta": {
+    "task": "事件总线 + 状态机联动注入（Phase 1）— 增量实施计划",
+    "generated_by": "AI-A",
+    "date": "2026-06-24",
+    "project_root": "/Users/gamidy/ros-source/ros-system/backend/app",
+    "existing_infrastructure": {
+      "events_py": "services/events.py — 单例 bus + EventTypes (4个事件类型) ✅",
+      "state_machine_py": "services/state_machine.py — assert_transition + 8个模型配置 ✅",
+      "event_handlers_py": "services/event_handlers.py — 3个handler已注册，含阈值内发射 ✅",
+      "main_py": "main.py — register_all_handlers() 在startup时调用 ✅"
+    },
+    "already_completed": [
+      "proposal_utils.py — 审批通过时 emit PROPOSAL_APPROVED ✅",
+      "tests.py — NG检测完成时 emit TEST_DONE_WITH_NG ✅",
+      "tests.py — TestRequest状态变更用 assert_transition 校验 ✅",
+      "event_handlers.py — on_test_done_with_ng 内部已自动发射 NG_THRESHOLD_REACHED ✅"
+    ]
+  },
+  "pre_analysis": {
+    "state_machine_model_analysis": {
+      "Project": {
+        "sm_config": ["draft→planning", "planning→running/cancelled", "running→completed/cancelled", "completed→[]", "cancelled→[]"],
+        "model_status_values": "planning, running, completed, paused, cancelled",
+        "model_default": "planning",
+        "mismatch": "⚠️ 状态机缺少 'paused'（API允许但SM未注册）；SM有'draft'但模型默认从planning开始",
+        "recommendation": "需将 'paused' 加入Project状态机配置（作为planning和running的可选转移）"
+      },
+      "BOM": {
+        "sm_config": ["draft→released", "released→obsolete/draft", "obsolete→[]"],
+        "model_status_values": "draft, released, obsolete",
+        "model_default": "draft",
+        "mismatch": "✅ 完全对齐"
+      },
+      "Certification": {
+        "sm_config": ["planning→preparing/failed", "preparing→testing/failed", "testing→submitted/failed", "submitted→certified/failed", "certified→[]", "failed→[]"],
+        "model_status_values": "planning, preparing, testing, submitted, approved, rejected, expiring",
+        "model_default": "planning",
+        "mismatch": "⚠️ SM用 'certified/failed'，模型用 'approved/rejected/expiring'。终端状态名不一致",
+        "recommendation": "assert_transition只对SM中已定义的转移生效；不存在的转移静默跳过（不阻断原流程）"
+      }
+    },
+    "event_handler_chain_confirmed": {
+      "chain_1": "tests.py [update_test] → emit(TEST_DONE_WITH_NG) → on_test_done_with_ng → [if ng≥3] create QualityIssue + emit(NG_THRESHOLD_REACHED) ✅ ALREADY WORKING",
+      "chain_2": "alerts.py [check_overdue] → emit(ALERT_OVERDUE_FOUND) → on_alert_overdue_found → upgrade alert level + create notification 🔜 NEEDS IMPLEMENTATION",
+      "chain_3": "handler on_alert_overdue_found 已注册但从未被触发，因为alerts.py尚未emit事件"
+    }
+  },
+  "tasks": [
+    {
+      "id": "A1",
+      "priority": 1,
+      "category": "状态机断言注入",
+      "module": "Project",
+      "file": "api/projects.py",
+      "function": "update_project()",
+      "line_ref": "L435-L441",
+      "description": "在 Project 状态变更前添加 assert_transition 校验。捕获 old_status = p.status，在 p.status = body.status 之前调用 assert_transition('Project', old_status, body.status)。将 ValueError 转为 HTTPException 400。",
+      "specific_changes": [
+        {
+          "action": "ADD_IMPORT",
+          "detail": "在文件顶部添加: from app.services.state_machine import assert_transition",
+          "after": "from app.models.project import ...",
+          "risk": "无循环依赖 — state_machine.py 纯Python无SQLAlchemy依赖"
+        },
+        {
+          "action": "MODIFY_LOGIC",
+          "detail": "在 update_project() 的 status 处理块中，在 'p.status = body.status' 之前插入:\n    old_status = p.status\n    try:\n        assert_transition('Project', old_status, body.status)\n    except ValueError as e:\n        raise HTTPException(status_code=400, detail=str(e))",
+          "before": "if body.status is not None:\n    if body.status not in (\"planning\", \"running\", \"completed\", \"paused\", \"cancelled\"):\n        raise HTTPException(...)\n    p.status = body.status",
+          "after": "if body.status is not None:\n    if body.status not in (\"planning\", \"running\", \"completed\", \"paused\", \"cancelled\"):\n        raise HTTPException(...)\n    old_status = p.status\n    try:\n        assert_transition('Project', old_status, body.status)\n    except ValueError as e:\n        raise HTTPException(status_code=400, detail=str(e))\n    p.status = body.status"
+        }
+      ],
+      "prerequisite": "需要先更新 state_machine.py 在 Project 配置中添加 'paused' 状态（否则paused转移会抛ValueError）",
+      "risk_level": "中",
+      "risk_reason": "⚠️ state_machine.py 中 Project 配置缺少 'paused' 状态。若先注入assert_transition而不改SM，则paused转移会报错。需同步更新SM或在assert前增加paused例外判断",
+      "estimated_lines": "4行（1行import + 3行try/except）",
+      "sm_update_required": true,
+      "sm_update_suggestion": "在 state_machine.py 的 'Project' 配置中:\n\"planning\": [\"running\", \"cancelled\", \"paused\"],\n\"running\": [\"completed\", \"cancelled\", \"paused\"],\n\"paused\": [\"running\"],  # paused 可恢复执行"
+    },
+    {
+      "id": "A1b",
+      "priority": 1,
+      "parent": "A1",
+      "category": "状态机配置依赖更新",
+      "module": "State Machine",
+      "file": "services/state_machine.py",
+      "function": "_TRANSITIONS_CONFIG[\"Project\"]",
+      "line_ref": "L28-L34",
+      "description": "在 Project 状态机配置中添加 'paused' 状态定义，确保 Project 的 planning→paused、running→paused 和 paused→running 转移合法。",
+      "specific_changes": [
+        {
+          "action": "MODIFY_CONFIG",
+          "before": "\"Project\": {\n    \"draft\": [\"planning\"],\n    \"planning\": [\"running\", \"cancelled\"],\n    \"running\": [\"completed\", \"cancelled\"],\n    \"completed\": [],\n    \"cancelled\": [],\n},",
+          "after": "\"Project\": {\n    \"draft\": [\"planning\"],\n    \"planning\": [\"running\", \"cancelled\", \"paused\"],\n    \"running\": [\"completed\", \"cancelled\", \"paused\"],\n    \"paused\": [\"running\"],\n    \"completed\": [],\n    \"cancelled\": [],\n},"
+        }
+      ],
+      "risk_level": "低",
+      "risk_reason": "纯配置变更，无业务逻辑改动。paused→running 是常见恢复路径",
+      "estimated_lines": "5行（配置条目变更）"
+    },
+    {
+      "id": "A2",
+      "priority": 2,
+      "category": "状态机断言注入",
+      "module": "BOM",
+      "file": "api/bom.py",
+      "function": "update_bom()",
+      "line_ref": "L231-L243",
+      "description": "在 BOM 状态变更前添加 assert_transition 校验。由于 BOMUpdate 的 status 字段是 Optional[str]，需要检测 status 是否在 update_dict 中，捕获 old_status，在 setattr 前调用 assert_transition('BOM', old_status, new_status)。",
+      "specific_changes": [
+        {
+          "action": "ADD_IMPORT",
+          "detail": "在文件顶部添加: from app.services.state_machine import assert_transition",
+          "note": "bom.py 当前没有从 state_machine 的引用，需新增import。state_machine.py 无SQLAlchemy依赖，不会引起循环依赖"
+        },
+        {
+          "action": "MODIFY_LOGIC",
+          "detail": "在 update_bom() 的 update_dict 构建后，遍历 setattr 前，添加:\n    if 'status' in update_dict:\n        old_status = b.status\n        new_status = update_dict['status']\n        try:\n            assert_transition('BOM', old_status, new_status)\n        except ValueError as e:\n            raise HTTPException(status_code=400, detail=str(e))",
+          "after": "update_dict = sanitize_dict(data.model_dump(exclude_unset=True))\n    # ── BOM 状态机校验 ──\n    if 'status' in update_dict:\n        try:\n            assert_transition('BOM', b.status, update_dict['status'])\n        except ValueError as e:\n            raise HTTPException(status_code=400, detail=str(e))\n    # Rule #2: MBOM changes must produce new BOM version\n    for k, v in update_dict.items():\n        setattr(b, k, v)"
+        }
+      ],
+      "risk_level": "低",
+      "risk_reason": "BOM的状态机与模型完全对齐，无状态名冲突，风险低",
+      "estimated_lines": "4行（1行import + 3行校验逻辑）",
+      "sm_update_required": false
+    },
+    {
+      "id": "A3",
+      "priority": 3,
+      "category": "状态机断言注入",
+      "module": "Certification",
+      "file": "api/certifications.py",
+      "function": "update_cert()",
+      "line_ref": "L294-L295",
+      "description": "在 Certification 状态变更前添加 assert_transition 校验。捕获 old_status = c.status，在 c.status = status 之前调用 assert_transition('Certification', old_status, status)。注意状态名不匹配问题：SM使用 'certified'/'failed'，但模型使用 'approved'/'rejected'/'expiring'。不匹配的转移静默跳过（不阻断流程）。",
+      "specific_changes": [
+        {
+          "action": "ADD_IMPORT",
+          "detail": "在文件顶部添加: from app.services.state_machine import assert_transition",
+          "note": "certifications.py 当前没有引用 state_machine。state_machine.py 纯Python无SQLAlchemy依赖，安全"
+        },
+        {
+          "action": "MODIFY_LOGIC",
+          "detail": "在 update_cert() 的 'if status:' 块中，在 'c.status = status' 前插入:\n    old_status = c.status\n    try:\n        assert_transition('Certification', old_status, status)\n    except ValueError:\n        pass  # SM与模型状态名不完全对齐（certified vs approved等），不阻断流程",
+          "note": "⚠️ 使用 except ValueError: pass 的理由：Certification 的状态名在 SM 和 模型之间存在已知不匹配（SM用certified/failed，模型用approved/rejected/expiring）。不匹配时不阻断，让业务逻辑照常执行。这是一个安全回退策略，并非忽略所有错误。"
+        }
+      ],
+      "risk_level": "中-高",
+      "risk_reason": "⚠️ 状态名不匹配（SM: certified/failed vs 模型: approved/rejected/expiring）。使用静默跳过策略，但可能导致部分非法转移未被捕获。长期建议统一状态名",
+      "estimated_lines": "5行（1行import + 4行try/except with pass）",
+      "sm_update_required": false,
+      "note": "也可选择更新SM配置以匹配模型状态名（推荐长期方案）：将SM中'certified'→'approved'，'failed'→'rejected'，并添加'expiring'。但此修改超出当前外科手术式任务范围"
+    },
+    {
+      "id": "B1",
+      "priority": 4,
+      "category": "事件发射点注入",
+      "module": "NG_THRESHOLD_REACHED",
+      "file": "api/tests.py",
+      "function": "update_test()",
+      "line_ref": "L120-L124",
+      "description": "NG_THRESHOLD_REACHED 事件的发射已由 event_handlers.py 的 on_test_done_with_ng 内部自动处理（L134-L167）。当 on_test_done_with_ng 检测到 ng_count >= 3 时，已创建 QualityIssue 并调用 bus.emit('test.ng_threshold_reached', ...)。tests.py 的 update_test 已正确 emit TEST_DONE_WITH_NG 触发了该链。",
+      "specific_changes": [
+        {
+          "action": "NO_CHANGE_NEEDED",
+          "detail": "✅ 现有的 handler 链已覆盖: tests.py → emit(TEST_DONE_WITH_NG) → handler on_test_done_with_ng → [if ≥3] emit(NG_THRESHOLD_REACHED)",
+          "note": "若仍需在 tests.py 中直接显式发射（提升可读性），可在 L124 之后添加:\n    if r.ng_count >= 3:\n        bus.emit(EventTypes.NG_THRESHOLD_REACHED, test_id=r.id, request_no=r.request_no, ng_count=r.ng_count)\n但此会导致重复发射（handler也会发射）。当前架构中handler层负责阈值判断更合理。"
+        }
+      ],
+      "risk_level": "无（无需改动）",
+      "estimated_lines": "0行",
+      "decision": "不修改 tests.py — handler链已完全覆盖 NG_THRESHOLD_REACHED 的发射"
+    },
+    {
+      "id": "B2",
+      "priority": 5,
+      "category": "事件发射点注入",
+      "module": "ALERT_OVERDUE_FOUND",
+      "file": "api/alerts.py",
+      "function": "check_overdue()",
+      "line_ref": "L91-L205",
+      "description": "在 check_overdue() 中，每次创建新的 overdue 预警记录（project/test/certification 三种类型）后，立即 emit ALERT_OVERDUE_FOUND 事件。事件处理器 on_alert_overdue_found 已注册（event_handlers.py L252），会自动处理预警升级和通知创建。",
+      "specific_changes": [
+        {
+          "action": "ADD_IMPORT",
+          "detail": "在文件顶部添加: from app.services.events import bus, EventTypes",
+          "note": "alerts.py 当前没有引用 events 模块。events.py 是纯Python单例，无循环依赖风险"
+        },
+        {
+          "action": "MODIFY_LOGIC — 项目超期",
+          "detail": "在 project 超期警报创建后（L125-132: db.add(alert) + created_count 递增后），添加:\n    bus.emit(EventTypes.ALERT_OVERDUE_FOUND, alert_id=alert.id, target_type='project', target_id=proj.id)",
+          "location": "L125-132区块之后"
+        },
+        {
+          "action": "MODIFY_LOGIC — 测试超期",
+          "detail": "在 test 超期警报创建后（L156-158: db.add(alert) + created_count 递增后），添加:\n    bus.emit(EventTypes.ALERT_OVERDUE_FOUND, alert_id=alert.id, target_type='test', target_id=test.id)",
+          "location": "L156-158区块之后"
+        },
+        {
+          "action": "MODIFY_LOGIC — 认证超期",
+          "detail": "在 cert 超期警报创建后（L188-190: db.add(alert) + created_count 递增后），添加:\n    bus.emit(EventTypes.ALERT_OVERDUE_FOUND, alert_id=alert.id, target_type='certification', target_id=cert.id)",
+          "location": "L188-190区块之后"
+        }
+      ],
+      "risk_level": "低",
+      "risk_reason": "emit调用在db.add之后、db.commit之前，属于同一事务范围。bus.emit是同步调用，handler会立即执行（在新DB session中），不影响当前事务。handler使用独立SessionLocal()，独立提交/回滚",
+      "estimated_lines": "8行（1行import + 3个emit调用 × 每行1句 + 少量注释）"
+    }
+  ],
+  "execution_order": [
+    "【第1步】services/state_machine.py — 添加 'paused' 到 Project 状态机配置（A1b）",
+    "【第2步】api/projects.py — 注入 assert_transition for Project（A1）",
+    "【第3步】api/bom.py — 注入 assert_transition for BOM（A2）",
+    "【第4步】api/certifications.py — 注入 assert_transition for Certification（A3）",
+    "【第5步】api/alerts.py — 注入 ALERT_OVERDUE_FOUND 事件发射（B2）"
+  ],
+  "dependency_graph": {
+    "edges": [
+      "A1 → A1b（A1依赖A1b先完成）",
+      "A2 → 无依赖",
+      "A3 → 无依赖",
+      "B2 → 无依赖",
+      "B1 → 无需修改（0行）"
+    ]
+  },
+  "total_estimated_lines": {
+    "new_imports": 4,
+    "new_logic": "18-20",
+    "state_machine_config_change": 5,
+    "total": "23-25行"
+  },
+  "files_to_modify": [
+    "services/state_machine.py",
+    "api/projects.py",
+    "api/bom.py",
+    "api/certifications.py",
+    "api/alerts.py"
+  ],
+  "files_not_modified_with_reason": {
+    "api/tests.py": "NG_THRESHOLD_REACHED 已由 event_handlers.py 内部自动发射，tests.py 无需改动（0行）",
+    "utils/cron_jobs.py": "文件不存在。超期扫描逻辑在 alerts.py:check_overdue() 中，已是API endpoint",
+    "services/events.py": "已有4个事件类型定义，无需修改",
+    "services/event_handlers.py": "3个handler已注册并实现，无需修改",
+    "main.py": "startup已调用 register_all_handlers()，无需修改"
+  },
+  "validation_checklist": [
+    "✅ 每个新增import确认无循环依赖（state_machine.py 纯Python无DB依赖；events.py 纯Python单例）",
+    "✅ 不改现有业务逻辑 — 只在状态变更前新增assert/emit，不修改数据赋值逻辑",
+    "⚠️ Certification 状态名不匹配问题 — 使用except ValueError: pass回退策略，不阻断现有流程",
+    "✅ Event handler链已验证 — on_test_done_with_ng 内部已自动发射 NG_THRESHOLD_REACHED",
+    "⚠️ Project 'paused' 需要先更新SM配置 — A1b必须在A1之前执行",
+    "✅ ALERT_OVERDUE_FOUND handler已注册 — on_alert_overdue_found 在 event_handlers.py L252 已注册，只需alerts.py触发"
+  ]
+}

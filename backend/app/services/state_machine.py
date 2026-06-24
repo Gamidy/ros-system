@@ -27,8 +27,9 @@ _TRANSITIONS_CONFIG: dict[str, dict[str, list[str]]] = {
     # 生命周期: 草稿 → 规划 → 执行 → 完成
     "Project": {
         "draft": ["planning"],
-        "planning": ["running", "cancelled"],
-        "running": ["completed", "cancelled"],
+        "planning": ["running", "cancelled", "paused"],
+        "running": ["completed", "cancelled", "paused"],
+        "paused": ["running"],
         "completed": [],
         "cancelled": [],
     },

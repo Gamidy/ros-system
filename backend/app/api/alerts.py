@@ -11,6 +11,7 @@ from app.models.alert import Notification, Alert, AlertRule
 from app.models.project import Project
 from app.models.test import TestRequest, Certification
 from app.schemas import NotificationOut, AlertOut, AlertRuleOut
+from app.services.events import bus, EventTypes
 
 router = APIRouter(prefix="", tags=["预警/通知管理"])
 
@@ -130,6 +131,8 @@ def check_overdue(
                 "title": alert.title,
                 "level": alert.level,
             })
+            db.flush()  # 先flush让alert.id有值再emit
+            bus.emit(EventTypes.ALERT_OVERDUE_FOUND, alert_id=alert.id, target_type="project", target_id=proj.id, title=alert.title, level=alert.level, message=alert.message)
 
     # 2. 检查超期测试 (target_date 已过但状态仍为 draft/submitted/testing)
     overdue_tests = db.query(TestRequest).filter(
@@ -162,6 +165,8 @@ def check_overdue(
                 "title": alert.title,
                 "level": alert.level,
             })
+            db.flush()
+            bus.emit(EventTypes.ALERT_OVERDUE_FOUND, alert_id=alert.id, target_type="test", target_id=test.id, title=alert.title, level=alert.level, message=alert.message)
 
     # 3. 检查超期认证
     overdue_certs = db.query(Certification).filter(
@@ -194,6 +199,8 @@ def check_overdue(
                 "title": alert.title,
                 "level": alert.level,
             })
+            db.flush()
+            bus.emit(EventTypes.ALERT_OVERDUE_FOUND, alert_id=alert.id, target_type="certification", target_id=cert.id, title=alert.title, level=alert.level, message=alert.message)
 
     if created_count > 0:
         db.commit()

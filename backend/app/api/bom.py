@@ -8,6 +8,7 @@ from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem, part_alternative_table
 from app.models.project import Project
+from app.services.state_machine import assert_transition
 from app.schemas import (
     PartCreate, PartOut, PartUpdate, PartDetailOut,
     PartAVLCreate, PartAVLOut,
@@ -236,6 +237,12 @@ def update_bom(bom_id: int, data: BOMUpdate, db: Session = Depends(get_db), _=De
         raise HTTPException(status_code=404, detail="BOM不存在")
 
     update_dict = sanitize_dict(data.model_dump(exclude_unset=True))
+    # ── BOM 状态机校验 ──
+    if "status" in update_dict:
+        try:
+            assert_transition("BOM", b.status, update_dict["status"])
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
     # Rule #2: MBOM changes must produce new BOM version
     for k, v in update_dict.items():
         setattr(b, k, v)
