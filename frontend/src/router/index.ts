@@ -331,6 +331,19 @@ const router = createRouter({
           component: () => import('../views/safety/SafetyAlertTab.vue'),
           meta: { title: '安规预警', menu: 'safety-alerts' },
         },
+        // P0-8 DFM可制造性分析
+        {
+          path: 'dfm/checklist',
+          name: 'DFMChecklist',
+          component: () => import('../views/manufacturability/DFMChecklistTab.vue'),
+          meta: { title: 'DFM检查项', menu: 'dfm-checklist' },
+        },
+        {
+          path: 'dfm/reports',
+          name: 'DFMReports',
+          component: () => import('../views/manufacturability/DFMReportTab.vue'),
+          meta: { title: 'DFM分析报告', menu: 'dfm-reports' },
+        },
       ],
     },
   ],

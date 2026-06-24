@@ -44,6 +44,9 @@ from app.models.safety import (
     SafetyStandard, SafetyInspectionItem,
     SupplierSafetyQualification, SupplierSafetyAuditRecord,
 )
+from app.models.manufacturability import (
+    DFMChecklist, DFMReport, DFMReportItem, DFMScoreWeight,
+)
 
 __all__ = [
     "User",
@@ -92,4 +95,8 @@ __all__ = [
     "SafetyInspectionItem",
     "SupplierSafetyQualification",
     "SupplierSafetyAuditRecord",
+    "DFMChecklist",
+    "DFMReport",
+    "DFMReportItem",
+    "DFMScoreWeight",
 ]

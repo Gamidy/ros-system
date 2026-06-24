@@ -77,6 +77,9 @@ ALL_MENUS = [
     "safety-inspection-items", # 安规检测项
     "safety-supplier-qual",    # 供应商安规
     "safety-alerts",           # 安规预警
+    # P0-8 — DFM可制造性分析
+    "dfm-checklist",           # DFM检查项模板
+    "dfm-reports",             # DFM分析报告
 ]
 
 # 角色 → 菜单 映射表
@@ -121,6 +124,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
     "structural_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -132,6 +137,11 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
     "electrical_control_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -145,6 +155,13 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
+
+        # P0-6 安规管理
+        'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
     "electrical_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -158,6 +175,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items', 'safety-supplier-qual',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
     "procurement": [
         "dashboard", "bom", "purchases", "alerts", "projects",
@@ -179,6 +198,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -212,6 +233,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
     "module_manager_struct": [  # 结构模块经理 — 侧重结构
         "dashboard", "products", "bom", "projects",
@@ -236,6 +259,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
     "finance_manager": [  # 财务经理 — 成本核算
         "dashboard", "products", "bom",
@@ -262,6 +287,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],  # IT安全员 — 裁剪权限（去掉 purchases, rd_dashboard, mm）
     "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
         "dashboard", "products", "bom", "projects",
@@ -272,6 +299,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
+        # P0-8 DFM
+        'dfm-checklist', 'dfm-reports',
     ],
 }
 
@@ -338,6 +367,9 @@ MENU_PATH_MAP: dict[str, str] = {
     "safety-inspection-items": "/safety/inspection-items",
     "safety-supplier-qual": "/safety/supplier-qualifications",
     "safety-alerts": "/safety/alerts",
+    # P0-8 DFM可制造性分析
+    "dfm-checklist": "/dfm/checklist",
+    "dfm-reports": "/dfm/reports",
 }
 
 

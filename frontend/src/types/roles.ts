@@ -94,6 +94,9 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/safety/inspection-items', title: '安规检测项', icon: Document },
   { path: '/safety/supplier-qualifications', title: '供应商安规', icon: ShoppingCart },
   { path: '/safety/alerts',     title: '安规预警',         icon: WarningFilled },
+  // P0-8 DFM可制造性分析
+  { path: '/dfm/checklist',   title: 'DFM检查项',        icon: Document },
+  { path: '/dfm/reports',     title: 'DFM分析报告',      icon: DataAnalysis },
 ]
 
 /**

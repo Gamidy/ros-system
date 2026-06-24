@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "module_name": "P0-8 DFM可制造性分析模块 (Design for Manufacturing)",
+    "project": "ROS — 空调(AC)产品研发全生命周期管理平台",
+    "tech_stack": "FastAPI + SQLAlchemy + Vue3 + Element Plus + TypeScript",
+    "total_tasks": 7,
+    "reference_module": "P0-6 Safety (安规模块) — 同构的4表Checklist模式",
+    "applicable_roles": ["admin", "rd_director", "structural_engineer", "process_engineer", "quality_engineer"]
+  },
+  "current_state_summary": {
+    "existing_assets": [
+      "P0-6 安规模块的完整4表模式 (SafetyStandard/SafetyInspectionItem/SupplierSafetyQualification/SupplierSafetyAuditRecord) — 可直接复用的CRUD模板",
+      "backend/app/api/__init__.py + main.py 双重注册模式 — safety 已演示完整流程",
+      "backend/app/models/__init__.py 模型导出模式",
+      "frontend 侧边栏/路由注册模式 — safety 路由已接入",
+      "require_role() 权限装饰器 — 目标角色均已定义在 permissions.py",
+      "tabbed视图模式 (SafetyManagementView.vue + el-tabs) — DFM可直接参考",
+      "多租户 org_id 字段模式 — safety 模型已示范"
+    ],
+    "gaps": [
+      "无 DFMChecklist 表 — 可制造性检查项模板完全空白",
+      "无 DFMReport 表 — 无分析报告存储",
+      "无 DFMReportItem 表 — 无问题项追踪能力",
+      "无 DFMScoreWeight 表 — 无评分权重配置",
+      "无后端 manufacturability.py API 模块",
+      "无前端 manufacturability/ 页面目录",
+      "无评分引擎逻辑"
+    ]
+  },
+  "phase_tasks": [
+    {
+      "id": "t1",
+      "title": "DFM数据模型 & Schema定义 (4表)",
+      "description": "创建 backend/app/models/manufacturability.py，定义4个SQLAlchemy模型：① DFMChecklist (检查项模板: 编码/名称/描述/适用产品类型/严重等级critical|major|minor/参考标准/检查方法/分类结构DFM|工艺DFM|装配DFM|电气DFM|模具DFM) ② DFMReport (报告: 关联project_id/prototype_id/状态draft|in_progress|completed) ③ DFMReportItem (问题项: 关联checklist_id或自定义/描述/类别/严重等级/建议方案/责任人/状态pending|resolved|verified/附件JSON/评分0-100) ④ DFMScoreWeight (评分权重: 按产品类型+分类配置权重百分比)。均含 org_id 多租户字段 + created_at/updated_at。同时创建 backend/app/schemas/manufacturability.py，每个模型对应 Create/Update/Out Schema，Out Schema 用 model_config=ConfigDict(from_attributes=True)。参考 safety.py 的4表模式。",
+      "domain_tags": ["python", "fastapi", "sqlalchemy", "pydantic", "dfm"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "depends_on": []
+    },
+    {
+      "id": "t2",
+      "title": "DFMChecklist检查项模板CRUD API",
+      "description": "在 backend/app/api/manufacturability.py (≤600行) 中实现 DFMChecklist 完整CRUD。路由前缀 /api/dfm。接口：GET /checklists (分页+过滤：category/severity/applicable_product_type/keyword)、GET /checklists/{id}、POST /checklists (创建，含编码唯一校验)、PUT /checklists/{id}、DELETE /checklists/{id} (物理删除，仅admin)。权限装饰器: require_role('admin','rd_director','structural_engineer','process_engineer','quality_engineer')。返回遵循 response_model 模式，支持 org_id 多租户过滤。参考 safety.py 中 SafetyInspectionItem CRUD 的实现风格。",
+      "domain_tags": ["python", "fastapi", "dfm", "crud"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "depends_on": ["t1"]
+    },
+    {
+      "id": "t3",
+      "title": "DFMScoreWeight评分权重API + 评分引擎",
+      "description": "实现 DFMScoreWeight CRUD API：GET /score-weights (按product_type过滤)、POST /score-weights、PUT /score-weights/{id}、DELETE /score-weights/{id}。核心评分引擎函数 calculate_dfm_score(report_id) — 逻辑：① 加载报告下所有DFMReportItem ② 按category分组统计 ③ 每类别得分 = (已解决问题项数/总项数)*100 ④ 加权总分 = Σ(各类别得分 × 对应category权重百分比) ⑤ 回写到DFMReport.total_score字段。该函数单独封装为可调用服务方法（app/services 层或 inline），供API和后续事件驱动调用。",
+      "domain_tags": ["python", "fastapi", "dfm", "scoring", "algorithm"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "depends_on": ["t1"]
+    },
+    {
+      "id": "t4",
+      "title": "DFMReport报告 & DFMReportItem问题项CRUD API",
+      "description": "实现报告全生命周期API：POST /reports (创建，关联project_id或prototype_id，自动设状态draft)、GET /reports (分页+关联名展开)、GET /reports/{id} (含嵌套items列表)、PUT /reports/{id} (更新字段+状态推进draft→in_progress→completed)、DELETE /reports/{id}。问题项API：GET /reports/{rid}/items (列表)、POST /reports/{rid}/items (添加问题项，关联checklist_id或自定义描述)、PUT /reports/{rid}/items/{iid} (更新+状态流转pending→resolved→verified)、DELETE /reports/{rid}/items/{iid}。状态流转时附加校验：resolved→verified 需责任人确认。每次问题项状态变更后自动触发 re-calculate_dfm_score(report_id)。参考 safety.py 中报告类API的风格。",
+      "domain_tags": ["python", "fastapi", "dfm", "workflow", "crud"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "depends_on": ["t1", "t2"]
+    },
+    {
+      "id": "t5",
+      "title": "模块注册集成 (后端注册 + 权限配置)",
+      "description": "① backend/app/models/__init__.py 导入 DFMChecklist/DFMReport/DFMReportItem/DFMScoreWeight 并加入__all__ ② backend/app/api/__init__.py 导入 manufacturability 模块 ③ backend/app/main.py 添加 app.include_router(manufacturability.router) ④ 检查 permissions.py 确保目标角色已有 DFM 相关菜单权限或扩展菜单数组 ⑤ 生成可选的 Alembic 迁移 SQL (migrations/add_dfm_tables.sql) 用于生产环境建表。完全遵循 safety 模块的双重注册模式。",
+      "domain_tags": ["python", "fastapi", "integration", "db-migration"],
+      "risk_level": "low",
+      "estimated_complexity": 1,
+      "depends_on": ["t1", "t2", "t3", "t4"]
+    },
+    {
+      "id": "t6",
+      "title": "前端API层 & 检查项模板+权重管理页面",
+      "description": "① 创建 frontend/src/api/manufacturability.ts，封装所有后端DFM API（checklists, score-weights, reports, items的CRUD函数），参考 safety.ts 的 axios 模式。② 创建 frontend/src/views/manufacturability/ 目录，实现 ManufacturabilityView.vue (el-tabs容器，含'检查项模板'/'权重配置'/'报告管理'三个tab)，参考 SafetyManagementView.vue 的tab模式。③ 实现 DFMChecklistTab.vue — 表格展示+搜索过滤+新建/编辑对话框（分类下拉选择、严重等级选择、适用产品类型多选等），参考 SafetyInspectionTab.vue。④ 实现 DFMScoreWeightTab.vue — 按产品类型分组的权重配置表格，每行5个分类权重输入框，总和校验=100%。",
+      "domain_tags": ["vue3", "element-plus", "typescript", "dfm"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "depends_on": ["t2", "t3", "t5"]
+    },
+    {
+      "id": "t7",
+      "title": "前端DFM报告管理页面（问题项+评分展示）",
+      "description": "实现 DFMReportTab.vue：① 报告列表页 — 表格展示(报告名称/关联项目/样机/状态/评分/创建时间)，附带新建/编辑/删除/查看详情操作，状态tag着色(draft=info/in_progress=warning/completed=success) ② 报告详情页(内嵌对话框或路由) — 展示报告基本信息+评分仪表盘(加权总分以大号数字展示，5类得分用进度条展示) ③ 问题项子表格 — 可增删改问题项，每行展示：checklist编码/描述/类别tag/严重等级tag(critical=危险/major=橙/minor=蓝)/建议方案/责任人select搜索/状态按钮组(pending→resolved→verified)，附件上传组件。④ 状态变更时自动刷新评分显示。参考 SafetyAlertTab.vue + SafetyInspectionTab.vue 的组合模式。",
+      "domain_tags": ["vue3", "element-plus", "typescript", "dfm", "dashboard"],
+      "risk_level": "high",
+      "estimated_complexity": 5,
+      "depends_on": ["t4", "t5", "t6"]
+    }
+  ],
+  "reasoning": "任务按\"数据层→服务层→集成层→展示层\"的经典四层架构排列，与P0-6安规模块任务结构高度同构。T1模型层无外部依赖，T2/T3/T4在T1之上并行开发，T5注册集成依赖所有后端任务完成，T6/T7前端任务依赖对应后端API就绪。关键设计决策：(1)评分引擎封装为可调用函数而非内联在API中，便于后续事件驱动或批量重算复用；(2)问题项状态机严格三态流转(pending→resolved→verified)，每次变更自动触发评分重算；(3)前端采用tabbed视图(+el-tabs)保持与安全模块一致的UX范式，减少学习成本。(4)7个任务平均复杂度适中，核心风险点在T7前端报告管理（交互复杂、含仪表盘+附件+状态机联动），建议分配最多开发资源。"
+}

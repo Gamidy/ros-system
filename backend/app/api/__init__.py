@@ -23,6 +23,7 @@ from app.api import (
     # Phase 6 S3 — ECR/ECO 工程变更控制
     ecr, eco,
     safety,
+    manufacturability,
     # 审计日志查询
     audit_logs,
     # 管理功能
@@ -50,6 +51,7 @@ __all__ = [
     "product_plan", "proposal_utils",
     "ecr", "eco",
     "safety",
+    "manufacturability",
     "audit_logs",
     "admin_cost_configs", "admin_role_mappings",
     "admin_role_templates", "admin_tenant",
