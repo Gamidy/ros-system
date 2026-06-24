@@ -1,0 +1,154 @@
+{
+  "context_summary": {
+    "file_analysis": {
+      "PMWorkspace_vue": {
+        "lines": 2650,
+        "key_observations": [
+          "3-column layout: PlanCalendarPanel(30%) | ProductInitiation(40%) | 我的项目(30%)",
+          "Drawer has 4 tabs with ✅/❌ indicators via tabStatus.{valid,errors}",
+          "validateOverviewMarket/Technical/Cost/Team functions exist and populate tabStatus[tab].errors",
+          "ERROR: tabStatus[tab].errors is collected but NEVER displayed to the user — only 'valid' boolean used",
+          "No roadmap or gantt view exists anywhere in the app",
+          "Mini stats in right column: running/completed/overdue counts"
+        ]
+      },
+      "pm_workspace_py": {
+        "lines": 1400,
+        "over_limit": true,
+        "key_observations": [
+          "GET /api/pm/workspace returns: my_projects, products, stats, planning_items, recent_projects",
+          "Stats: total_projects, active_projects, total_budget, completed_count, overdue_count",
+          "AnnualPlan project_count hardcoded as 0 with TODO comment",
+          "No dedicated statistics endpoint exists"
+        ]
+      },
+      "annual_plan_model": "24 lines, fields: id, name, year, description, doc_ref, owner, created_at, updated_at",
+      "project_model": "234 lines, has: start_date, target_end_date, actual_end_date, status, budget, annual_planning_ref"
+    },
+    "current_limitations": [
+      "PMWorkspace.vue at 2650 lines — new features should use sub-components, not inline code",
+      "pm_workspace.py at 1400 lines (over 600 limit) — new API should go in new file",
+      "Tab validation errors exist but are invisible to the user",
+      "No annual_plan_count or rate-based statistics available",
+      "No timeline/roadmap visualization exists"
+    ]
+  },
+  "phase_tasks": [
+    {
+      "id": "r1",
+      "title": "①-1 后端：扩展workspace或新建roadmap端点，聚合年度规划+项目时间线数据",
+      "description": "在pm_workspace.py中向/api/pm/workspace响应追加roadmap_items字段，或新建/api/pm/roadmap端点。数据来源：AnnualPlan表（plans）+ Project表（关联annual_planning_ref或annual_planning_id的项目的start_date/target_end_date/status/name），按年度分组输出。同时修复annual_planning.py中project_count的TODO（实际关联计数）。",
+      "domain_tags": ["fastapi", "sqlalchemy", "python"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "file_constraint": "pm_workspace.py当前1400行超限 → 建议roadmap逻辑拆入新文件 app/api/pm_roadmap.py",
+      "acceptance_criteria": "API返回按年分组的[{year, plan_name, projects:[{name, start_date, target_end_date, status}]}] 结构"
+    },
+    {
+      "id": "r2",
+      "title": "①-2 前端：新建RoadmapPanel.vue纯CSS甘特图组件",
+      "description": "在frontend/src/views/pm/下新建RoadmapPanel.vue，不引入第三方图表库，用纯CSS+Element Plus el-progress或自定义div绘制横向时间条。输入数据：按年份分组的年度规划+项目列表。展示：纵轴为规划/项目名称，横轴为月份时间线，彩色条形表示项目跨度，用颜色区分状态（规划中/进行中/已完成/超期）。支持年度切换和滚动。",
+      "domain_tags": ["vue3", "typescript", "css"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "acceptance_criteria": "纯CSS甘特图正确渲染项目时间跨度，颜色按状态区分，无第三方依赖"
+    },
+    {
+      "id": "r3",
+      "title": "①-3 前端：PM工作台新增'路线图'Tab并集成RoadmapPanel",
+      "description": "在PMWorkspace.vue的workspace-header区域新增el-tabs或el-radio-group切换（'工作台'/'路线图'），默认显示原有3栏布局，切换'路线图'时显示RoadmapPanel组件。调用workspace API获取数据并透传。此修改控制在30行以内（仅模板+脚本文本），不移动已有代码。",
+      "domain_tags": ["vue3", "element-plus", "typescript"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "acceptance_criteria": "Tab切换在PMWorkspace顶部，路线图视图完整显示，不影响现有工作台"
+    },
+    {
+      "id": "s1",
+      "title": "②-1 后端：新建pm_statistics.py + GET /api/pm/statistics端点",
+      "description": "新建backend/app/api/pm_statistics.py（≤50行）。聚合统计：annual_plan_count（AnnualPlan总量）、total_projects（当前用户项目总量）、total_budget（预算总和）、completion_rate（status=completed占比）、overdue_rate（逾期项目占比，逾期定义：未完成且target_end_date<today）。SQLAlchemy聚合查询，返回{annual_plan_count, total_projects, total_budget, completion_rate, overdue_rate, running_count, overdue_count}。",
+      "domain_tags": ["fastapi", "sqlalchemy", "python"],
+      "risk_level": "low",
+      "estimated_complexity": 1,
+      "file_constraint": "新文件，无行数隐患",
+      "acceptance_criteria": "新端点返回完整统计字段，completion_rate和overdue_rate为0-100百分比"
+    },
+    {
+      "id": "s2",
+      "title": "②-2 前端：PM工作台顶部新增统计卡片栏（el-card + 大数字）",
+      "description": "在PMWorkspace.vue的workspace-header下方新增一个el-row栅格行，5张el-card卡片分别展示：年度规划数、总项目数、总预算（¥格式化）、完成率（百分比+环形进度条或标签）、逾期率（红色警告标签）。数据从/api/pm/statistics获取，在onMounted中并行请求。卡片用简洁大数字样式（font-size:28px font-weight:bold + 小字标签）。",
+      "domain_tags": ["vue3", "element-plus", "typescript"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "acceptance_criteria": "5张统计卡片正确显示在顶部，大数字+标签，响应式栅格"
+    },
+    {
+      "id": "v1",
+      "title": "③-1 前端：增强校验函数，支持逐字段粒度错误信息",
+      "description": "增强现有validateOverviewMarket/validateTechnical/validateCost/validateTeam函数，将目前仅在errs数组中填字段名的逻辑改为包含字段路径+可读错误信息。例如：从errs.push('项目负责人')改为errs.push({field:'leader_id', label:'项目负责人', message:'请选择项目负责人'})。同时保留原有的简单错误数组，在tabStatus中新增一个detailedErrors字段以支持tooltip展示。校验规则使用现有逻辑，不改变任何表单字段或组件交互。",
+      "domain_tags": ["typescript", "vue3"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "acceptance_criteria": "tabStatus每个tab的errors中包含detailed数组, 每条含field/label/message, 不破坏现有✅/❌逻辑"
+    },
+    {
+      "id": "v2",
+      "title": "③-2 前端：Tab标签tooltip显示校验错误信息",
+      "description": "在PMWorkspace.vue的el-tab-pane的label模板中，为每个带❌的Tab标签添加el-tooltip包裹，tooltip内容渲染该tab的errors列表。同时，在抽屉顶部（el-drawer body顶部）添加一个全局错误通知条el-alert（type='error'），汇总当前Tab的未填字段，点击可跳转到对应字段（通过锚点或高亮）。样式：错误文字用红色小字，每个错误项一行。",
+      "domain_tags": ["vue3", "element-plus", "typescript"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "acceptance_criteria": "❌Tab悬停可见具体错误列表；抽屉顶部显示当前Tab错误摘要；不改变表单结构"
+    }
+  ],
+  "reasoning": {
+    "task_allocation_rationale": [
+      "【方向① 路线图】拆为3个子任务：后端API（r1，低风险，先准备数据）→ 纯CSS甘特图组件（r2，中等风险，核心视觉）→ 集成到工作台Tab（r3，低风险，最小化修改PMWorkspace）。数据已有规划+项目时间线字段，后端只需聚合关联。CSS甘特图是唯一中等复杂度任务，因为需要手工实现时间轴渲染算法，但避免了引入第三方库的依赖风险。",
+      "【方向② 统计看板】拆为2个子任务：后端新端点（s1，低风险，30-50行独立文件）→ 前端卡片集成（s2，低风险，仅模板追加）。PMWorkspace右栏已有迷你统计行，新卡片放在顶部形成独立的视觉层，与现有统计共存不冲突。新文件pm_statistics.py遵守单文件≤600行约定。",
+      "【方向③ Tab校验反馈】拆为2个子任务：增强校验函数（v1，低风险，纯逻辑层增强）→ 错误展示（v2，低风险，仅模板层改el-tooltip+el-alert）。核心优势：validate函数已存在，errors数组已收集但被无视——本项目只增加展示层，不改变表单结构，开发成本最低。detailedErrors扩展确保未来可对接字段高亮。"
+    ],
+    "avoided_overengineering": [
+      "不为路线图建独立页面——复用PMWorkspace的Tab切换，复用已有workspace API数据",
+      "不为甘特图引入第三方库——纯CSS实现，可维护性高，无npm依赖风险",
+      "不重构现有表单组件以支持字段级校验——只在现有tabStatus上扩展detailedErrors层",
+      "不把PMWorkspace.vue拆分成多个文件——通过子组件（RoadmapPanel）吸收新增逻辑，PMWorkspace改动仅~50行",
+      "统计卡片用el-card原生组件，不自定义复杂图表"
+    ],
+    "expected_effect": [
+      "路线图：PM可在一个视图下纵览所有年度规划到项目的完整时间线，理解产品从策划到开发的全局进度",
+      "统计看板：决策者一目了然获知关键指标（完成率、逾期率、总预算），无需手动统计",
+      "Tab校验：用户提交立项书前能准确知道每个Tab缺少哪些字段，降低表单提交失败率和沟通成本"
+    ],
+    "order_of_execution": "推荐执行顺序: v1→v2（③校验最快见效，2个子任务）→ s1→s2（②统计，后端→前端）→ r1→r2→r3（①路线图，后端→前端→集成）。也可按P1方向①②③并行开发，各方向内部按依赖顺序执行。"
+  },
+  "risk_assessment": {
+    "r1": "low — 数据已有，仅聚合查询，AnnualPlan表23行模型简单；注意project_count的TODO实际查询附加count即可",
+    "r2": "medium — 纯CSS甘特图的时间轴渲染、月份刻度对齐、跨年处理需要精心设计CSS flex/grid布局；避免与Element Plus样式冲突",
+    "r3": "low — Tab切换为成熟模式，PMWorkspace.vue已有Tabs使用经验，仅在header追加30行",
+    "s1": "low — 独立新文件，标准FastAPI CRUD模式，≤60行代码",
+    "s2": "low — 标准el-card栅格布局，mock数据即可验证，API调用模式与现有fetchWorkspace一致",
+    "v1": "low — 纯逻辑增强，类型定义扩展，不涉及DOM或API",
+    "v2": "low — Element Plus el-tooltip + el-alert标准用法，模板修改不超过20行"
+  },
+  "estimated_total_effort": "7子任务 × 1-2天 = 约10-14人天",
+  "file_touch_plan": {
+    "new_files": [
+      "backend/app/api/pm_roadmap.py (方向①后端，~80行)",
+      "backend/app/api/pm_statistics.py (方向②后端，~60行)",
+      "frontend/src/views/pm/RoadmapPanel.vue (方向①前端甘特图组件，~200行)"
+    ],
+    "modified_files": [
+      "frontend/src/views/pm/PMWorkspace.vue (+~80行: Tab切换+统计卡片+错误展示)",
+      "frontend/src/views/pm/proposal/ProposalOverview.vue (无修改，仅透传校验)",
+      "frontend/src/views/pm/proposal/ProposalTechSpec.vue (无修改)",
+      "frontend/src/views/pm/proposal/ProposalCosting.vue (无修改)",
+      "frontend/src/views/pm/proposal/ProposalTeam.vue (无修改)",
+      "backend/app/api/pm_workspace.py (可选追加roadmap_items字段，~30行，注意1400行已在600限外)"
+    ],
+    "no_touch": [
+      "backend/app/models/project.py (已有足够字段，不改)",
+      "backend/app/models/annual_plan.py (足够简单，不改)",
+      "frontend/src/api/index.ts (不改)",
+      "frontend/src/router/index.ts (不改)"
+    ]
+  }
+}
