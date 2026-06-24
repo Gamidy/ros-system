@@ -9,7 +9,7 @@ from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -17,7 +17,36 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
+# ── OpenAPI 中文分组描述 ──
+tags_metadata = [
+    {"name": "auth",       "description": "认证与用户管理"},
+    {"name": "products",   "description": "产品管理"},
+    {"name": "bom",        "description": "BOM物料"},
+    {"name": "projects",   "description": "项目管理"},
+    {"name": "events",     "description": "事件时间线"},
+    {"name": "dashboard",  "description": "决策看板"},
+    {"name": "admin",      "description": "系统管理"},
+    {"name": "tenant",     "description": "多租户"},
+]
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    description="ROS (R&D Operations System) API - 空调产品研发运营系统",
+    contact={
+        "name": "ROS Team",
+        "email": "ros@nousresearch.com",
+        "url": "https://ros-system.dev",
+    },
+    license_info={
+        "name": "Proprietary",
+        "url": "https://ros-system.dev/license",
+    },
+    openapi_tags=tags_metadata,
+    openapi_url="/api/v2/openapi.json",
+    docs_url="/api/v2/docs",
+    redoc_url="/api/v2/redoc",
+)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -54,7 +83,7 @@ if _cors_origins == "*":
         allow_headers=["*"],
     )
 else:
-    origins = [o.strip() for o in _cors_origins.split(",") if o.strip()]
+    origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
@@ -105,6 +134,9 @@ app.include_router(risk_dashboard.router)
 
 # ── Event Timeline 路由 ──
 app.include_router(event_timeline.router)
+
+# ── Webhook 路由 ──
+app.include_router(webhooks.router)
 
 _celery_thread = None
 

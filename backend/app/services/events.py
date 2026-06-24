@@ -14,6 +14,7 @@
     Phase 4: Redis/Celery → emit_async (无 threading 依赖)
     降级: 如果 Celery 不可用，自动 fallback 到 threading
 """
+import asyncio
 import json
 import logging
 from typing import Callable, Dict, List, Optional
@@ -163,6 +164,9 @@ class EventBus:
         Phase 4 升级:
         1. 尝试 Redis/Celery 队列（生产级）
         2. 如果不可用 → threading fallback（开发兼容）
+
+        Phase 5 (P5-10):
+        事件发出后自动触发 Webhook 推送。
         """
         handlers = self._handlers.get(event_type, [])
         if not handlers:
@@ -175,6 +179,49 @@ class EventBus:
             self._emit_via_celery(event_type, handlers, kwargs)
         else:
             self._emit_via_threading(event_type, handlers, kwargs)
+
+        # ── P5-10: 事件发出后触发 Webhook 推送 ──
+        self._trigger_webhooks(event_type, kwargs)
+
+    def _trigger_webhooks(self, event_type: str, kwargs: dict) -> None:
+        """触发 Webhook 推送（非阻塞）
+
+        在异步事件分发后调用，确保不阻塞主流程。
+        使用 asyncio.create_task 在事件循环中调度，
+        若当前线程无事件循环则使用 threading fallback。
+        """
+        try:
+            from app.services.webhook_service import webhook_dispatcher
+
+            payload = {
+                k: str(v) if not isinstance(v, (str, int, float, bool, type(None), list, dict))
+                else v
+                for k, v in kwargs.items()
+            }
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(webhook_dispatcher.dispatch(event_type, payload))
+                    logger.debug("Webhook dispatch scheduled via event loop: %s", event_type)
+                    return
+            except RuntimeError:
+                pass
+
+            # Fallback: threading
+            import threading
+            t = threading.Thread(
+                target=lambda: asyncio.run(
+                    webhook_dispatcher.dispatch(event_type, payload)
+                ),
+                daemon=True,
+                name=f"wh-{event_type.replace('.','-')}",
+            )
+            t.start()
+            logger.debug("Webhook dispatch scheduled via threading: %s", event_type)
+
+        except Exception as e:
+            logger.error("Webhook dispatch 失败: event_type=%s, error=%s", event_type, e)
 
     def _emit_via_celery(self, event_type: str, handlers: List[EventHandler], kwargs: dict) -> None:
         """通过 Celery 任务异步分发（生产级）"""

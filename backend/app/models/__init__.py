@@ -6,6 +6,7 @@ from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
 from app.models.test import TestRequest, TestResult, MQVerification, Certification, Prototype, QualityIssue, ECR, ECN
 from app.models.alert import AlertRule, Alert, Notification
+from app.models.webhook import WebhookSubscription, WebhookDeliveryLog
 from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalRecord
 from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.audit import AuditLog
@@ -31,6 +32,7 @@ __all__ = [
     "Program", "Project", "ProjectGate", "Milestone", "Task", "Risk",
     "TestRequest", "TestResult", "MQVerification", "Certification", "Prototype", "QualityIssue", "ECR", "ECN",
     "AlertRule", "Alert", "Notification",
+    "WebhookSubscription", "WebhookDeliveryLog",
     "ApprovalChain", "ApprovalStep", "ApprovalRequest", "ApprovalRecord",
     "PurchaseOrder", "PurchaseOrderItem", "Supplier",
     "AuditLog",
