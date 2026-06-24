@@ -1,0 +1,341 @@
+{
+  "plan_metadata": {
+    "title": "ROS系统P0问题修复计划",
+    "version": "1.0",
+    "author": "AI-A Architecture Planner",
+    "created_at": "2026-06-24",
+    "priority_order": ["P0-2", "P0-1", "P0-9", "P0-3", "P0-4", "P0-5", "P0-6", "P0-7", "P0-8"]
+  },
+  "phase_tasks": [
+    {
+      "id": "P0-2",
+      "title": "【安全】POST /api/auth/register 添加认证防护",
+      "domain_tags": ["security", "auth", "api"],
+      "risk_level": "critical",
+      "estimated_complexity": "XS（0.5h）",
+      "estimated_effort": "0.5人时",
+      "remediation_files": [
+        "backend/app/api/auth.py"
+      ],
+      "root_cause": "register()函数（第35-53行）无任何认证依赖(Depends)，任何未登录用户可创建账号。虽然限制了admin/general_manager角色，但仍可创建engineer等角色，存在垃圾账号/暴力破解风险。",
+      "fix_plan": {
+        "approach": "3选1方案（推荐③）",
+        "options": [
+          {
+            "id": "① 加验证码",
+            "change": "在register函数添加 Depends(get_current_user) + 邀请码/验证码校验",
+            "files": "auth.py + 前端注册页",
+            "effort": "2h"
+          },
+          {
+            "id": "② 加邮件验证",
+            "change": "注册后发送验证邮件，is_active保持False直到邮箱验证",
+            "files": "auth.py + 用户模型 + 邮件服务",
+            "effort": "4h"
+          },
+          {
+            "id": "③ 推荐：环境开关",
+            "change": "在config.py添加 ALLOW_PUBLIC_REGISTER 开关，生产环境默认False；False时register需管理员token",
+            "files": "auth.py + config.py",
+            "effort": "0.5h"
+          }
+        ],
+        "recommended_option": "③",
+        "exact_code_change": "在 auth.py register() 函数添加：若 settings.ALLOW_PUBLIC_REGISTER 为 False，则要求 Depends(require_role('admin')) 才能创建账号",
+        "risk_assessment": {
+          "risk": "低 — 配置开关方式可逆，不影响现有用户",
+          "note": "现有已注册用户不受影响；管理员账号继续使用现有注册渠道"
+        }
+      }
+    },
+    {
+      "id": "P0-1",
+      "title": "【功能】/api/tests GET 500 Internal Server Error 修复",
+      "domain_tags": ["api", "crash", "serialization", "tests"],
+      "risk_level": "high",
+      "estimated_complexity": "S（2h）",
+      "estimated_effort": "2人时",
+      "remediation_files": [
+        "backend/app/schemas/__init__.py",
+        "backend/app/api/tests.py"
+      ],
+      "root_cause": "TestRequestOut(Pydantic schema，第688行)继承自TestRequestCreate，其中trigger_mode: str = 'engineer'和priority: str = 'medium'为非Optional字段。但数据库现有记录的test_requests表可能含有NULL值(字段迁移后未设置默认值)。FastAPI通过response_model序列化时，Pydantic v2对非Optional字段的NULL值抛出ValidationError→HTTP 500。另外 results: list[TestResultOut] 关系加载也可能因外键断裂失败。",
+      "fix_plan": {
+        "approach": "三管齐下",
+        "steps": [
+          {
+            "step": 1,
+            "action": "schema修复",
+            "file": "backend/app/schemas/__init__.py",
+            "detail": "将TestRequestOut中继承自TestRequestCreate的trigger_mode和priority改为 Optional[str]，或创建一个不继承Create的独立Out schema",
+            "code": "class TestRequestOut(BaseModel):\n    id: int\n    request_no: str\n    title: str\n    project_code: Optional[str] = None\n    product_code: Optional[str] = None\n    test_type: str\n    test_standard: Optional[str] = None\n    trigger_mode: Optional[str] = 'engineer'\n    requester: str\n    requirement: Optional[str] = None\n    sample_info: Optional[str] = None\n    priority: Optional[str] = 'medium'\n    target_date: Optional[date] = None\n    vr_id: Optional[int] = None\n    prototype_id: Optional[int] = None\n    test_category: Optional[str] = None\n    status: str\n    ng_count: int\n    result_summary: Optional[str] = None\n    results: list[TestResultOut] = []\n    completed_date: Optional[date] = None\n    created_at: datetime\n    class Config: from_attributes = True"
+          },
+          {
+            "step": 2,
+            "action": "数据库迁移",
+            "file": "SQL迁移脚本",
+            "detail": "执行ALTER TABLE test_requests MODIFY trigger_mode VARCHAR(20) DEFAULT 'engineer'; 并处理priority字段默认值"
+          },
+          {
+            "step": 3,
+            "action": "防御性编程",
+            "file": "backend/app/api/tests.py",
+            "detail": "在list_tests()中异常发生时返回空列表而非500，避免整个API不可用",
+            "code": "try:\n    return q.order_by(TestRequest.created_at.desc()).all()\nexcept Exception as e:\n    logger.error('list_tests failed: %s', e)\n    return []"
+          }
+        ],
+        "risk_assessment": {
+          "risk": "中 — schema变更可能影响前端数据格式，需同步验证",
+          "mitigation": "先加日志定位确切错误行，再按步骤修复。建议在staging环境验证"
+        }
+      }
+    },
+    {
+      "id": "P0-9",
+      "title": "【路由】/projects/{pid} 与 /projects/programs 潜在冲突检查",
+      "domain_tags": ["routing", "api", "frontend"],
+      "risk_level": "low",
+      "estimated_complexity": "XS（0.5h）",
+      "estimated_effort": "0.5人时",
+      "remediation_files": [
+        "backend/app/api/projects.py",
+        "frontend/src/router/index.ts"
+      ],
+      "root_cause": "经代码审计：后端program_router使用/programs前缀（独立），project_router使用/projects前缀（含/{pid}且pid: int类型标注），不会拦截字符串'programs'。前端router也无/projects/programs路由。问题描述不准确——实际不存在冲突。但需确认无其他隐藏冲突。",
+      "fix_plan": {
+        "approach": "验证即可",
+        "steps": [
+          {
+            "step": 1,
+            "action": "确认后端路由安全",
+            "detail": "project_router中所有/{pid}路由均有pid: int类型注解，FastAPI不会匹配非数字路径段到这些路由。programs路径不会被拦截。"
+          },
+          {
+            "step": 2,
+            "action": "确认前端路由安全",
+            "detail": "前端子路由path: 'projects'仅为项目列表，无programs子路由。路由守卫使用exact匹配。"
+          },
+          {
+            "step": 3,
+            "action": "添加防御性路由顺序注释（可选）",
+            "file": "backend/app/api/projects.py",
+            "detail": "在project_router定义前添加注释，说明静态路径应定义在动态{pid}之前"
+          }
+        ],
+        "risk_assessment": {
+          "risk": "极低 — 现有代码无实际冲突，可标记为已关闭"
+        }
+      }
+    },
+    {
+      "id": "P0-3",
+      "title": "【架构】审计日志系统增强",
+      "domain_tags": ["audit", "security", "compliance", "middleware"],
+      "risk_level": "medium",
+      "estimated_complexity": "M（8h）",
+      "estimated_effort": "8人时",
+      "remediation_files": [
+        "backend/app/middleware/audit.py",
+        "backend/app/models/audit.py",
+        "backend/app/schemas/__init__.py"
+      ],
+      "root_cause": "审计日志系统基础设施已存在（AuditLog模型 + AuditMiddleware），但功能过于基础：仅记录username/role/method/path/status_code/ip，未记录请求体、响应体、资源ID、操作详情。静默失败（try/except包裹）。查询接口缺失。",
+      "fix_plan": {
+        "approach": "三阶段增强",
+        "phases": [
+          {
+            "phase": "Phase 1 - 立即修复（2h）",
+            "actions": [
+              "为AuditLog模型添加action_type、resource_type、resource_id、detail、request_body字段",
+              "添加/api/audit-logs查询接口（仅admin可访问）"
+            ]
+          },
+          {
+            "phase": "Phase 2 - 中期增强（4h）",
+            "actions": [
+              "改造AuditMiddleware：记录请求体（限制1KB）、响应状态码+摘要",
+              "添加操作级别的事件日志（create/update/delete/view）",
+              "添加失败重试机制（当前静默失败改为至少WARN日志）"
+            ]
+          },
+          {
+            "phase": "Phase 3 - 长期（2h）",
+            "actions": [
+              "添加审计日志定期归档机制",
+              "前端审计日志查看页面"
+            ]
+          }
+        ],
+        "risk_assessment": {
+          "risk": "中 — 记录请求体可能涉及敏感数据（密码），需配置敏感字段过滤列表",
+          "mitigation": "在audit.py中添加SENSITIVE_FIELDS列表，自动过滤password/secret/token字段"
+        }
+      }
+    },
+    {
+      "id": "P0-4",
+      "title": "【缺失模块】成本核算系统",
+      "domain_tags": ["cost", "finance", "new-module"],
+      "risk_level": "medium",
+      "estimated_complexity": "XL（40h）",
+      "estimated_effort": "40人时（1人周）",
+      "remediation_files": [
+        "backend/app/api/costing.py（新建）",
+        "backend/app/models/costing.py（新建）",
+        "backend/app/schemas/costing.py（新建）"
+      ],
+      "root_cause": "成本数据当前散落在Project模型的JSON文本字段中（dev_cost_items、economic_indicators、mold_costs、prototype_costs_detail、test_costs、cert_costs、labor_costs），无法进行结构化的成本核算、对比分析和报表。",
+      "fix_plan": {
+        "approach": "新建独立成本核算模块",
+        "scope": [
+          "CostEstimate模型（BOM成本/模具/人工/测试/认证费用结构化存储）",
+          "CostActual模型（实际发生费用跟踪）",
+          "CostComparison服务（预算 vs 实际的偏差分析）",
+          "/api/costing/* CRUD接口",
+          "成本报表API"
+        ],
+        "risk_assessment": {
+          "risk": "高 — 涉及财务数据，需仔细设计权限和数据迁移策略",
+          "mitigation": "先做数据迁移脚本将现有Project JSON字段转入新表，保留旧字段兼容"
+        }
+      }
+    },
+    {
+      "id": "P0-5",
+      "title": "【缺失模块】知识库系统增强",
+      "domain_tags": ["knowledge", "content", "enhancement"],
+      "risk_level": "low",
+      "estimated_complexity": "M（12h）",
+      "estimated_effort": "12人时",
+      "remediation_files": [
+        "backend/app/api/knowledge.py",
+        "backend/app/models/knowledge.py"
+      ],
+      "root_cause": "现有KnowledgeItem模型和/kb API仅提供3个只读接口（/items、/categories、/team），无知识内容管理功能（CRUD、富文本、文件附件、版本管理、全文搜索）。",
+      "fix_plan": {
+        "approach": "增强现有模块（非重建）",
+        "scope": [
+          "知识条目CRUD接口（POST/PUT/DELETE）",
+          "富文本内容支持（HTML/Markdown）",
+          "文件附件支持",
+          "全文搜索（MySQL LIKE → 考虑Elasticsearch或MySQL全文索引）",
+          "前端知识库管理页面"
+        ],
+        "risk_assessment": {
+          "risk": "低 — 独立模块，不依赖其他系统"
+        }
+      }
+    },
+    {
+      "id": "P0-6",
+      "title": "【缺失模块】安规管理模块",
+      "domain_tags": ["safety", "regulation", "compliance", "new-module"],
+      "risk_level": "medium",
+      "estimated_complexity": "L（24h）",
+      "estimated_effort": "24人时（3人天）",
+      "remediation_files": [
+        "backend/app/api/safety.py（新建）",
+        "backend/app/models/safety.py（新建）",
+        "backend/app/schemas/safety.py（新建）"
+      ],
+      "root_cause": "安规信息没有独立模块。Certification模型覆盖了认证管理但未覆盖供应商安规资质审核、产品安规检测项管理、安规证书到期预警等功能。",
+      "fix_plan": {
+        "approach": "新建安规管理模块",
+        "scope": [
+          "SafetyStandard模型（安全标准库，如GB/T 7725、IEC 60335）",
+          "SafetyChecklist模型（安规检测项）",
+          "SafetyCertification模型（供应商安规资质）",
+          "SafetyAlert服务（证书到期预警、标准更新通知）",
+          "/api/safety/* CRUD接口"
+        ],
+        "risk_assessment": {
+          "risk": "中 — 可复用到Certification模块的预警机制",
+          "note": "建议与认证中心(S2)模块集成复用Gate规则引擎"
+        }
+      }
+    },
+    {
+      "id": "P0-7",
+      "title": "【缺失模块】外协管理模块",
+      "domain_tags": ["outsource", "supply-chain", "new-module"],
+      "risk_level": "medium",
+      "estimated_complexity": "XL（40h）",
+      "estimated_effort": "40人时（1人周）",
+      "remediation_files": [
+        "backend/app/api/outsource.py（新建）",
+        "backend/app/models/outsource.py（新建）",
+        "backend/app/schemas/outsource.py（新建）"
+      ],
+      "root_cause": "完全不存在外协管理模块。空调产品的外协（模具外协、电控外协、系统外协）是核心业务流程，目前无系统支持。",
+      "fix_plan": {
+        "approach": "新建外协管理模块",
+        "scope": [
+          "OutsourcePartner模型（外协厂商信息、资质、评级）",
+          "OutsourceOrder模型（外协工单、交期、质量）",
+          "OutsourceCost模型（外协费用核算）",
+          "OutsourceQuality模型（外协来料/成品质检）",
+          "/api/outsource/* CRUD接口",
+          "与Project模块集成：外协任务挂接到项目里程碑"
+        ],
+        "risk_assessment": {
+          "risk": "高 — 涉及供应链数据，需与采购模块(purchases)协同设计"
+        }
+      }
+    },
+    {
+      "id": "P0-8",
+      "title": "【缺失模块】可制造性分析(DFM)模块",
+      "domain_tags": ["manufacturing", "dfm", "process", "new-module"],
+      "risk_level": "low",
+      "estimated_complexity": "L（24h）",
+      "estimated_effort": "24人时（3人天）",
+      "remediation_files": [
+        "backend/app/api/manufacturability.py（新建）",
+        "backend/app/models/manufacturability.py（新建）",
+        "backend/app/schemas/manufacturability.py（新建）"
+      ],
+      "root_cause": "完全不存在可制造性分析模块。Project模型的manufacturing_cost字段仅存储粗略成本数值，无结构化DFM分析支持。",
+      "fix_plan": {
+        "approach": "新建可制造性分析模块",
+        "scope": [
+          "DFMChecklist模型（可制造性检查项模板）",
+          "DFMReport模型（分析报告、问题项、建议方案）",
+          "DFMScore模型（可制造性评分，按产品类型配置权重）",
+          "/api/dfm/* CRUD接口",
+          "与Prototype模块集成：样机试产后的DFM反馈闭环"
+        ],
+        "risk_assessment": {
+          "risk": "低 — 独立模块，可逐步迭代"
+        }
+      }
+    }
+  ],
+  "execution_plan": {
+    "phase_1_urgent_2h": {
+      "title": "紧急修复（2小时）",
+      "tasks": ["P0-2: register添加认证防护", "P0-1: TestRequestOut schema修复"],
+      "impact": "恢复测试管理API + 关闭注册安全漏洞"
+    },
+    "phase_2_short_4h": {
+      "title": "短期修复（4小时）",
+      "tasks": ["P0-9: 路由验证", "P0-3 Phase1: 审计日志基础增强"],
+      "impact": "架构合规性提升"
+    },
+    "phase_3_medium_1w": {
+      "title": "中期模块建设（1-2周）",
+      "tasks": ["P0-5: 知识库增强", "P0-6: 安规模块", "P0-3 Phase2: 审计日志完整增强"],
+      "impact": "核心缺失功能补齐"
+    },
+    "phase_4_long_2w": {
+      "title": "长期模块建设（2-3周）",
+      "tasks": ["P0-4: 成本核算模块", "P0-7: 外协管理模块", "P0-8: DFM模块"],
+      "impact": "完整业务闭环"
+    }
+  },
+  "total_effort_estimate": {
+    "immediate_fixes": "2.5人时",
+    "architecture_enhancements": "12人时",
+    "new_modules": "140人时",
+    "grand_total": "~155人时（约4人周）"
+  }
+}

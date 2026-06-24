@@ -62,7 +62,7 @@ def create_test(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
 ):
-    req = TestRequest(**data.model_dump(), request_no=_gen_request_no())
+    req = TestRequest(**data.model_dump(exclude_none=True), request_no=_gen_request_no())
     db.add(req)
     db.commit()
     db.refresh(req)

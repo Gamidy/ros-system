@@ -673,11 +673,11 @@ class TestRequestCreate(BaseModel):
     product_code: Optional[str] = None
     test_type: str
     test_standard: Optional[str] = None
-    trigger_mode: str = "engineer"
+    trigger_mode: Optional[str] = None
     requester: str
     requirement: Optional[str] = None
     sample_info: Optional[str] = None
-    priority: str = "medium"
+    priority: Optional[str] = None
     target_date: Optional[date] = None
     # Phase 6 增强字段
     vr_id: Optional[int] = None

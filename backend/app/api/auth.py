@@ -1,8 +1,10 @@
 """认证API"""
 import secrets
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.security import get_password_hash, verify_password, create_access_token, get_current_user, require_role, invalidate_token, oauth2_scheme
 from app.core.permissions import get_allowed_menus, get_allowed_paths, is_valid_role
 from app.models.user import User
@@ -32,8 +34,20 @@ def logout(token: str = Security(oauth2_scheme)):
     return {"message": "已登出"}
 
 
+def _require_admin_for_register():
+    if settings.ALLOW_PUBLIC_REGISTER:
+        def _noop():
+            return None
+        return _noop
+    return require_role("admin")
+
+
 @router.post("/register", response_model=UserOut)
-def register(req: UserCreate, db: Session = Depends(get_db)):
+def register(
+    req: UserCreate,
+    db: Session = Depends(get_db),
+    _admin_check: Optional[User] = Depends(_require_admin_for_register()),
+):
     if db.query(User).filter(User.username == req.username).first():
         raise HTTPException(status_code=400, detail="用户名已存在")
     # 接受请求中的 role 参数，但禁止 admin 和 general_manager 特权角色

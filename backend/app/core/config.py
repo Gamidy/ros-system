@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # 环境标识: development / staging / production
     ENV: str = "development"
 
+    # ── 安全配置 ──
+    ALLOW_PUBLIC_REGISTER: bool = False
+
     # ── 数据库 ──
     DB_TYPE: str = "sqlite"  # sqlite | mysql
     DATABASE_URL: Optional[str] = None
