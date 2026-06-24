@@ -7,6 +7,7 @@ from app.core.security import get_current_user, require_role, sanitize_dict
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem, part_alternative_table
+from app.models.project import Project
 from app.schemas import (
     PartCreate, PartOut, PartUpdate, PartDetailOut,
     PartAVLCreate, PartAVLOut,
@@ -400,6 +401,88 @@ def get_bom_cost_summary(bom_id: int, db: Session = Depends(get_db), _=Depends(r
         "total_cost": total_cost,
         "cost_by_level": cost_by_level,
         "tree_with_cost": tree_with_cost,
+    }
+
+
+# ══════════════════════════════════════════════════
+# BOM Cost Aggregation by Project
+# ══════════════════════════════════════════════════
+
+@router.get("/cost-aggregation/{project_id}")
+def get_bom_cost_aggregation(
+    project_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("bom")),
+):
+    """项目BOM成本聚合 — 通过项目ID拉取关联BOM的物料成本汇总
+
+    连接链路: Project.product_code → BOM.product_code → BOMItem
+    计算每项成本: item_cost = unit_price × amount × quantity
+    递归汇总 subtree 成本得到 total_cost
+    """
+    from collections import defaultdict
+
+    # 1. 查项目获取 product_code
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    if not project.product_code:
+        raise HTTPException(status_code=400, detail="项目未关联产品编码，无法获取BOM成本")
+
+    product_code = project.product_code
+
+    # 2. 查 BOM 获取物料清单
+    bom = db.query(BOM).filter(BOM.product_code == product_code).first()
+    if not bom:
+        raise HTTPException(
+            status_code=404,
+            detail=f"未找到产品编码「{product_code}」的BOM",
+        )
+
+    items = db.query(BOMItem).filter(BOMItem.bom_id == bom.id).all()
+    if not items:
+        return {"total_cost": 0.0, "items": []}
+
+    # 3. 按 parent_item_id 分组，构建树
+    children_map = defaultdict(list)
+    for i in items:
+        children_map[i.parent_item_id].append(i)
+
+    def _calc_item_cost(item) -> float:
+        up = float(getattr(item, "unit_price", 0) or 0)
+        amt = float(getattr(item, "amount", 1) or 1)
+        qty = float(item.quantity or 1)
+        return round(up * amt * qty, 2)
+
+    def _aggregate(parent_id=None):
+        """递归遍历子树，返回 (flat_items_list, subtree_total)"""
+        result = []
+        subtree_total = 0.0
+        for i in children_map.get(parent_id, []):
+            item_cost = _calc_item_cost(i)
+            child_items, child_total = _aggregate(i.id)
+            children_count = len(children_map.get(i.id, []))
+
+            result.append({
+                "part_no": i.part_no,
+                "part_name": i.part_name,
+                "level": i.level,
+                "unit_price": float(getattr(i, "unit_price", 0) or 0),
+                "amount": float(getattr(i, "amount", 1) or 1),
+                "quantity": float(i.quantity or 1),
+                "item_cost": item_cost,
+                "children_count": children_count,
+            })
+            result.extend(child_items)
+            subtree_total += item_cost + child_total
+
+        return result, round(subtree_total, 2)
+
+    items_flat, total_cost = _aggregate()
+
+    return {
+        "total_cost": total_cost,
+        "items": items_flat,
     }
 
 

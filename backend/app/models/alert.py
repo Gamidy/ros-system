@@ -42,7 +42,12 @@ class Alert(Base):
 
 
 class Notification(Base):
-    """通知记录（钉钉/邮件等）"""
+    """通知记录（当前仅系统内通知，未接入钉钉/飞书等外部渠道）
+
+    TODO: 接入外部通知渠道（webhook/webhook）：
+      - dingtalk: 群机器人 webhook → 发送 markdown 消息
+      - feishu: 群机器人 webhook → 发送富文本消息
+    """
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

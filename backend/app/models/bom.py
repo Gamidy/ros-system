@@ -107,7 +107,7 @@ class BOMItem(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     bom_id = Column(Integer, ForeignKey("boms.id"), nullable=False)
     parent_item_id = Column(Integer, ForeignKey("bom_items.id"), nullable=True, comment="父级BOM条目")
-    part_no = Column(String(50), nullable=False, comment="物料编码")
+    part_no = Column(String(50), nullable=False, comment="物料编码（TODO: 清理孤儿子记录后改为 ForeignKey(\"parts.part_no\")）")
     part_name = Column(String(200), nullable=True)
     item_type = Column(String(20), default="Part", comment="Assembly/Component/Part/Consumable")
     level = Column(Integer, nullable=False, comment="层级: 1整机 2内外机 3总成 4组件 5子件 6零部件")

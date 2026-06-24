@@ -3,20 +3,51 @@
 海外分体机研发全生命周期管理平台
 
 ## 技术栈
-- **前端**: Vue3 + Element Plus + TypeScript
-- **后端**: FastAPI (Python 3.14)
-- **数据库**: MySQL
-- **缓存**: Redis
-- **Web服务器**: Nginx
-- **鉴权**: JWT + RBAC
 
-## 开发
+| 层 | 技术 | 说明 |
+|:--|:-----|:-----|
+| 前端 | Vue3 + Element Plus + TypeScript | Vite构建，Pinia状态管理 |
+| 后端 | FastAPI (Python 3.11) | SQLAlchemy ORM，Pydantic验证 |
+| 数据库 | MySQL/MariaDB | 数据库名: ros_db (docker-compose + network_mode=host) |
+| 鉴权 | JWT + RBAC | 13种角色，权限矩阵驱动 |
+| 部署 | Docker (ros-backend) + Nginx | 阿里云 139.196.15.52 |
+
+## 项目结构
+
+```
+ros-system/
+├── backend/
+│   ├── app/
+│   │   ├── api/       # API路由（按模块拆分）
+│   │   ├── core/      # 配置/安全/数据库
+│   │   ├── models/    # SQLAlchemy模型
+│   │   ├── schemas/   # Pydantic验证
+│   │   ├── middleware/# 审计/限流/XSS中间件
+│   │   └── main.py    # 应用入口
+│   ├── tests/         # pytest测试
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── views/     # 页面组件（按角色分组）
+│   │   ├── api/       # Axios API调用
+│   │   ├── router/    # Vue Router + 权限守卫
+│   │   ├── stores/    # Pinia状态管理
+│   │   ├── types/     # TypeScript类型定义
+│   │   ├── layout/    # 布局组件（侧边栏/顶部栏）
+│   │   └── components/# 通用组件
+│   ├── dist/          # 构建产物（git ignored）
+│   └── package.json
+└── docs/              # 文档
+```
+
+## 开发环境
 
 ```bash
 # 后端
 cd backend
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+# 修改 backend/.env DB_TYPE=sqlite 使用本地SQLite
+uvicorn app.main:app --reload --port 8000
 
 # 前端
 cd frontend
@@ -24,69 +55,29 @@ npm install
 npm run dev
 ```
 
-## 项目结构
-```
-ros-system/
-├── backend/
-│   ├── app/
-│   │   ├── api/       # API路由
-│   │   ├── core/      # 配置/安全/数据库
-│   │   ├── models/    # SQLAlchemy模型
-│   │   ├── schemas/   # Pydantic验证
-│   │   └── main.py    # 应用入口
-|   ├── tests/         # 测试
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── views/     # 页面组件
-│   │   ├── api/       # API调用
-│   │   ├── router/    # 路由
-│   │   ├── stores/    # Pinia状态管理
-│   │   ├── types/     # TypeScript类型
-│   │   ├── layout/    # 布局组件
-│   │   └── components/# 通用组件
-│   ├── dist/          # 构建产物
-│   └── package.json
-├── config/
-│   └── nginx.conf     # Nginx配置
-└── docs/              # 文档
-```
-
-## 部署
-
-### 生产环境（阿里云 139.196.15.52）
+## 生产部署（阿里云）
 
 ```bash
 # 1. 构建前端
 cd frontend && npm run build
 
-# 2. 上传到服务器
+# 2. 上传前端
 scp -r dist/* root@139.196.15.52:/opt/ros-system/frontend/dist/
 
-# 3. 重新部署后端
-scp -r backend/* root@139.196.15.52:/opt/ros-system/backend/
-ssh root@139.196.15.52 "docker cp /opt/ros-system/backend ros-backend:/app && docker restart ros-backend"
+# 3. 上传修改的后端文件到服务器
+scp backend/app/api/*.py root@139.196.15.52:/tmp/
+ssh root@139.196.15.52 "docker cp /tmp/xxx.py ros-backend:/app/app/api/xxx.py"
 
-# Nginx配置
-scp config/nginx.conf root@139.196.15.52:/etc/nginx/conf.d/ros.conf
-ssh root@139.196.15.52 "nginx -t && nginx -s reload"
+# 4. 重启容器（env_file: .env.production 自动加载新配置）
+ssh root@139.196.15.52 "docker restart ros-backend"
+
+# 5. Nginx（通常不需要重启）
+# ssh root@139.196.15.52 "nginx -s reload"
 ```
 
-### 开发环境
+## 关键约定
 
-```bash
-# 后端
-cd backend && pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-
-# 前端
-cd frontend && npm install
-npm run dev
-```
-
-## 技术栈
-- **前端**: Vue3 + Element Plus + TypeScript (Vite)
-- **后端**: FastAPI (Python 3.11) + SQLAlchemy
-- **数据库**: MySQL/MariaDB
-- **鉴权**: JWT + RBAC (13种角色 + 超级角色)
-- **部署**: Docker + Nginx (阿里云)
+- 单个API路由文件 ≤ 600行，超出拆子模块
+- 所有API端点使用 `response_model` + `from_attributes = True`
+- 新功能需配套 pytest 测试
+- Redis 暂未接入（所有 import 已注释）
