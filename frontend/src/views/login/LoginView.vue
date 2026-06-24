@@ -79,6 +79,12 @@
             </el-form-item>
           </el-form>
 
+          <!-- Registration link -->
+          <div class="register-section">
+            <span class="register-text">没有账号？</span>
+            <a class="register-link" @click="handleRegister">申请注册</a>
+          </div>
+
           <div class="login-footer">
             <p>© {{ currentYear }} ROS System</p>
           </div>
@@ -135,6 +141,10 @@ async function handleLogin() {
   } finally {
     loading.value = false
   }
+}
+
+function handleRegister() {
+  router.push('/register')
 }
 </script>
 
@@ -383,6 +393,42 @@ async function handleLogin() {
 @keyframes dotBounce {
   0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
   40% { transform: scale(1); opacity: 1; }
+}
+
+/* Registration Link */
+.register-section {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+.register-text {
+  color: #5e5d59;
+}
+.register-link {
+  color: #d97757;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.register-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 1.5px;
+  background: #d97757;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.register-link:hover {
+  color: #c96442;
+}
+.register-link:hover::after {
+  transform: scaleX(1);
 }
 
 .login-footer {
