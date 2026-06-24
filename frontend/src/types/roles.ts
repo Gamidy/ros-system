@@ -3,6 +3,7 @@ import {
   Monitor, Goods, List, Folder, Document, WarningFilled,
   Stamp, Cpu, WarnTriangleFilled, Refresh, Select,
   ShoppingCart, DataAnalysis, Setting, Checked,
+  OfficeBuilding, User,
 } from '@element-plus/icons-vue'
 
 /** 系统支持的全部角色（与后端 permissions.py ALL_ROLES 对齐） */
@@ -86,6 +87,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/risk-dashboard',  title: '智能决策看板',  icon: DataAnalysis },
   { path: '/rd-dashboard',   title: '研发总监',       icon: DataAnalysis },
   { path: '/admin-config',   title: '系统设置',       icon: Setting },
+  { path: '/admin/tenants',   title: '多租户管理',     icon: OfficeBuilding },
+  { path: '/admin/my-org',    title: '我的组织',       icon: User },
 ]
 
 /**

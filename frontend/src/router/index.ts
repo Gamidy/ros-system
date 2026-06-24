@@ -178,6 +178,18 @@ const router = createRouter({
           component: () => import('../views/admin/AdminConfig.vue'),
           meta: { title: '系统设置', menu: 'admin-config' },
         },
+        {
+          path: 'admin/tenants',
+          name: 'TenantManagement',
+          component: () => import('../views/admin/TenantManagement.vue'),
+          meta: { title: '多租户管理' },
+        },
+        {
+          path: 'admin/my-org',
+          name: 'MyOrgInfo',
+          component: () => import('../views/admin/MyOrgInfo.vue'),
+          meta: { title: '我的组织' },
+        },
       ],
     },
   ],

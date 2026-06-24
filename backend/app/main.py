@@ -9,7 +9,7 @@ from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -95,6 +95,8 @@ app.include_router(admin_role_templates.router)
 app.include_router(admin_role_mappings.router)
 app.include_router(admin_role_mappings.pm_router)
 app.include_router(admin_cost_configs.router)
+app.include_router(admin_tenant.router)
+app.include_router(admin_tenant.auth_router)
 app.include_router(proposal_approval.router, prefix="/api")
 app.include_router(pm_proposal_api.router, prefix="/api")
 app.include_router(rd_panel.router, prefix="/api")
