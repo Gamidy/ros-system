@@ -53,6 +53,9 @@ class ProductPlan(Base):
     performance_target = Column(Text, nullable=True, comment="技术指标目标JSON: [{param, target, unit}]")
     status = Column(SAEnum(ProductPlanStage), default=ProductPlanStage.DRAFT, nullable=False, comment="流程阶段")
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True, comment="关联项目ID（APPROVED后赋值）")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    # ---- 时间戳 ----
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     created_by = Column(String(50), nullable=True, comment="创建者用户名")
@@ -61,6 +64,7 @@ class ProductPlan(Base):
     competitor = relationship("CompetitorModel", foreign_keys=[competitor_id])
     project = relationship("Project", foreign_keys=[project_id])
     costs = relationship("Cost", back_populates="product_plan", cascade="all, delete-orphan")
+    org = relationship("Organization", foreign_keys=[org_id])
 
 
 class Cost(Base):

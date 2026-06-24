@@ -17,6 +17,8 @@ class AlertRule(Base):
     is_enabled = Column(Boolean, default=True)
     notify_channels = Column(String(200), nullable=True, comment="通知渠道JSON: [\"feishu\",\"email\"]")
     notify_users = Column(String(300), nullable=True, comment="通知用户列表JSON")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
 
 
@@ -36,6 +38,8 @@ class Alert(Base):
     is_resolved = Column(Boolean, default=False)
     resolved_by = Column(String(50), nullable=True)
     resolved_at = Column(DateTime, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
 
     rule = relationship("AlertRule")
@@ -60,4 +64,6 @@ class Notification(Base):
     is_read = Column(Boolean, default=False)
     sent_at = Column(DateTime, nullable=True)
     read_at = Column(DateTime, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())

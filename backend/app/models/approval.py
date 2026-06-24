@@ -13,6 +13,8 @@ class ApprovalChain(Base):
     code = Column(String(50), unique=True, index=True, nullable=False, comment="审批链编码")
     description = Column(Text, nullable=True, comment="描述")
     steps = Column(JSON, nullable=True, comment="步骤定义（兼容JSON格式）")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
 
     step_items = relationship("ApprovalStep", back_populates="chain",
@@ -48,6 +50,8 @@ class ApprovalRequest(Base):
     status = Column(String(20), default="pending", comment="pending/approved/rejected")
     current_step = Column(Integer, default=1, comment="当前步骤序号")
     step_meta = Column(JSON, nullable=True, comment="并行步骤状态快照（审批人决策记录）")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

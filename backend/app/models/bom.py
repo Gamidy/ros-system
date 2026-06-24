@@ -52,6 +52,8 @@ class Part(Base):
     mq_status = Column(String(20), nullable=True, comment="MQ验证状态: pending/pass/fail")
     # MRC属性
     mrc_level = Column(String(10), nullable=True, comment="MRC风险等级: A/B/C")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -79,6 +81,8 @@ class PartAVL(Base):
     status = Column(String(20), default="approved", comment="approved/suspended/disqualified")
     approved_date = Column(Date, nullable=True)
     remark = Column(String(500), nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
 
     part = relationship("Part", back_populates="avl_entries")
@@ -96,6 +100,8 @@ class BOM(Base):
     description = Column(Text, nullable=True)
     factory_code = Column(String(50), nullable=True, comment="工厂代码（制造变体级别）")
     status = Column(String(20), default="draft", comment="draft/released/obsolete")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -117,6 +123,8 @@ class BOMItem(Base):
     amount = Column(Float, default=1.0, comment="用量/系数，用于成本计算: cost=unit_price×amount×quantity")
     position_no = Column(String(50), nullable=True, comment="位置号（ECN定位+ERP同步）")
     remark = Column(String(500), nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

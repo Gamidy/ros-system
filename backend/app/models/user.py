@@ -1,5 +1,6 @@
 """用户与角色模型"""
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, func
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.core.permissions import ALL_ROLES
 
@@ -43,5 +44,13 @@ class User(Base):
     application_reason = Column(String(500), nullable=True)
     application_status = Column(String(20), default="approved")  # pending/approved/rejected
     is_active = Column(Boolean, default=True)
+    # ---- 多租户字段 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    is_org_admin = Column(Boolean, default=False, comment="是否为组织管理员")
+    # ---- 时间戳 ----
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    # 多租户关联
+    organization = relationship("Organization", back_populates="users", foreign_keys=[org_id])
+    org_membership = relationship("OrganizationMember", back_populates="user", foreign_keys="OrganizationMember.user_id")

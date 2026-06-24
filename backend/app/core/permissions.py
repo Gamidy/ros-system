@@ -1,4 +1,5 @@
 """角色-菜单权限映射模块"""
+from typing import Optional
 
 # 全部有效角色（13种正式角色 + engineer 为向后兼容的默认角色）
 ALL_ROLES = [
@@ -27,6 +28,9 @@ ALL_ROLES = [
 
 # 超级角色 — 拥有全部菜单权限
 SUPER_ROLES = ["admin", "general_manager"]
+
+# 组织管理员角色 — 拥有组织级管理权限
+SUPER_ORG_ADMIN_ROLES = ["admin", "general_manager"]
 
 # 全部菜单列表
 ALL_MENUS = [
@@ -235,3 +239,53 @@ def require_menu(menu_name: str):
             raise HTTPException(status_code=403, detail="权限不足，无法访问该资源")
         return user
     return _check
+
+
+def require_org_access(required_org_id: int):
+    """FastAPI 依赖：检查当前用户是否属于指定组织
+
+    超级角色（admin / general_manager）不受组织限制，自动放行。
+    普通用户必须 org_id 与 required_org_id 一致。
+    
+    用法: @router.get("/org/{org_id}/items", dependencies=[Depends(require_org_access(org_id))])
+    """
+    from fastapi import Depends, HTTPException
+    from app.core.security import get_current_user
+
+    def _check(current_user = Depends(get_current_user)):
+        role = current_user.role
+        if role in SUPER_ROLES:
+            return current_user
+        user_org_id = getattr(current_user, "org_id", None)
+        if user_org_id != required_org_id:
+            raise HTTPException(
+                status_code=403,
+                detail="无权访问该组织的资源",
+            )
+        return current_user
+    return _check
+
+
+def get_org_scoped_query(db_query, org_id: Optional[int] = None):
+    """为 SQLAlchemy 查询自动添加 org_id 过滤
+
+    如果传入了 org_id，则添加 WHERE org_id = <org_id> 条件。
+    如果未传入，尝试从 TenantContext 获取当前请求的 org_id。
+    如果都没有，返回原始查询（超级角色场景）。
+
+    用法:
+        query = db.query(ProductPlan)
+        query = get_org_scoped_query(query, org_id=123)
+        # 或从 TenantContext 自动获取
+        query = get_org_scoped_query(query)
+    """
+    from app.core.tenant_context import TenantContext
+
+    if org_id is None:
+        org_id = TenantContext.get_org_id()
+    if org_id is not None:
+        # 检查模型是否有 org_id 列
+        mapper = db_query.column_descriptions[0]["entity"]
+        if hasattr(mapper, "org_id"):
+            query = db_query.filter(mapper.org_id == org_id)
+    return db_query

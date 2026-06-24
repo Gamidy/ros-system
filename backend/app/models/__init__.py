@@ -1,5 +1,6 @@
 """模型初始化"""
 from app.models.user import User
+from app.models.organization import Organization, OrganizationMember
 from app.models.product import Platform, Product, Version, Market, ManufacturingVariant
 from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
@@ -24,6 +25,7 @@ from app.models.event_log import EventLog
 
 __all__ = [
     "User",
+    "Organization", "OrganizationMember",
     "Platform", "Product", "Version", "Market", "ManufacturingVariant",
     "PartCategory", "Part", "PartAVL", "BOM", "BOMItem",
     "Program", "Project", "ProjectGate", "Milestone", "Task", "Risk",

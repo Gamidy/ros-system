@@ -36,6 +36,8 @@ class TestRequest(Base):
     completed_date = Column(Date, nullable=True)
     ng_count = Column(Integer, default=0, comment="不合格项数")
     result_summary = Column(Text, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -55,6 +57,8 @@ class TestResult(Base):
     remark = Column(Text, nullable=True)
     tested_by = Column(String(50), nullable=True)
     tested_at = Column(DateTime, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
 
     test_request = relationship("TestRequest", back_populates="results")
 
@@ -78,6 +82,8 @@ class MQVerification(Base):
     result_report = Column(Text, nullable=True)
     verified_by = Column(String(50), nullable=True)
     verified_at = Column(Date, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
 
 
@@ -101,6 +107,8 @@ class Certification(Base):
     result = Column(String(20), nullable=True, comment="pass/fail")
     cdf_doc_ref = Column(String(100), nullable=True, comment="CDF文档引用")
     remark = Column(Text, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -124,6 +132,8 @@ class Prototype(Base):
     test_date = Column(Date, nullable=True)
     result = Column(String(20), nullable=True, comment="pass/fail")
     remark = Column(Text, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -148,6 +158,8 @@ class QualityIssue(Base):
     assigned_to = Column(String(50), nullable=True)
     target_date = Column(Date, nullable=True)
     closed_date = Column(Date, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -169,6 +181,8 @@ class ECR(Base):
     impact_analysis = Column(Text, nullable=True, comment="影响分析: 性能/认证/项目/成本")
     submitted_by = Column(String(50), nullable=True)
     approved_by = Column(String(50), nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -188,6 +202,8 @@ class ECN(Base):
     certification_impact = Column(Boolean, default=False, comment="是否影响认证")
     status = Column(String(20), default="draft", comment="draft/released/implemented")
     effective_date = Column(Date, nullable=True, comment="生效日期")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

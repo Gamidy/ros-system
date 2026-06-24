@@ -134,9 +134,21 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """创建 JWT access token
+
+    JWT payload 结构: {sub, role, org_id, user_id, exp}
+    - sub: 用户ID（字符串）
+    - role: 用户角色
+    - org_id: 所属组织ID（可选）
+    - user_id: 用户ID（数值）
+    - exp: 过期时间
+    """
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
+    # 确保 user_id 写入 payload（数值形式）
+    if "sub" in to_encode and "user_id" not in to_encode:
+        to_encode["user_id"] = int(to_encode["sub"])
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 

@@ -19,6 +19,8 @@ class Supplier(Base):
     bank_info = Column(String(200), nullable=True, comment="银行信息")
     status = Column(String(20), default="active", comment="active/inactive")
     remark = Column(Text, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -35,6 +37,8 @@ class PurchaseOrder(Base):
     status = Column(String(20), default="draft", comment="draft/pending_approval/approved/ordered/received/cancelled")
     requester = Column(String(100), nullable=False, comment="申请人")
     remark = Column(Text, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -57,6 +61,8 @@ class PurchaseOrderItem(Base):
     delivery_date = Column(Date, nullable=True, comment="要求交货日期")
     received_qty = Column(Float, default=0.0, comment="已收货数量")
     remark = Column(String(500), nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
 
     order = relationship("PurchaseOrder", back_populates="items")
@@ -76,5 +82,7 @@ class OutsourceRequest(Base):
     description = Column(Text, nullable=True, comment="送样说明")
     status = Column(String(20), default="pending", comment="pending/approved/rejected/completed")
     created_by = Column(String(50), nullable=False, comment="申请人")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

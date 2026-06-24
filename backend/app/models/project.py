@@ -17,6 +17,8 @@ class Program(Base):
     end_date = Column(Date, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
 
     projects = relationship("Project", back_populates="program")
 
@@ -31,6 +33,8 @@ class Project(Base):
     # 归属
     program_id = Column(Integer, ForeignKey("programs.id"), nullable=True, comment="归属Program")
     product_code = Column(String(50), nullable=True, comment="关联产品编码")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     # L1: 项目等级 T/A/B/C
     project_class = Column(String(10), nullable=False, comment="T级/A级/B级/C级")
     # L2: 项目场景
@@ -163,6 +167,8 @@ class ProjectGate(Base):
     # 特殊标记
     is_high_risk_zone = Column(Boolean, default=False, comment="M4-M6高风险区标记")
     is_hidden = Column(Boolean, default=False, comment="M5A隐藏节点")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -185,6 +191,8 @@ class Milestone(Base):
     gate_code = Column(String(10), nullable=True, comment="关联M1~M9")
     # 依赖链: 里程碑延期传导
     depends_on_milestone_id = Column(Integer, ForeignKey("milestones.id"), nullable=True, comment="依赖的上游里程碑")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
 
     project = relationship("Project", back_populates="milestones")
@@ -206,6 +214,8 @@ class Task(Base):
     due_date = Column(Date, nullable=True)
     actual_date = Column(Date, nullable=True)
     description = Column(Text, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -228,6 +238,8 @@ class Risk(Base):
     status = Column(String(20), default="open", comment="open/monitoring/resolved")
     raised_by = Column(String(50), nullable=True)
     resolved_at = Column(Date, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

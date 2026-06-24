@@ -50,6 +50,8 @@ class Platform(Base):
     # 平台尺寸约束（PR-02）
     dimensions = Column(String(200), nullable=True, comment="外观尺寸约束描述")
     hard_constraints = Column(Text, nullable=True, comment="硬约束JSON: 外观结构件清单")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -71,6 +73,8 @@ class Product(Base):
     outdoor_product_code = Column(String(50), nullable=True, comment="外机成品码")
     status = Column(String(20), default=ProductStatus.ACTIVE.value, comment="active/obsolete")
     description = Column(Text, nullable=True)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -124,6 +128,8 @@ class Version(Base):
     change_type = Column(String(50), nullable=True, comment="变更类型: performance/structural/certification/bom_only")
     customer_perceivable = Column(String(5), default="false", comment="客户是否可感知（PR-09）")
     effective_date = Column(DateTime, nullable=True, comment="生效日期")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
