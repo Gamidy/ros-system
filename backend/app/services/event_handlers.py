@@ -14,7 +14,7 @@ from app.core.database import SessionLocal
 from app.models.project import ProjectGate
 from app.models.test import TestRequest, QualityIssue
 from app.models.alert import Alert, Notification
-from .events import bus, EventTypes
+from .events import bus, EventTypes, store_event
 
 logger = logging.getLogger(__name__)
 
@@ -270,13 +270,32 @@ def on_alert_overdue_found(alert_id: int, target_type: str, target_id: int, **kw
 # ─────────────────────────────────────────────────────────
 
 
-def register_all_handlers():
-    """注册所有事件处理器 — 在 main.py 启动时调用"""
+def _register_all_events():
+    """注册所有事件处理器 + Event Store"""
+    # ── 已有事件 ──
+    for evt in [
+        "proposal.approved",
+        "test.done_with_ng",
+        "alert.overdue_found",
+    ]:
+        bus.on(evt, store_event)
+
     bus.on("proposal.approved", on_proposal_approved)
     bus.on("test.done_with_ng", on_test_done_with_ng)
     bus.on("alert.overdue_found", on_alert_overdue_found)
 
-    # ── ProductPlan 事件处理器 ──
+    # ── ProductPlan 事件 ──
+    for evt in [
+        "plan.approved",
+        "plan.competitor_done",
+        "plan.definition_done",
+        "plan.costing_done",
+        "plan.tech_input_done",
+        "plan.project_init_done",
+        "plan.released",
+    ]:
+        bus.on(evt, store_event)
+
     bus.on("plan.approved", on_plan_approved)
     bus.on("plan.competitor_done", on_plan_side_effect)
     bus.on("plan.definition_done", on_plan_side_effect)
@@ -284,10 +303,22 @@ def register_all_handlers():
     bus.on("plan.tech_input_done", on_plan_side_effect)
     bus.on("plan.project_init_done", on_plan_side_effect)
     bus.on("plan.released", on_plan_side_effect)
+
+    # ── System Events（预留） ──
+    bus.on("plan.project_created", store_event)
+    bus.on("plan.bom_initialized", store_event)
+
+    # ── Side Effect Events（预留） ──
+    bus.on("plan.audit_log", store_event)
+    bus.on("plan.notify_pm", store_event)
+
     logger.info(
-        "所有事件处理器已注册: proposal.approved, test.done_with_ng, "
-        "alert.overdue_found, plan.* (7 handlers)"
+        "事件系统初始化完成: %d 事件类型, Event Store 已激活",
+        len(bus.handlers),
     )
+
+
+register_all_handlers = _register_all_events
 
 
 # ════════════════════════════════════════════════════════

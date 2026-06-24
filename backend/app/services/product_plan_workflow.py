@@ -154,11 +154,11 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
             if target == ProductPlanStage.APPROVED:
                 event_kwargs["project_id"] = plan.project_id
                 event_kwargs["created_by"] = plan.created_by
-            # 发射业务事件 (独立 try/except, 不阻断主流程)
-            bus.emit(event_type, **event_kwargs)
+            # 发射业务事件 (异步，不阻塞主流程)
+            bus.emit_async(event_type, **event_kwargs)
             # 发射副作用事件 (审计+通知)
-            bus.emit(EventTypes.PLAN_AUDIT_LOG, **event_kwargs)
-            bus.emit(EventTypes.PLAN_NOTIFY_PM, **event_kwargs)
+            bus.emit_async(EventTypes.PLAN_AUDIT_LOG, **event_kwargs)
+            bus.emit_async(EventTypes.PLAN_NOTIFY_PM, **event_kwargs)
     except Exception as e:
         logger.error("advance_stage 事件发射失败: %s", e, exc_info=True)
 
