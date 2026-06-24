@@ -10,7 +10,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-from app.models.proposal_approval import ProposalApproval
+from app.models.proposal_approval import ProposalApproval, ProposalParallelReviewer  # BUGFIX: added ProposalParallelReviewer
 from app.models.user import User
 from app.models.alert import Notification
 
@@ -81,19 +81,26 @@ def scan_and_remind():
 
             # ── 超过 24 小时, 通知审批人 ──
             elif pa.created_at <= threshold_24h and not pa.reminded:
-                # 通知还 pending 的审批人
-                if pa.status == "pending_parallel" and pa.parallel_reviewers:
-                    for reviewer in pa.parallel_reviewers:
-                        if reviewer.get("status") == "pending":
-                            _create_notification(
-                                db,
-                                target_user_id=reviewer["user_id"],
-                                title=f"【审批催办】待审批: {pa.title}",
-                                content=(
-                                    f"项目「{pa.title}」的立项审批已提交超过 24 小时，"
-                                    f"请您尽快完成审批。"
-                                ),
-                            )
+                # 通知还 pending 的审批人 — BUGFIX: query proposal_parallel_reviewers table instead of deprecated pa.parallel_reviewers JSON
+                if pa.status == "pending_parallel":
+                    pending_reviewers = (
+                        db.query(ProposalParallelReviewer)
+                        .filter(
+                            ProposalParallelReviewer.approval_id == pa.id,
+                            ProposalParallelReviewer.status == "pending",
+                        )
+                        .all()
+                    )
+                    for reviewer in pending_reviewers:
+                        _create_notification(
+                            db,
+                            target_user_id=reviewer.user_id,
+                            title=f"【审批催办】待审批: {pa.title}",
+                            content=(
+                                f"项目「{pa.title}」的立项审批已提交超过 24 小时，"
+                                f"请您尽快完成审批。"
+                            ),
+                        )
 
                 elif pa.status == "pending_director" and pa.director_reviewer_id:
                     _create_notification(

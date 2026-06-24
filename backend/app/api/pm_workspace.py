@@ -516,6 +516,7 @@ def pm_create_project(
     project_class: str = Body("B", pattern="^(T|A|B|C)$"),
     source: str | None = Body(None, max_length=50),
     target_end_date: date | None = Body(None),
+    start_date: date | None = Body(None),  # BUGFIX: Added missing start_date parameter
     program_id: int | None = Body(None),
     leader_id: int | None = Body(None),
     # Sheet 1 - 项目概述

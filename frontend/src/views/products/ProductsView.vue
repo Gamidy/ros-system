@@ -42,9 +42,9 @@
             <el-table-column prop="id" label="ID" width="60" />
             <el-table-column prop="code" label="产品编码" width="120" />
             <el-table-column prop="name" label="名称" />
-            <el-table-column prop="markets" label="目标市场" width="160">
+            <el-table-column prop="market_codes" label="目标市场" width="160">
               <template #default="{ row }">
-                <el-tag v-for="m in row.markets" :key="m" size="small" style="margin:1px">{{ m }}</el-tag>
+                <el-tag v-for="m in row.market_codes" :key="m" size="small" style="margin:1px">{{ m }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="capacity" label="容量" width="80" />
@@ -366,7 +366,7 @@ async function saveMarket() {
 // Market Assign
 function openMarketAssign(product: any) {
   currentProduct.value = product
-  selectedMarkets.value = [...(product.markets || [])]
+  selectedMarkets.value = [...(product.market_codes || [])]  // BUGFIX: use market_codes
   showMarketAssignDialog.value = true
 }
 

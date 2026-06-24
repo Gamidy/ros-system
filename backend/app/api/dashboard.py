@@ -13,6 +13,7 @@ from app.models.project import Project, ProjectGate
 from app.models.bom import Part
 from app.models.test import TestRequest, TestResult, Certification, QualityIssue
 from app.models.alert import Alert, AlertRule
+from app.models.proposal_approval import ProposalApproval  # BUGFIX: for pending approvals count
 from app.schemas import (
     DashboardSummary,
     DashboardResponse,
@@ -128,11 +129,9 @@ def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("das
     )
     project_status_distribution = {row[0] or "unknown": row[1] for row in project_status_rows}
 
-    # 待审批项目数: approval_status='pending' AND is_draft=0 AND is_deleted=0
-    pending_approvals_count = db.query(func.count(Project.id)).filter(
-        Project.approval_status == "pending",
-        Project.is_draft == False,
-        Project.is_deleted == False,
+    # 待审批项目数: 从 proposal_approvals 表统计 pending 状态的记录 (BUGFIX: was querying Project.approval_status which is never written)
+    pending_approvals_count = db.query(func.count(ProposalApproval.id)).filter(
+        ProposalApproval.status.in_(["pending_parallel", "pending_director"]),
     ).scalar() or 0
 
     layer2 = Layer2ProjectOps(
@@ -357,3 +356,30 @@ def create_alert_rule(
     db.commit()
     db.refresh(rule)
     return rule
+
+
+@router.get("/trends")  # BUGFIX: added missing endpoint for dashboard trends chart
+def get_dashboard_trends(
+    days: int = Query(30, description="统计天数"),
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """返回最近N天每日项目创建数量，用于趋势图"""
+    from datetime import date as dt_date
+    start = dt_date.today() - timedelta(days=days)
+    rows = (
+        db.query(
+            func.date(Project.created_at).label("d"),
+            func.count(Project.id).label("c"),
+        )
+        .filter(Project.created_at >= start)
+        .group_by(func.date(Project.created_at))
+        .order_by(func.date(Project.created_at))
+        .all()
+    )
+    data_map = {str(r.d): r.c for r in rows}
+    result = []
+    for i in range(days, -1, -1):
+        d = (dt_date.today() - timedelta(days=i)).isoformat()
+        result.append({"date": d, "value": data_map.get(d, 0)})
+    return result

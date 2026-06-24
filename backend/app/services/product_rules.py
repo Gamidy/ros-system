@@ -145,7 +145,7 @@ class ProductRulesEngine:
         """
         parts = code.split("-")
         if len(parts) < 2:
-            return False, f"产品编码格式不符合 {Market}-{Capacity} 规范: {code}"
+            return False, f"产品编码格式不符合 {market}-{capacity} 规范: {code}"
 
         code_market = parts[0].upper()
         if code_market != market.upper():

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.models.pm_accessory import AccessoryDefault, FeatureDefault
+from app.models.pm_accessory import AccessoryDefault  # BUGFIX: removed FeatureDefault import (route moved to pm_config.py)
 
 router = APIRouter(prefix="/pm", tags=["PM配置查询"])
 
@@ -42,28 +42,7 @@ def get_accessory_defaults(
     }
 
 
-@router.get("/feature-defaults")
-def get_feature_defaults(
-    market: str = Query(..., description="目标市场，如'通用'"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_auth),
-):
-    """获取指定市场的功能默认列表"""
-    items = (
-        db.query(FeatureDefault)
-        .filter(FeatureDefault.market == market)
-        .order_by(FeatureDefault.sort_order, FeatureDefault.id)
-        .all()
-    )
-    return {
-        "items": [
-            {
-                "id": item.id,
-                "market": item.market,
-                "name": item.name,
-                "default_selection": item.default_selection,
-                "sort_order": item.sort_order,
-            }
-            for item in items
-        ]
-    }
+# ══════════════════════════════════════════════════════════════
+# /feature-defaults 路由已移入 pm_config.py 以避免路由冲突
+# BUGFIX: 删除本文件的重复注册，由 pm_config.py 统一提供
+# ══════════════════════════════════════════════════════════════
