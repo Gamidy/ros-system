@@ -5,21 +5,32 @@
       <template #header>
         <div class="card-header">
           <span>BOM树可视化</span>
-          <el-select
-            v-model="selectedBomId"
-            placeholder="请选择BOM查看树结构"
-            clearable
-            filterable
-            @change="onBomSelect"
-            style="width: 320px"
-          >
-            <el-option
-              v-for="b in boms"
-              :key="b.id"
-              :label="`${b.bom_no} — ${b.product_code}`"
-              :value="b.id"
-            />
-          </el-select>
+          <div class="header-actions">
+            <el-select
+              v-model="selectedBomId"
+              placeholder="请选择BOM查看树结构"
+              clearable
+              filterable
+              @change="onBomSelect"
+              style="width: 320px"
+            >
+              <el-option
+                v-for="b in boms"
+                :key="b.id"
+                :label="`${b.bom_no} — ${b.product_code}`"
+                :value="b.id"
+              />
+            </el-select>
+            <el-button
+              type="primary"
+              size="small"
+              :disabled="!selectedBomId"
+              :loading="loadingCost"
+              @click="refreshCost"
+            >
+              🔄 拉取物料成本
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -262,6 +273,13 @@ async function fetchCostSummary(bomId: number | string) {
   }
 }
 
+/** 手动刷新物料成本（拉取最新成本数据） */
+function refreshCost() {
+  if (!selectedBomId.value) return
+  ElMessage.info('正在拉取物料成本...')
+  fetchCostSummary(selectedBomId.value)
+}
+
 /** 树节点点击 */
 function onNodeClick(data: any) {
   selectedNode.value = data
@@ -305,6 +323,7 @@ onMounted(fetchAll)
 
 <style scoped>
 .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
 h3 { margin: 0 0 12px; color: #303133; }
 
 /* ——— BOM树可视化样式 ——— */
