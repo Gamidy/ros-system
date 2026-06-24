@@ -275,6 +275,37 @@ const router = createRouter({
           component: () => import('../views/admin/MyOrgInfo.vue'),
           meta: { title: '我的组织' },
         },
+        // Phase 6 S3 — ECR/ECO 工程变更控制
+        {
+          path: 'ecr',
+          name: 'ECRList',
+          component: () => import('../views/changes/ECRListView.vue'),
+          meta: { title: 'ECR变更申请', menu: 'changes' },
+        },
+        {
+          path: 'ecr/:id',
+          name: 'ECRDetail',
+          component: () => import('../views/changes/ECRDetailView.vue'),
+          meta: { title: 'ECR详情', menu: 'changes' },
+        },
+        {
+          path: 'eco',
+          name: 'ECOList',
+          component: () => import('../views/changes/ECOListView.vue'),
+          meta: { title: 'ECO变更指令', menu: 'changes' },
+        },
+        {
+          path: 'eco/:id',
+          name: 'ECODetail',
+          component: () => import('../views/changes/ECODetailView.vue'),
+          meta: { title: 'ECO详情', menu: 'changes' },
+        },
+        {
+          path: 'eco/changes',
+          name: 'ECOChDashboard',
+          component: () => import('../views/changes/ECOChDashboard.vue'),
+          meta: { title: '变更看板', menu: 'changes' },
+        },
       ],
     },
   ],

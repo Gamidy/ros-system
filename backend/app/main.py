@@ -12,6 +12,7 @@ from app.api import knowledge
 from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks
 from app.api import verification_requirements, prototypes, test_executions, gate_rules, target_markets
 from app.api import s2_cert_requirements, s2_cert_projects, s2_cert_samples, s2_cert_executions, s2_cert_results, s2_certificates, s2_gate_rules, s2_change_impact
+from app.api import ecr, eco
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -147,6 +148,10 @@ app.include_router(pm_proposal_api.router, prefix="/api")
 app.include_router(rd_panel.router, prefix="/api")
 app.include_router(state_machine_api.router, prefix="/api")
 app.include_router(risk_dashboard.router)
+
+# ── Phase 6 S3 — ECR/ECO 工程变更控制 ──
+app.include_router(ecr.router)
+app.include_router(eco.router)
 
 # ── Event Timeline 路由 ──
 app.include_router(event_timeline.router)

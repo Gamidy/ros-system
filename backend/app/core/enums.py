@@ -191,6 +191,66 @@ class StandardLevel(str, Enum):
     CUSTOMER = "customer"               # 客户: 小米, 格力
 
 
+# ═══════════════ Phase 6 S3 — ECR/ECO 工程变更控制 ═══════════════
+
+class ECRStatus(str, Enum):
+    """ECR状态机"""
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    REVIEWING = "reviewing"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CONVERTED = "converted"  # 已转为ECO
+
+
+class ECOStatus(str, Enum):
+    """ECO状态机"""
+    DRAFT = "draft"
+    IMPLEMENTING = "implementing"
+    VERIFIED = "verified"
+    EFFECTIVE = "effective"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"
+
+
+class ECRType(str, Enum):
+    """ECR变更类型"""
+    DESIGN_CHANGE = "design_change"       # 设计变更
+    MATERIAL_CHANGE = "material_change"   # 物料变更
+    PROCESS_CHANGE = "process_change"     # 工艺变更
+    CERT_CHANGE = "cert_change"           # 认证变更
+    STANDARD_CHANGE = "standard_change"   # 标准变更
+    BOM_CHANGE = "bom_change"             # BOM变更
+    OTHER = "other"                       # 其他
+
+
+class ECRUrgency(str, Enum):
+    """ECR紧急度"""
+    EMERGENCY = "emergency"  # 紧急
+    HIGH = "high"            # 高
+    MEDIUM = "medium"        # 中
+    LOW = "low"              # 低
+
+
+class ECOChangeType(str, Enum):
+    """ECO变更操作类型"""
+    ADD = "add"           # 新增
+    MODIFY = "modify"     # 修改
+    REPLACE = "replace"   # 替换
+    DELETE = "delete"     # 删除
+    DISABLE = "disable"   # 禁用
+
+
+class ECOObjectType(str, Enum):
+    """ECO变更对象类型"""
+    PART = "part"               # 物料
+    BOM = "bom"                 # BOM
+    DOCUMENT = "document"       # 文档
+    CERTIFICATION = "certification"  # 认证
+    PROCESS = "process"         # 工艺
+    OTHER = "other"             # 其他
+
+
 # ═══════════════ 业务对象状态（通用） ═══════════════
 
 class ActiveStatus(str, Enum):

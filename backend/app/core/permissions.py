@@ -69,6 +69,9 @@ ALL_MENUS = [
     "cert-results",            # 认证结果
     "certificates",            # 证书管理
     "cert-gate-rules",         # 认证门禁规则
+    # Phase 6 S3 — ECR/ECO 工程变更控制
+    "ecr",                     # ECR变更申请
+    "eco",                     # ECO变更指令
 ]
 
 # 角色 → 菜单 映射表
@@ -86,8 +89,10 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
-    ],
-    "product_manager": [
+ # S3 ECR/ECO
+ 'ecr', 'eco',
+ ],
+ "product_manager": [
         "dashboard", "products", "bom", "projects",
         'certifications', 'alerts', 'approvals', 'pm-workspace',
         'competitor_bench', 'market_mgmt', 'proposal_approvals',
@@ -105,6 +110,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "structural_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -114,6 +121,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "electrical_control_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -123,6 +132,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "electrical_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -132,6 +143,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "procurement": [
         "dashboard", "bom", "purchases", "alerts", "projects",
@@ -149,6 +162,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -163,6 +178,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "projects", "alerts", "changes",
         "products", "bom", "tests", "prototypes", "approvals",
         "verification-requirements", "test-executions",
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "production": [
         "dashboard", "bom", "quality", "alerts", "projects",
@@ -176,6 +193,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "module_manager_struct": [  # 结构模块经理 — 侧重结构
         "dashboard", "products", "bom", "projects",
@@ -185,6 +204,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "module_manager_sys": [  # 系统模块经理 — 侧重系统性能
         "dashboard", "products", "bom", "projects", "tests",
@@ -194,6 +215,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
     "finance_manager": [  # 财务经理 — 成本核算
         "dashboard", "products", "bom",
@@ -216,12 +239,16 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],  # IT安全员 — 裁剪权限（去掉 purchases, rd_dashboard, mm）
     "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "changes",
         "competitor_bench", "target-markets",
         "verification-requirements", "test-executions",
+        # S3 ECR/ECO
+        'ecr', 'eco',
     ],
 }
 
@@ -280,6 +307,9 @@ MENU_PATH_MAP: dict[str, str] = {
     "cert-results": "/cert-results",
     "certificates": "/certificates",
     "cert-gate-rules": "/cert-gate-rules",
+    # Phase 6 S3 — ECR/ECO
+    "ecr": "/ecr",
+    "eco": "/eco",
 }
 
 
@@ -317,6 +347,9 @@ API_MENU_MAP: dict[str, str] = {
     "s2/certification-results": "cert-results",
     "s2/certificates": "certificates",
     "s2/gate-rules": "cert-gate-rules",
+    # Phase 6 S3 — ECR/ECO
+    "ecr": "changes",
+    "eco": "changes",
 }
 
 def require_menu(menu_name: str):

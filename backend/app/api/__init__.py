@@ -20,6 +20,8 @@ from app.api import (
     competitor, competitor_bench,
     pm_accessory, pm_roadmap, pm_statistics,
     product_plan, proposal_utils,
+    # Phase 6 S3 — ECR/ECO 工程变更控制
+    ecr, eco,
     # 管理功能
     admin_cost_configs, admin_role_mappings,
     admin_role_templates, admin_tenant,
@@ -43,6 +45,7 @@ __all__ = [
     "competitor", "competitor_bench",
     "pm_accessory", "pm_roadmap", "pm_statistics",
     "product_plan", "proposal_utils",
+    "ecr", "eco",
     "admin_cost_configs", "admin_role_mappings",
     "admin_role_templates", "admin_tenant",
     "rd_panel",
