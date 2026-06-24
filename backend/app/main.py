@@ -9,7 +9,7 @@ from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, admin_config, pm_config, pm_accessory, competitor, competitor_bench, proposal_approval, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -99,9 +99,10 @@ app.include_router(proposal_approval.router, prefix="/api")
 app.include_router(pm_proposal_api.router, prefix="/api")
 app.include_router(rd_panel.router, prefix="/api")
 app.include_router(state_machine_api.router, prefix="/api")
+app.include_router(risk_dashboard.router)
 
-
-# ── Phase 4: 事件基础设施启动 ──
+# ── Event Timeline 路由 ──
+app.include_router(event_timeline.router)
 
 _celery_thread = None
 
@@ -224,11 +225,17 @@ def infra_health():
     except Exception:
         pass
 
-    # Celery ping
+    # Celery ping（重试一次）
     try:
         from app.workers.celery_app import celery_app
-        result = celery_app.control.ping(timeout=1)
-        checks["celery"] = len(result) > 0 if result else False
+        r = celery_app.control.ping(timeout=2)
+        checks["celery"] = len(r) > 0 if r else False
+        if not checks["celery"]:
+            # 再试一次
+            import time
+            time.sleep(0.5)
+            r = celery_app.control.ping(timeout=1)
+            checks["celery"] = len(r) > 0 if r else False
     except Exception:
         pass
 
@@ -243,44 +250,3 @@ def infra_health():
             "checks": checks,
         },
     )
-
-
-@app.post("/api/v2/events/replay/{plan_id}")
-def replay_plan_events(plan_id: str):
-    """重放 ProductPlan 事件，重建当前状态"""
-    from app.core.event_store import EventStore
-    success, state = EventStore.replay(plan_id)
-    if success:
-        return {"success": True, "state": state}
-    return {"success": False, "error": state.get("error")}
-
-
-@app.get("/api/v2/events/timeline/{plan_id}")
-def get_plan_timeline(plan_id: str):
-    """获取 ProductPlan 事件时间线"""
-    from app.core.event_store import EventStore
-    timeline = EventStore.get_timeline(plan_id)
-    return {"plan_id": plan_id, "events": timeline, "count": len(timeline)}
-
-
-@app.post("/api/v2/saga/execute")
-def execute_saga(plan_id: str, plan_name: str, project_id: int):
-    """手动执行 ProductPlan Saga 事务（调试用）"""
-    from app.core.saga_engine import saga_coordinator, create_product_plan_saga
-
-    saga_id = saga_coordinator.create_saga(plan_id=plan_id)
-    steps = create_product_plan_saga()
-    result = saga_coordinator.execute(saga_id, steps, context={
-        "plan_id": plan_id,
-        "plan_name": plan_name,
-        "project_id": project_id,
-        "created_by": "debug_api",
-    })
-    saga_coordinator.cleanup(saga_id)
-
-    return {
-        "saga_id": saga_id,
-        "status": result.status.value,
-        "steps": {k: v.value for k, v in result.steps.items()},
-        "error": result.error,
-    }

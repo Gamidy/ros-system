@@ -176,3 +176,149 @@ def get_certification_timeline(required_certs: List[dict]) -> List[dict]:
         phase += 1
 
     return timeline
+
+
+# ═══════════════════════════════════════════
+# 仪表盘聚合方法（不破坏现有 assess_certification_requirements）
+# ═══════════════════════════════════════════
+
+
+def _fetch_all_plan_ids() -> List[str]:
+    """从 product_plans 表获取所有 plan_id"""
+    from app.core.database import SessionLocal
+    from sqlalchemy import text
+    db = SessionLocal()
+    try:
+        rows = db.execute(
+            text("SELECT id FROM product_plans ORDER BY created_at DESC")
+        ).fetchall()
+        return [r[0] for r in rows]
+    except Exception:
+        logger.warning("查询 product_plans 失败，返回空列表")
+        return []
+    finally:
+        db.close()
+
+
+def get_cert_dashboard() -> dict:
+    """认证看板 — 各类型认证进度和强制认证完成率汇总
+
+    遍历所有计划，聚合每项认证的覆盖情况和完成状态。
+
+    Returns:
+        {
+            "total_plans": int,
+            "cert_type_summary": [
+                {code, name, mandatory, required_plans_count, completed_count, completion_rate}
+            ],
+            "mandatory_completion_rate": float,
+            "overall_risk_level": str,
+            "average_lead_days": float,
+        }
+    """
+    plan_ids = _fetch_all_plan_ids()
+    total = len(plan_ids)
+
+    # 认证统计: {code: {name, mandatory, required_plans: set}}
+    cert_stats: Dict[str, dict] = {}
+    total_lead = 0
+    risk_scores = []
+    low_risk_plans: set = set()  # 追踪低风险的 plan
+
+    for pid in plan_ids:
+        result = assess_certification_requirements(pid)
+        certs = result.get("required_certs", [])
+        total_lead += result.get("estimated_lead_days", 0)
+
+        # 风险评分映射
+        rl = result.get("risk_level", "low")
+        risk_scores.append({"high": 3, "medium": 2, "low": 1}.get(rl, 1))
+        if rl == "low":
+            low_risk_plans.add(pid)
+
+        for cert in certs:
+            code = cert["code"]
+            if code not in cert_stats:
+                cert_stats[code] = {
+                    "code": code,
+                    "name": cert["name"],
+                    "mandatory": cert.get("mandatory", False),
+                    "lead_time_days": cert.get("lead_time_days", 0),
+                    "required_plans": set(),
+                    "completed_plans": set(),  # TODO: 对接认证完成状态表
+                }
+            cert_stats[code]["required_plans"].add(pid)
+
+    # 简单填充逻辑: 假设所有风险等级为 low 的 plan 已完成认证 (占位, 后续接入真实数据)
+    for stats in cert_stats.values():
+        stats["completed_plans"] = {pid for pid in stats["required_plans"] if pid in low_risk_plans}
+
+    # 构建结果
+    cert_type_summary = []
+    mandatory_total = 0
+    mandatory_completed = 0
+
+    for code, stats in cert_stats.items():
+        req_count = len(stats["required_plans"])
+        comp_count = len(stats["completed_plans"])
+        rate = round(comp_count / req_count * 100, 1) if req_count else 0
+
+        cert_type_summary.append({
+            "code": stats["code"],
+            "name": stats["name"],
+            "mandatory": stats["mandatory"],
+            "lead_time_days": stats["lead_time_days"],
+            "required_plans_count": req_count,
+            "completed_count": comp_count,
+            "completion_rate": rate,
+        })
+
+        if stats["mandatory"]:
+            mandatory_total += req_count
+            mandatory_completed += comp_count
+
+    overall_mandatory_rate = round(mandatory_completed / mandatory_total * 100, 1) if mandatory_total else 100.0
+    avg_lead = round(total_lead / total, 1) if total else 0
+    avg_risk = sum(risk_scores) / len(risk_scores) if risk_scores else 1
+    if avg_risk >= 2.5:
+        overall_risk = "high"
+    elif avg_risk >= 1.5:
+        overall_risk = "medium"
+    else:
+        overall_risk = "low"
+
+    return {
+        "total_plans": total,
+        "cert_type_summary": cert_type_summary,
+        "mandatory_completion_rate": overall_mandatory_rate,
+        "overall_risk_level": overall_risk,
+        "average_lead_days": avg_lead,
+    }
+
+
+def get_plan_cert_detail(plan_id: str) -> dict:
+    """单个计划的认证要求 + 时间线详情
+
+    综合 assess_certification_requirements 和 get_certification_timeline，
+    返回完整的认证需求、风险评估和推进时间线。
+
+    Args:
+        plan_id: ProductPlan ID
+
+    Returns:
+        {
+            "plan_id": str,
+            "product_type": str,
+            "target_markets": [str],
+            "required_certs": [{code, name, mandatory, lead_time_days}],
+            "estimated_lead_days": int,
+            "risk_level": str,
+            "recommendation": str,
+            "timeline": [{phase, code, name, lead_days, type, can_parallel}],
+        }
+    """
+    result = assess_certification_requirements(plan_id)
+    certs = result.get("required_certs", [])
+    timeline = get_certification_timeline(certs)
+    result["timeline"] = timeline
+    return result

@@ -175,3 +175,122 @@ def _fetch_bom_items(db, plan_id: str) -> List[dict]:
     except Exception:
         logger.warning("BOM 物料查询失败（可能表不存在）: plan=%s", plan_id)
         return []
+
+
+# ═══════════════════════════════════════════
+# 仪表盘聚合方法（不破坏现有 assess_bom_risk）
+# ═══════════════════════════════════════════
+
+
+def _fetch_all_plan_ids() -> List[str]:
+    """从 product_plans 表获取所有 plan_id"""
+    from app.core.database import SessionLocal
+    from sqlalchemy import text
+    db = SessionLocal()
+    try:
+        rows = db.execute(
+            text("SELECT id FROM product_plans ORDER BY created_at DESC")
+        ).fetchall()
+        return [r[0] for r in rows]
+    except Exception:
+        logger.warning("查询 product_plans 失败，返回空列表")
+        return []
+    finally:
+        db.close()
+
+
+def get_all_risk_summary() -> dict:
+    """所有计划的风险汇总
+
+    Returns:
+        {
+            "total_plans": int,
+            "high_risk_count": int,
+            "medium_risk_count": int,
+            "low_risk_count": int,
+            "plans_by_risk": [{plan_id, name, risk_level, risk_score}]
+        }
+    """
+    plan_ids = _fetch_all_plan_ids()
+    total = len(plan_ids)
+    high = medium = low = 0
+    plan_list = []
+
+    for pid in plan_ids:
+        result = assess_bom_risk(pid)
+        risk_level = result.get("risk_level", MaterialRiskLevel.LOW)
+        if risk_level == MaterialRiskLevel.HIGH:
+            high += 1
+        elif risk_level == MaterialRiskLevel.MEDIUM:
+            medium += 1
+        else:
+            low += 1
+        plan_list.append({
+            "plan_id": pid,
+            "risk_level": risk_level,
+            "risk_score": result.get("risk_score", 0),
+            "total_items": result.get("total_items", 0),
+            "high_risk_count": result.get("high_risk_count", 0),
+        })
+
+    return {
+        "total_plans": total,
+        "high_risk_count": high,
+        "medium_risk_count": medium,
+        "low_risk_count": low,
+        "plans": plan_list,
+    }
+
+
+def get_plan_risk_detail(plan_id: str) -> dict:
+    """单个计划的详细风险评估
+
+    在 assess_bom_risk 基础上增加物料明细列表和风险分布。
+
+    Args:
+        plan_id: ProductPlan ID
+
+    Returns:
+        {
+            "plan_id": str,
+            "risk_level": str,
+            "risk_score": int,
+            "total_items": int,
+            "high_risk_count": int,
+            "medium_risk_count": int,
+            "low_risk_count": int,
+            "high_risk_items": [{name, type, supplier, score}],
+            "items": [{name, type, supplier, risk_level, score}],
+            "recommendation": str,
+        }
+    """
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        items = _fetch_bom_items(db, plan_id)
+        result = assess_bom_risk(plan_id, items)
+
+        # 为每个物料标注风险等级
+        item_details = []
+        for item in items:
+            level, score = _get_material_risk(
+                material_type=item.get("material_type", "generic"),
+                supplier=item.get("supplier", ""),
+                is_new_supplier=item.get("is_new_supplier", False),
+                is_key_part=item.get("is_key_part", False),
+            )
+            item_details.append({
+                "name": item.get("name", "Unnamed"),
+                "type": item.get("material_type", "generic"),
+                "supplier": item.get("supplier", ""),
+                "risk_level": level,
+                "score": score,
+            })
+
+        result["items"] = item_details
+        return result
+    except Exception as e:
+        logger.exception("获取计划风险详情失败: plan=%s", plan_id)
+        return {"plan_id": plan_id, "error": str(e), "risk_level": MaterialRiskLevel.HIGH}
+    finally:
+        db.close()

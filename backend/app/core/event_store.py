@@ -23,6 +23,21 @@ logger = logging.getLogger(__name__)
 
 
 # ════════════════════════════════════════════════════════
+# 辅助函数
+# ════════════════════════════════════════════════════════
+
+
+def _safe_iso(dt) -> Optional[str]:
+    """将 datetime 转换为 ISO 8601 字符串，None-safe"""
+    if dt is None:
+        return None
+    try:
+        return dt.isoformat()
+    except Exception:
+        return None
+
+
+# ════════════════════════════════════════════════════════
 # Event Store — 持久化 + 查询 + Replay
 # ════════════════════════════════════════════════════════
 
@@ -139,7 +154,7 @@ class EventStore:
                     "event_version": r[2],
                     "payload": json.loads(r[3]) if r[3] else {},
                     "state_snapshot": json.loads(r[4]) if r[4] else None,
-                    "created_at": r[5].isoformat() if r[5] else None,
+                    "created_at": _safe_iso(r[5]),
                     "status": r[6],
                     "plan_id": r[7],
                 }
@@ -248,7 +263,7 @@ class EventStore:
                 state["last_event"] = {
                     "id": r[0],
                     "type": r[1],
-                    "at": r[5].isoformat() if r[5] else None,
+                    "at": _safe_iso(r[5]),
                 }
 
             state["replayed_from_snapshot"] = snapshot_idx >= 0
@@ -284,6 +299,210 @@ class EventStore:
                 if success:
                     results.append(state)
             return results
+        finally:
+            if close_db:
+                db.close()
+
+    # ════════════════════════════════════════════════════════
+    # 新增: 分页时间线 + Saga 链 + 快照差异
+    # ════════════════════════════════════════════════════════
+
+    @staticmethod
+    def paginated_timeline(
+        plan_id: str,
+        page: int = 1,
+        page_size: int = 50,
+        event_type: Optional[str] = None,
+        status: Optional[str] = None,
+        db: Optional[Session] = None,
+    ) -> dict:
+        """分页查询事件时间线，支持按 event_type / status 过滤
+
+        Returns:
+            dict: {"items": [...], "total": int, "page": int, "page_size": int}
+        """
+        close_db = db is None
+        if db is None:
+            db = SessionLocal()
+        try:
+            EventStore._ensure_columns(db)
+
+            # 构建 WHERE 条件
+            conditions = "WHERE plan_id = :plan_id"
+            params: dict = {"plan_id": plan_id}
+
+            if event_type:
+                conditions += " AND event_type = :event_type"
+                params["event_type"] = event_type
+            if status:
+                conditions += " AND status = :status"
+                params["status"] = status
+
+            # 总数
+            count_sql = text(f"SELECT COUNT(*) FROM event_logs {conditions}")
+            total = db.execute(count_sql, params).scalar() or 0
+
+            # 分页数据
+            offset = (page - 1) * page_size
+            data_sql = text(f"""
+                SELECT id, event_type, event_version, payload,
+                       state_snapshot, created_at, status, plan_id, saga_id
+                FROM event_logs
+                {conditions}
+                ORDER BY created_at ASC
+                LIMIT :limit OFFSET :offset
+            """)
+            params["limit"] = page_size
+            params["offset"] = offset
+            rows = db.execute(data_sql, params).fetchall()
+
+            items = []
+            for r in rows:
+                items.append({
+                    "id": r[0],
+                    "event_type": r[1],
+                    "event_version": r[2],
+                    "payload": json.loads(r[3]) if r[3] else {},
+                    "state_snapshot": json.loads(r[4]) if r[4] else None,
+                    "created_at": _safe_iso(r[5]),
+                    "status": r[6],
+                    "plan_id": r[7],
+                    "saga_id": r[8],
+                })
+
+            return {
+                "items": items,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+            }
+        finally:
+            if close_db:
+                db.close()
+
+    @staticmethod
+    def get_saga_chain(
+        saga_id: str,
+        db: Optional[Session] = None,
+    ) -> List[dict]:
+        """按 saga_id 查询完整步骤链（按时间升序）"""
+        close_db = db is None
+        if db is None:
+            db = SessionLocal()
+        try:
+            EventStore._ensure_columns(db)
+            rows = db.execute(
+                text("""
+                    SELECT id, event_type, event_version, payload,
+                           state_snapshot, created_at, status, plan_id, saga_id
+                    FROM event_logs
+                    WHERE saga_id = :saga_id
+                    ORDER BY created_at ASC
+                """),
+                {"saga_id": saga_id},
+            ).fetchall()
+
+            result = []
+            for r in rows:
+                result.append({
+                    "id": r[0],
+                    "event_type": r[1],
+                    "event_version": r[2],
+                    "payload": json.loads(r[3]) if r[3] else {},
+                    "state_snapshot": json.loads(r[4]) if r[4] else None,
+                    "created_at": _safe_iso(r[5]),
+                    "status": r[6],
+                    "plan_id": r[7],
+                    "saga_id": r[8],
+                })
+            return result
+        finally:
+            if close_db:
+                db.close()
+
+    @staticmethod
+    def get_snapshot_diff_for_event(
+        event_id: int,
+        db: Optional[Session] = None,
+    ) -> Optional[dict]:
+        """获取某个事件前后的状态快照差异
+
+        对比该事件的 state_snapshot 与上一个同 plan_id 事件的 state_snapshot，
+        返回差异字段列表及前后值。
+        """
+        close_db = db is None
+        if db is None:
+            db = SessionLocal()
+        try:
+            EventStore._ensure_columns(db)
+
+            # 获取当前事件
+            row = db.execute(
+                text("""
+                    SELECT id, event_type, plan_id, state_snapshot, created_at
+                    FROM event_logs
+                    WHERE id = :eid
+                """),
+                {"eid": event_id},
+            ).fetchone()
+            if not row:
+                return None
+
+            event_id_val, event_type, plan_id, snapshot_raw, created_at = row
+            current_snapshot = json.loads(snapshot_raw) if snapshot_raw else {}
+
+            # 没有 plan_id → 无法找到前一个事件
+            if not plan_id:
+                return {
+                    "event_id": event_id_val,
+                    "event_type": event_type,
+                    "created_at": _safe_iso(created_at),
+                    "previous_snapshot": None,
+                    "current_snapshot": current_snapshot,
+                    "diff": [],
+                    "note": "该事件无关联 plan_id，无法计算前后差异",
+                }
+
+            # 找上一个有 state_snapshot 的事件（同 plan_id，id < 当前）
+            prev_row = db.execute(
+                text("""
+                    SELECT id, state_snapshot
+                    FROM event_logs
+                    WHERE plan_id = :plan_id AND id < :eid AND state_snapshot IS NOT NULL
+                    ORDER BY id DESC
+                    LIMIT 1
+                """),
+                {"plan_id": plan_id, "eid": event_id_val},
+            ).fetchone()
+
+            prev_snapshot = {}
+            prev_id = None
+            if prev_row:
+                prev_id = prev_row[0]
+                prev_snapshot = json.loads(prev_row[1]) if prev_row[1] else {}
+
+            # 计算差异
+            diff = []
+            all_keys = set(list(prev_snapshot.keys()) + list(current_snapshot.keys()))
+            for key in sorted(all_keys):
+                old_val = prev_snapshot.get(key)
+                new_val = current_snapshot.get(key)
+                if old_val != new_val:
+                    diff.append({
+                        "field": key,
+                        "before": old_val,
+                        "after": new_val,
+                    })
+
+            return {
+                "event_id": event_id_val,
+                "event_type": event_type,
+                "created_at": _safe_iso(created_at),
+                "previous_event_id": prev_id,
+                "previous_snapshot": prev_snapshot,
+                "current_snapshot": current_snapshot,
+                "diff": diff,
+            }
         finally:
             if close_db:
                 db.close()

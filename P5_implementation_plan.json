@@ -1,0 +1,138 @@
+{
+  "phase_tasks": [
+    {
+      "id": "P5-1",
+      "title": "Event Timeline 后端API增强",
+      "domain_tags": ["fastapi", "sqlalchemy", "event_store", "saga_engine"],
+      "risk_level": "low",
+      "estimated_complexity": 5,
+      "description": "增强现有事件存储和Saga引擎后端能力，支撑前端时间线可视化。\n1) 增强 event_store.py - 添加 paginated_timeline() 支持分页、event_type/status 过滤、get_saga_chain() 按 saga_id 查询完整步骤链\n2) 创建 api/event_timeline.py - GET /api/v2/events/timeline/{plan_id} (增强), GET /api/v2/events/saga/{saga_id}, GET /api/v2/events/replay/{plan_id} (带snapshot差异)\n3) saga_engine.py 增强 SagaResult.to_dict() 增加 duration 字段",
+      "depends_on": []
+    },
+    {
+      "id": "P5-2",
+      "title": "Event Timeline 前端UI",
+      "domain_tags": ["vue3", "typescript", "element-plus", "echarts"],
+      "risk_level": "medium",
+      "estimated_complexity": 7,
+      "description": "构建产品策划生命周期可视化、Saga执行链、Event Replay查看器三大页面。\n1) EventTimelineView.vue - el-timeline Gantt风格时间线\n2) EventReplayViewer.vue - 双栏布局：事件列表+状态快照diff\n3) SagaChainViewer.vue - el-steps Saga步骤链流程图\n4) 新路由+菜单注册",
+      "depends_on": ["P5-1"]
+    },
+    {
+      "id": "P5-3",
+      "title": "MQ/MRC/CDF 后端聚合API",
+      "domain_tags": ["fastapi", "sqlalchemy", "mq_service", "mrc_service", "cdf_service"],
+      "risk_level": "low",
+      "estimated_complexity": 4,
+      "description": "为前端仪表盘提供物料风险、制造就绪度、认证决策的聚合数据API。\n1) mq_service.py 增强: get_all_risk_summary(), get_plan_risk_detail()\n2) mrc_service.py 增强: get_all_mrc_summary(), get_plan_mrc_detail()\n3) cdf_service.py 增强: get_cert_dashboard()\n4) 新建 api/risk_dashboard.py 聚合路由",
+      "depends_on": []
+    },
+    {
+      "id": "P5-4",
+      "title": "MQ/MRC/CDF 前端可视化看板",
+      "domain_tags": ["vue3", "typescript", "echarts", "element-plus"],
+      "risk_level": "medium",
+      "estimated_complexity": 7,
+      "description": "构建物料风险评分卡、认证状态看板、制造准备度可视化三大面板。\n1) RiskDashboard.vue - 3个tab入口页\n2) MQScorecardPanel.vue - 高风险物料清单+风险分布饼图\n3) MRCReadinessPanel.vue - 4维度雷达图+差距清单\n4) CDFTimelinePanel.vue - 认证Gantt时间线+合规badge\n5) 新路由+菜单",
+      "depends_on": ["P5-3"]
+    },
+    {
+      "id": "P5-5",
+      "title": "多租户后端基础设施（org_id + 数据隔离）",
+      "domain_tags": ["fastapi", "sqlalchemy", "mariadb", "permissions"],
+      "risk_level": "high",
+      "estimated_complexity": 8,
+      "description": "核心数据模型改造：引入Organization，实现按租户的数据隔离。\n1) 新建 models/organization.py (Organization表+OrganizationMember关联表)\n2) 修改 models/user.py (添加 org_id + is_org_admin)\n3) core/database.py 增强 TenantSession 中间件\n4) core/permissions.py 增强 org级权限检查\n5) core/security.py JWT增加 org_id\n6) 核心表(plans/projects/bom)添加org_id列\n7) 数据库迁移脚本",
+      "depends_on": []
+    },
+    {
+      "id": "P5-6",
+      "title": "多租户后端管理API",
+      "domain_tags": ["fastapi", "sqlalchemy", "rbac", "admin"],
+      "risk_level": "medium",
+      "estimated_complexity": 5,
+      "description": "租户管理CRUD接口和角色管理API。\n1) 新建 api/admin_tenant.py - 组织CRUD+成员管理+角色分配\n2) 增强 admin_role_mappings.py org维度\n3) 新建 schemas/tenant.py",
+      "depends_on": ["P5-5"]
+    },
+    {
+      "id": "P5-7",
+      "title": "多租户前端管理界面",
+      "domain_tags": ["vue3", "typescript", "element-plus", "admin"],
+      "risk_level": "medium",
+      "estimated_complexity": 5,
+      "description": "组织管理和租户级角色配置的可视化界面。\n1) TenantManagement.vue - 组织列表+编辑+成员管理\n2) TenantRoleConfig.vue - 角色模板配置树\n3) AdminConfig.vue 增加租户tab\n4) 登录页支持多组织选择",
+      "depends_on": ["P5-6"]
+    },
+    {
+      "id": "P5-8",
+      "title": "OpenAPI 规范标准化",
+      "domain_tags": ["fastapi", "openapi", "documentation"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "description": "为所有API生成规范的OpenAPI 3.0文档。\n1) 增强 main.py OpenAPI metadata (tags/security/servers)\n2) 补充所有API路由的docstring和response_model\n3) 配置 openapi_url 和自定义docs端点\n4) 生成 openapi.yaml 静态文件",
+      "depends_on": []
+    },
+    {
+      "id": "P5-9",
+      "title": "Python & TypeScript SDK 生成",
+      "domain_tags": ["openapi", "codegen", "python", "typescript"],
+      "risk_level": "low",
+      "estimated_complexity": 4,
+      "description": "基于OpenAPI规范自动生成客户端SDK。\n1) Python SDK - sdk/python/ros_client/ (openapi-python-client)\n2) TypeScript SDK - sdk/typescript/src/ (openapi-typescript-codegen)\n3) SDK README和发布脚本",
+      "depends_on": ["P5-8"]
+    },
+    {
+      "id": "P5-10",
+      "title": "Webhook 系统",
+      "domain_tags": ["fastapi", "celery", "http", "events"],
+      "risk_level": "medium",
+      "estimated_complexity": 6,
+      "description": "事件驱动的Webhook推送系统。\n1) 新建 models/webhook.py (Subscription+DeliveryLog)\n2) 新建 services/webhook_service.py (Dispatcher+HMAC签名+重试)\n3) 新建 api/webhooks.py (CRUD+测试+日志)\n4) events.py 集成Webhook dispatch\n5) 前端 WebhookConfig.vue 管理页面",
+      "depends_on": ["P5-8"]
+    },
+    {
+      "id": "P5-11",
+      "title": "配置分离与环境变量重构",
+      "domain_tags": ["fastapi", "config", "environment"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "description": "消除硬编码配置，全部通过环境变量/配置文件注入。\n1) core/config.py 重构(多profile支持：dev/staging/prod)\n2) workers/celery_app.py 使用settings取代硬编码URL\n3) .env.example + .env.dev + .env.prod 模板\n4) database.py TLS/SSL支持\n5) 审计所有硬编码常量",
+      "depends_on": []
+    },
+    {
+      "id": "P5-12",
+      "title": "Docker Compose 一键部署",
+      "domain_tags": ["docker", "docker-compose", "nginx", "deployment"],
+      "risk_level": "medium",
+      "estimated_complexity": 6,
+      "description": "完整容器化部署方案。\n1) Dockerfile.backend (Python 3.11-slim多阶段构建)\n2) Dockerfile.frontend (Node构建+nginx生产)\n3) docker-compose.yml (mariadb+redis+backend+frontend)\n4) nginx.conf (反向代理+静态服务+gzip)\n5) docker-entrypoint.sh (自动迁移+启动)\n6) docker-compose.override.yml (开发模式)",
+      "depends_on": ["P5-11"]
+    },
+    {
+      "id": "P5-13",
+      "title": "离线安装包构建",
+      "domain_tags": ["scripts", "packaging", "deployment"],
+      "risk_level": "low",
+      "estimated_complexity": 4,
+      "description": "标准化离线安装包，支持有网络限制的环境下一键部署。\n1) build_offline.sh (npm build+pip download+docker save+打包)\n2) offline_install.sh (解压+docker load+compose up+初始化)\n3) healthcheck.sh (API/DB/Redis/EventStore验证)\n4) init_admin.sh (首次启动初始admin账号)",
+      "depends_on": ["P5-12"]
+    }
+  ],
+  "implementation_order": [
+    "P5-11",
+    "P5-8",
+    "P5-1",
+    "P5-3",
+    "P5-5",
+    "P5-6",
+    "P5-2",
+    "P5-4",
+    "P5-7",
+    "P5-9",
+    "P5-10",
+    "P5-12",
+    "P5-13"
+  ],
+  "architecture_notes": "【关键架构决策】\n\n1. 多租户：采用「共享数据库+行级org_id隔离」模式。\n   - org_id通过FastAPI Depends中间件自动注入，无需每个查询手动加where\n   - 所有org_id列建索引，迁移先用ALTER TABLE加列(可空)再填充默认值\n   - 后续可升级独立Schema模式\n\n2. 事件时间线：重用现有event_store.py(get_timeline)，前端使用el-timeline+ECharts Gantt混合。Event Replay通过snapshot diff机制显示增量变化。Saga链使用el-steps实现流程图。\n\n3. Webhook：订阅事件类型使用现有EventTypes枚举，签名HMAC-SHA256，重试指数退避(1s-4s-16s)，httpx.AsyncClient异步推送。\n\n4. 配置分层：环境变量 > .env.{ENV} > .env > 默认值。敏感信息仅从环境变量读取。\n\n5. 前端风格：所有P5新页面继承现有claude-theme.css CSS变量体系(--c-bg-page/--c-accent等)，不建新主题。\n\n6. 部署：Docker Compose兼容Swarm/K8s迁移，前端构建产物nginx提供，容器不含Node运行时。",
+  "risk_assessment": "【主要风险和缓解措施】\n\n1. 高：多租户数据隔离完整性\n   - 风险：某处API漏加org_id过滤导致跨组织数据泄露\n   - 措施：TenantSession中间件自动注入+所有新建查询强制使用get_current_org_id()+编写隔离测试\n\n2. 中：事件Timeline UI性能\n   - 风险：大量事件(10万+)导致前端渲染慢\n   - 措施：后端分页(默认50)+前端虚拟滚动(el-table-v2)+默认30天筛选\n\n3. 中：Docker Compose首次部署复杂度\n   - 风险：MySQL/Redis版本与环境变量配置出错\n   - 措施：.env.prod模板(含中文注释)+healthcheck.sh+init_admin.sh+部署README\n\n4. 中：Webhook不可靠回调\n   - 风险：目标服务器不可达导致事件丢失\n   - 措施：DeliveryLog持久化+管理界面查看7天日志+重试3次+手动重试\n\n5. 低：SDK版本与API不同步\n   - 措施：SDK每次构建从OpenAPI spec重新生成+版本对齐\n\n6. 中：数据迁移兼容性\n   - 措施：使用MariaDB ONLINE ALTER TABLE+分两步迁移(先加列再填充再NOT NULL)"
+}

@@ -16,9 +16,11 @@
 """
 import json
 import logging
+import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from app.core.database import SessionLocal
@@ -74,6 +76,30 @@ class SagaResult:
     error: Optional[str] = None
     failed_step: Optional[str] = None
     compensation_results: Dict[str, bool] = field(default_factory=dict)
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
+
+    def to_dict(self) -> dict:
+        """转换为字典，自动计算 duration（秒）"""
+        d = {
+            "saga_id": self.saga_id,
+            "status": self.status.value,
+            "steps": {k: v.value for k, v in self.steps.items()},
+            "error": self.error,
+            "failed_step": self.failed_step,
+            "compensation_results": self.compensation_results,
+            "step_results": self.step_results,
+        }
+        if self.start_time is not None:
+            d["start_time"] = datetime.fromtimestamp(self.start_time).isoformat()
+            if self.end_time is not None:
+                d["end_time"] = datetime.fromtimestamp(self.end_time).isoformat()
+                d["duration"] = round(self.end_time - self.start_time, 4)
+            else:
+                d["duration"] = round(time.time() - self.start_time, 4)  # 仍在执行中
+        else:
+            d["duration"] = None
+        return d
 
 
 # ════════════════════════════════════════════════════════
@@ -125,6 +151,7 @@ class SagaCoordinator:
             result = SagaResult(saga_id=saga_id, status=SagaStatus.PENDING)
             self._active_sagas[saga_id] = result
 
+        result.start_time = time.time()
         result.status = SagaStatus.IN_PROGRESS
         ctx = context or {}
         executed: List[str] = []
@@ -155,16 +182,19 @@ class SagaCoordinator:
                                  saga_id, step.name, result.error)
                     # 启动补偿
                     self._compensate(result, executed, steps, ctx)
+                    result.end_time = time.time()
                     return result
 
             # 全部成功
             result.status = SagaStatus.COMPLETED
+            result.end_time = time.time()
             logger.info("Saga COMPLETED: %s (%d steps)", saga_id, len(steps))
             return result
 
         except Exception as e:
             result.status = SagaStatus.FAILED
             result.error = str(e)
+            result.end_time = time.time()
             logger.exception("Saga unexpected error: %s", saga_id)
             self._compensate(result, executed, steps, ctx)
             return result
