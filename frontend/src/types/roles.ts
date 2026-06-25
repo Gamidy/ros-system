@@ -97,6 +97,10 @@ export const ALL_MENUS: MenuItem[] = [
   // P0-8 DFM可制造性分析
   { path: '/dfm/checklist',   title: 'DFM检查项',        icon: Document },
   { path: '/dfm/reports',     title: 'DFM分析报告',      icon: DataAnalysis },
+  // P0-7 外协管理
+  { path: '/outsource/partners',  title: '外协厂商',        icon: ShoppingCart },
+  { path: '/outsource/orders',    title: '外协订单',        icon: List },
+  { path: '/outsource/quality-records', title: '外协质检',  icon: Document },
 ]
 
 /**

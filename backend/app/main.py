@@ -16,6 +16,7 @@ from app.api import ecr, eco
 from app.api import audit_logs
 from app.api import safety
 from app.api import manufacturability
+from app.api import outsource
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -129,6 +130,7 @@ app.include_router(s2_change_impact.router)
 app.include_router(alerts.router, prefix="/api")
 app.include_router(safety.router)
 app.include_router(manufacturability.router)
+app.include_router(outsource.router)
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")
 app.include_router(purchases.router, prefix="/api")

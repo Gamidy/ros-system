@@ -80,6 +80,10 @@ ALL_MENUS = [
     # P0-8 — DFM可制造性分析
     "dfm-checklist",           # DFM检查项模板
     "dfm-reports",             # DFM分析报告
+    # P0-7 — 外协管理
+    "outsource-partners",      # 外协厂商
+    "outsource-orders",        # 外协订单
+    "outsource-quality",       # 外协质检
 ]
 
 # 角色 → 菜单 映射表
@@ -184,6 +188,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # P0-7 外协管理
+        'outsource-partners', 'outsource-orders', 'outsource-quality',
     ],
     "quality_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -200,6 +206,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # P0-7 外协管理
+        'outsource-partners', 'outsource-orders', 'outsource-quality',
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -370,6 +378,10 @@ MENU_PATH_MAP: dict[str, str] = {
     # P0-8 DFM可制造性分析
     "dfm-checklist": "/dfm/checklist",
     "dfm-reports": "/dfm/reports",
+    # P0-7 外协管理
+    "outsource-partners": "/outsource/partners",
+    "outsource-orders": "/outsource/orders",
+    "outsource-quality": "/outsource/quality-records",
 }
 
 

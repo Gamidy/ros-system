@@ -344,6 +344,25 @@ const router = createRouter({
           component: () => import('../views/manufacturability/DFMReportTab.vue'),
           meta: { title: 'DFM分析报告', menu: 'dfm-reports' },
         },
+        // P0-7 外协管理
+        {
+          path: 'outsource/partners',
+          name: 'OutsourcePartners',
+          component: () => import('../views/outsource/OutsourcePartnerTab.vue'),
+          meta: { title: '外协厂商', menu: 'outsource-partners' },
+        },
+        {
+          path: 'outsource/orders',
+          name: 'OutsourceOrders',
+          component: () => import('../views/outsource/OutsourceOrderTab.vue'),
+          meta: { title: '外协订单', menu: 'outsource-orders' },
+        },
+        {
+          path: 'outsource/quality-records',
+          name: 'OutsourceQuality',
+          component: () => import('../views/outsource/OutsourceQualityTab.vue'),
+          meta: { title: '外协质检', menu: 'outsource-quality' },
+        },
       ],
     },
   ],

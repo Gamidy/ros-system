@@ -47,6 +47,10 @@ from app.models.safety import (
 from app.models.manufacturability import (
     DFMChecklist, DFMReport, DFMReportItem, DFMScoreWeight,
 )
+from app.models.outsource import (
+    OutsourcePartner, OutsourceOrder, OutsourceOrderItem,
+    OutsourceQualityRecord, OutsourceQualityFile,
+)
 
 __all__ = [
     "User",
@@ -99,4 +103,9 @@ __all__ = [
     "DFMReport",
     "DFMReportItem",
     "DFMScoreWeight",
+    "OutsourcePartner",
+    "OutsourceOrder",
+    "OutsourceOrderItem",
+    "OutsourceQualityRecord",
+    "OutsourceQualityFile",
 ]

@@ -24,6 +24,7 @@ from app.api import (
     ecr, eco,
     safety,
     manufacturability,
+    outsource,
     # 审计日志查询
     audit_logs,
     # 管理功能
@@ -52,6 +53,7 @@ __all__ = [
     "ecr", "eco",
     "safety",
     "manufacturability",
+    "outsource",
     "audit_logs",
     "admin_cost_configs", "admin_role_mappings",
     "admin_role_templates", "admin_tenant",
