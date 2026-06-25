@@ -9,104 +9,112 @@
       </div>
     </div>
 
-    <!-- ═══════════ 筛选栏 ═══════════ -->
-    <el-row :gutter="12" class="ppc-filters">
-      <el-col :span="6">
-        <el-select v-model="filterStatus" placeholder="按状态筛选" clearable size="small" style="width:100%" @change="fetchPlans">
-          <el-option label="草稿" value="draft" />
-          <el-option label="竞品分析" value="competitor" />
-          <el-option label="产品定义" value="definition" />
-          <el-option label="成本目标" value="costing" />
-          <el-option label="技术方案" value="tech_input" />
-          <el-option label="立项审批" value="project_init" />
-          <el-option label="已批准" value="approved" />
-          <el-option label="已发布" value="released" />
-        </el-select>
-      </el-col>
-      <el-col :span="6">
-        <el-input v-model="searchText" placeholder="搜索策划名称" size="small" clearable @change="fetchPlans" />
-      </el-col>
-    </el-row>
+    <!-- ═══════════ 主体区 + 全局待办 ═══════════ -->
+    <el-row :gutter="16">
+      <el-col :xs="24" :md="18" :lg="18">
+        <!-- ═══════════ 筛选栏 ═══════════ -->
+        <el-row :gutter="12" class="ppc-filters">
+          <el-col :span="6">
+            <el-select v-model="filterStatus" placeholder="按状态筛选" clearable size="small" style="width:100%" @change="fetchPlans">
+              <el-option label="草稿" value="draft" />
+              <el-option label="竞品分析" value="competitor" />
+              <el-option label="产品定义" value="definition" />
+              <el-option label="成本目标" value="costing" />
+              <el-option label="技术方案" value="tech_input" />
+              <el-option label="立项审批" value="project_init" />
+              <el-option label="已批准" value="approved" />
+              <el-option label="已发布" value="released" />
+            </el-select>
+          </el-col>
+          <el-col :span="6">
+            <el-input v-model="searchText" placeholder="搜索策划名称" size="small" clearable @change="fetchPlans" />
+          </el-col>
+        </el-row>
 
-    <!-- ═══════════ 下一步动作引导 ═══════════ -->
-    <el-card v-if="selectedPlanNextAction" shadow="never" class="next-action-card">
-      <div class="next-action-header">
-        <span class="next-action-label">下一步动作</span>
-        <el-tag size="small" type="warning" effect="dark">{{ selectedPlanName }}</el-tag>
-      </div>
-      <div class="next-action-body">
-        <el-steps :active="nextActionStepIndex" align-center finish-status="success" size="small">
-          <el-step :title="selectedPlanNextAction.current_stage" />
-          <el-step v-if="selectedPlanNextAction.next_stage" :title="selectedPlanNextAction.next_stage" />
-        </el-steps>
-        <div class="next-action-text">
-          <el-alert
-            :title="selectedPlanNextAction.next_action"
-            :type="selectedPlanNextAction.can_advance ? 'success' : 'warning'"
-            show-icon
-            :closable="false"
+        <!-- ═══════════ 下一步动作引导 ═══════════ -->
+        <el-card v-if="selectedPlanNextAction" shadow="never" class="next-action-card">
+          <div class="next-action-header">
+            <span class="next-action-label">下一步动作</span>
+            <el-tag size="small" type="warning" effect="dark">{{ selectedPlanName }}</el-tag>
+          </div>
+          <div class="next-action-body">
+            <el-steps :active="nextActionStepIndex" align-center finish-status="success" size="small">
+              <el-step :title="selectedPlanNextAction.current_stage" />
+              <el-step v-if="selectedPlanNextAction.next_stage" :title="selectedPlanNextAction.next_stage" />
+            </el-steps>
+            <div class="next-action-text">
+              <el-alert
+                :title="selectedPlanNextAction.next_action"
+                :type="selectedPlanNextAction.can_advance ? 'success' : 'warning'"
+                show-icon
+                :closable="false"
+              />
+            </div>
+            <div v-if="selectedPlanNextAction.missing_fields.length > 0" class="missing-fields">
+              <div v-for="f in selectedPlanNextAction.missing_fields" :key="f" class="missing-field-item">· {{ f }}</div>
+            </div>
+            <el-button
+              v-if="selectedPlanNextAction.can_advance && selectedPlanId"
+              type="primary"
+              size="small"
+              @click="advancePlan(selectedPlanId!)"
+              :loading="advancing"
+            >推进到下一阶段</el-button>
+          </div>
+        </el-card>
+
+        <!-- ═══════════ 策划列表 ═══════════ -->
+        <el-table :data="plans" stripe border size="small" v-loading="loading" @row-click="selectPlan" highlight-current-row>
+          <el-table-column prop="name" label="策划名称" min-width="180">
+            <template #default="{ row }">
+              <div class="plan-name-cell">{{ row.name }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="series" label="系列" width="100" />
+          <el-table-column prop="market" label="市场" width="100" />
+          <el-table-column label="当前阶段" width="120">
+            <template #default="{ row }">
+              <el-tag :type="stageTagType(row.status)" size="small">{{ stageLabel(row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="进度" width="180">
+            <template #default="{ row }">
+              <el-progress :percentage="stageProgress(row.status)" :stroke-width="8" :color="progressColor(row.status)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="关联项目" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.project_id" size="small" type="success">已关联</el-tag>
+              <span v-else class="no-project">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="创建时间" width="160">
+            <template #default="{ row }">{{ row.created_at?.substring(0, 10) || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button link size="small" type="primary" @click.stop="viewDetail(row)">详情</el-button>
+              <el-button link size="small" type="danger" @click.stop="deletePlan(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- ═══════════ 分页 ═══════════ -->
+        <div class="ppc-pagination">
+          <el-pagination
+            v-model:current-page="page"
+            :page-size="pageSize"
+            :total="total"
+            layout="prev, pager, next, total"
+            small
+            @current-change="fetchPlans"
           />
         </div>
-        <div v-if="selectedPlanNextAction.missing_fields.length > 0" class="missing-fields">
-          <div v-for="f in selectedPlanNextAction.missing_fields" :key="f" class="missing-field-item">· {{ f }}</div>
-        </div>
-        <el-button
-          v-if="selectedPlanNextAction.can_advance && selectedPlanId"
-          type="primary"
-          size="small"
-          @click="advancePlan(selectedPlanId!)"
-          :loading="advancing"
-        >推进到下一阶段</el-button>
-      </div>
-    </el-card>
-
-    <!-- ═══════════ 策划列表 ═══════════ -->
-    <el-table :data="plans" stripe border size="small" v-loading="loading" @row-click="selectPlan" highlight-current-row>
-      <el-table-column prop="name" label="策划名称" min-width="180">
-        <template #default="{ row }">
-          <div class="plan-name-cell">{{ row.name }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="series" label="系列" width="100" />
-      <el-table-column prop="market" label="市场" width="100" />
-      <el-table-column label="当前阶段" width="120">
-        <template #default="{ row }">
-          <el-tag :type="stageTagType(row.status)" size="small">{{ stageLabel(row.status) }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="进度" width="180">
-        <template #default="{ row }">
-          <el-progress :percentage="stageProgress(row.status)" :stroke-width="8" :color="progressColor(row.status)" />
-        </template>
-      </el-table-column>
-      <el-table-column label="关联项目" width="100">
-        <template #default="{ row }">
-          <el-tag v-if="row.project_id" size="small" type="success">已关联</el-tag>
-          <span v-else class="no-project">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="创建时间" width="160">
-        <template #default="{ row }">{{ row.created_at?.substring(0, 10) || '-' }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="120" fixed="right">
-        <template #default="{ row }">
-          <el-button link size="small" type="primary" @click.stop="viewDetail(row)">详情</el-button>
-          <el-button link size="small" type="danger" @click.stop="deletePlan(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <!-- ═══════════ 分页 ═══════════ -->
-    <div class="ppc-pagination">
-      <el-pagination
-        v-model:current-page="page"
-        :page-size="pageSize"
-        :total="total"
-        layout="prev, pager, next, total"
-        small
-        @current-change="fetchPlans"
-      />
-    </div>
+      </el-col>
+      <el-col :xs="24" :md="6" :lg="6">
+        <GlobalActionCard />
+      </el-col>
+    </el-row>
 
     <!-- ═══════════ 创建策划弹窗 ═══════════ -->
     <el-dialog v-model="showCreateDialog" title="新建产品策划" width="520px" :close-on-click-modal="false">
@@ -134,6 +142,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import api from '../../api'
+import GlobalActionCard from '../../components/GlobalActionCard.vue'
 
 const router = useRouter()
 

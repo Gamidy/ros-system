@@ -19,7 +19,7 @@ celery_app = Celery(
     "ros_worker",
     broker=BROKER_URL,
     backend=RESULT_BACKEND,
-    include=["app.workers.plan_worker"],
+    include=["app.workers.plan_worker", "app.workers.approval_reminder_worker"],
 )
 
 # ── 队列定义 ──
@@ -53,7 +53,13 @@ celery_app.conf.update(
     worker_concurrency=2,          # 2 个并行 worker（小内存服务器）
     worker_prefetch_multiplier=1,  # 每次只取一个任务
     # Beat 配置（定时任务）
-    beat_schedule={},
+    beat_schedule={
+        "scan-approval-reminders": {
+            "task": "scan_approval_reminders",
+            "schedule": 3600.0,  # 每小时扫描一次
+            "options": {"queue": "default"},
+        },
+    },
 )
 
 logger.info("Celery app initialized: broker=%s, backend=%s", BROKER_URL, RESULT_BACKEND)
