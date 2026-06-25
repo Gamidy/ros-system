@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.project import Project, ProjectGate, Risk
-from app.models.proposal_approval import ProposalApproval
+from app.models.approval import ApprovalRequest  # 统一审批引擎
 
 router = APIRouter(prefix="/rd", tags=["研发总监面板"])
 
@@ -123,19 +123,17 @@ def rd_panel(
         ProjectGate.status != "passed",
     ).scalar() or 0
 
-    # ── 4. 审批中 ──
-    pending_parallel = db.query(func.count(ProposalApproval.id)).filter(
-        ProposalApproval.status == "pending_parallel"
-    ).scalar() or 0
-
-    pending_director_count = db.query(func.count(ProposalApproval.id)).filter(
-        ProposalApproval.status == "pending_director"
+    # ── 4. 审批中: 统一 ApprovalRequest 查询 ──
+    pending_proposal_count = db.query(func.count(ApprovalRequest.id)).filter(
+        ApprovalRequest.status == "pending",
+        ApprovalRequest.request_type == "proposal",
     ).scalar() or 0
 
     # 近30天审批完成数
-    recent_approved = db.query(func.count(ProposalApproval.id)).filter(
-        ProposalApproval.status == "approved",
-        ProposalApproval.updated_at >= thirty_days_ago,
+    recent_approved = db.query(func.count(ApprovalRequest.id)).filter(
+        ApprovalRequest.status == "approved",
+        ApprovalRequest.request_type == "proposal",
+        ApprovalRequest.updated_at >= thirty_days_ago,
     ).scalar() or 0
 
     # ── 5. 延期项目 ──
@@ -204,8 +202,7 @@ def rd_panel(
         },
         # 审批
         "approvals": {
-            "pending_parallel": pending_parallel,
-            "pending_director": pending_director_count,
+            "pending_proposal": pending_proposal_count,
             "recent_30d_approved": recent_approved,
         },
         # 延期

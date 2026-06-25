@@ -1,17 +1,132 @@
 <template>
   <div class="dashboard">
+    <!-- ═══════════ 顶部主CTA区域 ═══════════ -->
     <div class="dashboard-header">
       <div>
-        <h1 class="page-title">仪表盘</h1>
-        <p class="page-subtitle">实时查看系统运行状态和关键指标</p>
+        <h1 class="page-title">策划主线</h1>
+        <p class="page-subtitle">产品策划全生命周期管理 — 从立项到发布一站式追踪</p>
       </div>
-      <button class="refresh-btn" @click="refreshAll" :class="{ spinning: loading }">
-        <el-icon :size="18"><Refresh /></el-icon>
-        <span>刷新</span>
-      </button>
+      <div class="header-actions">
+        <button class="refresh-btn" @click="refreshAll" :class="{ spinning: loading || planLoading }">
+          <el-icon :size="18"><Refresh /></el-icon>
+          <span>刷新</span>
+        </button>
+        <el-button type="primary" size="large" @click="goToNewPlan">
+          <el-icon class="btn-icon"><Plus /></el-icon>
+          新建产品策划
+        </el-button>
+      </div>
     </div>
 
-    <!-- L1: System Health -->
+    <!-- ═══════════ 策划KPI卡片行 ═══════════ -->
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div class="section-badge" style="background: var(--c-primary-light, #ecf5ff); color: var(--c-primary, #409eff);">
+          <el-icon :size="16"><DataAnalysis /></el-icon>
+        </div>
+        <h2 class="section-title">策划概览</h2>
+        <span class="section-count">4 项指标</span>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card" @click="router.push('/product-plans')">
+          <div class="stat-icon" style="background: #409eff12; color: #409eff;">
+            <el-icon :size="22"><Folder /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #409eff;">{{ planKPIs.inProgress }}</div>
+            <div class="stat-label">进行中策划</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div class="stat-card" @click="router.push('/product-plans')">
+          <div class="stat-icon" style="background: #e6a23c12; color: #e6a23c;">
+            <el-icon :size="22"><Coin /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value stat-value-sm" style="color: #e6a23c;">
+              <span v-for="(count, stage) in planKPIs.stageDistribution" :key="stage" class="stage-chip">
+                {{ stageLabel(stage) }}<em>{{ count }}</em>
+              </span>
+            </div>
+            <div class="stat-label">各阶段分布</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div class="stat-card" @click="router.push('/approvals/proposals')">
+          <div class="stat-icon" style="background: #67c23a12; color: #67c23a;">
+            <el-icon :size="22"><Clock /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #67c23a;">{{ planKPIs.pendingApprovals }}</div>
+            <div class="stat-label">待审批</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div class="stat-card" @click="router.push('/product-plans')">
+          <div class="stat-icon" style="background: #90939912; color: #909399;">
+            <el-icon :size="22"><CircleCheck /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #909399;">{{ planKPIs.monthlyCompleted }}</div>
+            <div class="stat-label">本月完成数</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 最近策划卡片列表 ═══════════ -->
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div class="section-badge" style="background: var(--c-warning-light, #fdf6ec); color: var(--c-warning, #e6a23c);">
+          <el-icon :size="16"><List /></el-icon>
+        </div>
+        <h2 class="section-title">最近策划</h2>
+        <button class="table-link" @click="router.push('/product-plans')">
+          查看全部 <el-icon :size="12"><ArrowRight /></el-icon>
+        </button>
+      </div>
+
+      <div class="plan-card-list">
+        <div v-if="recentPlans.length === 0" class="empty-state-small">
+          <p>暂无策划数据</p>
+        </div>
+        <div
+          v-for="plan in recentPlans"
+          :key="plan.id"
+          class="plan-card"
+          @click="goToPlan(plan)"
+        >
+          <div class="plan-card-left">
+            <div class="plan-card-name">{{ plan.name }}</div>
+            <div class="plan-card-meta">
+              <el-tag :type="stageTagType(plan.status)" size="small" effect="plain">
+                {{ stageLabel(plan.status) }}
+              </el-tag>
+              <span v-if="plan.series" class="plan-card-series">{{ plan.series }}</span>
+              <span v-if="plan.market" class="plan-card-market">{{ plan.market }}</span>
+            </div>
+          </div>
+          <div class="plan-card-right">
+            <span v-if="nextActionForPlan(plan)" class="next-action-badge">
+              {{ nextActionForPlan(plan) }}
+            </span>
+            <el-icon :size="14" class="plan-card-arrow"><ArrowRight /></el-icon>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ L1: System Health ═══════════ -->
     <section class="dashboard-section">
       <div class="section-header">
         <div class="section-badge">
@@ -82,7 +197,7 @@
       </div>
     </section>
 
-    <!-- L2: Project Operations -->
+    <!-- ═══════════ L2: Project Operations ═══════════ -->
     <section class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-success-light); color: var(--c-success);">
@@ -161,7 +276,7 @@
       </div>
     </section>
 
-    <!-- AC R&D Metrics (New) -->
+    <!-- ═══════════ AC R&D Metrics ═══════════ -->
     <section class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-warning-light); color: var(--c-warning);">
@@ -228,7 +343,7 @@
       </template>
     </section>
 
-    <!-- L3: Penetration Analysis -->
+    <!-- ═══════════ L3: Penetration Analysis ═══════════ -->
     <section class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-info-light); color: var(--c-info);">
@@ -258,7 +373,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh, Cpu, InfoFilled, CircleCloseFilled } from '@element-plus/icons-vue'
+import {
+  DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh,
+  Cpu, InfoFilled, CircleCloseFilled, Plus, Folder, Coin, Clock,
+  CircleCheck, List,
+} from '@element-plus/icons-vue'
 import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
 import BarChart from '../../components/charts/BarChart.vue'
@@ -266,7 +385,109 @@ import LineChart from '../../components/charts/LineChart.vue'
 
 const router = useRouter()
 const loading = ref(false)
+const planLoading = ref(false)
 
+// ── 策划阶段常量（复用 PlanningCenter 定义）──
+const STAGE_ORDER = ['draft', 'competitor', 'definition', 'costing', 'tech_input', 'project_init', 'approved', 'released']
+const STAGE_LABELS: Record<string, string> = {
+  draft: '草稿', competitor: '竞品分析', definition: '产品定义',
+  costing: '成本目标', tech_input: '技术方案', project_init: '立项审批',
+  approved: '已批准', released: '已发布',
+}
+const STAGE_TAGS: Record<string, string> = {
+  draft: 'info', competitor: 'primary', definition: '',
+  costing: 'warning', tech_input: 'primary', project_init: 'warning',
+  approved: 'success', released: '',
+}
+function stageLabel(s: string): string { return STAGE_LABELS[s] || s }
+function stageTagType(s: string): string { return STAGE_TAGS[s] || 'info' }
+
+// ── 产品策划数据 ──
+const allPlans = ref<any[]>([])
+interface PlanKPIs {
+  inProgress: number
+  stageDistribution: Record<string, number>
+  pendingApprovals: number
+  monthlyCompleted: number
+}
+const planKPIs = ref<PlanKPIs>({
+  inProgress: 0,
+  stageDistribution: {},
+  pendingApprovals: 0,
+  monthlyCompleted: 0,
+})
+
+const recentPlans = computed(() => {
+  // 取最近5条，按 updated_at 或 created_at 降序
+  const sorted = [...allPlans.value].sort((a, b) => {
+    const da = a.updated_at || a.created_at || ''
+    const db = b.updated_at || b.created_at || ''
+    return db.localeCompare(da)
+  })
+  return sorted.slice(0, 5)
+})
+
+function nextActionForPlan(plan: any): string {
+  // 根据阶段计算下一步动作提示
+  const stage = plan.status || 'draft'
+  const idx = STAGE_ORDER.indexOf(stage)
+  if (idx === -1) return ''
+  if (stage === 'released') return '已发布 ✓'
+  const nextStage = STAGE_ORDER[idx + 1]
+  if (!nextStage) return ''
+  return `推进至 ${STAGE_LABELS[nextStage] || nextStage}`
+}
+
+async function fetchProductPlanSummary() {
+  planLoading.value = true
+  try {
+    // 获取前100条数据用于仪表盘统计
+    const res = await api.get('/product-plans', { params: { page: 1, page_size: 100 } })
+    const items: any[] = res.data.items || []
+    allPlans.value = items
+
+    // 计算KPI
+    const inProgressStages = ['draft', 'competitor', 'definition', 'costing', 'tech_input', 'project_init']
+    const inProgress = items.filter(p => inProgressStages.includes(p.status)).length
+
+    // 按阶段分布
+    const stageDistribution: Record<string, number> = {}
+    items.forEach(p => {
+      const s = p.status || 'draft'
+      stageDistribution[s] = (stageDistribution[s] || 0) + 1
+    })
+
+    // 本月完成数（status=released 且 updated_at 在本月内）
+    const now = new Date()
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const monthlyCompleted = items.filter(p => {
+      if (p.status !== 'released') return false
+      const updated = (p.updated_at || p.created_at || '').substring(0, 7)
+      return updated === thisMonth
+    }).length
+
+    planKPIs.value = {
+      inProgress,
+      stageDistribution,
+      pendingApprovals: Number(opsData.value?.pending_approvals_count) || 0,
+      monthlyCompleted,
+    }
+  } catch {
+    // 产品策划数据接口失败不影响已有面板
+    allPlans.value = []
+  } finally {
+    planLoading.value = false
+  }
+}
+
+function goToNewPlan() {
+  router.push('/product-plans')
+}
+function goToPlan(plan: any) {
+  router.push(`/product-plans/${plan.id}`)
+}
+
+// ── 原有L1/L2/L3卡片定义 ──
 const L1Cards = {
   total_platforms: { label: '平台总数', color: '#0284c7', icon: 'Monitor' },
   total_products: { label: '产品总数', color: '#059669', icon: 'Goods' },
@@ -314,6 +535,7 @@ const isACEmpty = computed(() => {
     return v === undefined || v === null || v === '0' || Number(v) === 0 || v === '' || v === '0%' || v === '0.0%'
   })
 })
+
 const trendsData = ref<{ name: string; value: number }[]>([])
 const productStatusData = ref<{ name: string; value: number }[]>([])
 const projectStatusData = ref<{ name: string; value: number }[]>([])
@@ -423,6 +645,7 @@ async function fetchTrends() {
 function refreshAll() {
   fetchDashboard()
   fetchTrends()
+  fetchProductPlanSummary()
 }
 
 function drillDown(key: string) {
@@ -452,6 +675,7 @@ function goToProject(row: any) {
 onMounted(() => {
   fetchDashboard()
   fetchTrends()
+  fetchProductPlanSummary()
 })
 </script>
 
@@ -484,6 +708,12 @@ onMounted(() => {
   color: var(--c-text-secondary);
   margin: 0;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
 
 .refresh-btn {
   display: flex;
@@ -510,6 +740,10 @@ onMounted(() => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.btn-icon {
+  margin-right: 4px;
 }
 
 /* Section */
@@ -607,6 +841,29 @@ onMounted(() => {
   line-height: 1.2;
   letter-spacing: -0.5px;
   transition: color var(--c-transition-fast);
+}
+.stat-value-sm {
+  font-size: 14px;
+  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--c-bg-hover);
+  padding: 2px 6px;
+  border-radius: var(--c-radius-sm);
+}
+.stage-chip em {
+  font-style: normal;
+  font-weight: 700;
+  margin-left: 2px;
+  color: inherit;
 }
 .stat-label {
   margin-top: 4px;
@@ -770,6 +1027,94 @@ onMounted(() => {
   font-family: var(--c-font-mono);
 }
 
+/* ─── 策划卡片列表 ─── */
+.plan-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plan-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-lg);
+  cursor: pointer;
+  transition: all var(--c-transition-base);
+  gap: 16px;
+}
+.plan-card:hover {
+  border-color: var(--c-border-dark);
+  box-shadow: var(--c-shadow-sm);
+  transform: translateY(-1px);
+}
+.plan-card:active {
+  transform: translateY(0);
+}
+.plan-card + .plan-card {
+  margin-top: 0;
+}
+
+.plan-card-left {
+  flex: 1;
+  min-width: 0;
+}
+.plan-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.plan-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.plan-card-series {
+  font-size: 12px;
+  color: var(--c-text-tertiary);
+  padding: 2px 6px;
+  background: var(--c-bg-hover);
+  border-radius: var(--c-radius-sm);
+}
+.plan-card-market {
+  font-size: 12px;
+  color: var(--c-text-tertiary);
+  padding: 2px 6px;
+  background: var(--c-bg-hover);
+  border-radius: var(--c-radius-sm);
+}
+
+.plan-card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.next-action-badge {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-accent);
+  background: var(--c-accent-light);
+  padding: 4px 10px;
+  border-radius: var(--c-radius-full);
+  white-space: nowrap;
+}
+.plan-card-arrow {
+  color: var(--c-text-muted);
+  transition: all var(--c-transition-fast);
+  opacity: 0;
+}
+.plan-card:hover .plan-card-arrow {
+  opacity: 1;
+  color: var(--c-text-tertiary);
+  transform: translateX(2px);
+}
+
 /* Penetration */
 .penetration-card {
   background: var(--c-bg-card);
@@ -925,6 +1270,10 @@ onMounted(() => {
     flex-direction: column;
     gap: 16px;
   }
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -937,6 +1286,15 @@ onMounted(() => {
     gap: 8px;
   }
   .project-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .plan-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .plan-card-right {
     width: 100%;
     justify-content: space-between;
   }

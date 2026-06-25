@@ -13,7 +13,7 @@ from app.models.project import Project, ProjectGate
 from app.models.bom import Part
 from app.models.test import TestRequest, TestResult, Certification, QualityIssue
 from app.models.alert import Alert, AlertRule
-from app.models.proposal_approval import ProposalApproval  # BUGFIX: for pending approvals count
+from app.models.approval import ApprovalRequest  # unified approval engine
 from app.schemas import (
     DashboardSummary,
     DashboardResponse,
@@ -129,9 +129,10 @@ def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("das
     )
     project_status_distribution = {row[0] or "unknown": row[1] for row in project_status_rows}
 
-    # 待审批项目数: 从 proposal_approvals 表统计 pending 状态的记录 (BUGFIX: was querying Project.approval_status which is never written)
-    pending_approvals_count = db.query(func.count(ProposalApproval.id)).filter(
-        ProposalApproval.status.in_(["pending_parallel", "pending_director"]),
+    # 待审批项目数: 从统一 ApprovalRequest 统计
+    pending_approvals_count = db.query(func.count(ApprovalRequest.id)).filter(
+        ApprovalRequest.status == "pending",
+        ApprovalRequest.request_type == "proposal",
     ).scalar() or 0
 
     layer2 = Layer2ProjectOps(

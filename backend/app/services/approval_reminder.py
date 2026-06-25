@@ -1,8 +1,8 @@
 """审批催办服务 — 定时扫描pending审批，超时自动通知
 
 规则:
-  - 提交超过 24 小时未完成审批 → 通知审批人 (reminded=True)
-  - 提交超过 48 小时未完成审批 → 升级通知研发总监 (escalated=True)
+  - 提交超过 24 小时未完成审批 → 通知审批人
+  - 提交超过 48 小时未完成审批 → 升级通知研发总监
 """
 from datetime import datetime, timedelta
 import logging
@@ -10,7 +10,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-from app.models.proposal_approval import ProposalApproval, ProposalParallelReviewer  # BUGFIX: added ProposalParallelReviewer
+from app.models.approval import ApprovalRequest, ApprovalRecord, ApprovalStep
 from app.models.user import User
 from app.models.alert import Notification
 
@@ -43,21 +43,22 @@ def scan_and_remind():
         threshold_24h = now - timedelta(hours=24)
         threshold_48h = now - timedelta(hours=48)
 
-        # 查询所有进行中的审批
-        pending_approvals = (
-            db.query(ProposalApproval)
+        # 查询所有进行中的产品策划审批
+        pending_requests = (
+            db.query(ApprovalRequest)
             .filter(
-                ProposalApproval.status.in_(["pending_parallel", "pending_director"])
+                ApprovalRequest.status == "pending",
+                ApprovalRequest.request_type == "proposal",
             )
             .all()
         )
 
-        for pa in pending_approvals:
-            if pa.created_at is None:
+        for ar in pending_requests:
+            if ar.created_at is None:
                 continue
 
             # ── 超过 48 小时, 升级通知研发总监 ──
-            if pa.created_at <= threshold_48h and not pa.escalated:
+            if ar.created_at <= threshold_48h:
                 # 通知研发总监
                 director = (
                     db.query(User)
@@ -68,59 +69,41 @@ def scan_and_remind():
                     _create_notification(
                         db,
                         target_user_id=director.id,
-                        title=f"【升级催办】审批超48小时: {pa.title}",
+                        title=f"【升级催办】审批超48小时: {ar.title}",
                         content=(
-                            f"项目「{pa.title}」的立项审批已提交超过 48 小时仍未完成。"
-                            f"当前状态: {pa.status}。请关注并推动审批流程。"
+                            f"项目「{ar.title}」的立项审批已提交超过 48 小时仍未完成。"
+                            f"请关注并推动审批流程。"
                         ),
                     )
-                    logger.info(f"审批 {pa.id} 已升级通知研发总监")
-
-                pa.escalated = True
-                pa.reminded = True  # 同时标记已催办
+                    logger.info(f"审批 {ar.id} 已升级通知研发总监")
 
             # ── 超过 24 小时, 通知审批人 ──
-            elif pa.created_at <= threshold_24h and not pa.reminded:
-                # 通知还 pending 的审批人 — BUGFIX: query proposal_parallel_reviewers table instead of deprecated pa.parallel_reviewers JSON
-                if pa.status == "pending_parallel":
-                    pending_reviewers = (
-                        db.query(ProposalParallelReviewer)
-                        .filter(
-                            ProposalParallelReviewer.approval_id == pa.id,
-                            ProposalParallelReviewer.status == "pending",
-                        )
-                        .all()
+            elif ar.created_at <= threshold_24h:
+                # 查询当前步骤中 pending 的审批人
+                current_record = (
+                    db.query(ApprovalRecord)
+                    .filter(
+                        ApprovalRecord.request_id == ar.id,
+                        ApprovalRecord.decision == "pending",
                     )
-                    for reviewer in pending_reviewers:
-                        _create_notification(
-                            db,
-                            target_user_id=reviewer.user_id,
-                            title=f"【审批催办】待审批: {pa.title}",
-                            content=(
-                                f"项目「{pa.title}」的立项审批已提交超过 24 小时，"
-                                f"请您尽快完成审批。"
-                            ),
-                        )
-
-                elif pa.status == "pending_director" and pa.director_reviewer_id:
+                    .first()
+                )
+                if current_record:
                     _create_notification(
                         db,
-                        target_user_id=pa.director_reviewer_id,
-                        title=f"【审批催办】待终审: {pa.title}",
+                        target_user_id=int(current_record.approver) if current_record.approver.isdigit() else 0,
+                        title=f"【审批催办】待审批: {ar.title}",
                         content=(
-                            f"项目「{pa.title}」的研发总监终审已等待超过 24 小时，"
+                            f"项目「{ar.title}」的立项审批已提交超过 24 小时，"
                             f"请您尽快完成审批。"
                         ),
                     )
 
-                pa.reminded = True
-                logger.info(f"审批 {pa.id} 已发送24h催办通知")
+                logger.info(f"审批 {ar.id} 已发送24h催办通知")
 
         db.commit()
-        logger.info(f"审批催办扫描完成, 共处理 {len(pending_approvals)} 条记录")
+        logger.info(f"审批催办扫描完成, 共处理 {len(pending_requests)} 条记录")
 
     except Exception as e:
         db.rollback()
         logger.error(f"审批催办扫描异常: {e}")
-    finally:
-        db.close()

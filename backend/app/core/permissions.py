@@ -48,7 +48,6 @@ ALL_MENUS = [
     "pm-workspace",     # 产品经理工作台
     "competitor_bench", # 竞品对标
     "market_mgmt",      # 市场管理
-    "proposal_approvals", # 产品立项审批
     "purchases",        # 采购
     "rd_dashboard",     # 研发总监
     "product-plans",     # 产品策划
@@ -96,7 +95,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects", "tests",
         "certifications", "prototypes", "quality", "changes",
         'alerts', 'approvals', 'rd_dashboard', 'purchases',
-        'pm-workspace', 'competitor_bench', 'proposal_approvals',
+        'pm-workspace', 'competitor_bench',
         'product-plans', 'verification-requirements', 'gate-rules',
         'risk-dashboard', 'event-timeline',
         'target-markets', 'test-executions',
@@ -113,7 +112,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
 "product_manager": [
         "dashboard", "products", "bom", "projects",
         'certifications', 'alerts', 'approvals', 'pm-workspace',
-        'competitor_bench', 'market_mgmt', 'proposal_approvals',
+        'competitor_bench', 'market_mgmt',
         'product-plans', 'target-markets', 'gate-rules',
         'verification-requirements', 'test-executions',
         # S2 认证中心
@@ -352,7 +351,6 @@ MENU_PATH_MAP: dict[str, str] = {
     "pm-workspace": "/pm-workspace",
     "competitor_bench": "/competitor-bench",
     "market_mgmt": "/market-mgmt",
-    "proposal_approvals": "/approvals/proposals",
     "product-plans": "/product-plans",
     "event-timeline": "/event-timeline",
     "saga-viewer": "/saga-viewer",

@@ -3,7 +3,7 @@ from app.api import (
     auth, products, bom, projects,
     tests, alerts, dashboard,
     pm_workspace, admin_config, pm_config,
-    proposal_approval, pm_proposal_api,
+    pm_proposal_api,
     state_machine_api, event_timeline, risk_dashboard,
     webhooks,
     # Phase 5 — 基础功能扩展
@@ -19,7 +19,7 @@ from app.api import (
     # Phase 6 — 产品管理扩展
     competitor, competitor_bench,
     pm_accessory, pm_roadmap, pm_statistics,
-    product_plan, product_plan_subs, proposal_utils,
+    product_plan, product_plan_subs,
     # Phase 6 S3 — ECR/ECO 工程变更控制
     ecr, eco,
     safety,
@@ -37,7 +37,7 @@ __all__ = [
     "auth", "products", "bom", "projects",
     "tests", "alerts", "dashboard",
     "pm_workspace", "admin_config", "pm_config",
-    "proposal_approval", "pm_proposal_api",
+    "pm_proposal_api",
     "state_machine_api", "event_timeline", "risk_dashboard",
     "webhooks",
     "approvals", "certifications", "purchases",
@@ -49,7 +49,7 @@ __all__ = [
     "s2_gate_rules", "s2_change_impact",
     "competitor", "competitor_bench",
     "pm_accessory", "pm_roadmap", "pm_statistics",
-    "product_plan", "product_plan_subs", "proposal_utils",
+    "product_plan", "product_plan_subs",
     "ecr", "eco",
     "safety",
     "manufacturability",

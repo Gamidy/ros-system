@@ -13,7 +13,7 @@ from app.models.audit import AuditLog
 from app.models.pm_config import CertStandard, PerfDefault, MarketCertification, MarketCompressor
 from app.models.pm_accessory import AccessoryDefault, FeatureDefault
 from app.models.competitor import CompetitorModel
-from app.models.proposal_approval import ProposalApproval
+from app.models.alert import Alert, AlertRule
 from app.models.team_role_template import TeamRoleTemplate
 from app.models.role_position_mapping import RolePositionMapping
 from app.models.material_component_template import MaterialComponentTemplate
@@ -76,7 +76,6 @@ __all__ = [
     "CertStandard", "PerfDefault", "MarketCertification", "MarketCompressor",
     "CompetitorModel",
     "AccessoryDefault", "FeatureDefault",
-    "ProposalApproval",
     "TeamRoleTemplate",
     "RolePositionMapping",
     "MaterialComponentTemplate",
