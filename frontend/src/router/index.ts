@@ -18,6 +18,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/forgot-password',
+      name: 'ForgotPassword',
+      component: () => import('../views/login/ForgotPassword.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('../layout/MainLayout.vue'),
       redirect: '/dashboard',

@@ -69,8 +69,16 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   return res.data
 }
 
-export async function forgotPassword(phone: string, full_name: string) {
-  const res = await api.post('/auth/forgot-password', { phone, full_name })
+export async function forgotPassword(username: string) {
+  const res = await api.post('/auth/forgot-password', { username })
+  return res.data
+}
+
+export async function verifyResetToken(token: string, newPassword: string) {
+  const res = await api.post('/auth/verify-reset-token', {
+    token,
+    new_password: newPassword,
+  })
   return res.data
 }
 

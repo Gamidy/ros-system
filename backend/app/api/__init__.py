@@ -38,6 +38,8 @@ from app.api import (
     user_notification_api,
     # D4 AI辅助策划
     ai_plan_api,
+    # 密码重置
+    password_reset_api,
 )
 
 __all__ = [
@@ -70,4 +72,5 @@ __all__ = [
     "cost_alert_api",
     "user_notification_api",
     "ai_plan_api",
+    "password_reset_api",
 ]

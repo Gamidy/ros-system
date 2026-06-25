@@ -21,6 +21,7 @@ from app.api import cost_accounting
 from app.api import bi_analytics
 from app.api import user_notification_api
 from app.api import ai_plan_api
+from app.api import password_reset_api
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -141,6 +142,8 @@ app.include_router(bi_analytics.router)
 app.include_router(user_notification_api.router)
 # ── D4 AI辅助策划 ──
 app.include_router(ai_plan_api.router, prefix="/api")
+# ── 密码重置 ──
+app.include_router(password_reset_api.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")
 app.include_router(purchases.router, prefix="/api")

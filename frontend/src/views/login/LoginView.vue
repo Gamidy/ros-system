@@ -79,6 +79,11 @@
             </el-form-item>
           </el-form>
 
+          <!-- Forgot password -->
+          <div class="forgot-section">
+            <a class="forgot-link" @click="handleForgotPassword">忘记密码？</a>
+          </div>
+
           <!-- Registration link -->
           <div class="register-section">
             <span class="register-text">没有账号？</span>
@@ -145,6 +150,10 @@ async function handleLogin() {
 
 function handleRegister() {
   router.push('/register')
+}
+
+function handleForgotPassword() {
+  router.push('/forgot-password')
 }
 </script>
 
@@ -396,6 +405,21 @@ function handleRegister() {
 }
 
 /* Registration Link */
+.forgot-section {
+  margin-top: 12px;
+  text-align: center;
+}
+.forgot-link {
+  color: #87867f;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+  transition: color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.forgot-link:hover {
+  color: #d97757;
+}
+
 .register-section {
   margin-top: 20px;
   text-align: center;

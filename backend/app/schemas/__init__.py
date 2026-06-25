@@ -790,8 +790,18 @@ class QualityIssueOut(QualityIssueCreate):
 
 
 class ForgotPasswordRequest(BaseModel):
-    phone: str
-    full_name: str
+    """忘记密码 — 通过用户名发起重置"""
+    username: str
+
+class VerifyResetTokenRequest(BaseModel):
+    """验证重置令牌并设置新密码"""
+    token: str
+    new_password: str = Field(min_length=6)
+
+class AdminResetPasswordRequest(BaseModel):
+    """管理员直接重置用户密码"""
+    user_id: int
+    new_password: str = Field(min_length=6)
 
 class IssueUpdate(BaseModel):
     root_cause: str | None = None
