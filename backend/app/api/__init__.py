@@ -31,6 +31,13 @@ from app.api import (
     admin_cost_configs, admin_role_mappings,
     admin_role_templates, admin_tenant,
     rd_panel,
+    # D1 BI分析看板
+    bi_analytics,
+    cost_alert_api,
+    # D3 消息通知增强
+    user_notification_api,
+    # D4 AI辅助策划
+    ai_plan_api,
 )
 
 __all__ = [
@@ -59,4 +66,8 @@ __all__ = [
     "admin_role_templates", "admin_tenant",
     "rd_panel",
     "cost_accounting",
+    "bi_analytics",
+    "cost_alert_api",
+    "user_notification_api",
+    "ai_plan_api",
 ]

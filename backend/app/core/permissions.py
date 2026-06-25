@@ -85,6 +85,10 @@ ALL_MENUS = [
     "outsource-quality",       # 外协质检
     # S4 — 成本核算
     "cost-accounting",         # 成本核算
+    # D1 — BI分析看板
+    "bi-analytics",            # BI分析看板
+    # D3 — 消息通知
+    "notification-settings",   # 用户通知偏好设置
 ]
 
 # 角色 → 菜单 映射表
@@ -108,8 +112,10 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
  'safety-standards', 'safety-inspection-items', 'safety-supplier-qual', 'safety-alerts',
  # S4 成本核算
  'cost-accounting',
-],
-"product_manager": [
+ # D1 BI分析看板
+ 'bi-analytics',
+ ],
+ "product_manager": [
         "dashboard", "products", "bom", "projects",
         'certifications', 'alerts', 'approvals', 'pm-workspace',
         'competitor_bench', 'market_mgmt',
@@ -120,6 +126,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S4 成本核算
         'cost-accounting',
+        # D1 BI分析看板
+        'bi-analytics',
     ],
     "systems_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -224,6 +232,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "verification-requirements", "test-executions",
         # S3 ECR/ECO
         'ecr', 'eco',
+        # D1 BI分析看板
+        'bi-analytics',
     ],
     "production": [
         "dashboard", "bom", "quality", "alerts", "projects",
@@ -275,6 +285,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "projects", "purchases", "alerts", "approvals",
         # S4 成本核算
         "cost-accounting",
+        # D1 BI分析看板
+        "bi-analytics",
     ],
     "process_manager": [  # 工艺经理 — 管理工艺+审批
         "dashboard", "products", "bom", "projects",
@@ -311,6 +323,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # D3 用户通知偏好
+        'notification-settings',
     ],
 }
 
@@ -426,6 +440,10 @@ API_MENU_MAP: dict[str, str] = {
     "eco": "changes",
     # S4 成本核算
     "cost-accounting": "cost-accounting",
+    # D1 BI分析看板
+    "bi": "bi-analytics",
+    # D3 消息通知
+    "user": "notification-settings",
 }
 
 def require_menu(menu_name: str):

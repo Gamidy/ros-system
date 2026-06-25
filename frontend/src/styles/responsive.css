@@ -1,0 +1,80 @@
+/* ============================================
+   Responsive CSS Variables
+   Spacing / Typography / Touch target scale
+   ============================================ */
+
+:root {
+  /* ── Spacing scale ── */
+  --r-spacing-xs: 4px;
+  --r-spacing-sm: 8px;
+  --r-spacing-md: 12px;
+  --r-spacing-lg: 16px;
+  --r-spacing-xl: 20px;
+  --r-spacing-2xl: 24px;
+
+  /* ── Typography ── */
+  --r-font-xs: 11px;
+  --r-font-sm: 12px;
+  --r-font-md: 13px;
+  --r-font-lg: 14px;
+  --r-font-xl: 16px;
+  --r-font-2xl: 18px;
+  --r-font-3xl: 20px;
+
+  /* ── Touch target minimum (≥44px) ── */
+  --r-touch-min: 44px;
+
+  /* ── Layout ── */
+  --r-sidebar-width: 240px;
+  --r-sidebar-collapsed-width: 64px;
+  --r-header-height: 64px;
+}
+
+/* ── Mobile (<768px) overrides ── */
+@media (max-width: 767px) {
+  :root {
+    --r-spacing-xs: 2px;
+    --r-spacing-sm: 4px;
+    --r-spacing-md: 8px;
+    --r-spacing-lg: 12px;
+    --r-spacing-xl: 16px;
+    --r-spacing-2xl: 20px;
+
+    --r-font-xs: 10px;
+    --r-font-sm: 11px;
+    --r-font-md: 12px;
+    --r-font-lg: 13px;
+    --r-font-xl: 14px;
+    --r-font-2xl: 16px;
+    --r-font-3xl: 18px;
+
+    --r-header-height: 56px;
+  }
+
+  /* ── Ensure all interactive elements meet 44px touch target ── */
+  .el-button,
+  .el-menu-item,
+  .el-sub-menu__title,
+  .el-select,
+  .el-input__wrapper,
+  .el-radio,
+  .el-checkbox,
+  .el-switch,
+  .el-tag,
+  button,
+  [role='button'],
+  a {
+    min-height: var(--r-touch-min);
+  }
+}
+
+/* ── Tablet (768px–1023px) adjusts ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --r-spacing-lg: 14px;
+    --r-spacing-xl: 18px;
+
+    --r-font-lg: 13px;
+    --r-font-xl: 15px;
+  }
+}

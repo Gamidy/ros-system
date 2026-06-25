@@ -39,6 +39,9 @@ from app.models.certification import (
 from app.models.change_impact import ChangeImpactRule, ChangeImpactRecord
 from app.models.cert_gate_rule import CertificationGateRule
 from app.models.cert_auto_gen import CertAutoGenLog
+from app.models.notification_channel import NotificationChannel
+from app.models.notification_log import NotificationLog
+from app.models.user_notification_pref import UserNotificationPref
 from app.models.ecr_eco import ECRAttachment, ECRRequest, ECO, ECOItem
 from app.models.safety import (
     SafetyStandard, SafetyInspectionItem,
@@ -60,6 +63,9 @@ from app.models.cost_accounting import (
     LaborRateConfig, ProductLaborCost,
     OverheadAllocationRule, ProductOverheadCost,
 )
+from app.models.cost_alert_rule import CostAlertRule, AlertEvent
+from app.models.ai_config import AIConfig
+from app.models.ai_call_log import AICallLog
 
 __all__ = [
     "User",
@@ -99,6 +105,9 @@ __all__ = [
     "ChangeImpactRecord",
     "CertificationGateRule",
     "CertAutoGenLog",
+    "NotificationChannel",
+    "NotificationLog",
+    "UserNotificationPref",
     "ECRAttachment",
     "ECRRequest",
     "ECO",
@@ -131,4 +140,10 @@ __all__ = [
     "ProductLaborCost",
     "OverheadAllocationRule",
     "ProductOverheadCost",
+    # cost alert
+    "CostAlertRule",
+    "AlertEvent",
+    # ai
+    "AIConfig",
+    "AICallLog",
 ]

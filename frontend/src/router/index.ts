@@ -252,6 +252,18 @@ const router = createRouter({
           meta: { title: '系统设置', menu: 'admin-config' },
         },
         {
+          path: 'settings/notifications',
+          name: 'NotificationSettings',
+          component: () => import('../views/settings/NotificationSettings.vue'),
+          meta: { title: '通知配置', menu: 'admin-config' },
+        },
+        {
+          path: 'settings/ai',
+          name: 'AiSettings',
+          component: () => import('../views/settings/AiSettings.vue'),
+          meta: { title: 'AI配置管理', menu: 'admin-config' },
+        },
+        {
           path: 'admin/tenants',
           name: 'TenantManagement',
           component: () => import('../views/admin/TenantManagement.vue'),
@@ -387,6 +399,19 @@ const router = createRouter({
           name: 'CostAnalysis',
           component: () => import('../views/cost-accounting/CostAnalysisView.vue'),
           meta: { title: '成本分析', menu: 'cost-accounting' },
+        },
+        // D1 — BI 分析看板
+        {
+          path: 'bi/planning',
+          name: 'BiPlanning',
+          component: () => import('../views/bi/PlanningAnalytics.vue'),
+          meta: { title: 'BI研发规划分析', menu: 'bi' },
+        },
+        {
+          path: 'bi/cost',
+          name: 'BiCost',
+          component: () => import('../views/bi/CostAnalytics.vue'),
+          meta: { title: 'BI成本分析', menu: 'bi' },
         },
       ],
     },

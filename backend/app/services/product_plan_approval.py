@@ -121,6 +121,19 @@ def create_plan_approval(plan_id: str, db: Session, current_user: str) -> Approv
         "Plan approval created: plan=%s, request=%s, requester=%s",
         plan_id, request.id, current_user,
     )
+
+    # ── 发射审批待处理通知 ──
+    try:
+        bus.emit_async(
+            "approval.pending",
+            plan_id=plan_id,
+            plan_name=plan.name,
+            requester=current_user,
+            username=current_user,
+        )
+    except Exception:
+        logger.exception("approval.pending 事件发射失败")
+
     return request
 
 

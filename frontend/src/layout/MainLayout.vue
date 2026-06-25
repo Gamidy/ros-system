@@ -1,24 +1,62 @@
 <template>
   <div class="claude-layout">
-    <!-- Sidebar Overlay (mobile only) -->
-    <div class="sidebar-overlay" v-if="mobileOpen" @click="mobileOpen = false"></div>
-    
-    <!-- Sidebar -->
-    <aside class="claude-sidebar" :class="{ collapsed: isCollapse, 'mobile-open': mobileOpen }">
+    <!-- ═══ Mobile Drawer Sidebar (＜768px) ═══ -->
+    <el-drawer
+      v-model="drawerVisible"
+      direction="ltr"
+      :size="280"
+      :with-header="false"
+      class="mobile-drawer"
+    >
+      <div class="sidebar-brand" @click="router.push('/dashboard'); drawerVisible = false">
+        <div class="brand-mark">
+          <span class="brand-icon">R</span>
+        </div>
+        <span class="brand-text">ROS</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <el-menu
+          :default-active="route.path"
+          router
+          class="sidebar-el-menu"
+          @select="drawerVisible = false"
+        >
+          <template v-for="group in authStore.visibleGroups" :key="group.title">
+            <el-sub-menu :index="group.title">
+              <template #title>
+                <el-icon><component :is="group.icon" /></el-icon>
+                <span>{{ group.title }}</span>
+              </template>
+              <el-menu-item
+                v-for="item in group.children"
+                :key="item.path"
+                :index="item.path"
+              >
+                <el-icon><component :is="item.icon" /></el-icon>
+                <span>{{ item.title }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+          </template>
+        </el-menu>
+      </nav>
+    </el-drawer>
+
+    <!-- ═══ Desktop Sidebar (≥768px) ═══ -->
+    <aside class="claude-sidebar desktop-sidebar" :class="{ collapsed: isCollapse }">
       <div class="sidebar-brand" @click="router.push('/dashboard')">
         <div class="brand-mark">
           <span class="brand-icon">R</span>
         </div>
-        <span class="brand-text" v-show="!isCollapse || mobileOpen">ROS</span>
+        <span class="brand-text" v-show="!isCollapse">ROS</span>
       </div>
-      
+
       <nav class="sidebar-nav">
         <el-menu
           :default-active="route.path"
           :collapse="isCollapse"
           router
           class="sidebar-el-menu"
-          @select="mobileOpen = false"
         >
           <template v-for="group in authStore.visibleGroups" :key="group.title">
             <el-sub-menu :index="group.title">
@@ -40,22 +78,22 @@
       </nav>
     </aside>
 
-    <!-- Main Content -->
-    <div class="claude-main" :class="{ 'menu-open': mobileOpen }">
+    <!-- ═══ Main Content ═══ -->
+    <div class="claude-main">
       <!-- Header -->
       <header class="claude-header">
         <div class="header-left">
-          <!-- Desktop collapse button -->
+          <!-- Desktop collapse toggle -->
           <button class="collapse-btn desktop-only" @click="isCollapse = !isCollapse">
             <el-icon :size="18">
               <Fold v-if="!isCollapse" />
               <Expand v-else />
             </el-icon>
           </button>
-          <!-- Mobile hamburger button -->
-          <button class="mobile-menu-btn mobile-only" @click="toggleMobileSidebar">
+          <!-- Mobile hamburger -->
+          <button class="mobile-menu-btn mobile-only" @click="drawerVisible = !drawerVisible">
             <el-icon :size="20">
-              <Fold v-if="mobileOpen" />
+              <Fold v-if="drawerVisible" />
               <Expand v-else />
             </el-icon>
           </button>
@@ -97,35 +135,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import { useResponsive } from '../composables/useResponsive'
 import api from '../api'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// ── Responsive state from composable ──
+// Registers resize/matchMedia listeners; returns isMobile/isTablet/breakpoint
+void useResponsive()
+
+// ── Desktop sidebar collapse ──
 const isCollapse = ref(false)
+
+// ── Mobile drawer ──
+const drawerVisible = ref(false)
+
+// ── Pending approvals badge ──
 const pendingApprovalCount = ref(0)
 
-// ── Mobile responsive state ──
-const isMobile = ref(window.innerWidth < 768)
-const mobileOpen = ref(false)
-
-function checkMobile() {
-  isMobile.value = window.innerWidth < 768
-  if (!isMobile.value) {
-    mobileOpen.value = false
-  }
-}
-
-function toggleMobileSidebar() {
-  mobileOpen.value = !mobileOpen.value
-}
-
 onMounted(async () => {
-  window.addEventListener('resize', checkMobile)
   if (!authStore.user) {
     try {
       await authStore.init()
@@ -140,10 +174,6 @@ onMounted(async () => {
   } catch {
     // Silently ignore
   }
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile)
 })
 
 const userInitial = computed(() => {
@@ -165,7 +195,9 @@ function handleLogout() {
   background: var(--c-bg-page);
 }
 
-/* Sidebar */
+/* ══════════════════════════════════════════
+   Sidebar (Desktop)
+   ══════════════════════════════════════════ */
 .claude-sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -226,7 +258,7 @@ function handleLogout() {
   padding: 4px 0;
 }
 
-/* ── el-menu overrides for sidebar ── */
+/* el-menu overrides for sidebar */
 .sidebar-el-menu {
   border-right: none !important;
   background: transparent !important;
@@ -234,7 +266,6 @@ function handleLogout() {
 .sidebar-el-menu:not(.el-menu--collapse) {
   width: 240px;
 }
-/* sub-menu title styling */
 .sidebar-el-menu .el-sub-menu__title {
   color: var(--c-text-secondary-dark) !important;
   font-size: 13px;
@@ -250,11 +281,9 @@ function handleLogout() {
   background: var(--c-bg-sidebar-hover) !important;
   color: var(--c-text-primary-dark) !important;
 }
-/* sub-menu arrow icon */
 .sidebar-el-menu .el-sub-menu__title .el-icon {
   color: var(--c-text-secondary-dark);
 }
-/* menu items inside sub-menus */
 .sidebar-el-menu .el-menu-item {
   color: var(--c-text-secondary-dark) !important;
   font-size: 13px;
@@ -277,7 +306,6 @@ function handleLogout() {
   color: inherit;
   font-size: 16px;
 }
-/* collapse mode */
 .sidebar-el-menu.el-menu--collapse .el-sub-menu__title {
   padding: 0 14px !important;
   justify-content: center;
@@ -285,18 +313,18 @@ function handleLogout() {
 .sidebar-el-menu.el-menu--collapse .el-sub-menu__title span {
   display: none;
 }
-/* remove default popup offset in collapse mode */
 .el-menu--collapse .el-menu .el-sub-menu,
 .el-menu--collapse .el-menu .el-menu-item {
   min-width: 200px;
 }
-/* no extra dividers / borders */
 .sidebar-el-menu .el-menu-item,
 .sidebar-el-menu .el-sub-menu {
   border-bottom: none !important;
 }
 
-/* Main Content Area */
+/* ══════════════════════════════════════════
+   Main Content Area
+   ══════════════════════════════════════════ */
 .claude-main {
   flex: 1;
   display: flex;
@@ -307,7 +335,7 @@ function handleLogout() {
 
 /* Header */
 .claude-header {
-  height: 64px;
+  height: var(--r-header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -369,13 +397,6 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.header-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--c-border);
-  margin: 0 4px;
 }
 
 .user-btn {
@@ -452,64 +473,61 @@ function handleLogout() {
   background: var(--c-danger-light);
 }
 
-/* ── Sidebar Overlay (mobile) ── */
-.sidebar-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: var(--c-z-modal);
-  display: none;
+/* ══════════════════════════════════════════
+   Mobile Drawer (el-drawer)
+   ══════════════════════════════════════════ */
+:deep(.mobile-drawer) {
+  background: var(--c-bg-sidebar) !important;
+}
+:deep(.mobile-drawer .el-drawer__body) {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+:deep(.mobile-drawer .sidebar-brand) {
+  flex-shrink: 0;
+}
+:deep(.mobile-drawer .sidebar-nav) {
+  flex: 1;
+  overflow-y: auto;
+}
+:deep(.mobile-drawer .sidebar-el-menu) {
+  width: 100% !important;
 }
 
-/* ── Desktop/Mobile visibility ── */
+/* ══════════════════════════════════════════
+   Desktop / Mobile Visibility Helpers
+   ══════════════════════════════════════════ */
 @media (min-width: 769px) {
   .mobile-only { display: none !important; }
 }
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
+  .desktop-sidebar { display: none !important; }
 }
 
-/* Mobile Responsive */
+/* ══════════════════════════════════════════
+   Mobile Responsive (＜768px)
+   ══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .sidebar-overlay {
-    display: block;
-  }
-  
-  .claude-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: calc(var(--c-z-modal) + 1);
-    height: 100vh;
-    transform: translateX(-100%);
-    width: 280px;
-    transition: transform 0.3s ease;
-  }
-  .claude-sidebar.mobile-open {
-    transform: translateX(0);
-  }
-  /* On mobile, collapsed state doesn't apply (use mobile-open instead) */
-  .claude-sidebar.collapsed.mobile-open {
-    width: 280px;
-  }
-  
   .claude-main {
     margin-left: 0;
     width: 100%;
+    /* 底部安全区适配 — 防止刘海屏/Home Indicator遮挡内容 */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  
+
   .claude-content {
     padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
-  
+
   .user-name {
     display: none;
   }
-  
-  /* Mobile menu button - always visible on mobile */
+
+  /* Mobile hamburger button */
   .mobile-menu-btn {
     display: flex;
     align-items: center;
@@ -527,7 +545,7 @@ function handleLogout() {
     background: var(--c-bg-hover);
     color: var(--c-text-primary);
   }
-  
+
   /* Breadcrumb text smaller on mobile */
   .breadcrumb {
     font-size: 13px;
@@ -540,7 +558,7 @@ function handleLogout() {
   }
 }
 
-/* Tiny screens (≤400px) - even tighter */
+/* Tiny screens (≤400px) */
 @media (max-width: 400px) {
   .claude-content {
     padding: 8px;
