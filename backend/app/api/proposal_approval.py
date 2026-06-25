@@ -363,7 +363,7 @@ def review_approval(
         if ar.status == "approved":
             project = db.query(Project).filter(Project.id == pa.proposal_id, Project.is_deleted == False).first()
             bus.emit(
-                EventTypes.PROPOSAL_APPROVED,
+                EventTypes.PLAN_APPROVED,
                 project_id=pa.proposal_id,
                 project_name=project.name if project else pa.title,
                 project_code=project.code if project else "",

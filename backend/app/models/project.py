@@ -59,84 +59,17 @@ class Project(Base):
     market_policy = Column(String(200), nullable=True, comment="市场政策背景")
     annual_planning_ref = Column(String(100), nullable=True, comment="年度规划关联")
     budget = Column(Integer, nullable=True, comment="项目预算(元)")
-    # ══════════════════════════════════════════
-    # Sheet 1 - 项目概述 (Product Initiation)
-    # ══════════════════════════════════════════
-    product_type = Column(String(50), nullable=True, comment="产品类型")
-    target_market = Column(String(100), nullable=True, comment="目标市场")
-    climate_zone = Column(String(50), nullable=True, comment="温带")
-    refrigerant = Column(String(50), nullable=True, comment="制冷剂")
-    capacity_range = Column(String(100), nullable=True, comment="覆盖容量")
-    voltage_freq = Column(String(50), nullable=True, comment="电压频率")
-    series_name = Column(String(50), nullable=True, comment="系列名称（如 J/K/L/M）")
-    energy_rating = Column(String(20), nullable=True, comment="能效等级（如 5星/3星/1星）")
-    ip_ownership = Column(String(100), nullable=True, comment="知识产权归属")
-    project_duration = Column(String(50), nullable=True, comment="项目周期")
-    dev_category = Column(String(50), nullable=True, comment="开发类别")
-    project_origin = Column(String(100), nullable=True, comment="项目来源")
-    background_basis = Column(Text, nullable=True, comment="项目背景与立项依据")
-    overall_goal = Column(Text, nullable=True, comment="总体目标")
-    tech_goal = Column(Text, nullable=True, comment="技术目标")
-    cost_goal = Column(Text, nullable=True, comment="成本目标")
-    sales_goal = Column(Text, nullable=True, comment="销售目标1-3年预测")
-    cert_goal = Column(Text, nullable=True, comment="认证目标")
-    schedule_goal = Column(Text, nullable=True, comment="进度目标")
-    patent_goal = Column(Text, nullable=True, comment="专利目标")
-    other_goals = Column(Text, nullable=True, comment="其他目标")
-    deliverables = Column(Text, nullable=True, comment="交付物清单")
-    sample_qty = Column(Integer, nullable=True, comment="客户样机数量")
-    required_date = Column(Date, nullable=True, comment="需求时间")
-    # ══════════════════════════════════════════
-    # Sheet 2 - 市场与客户需求
-    # ══════════════════════════════════════════
-    main_capacity = Column(String(50), nullable=True, comment="主销容量")
-    energy_efficiency_req = Column(String(100), nullable=True, comment="能效要求")
-    cert_requirements = Column(Text, nullable=True, comment="认证要求")
-    target_price = Column(String(50), nullable=True, comment="目标售价USD")
-    customer_requirements = Column(Text, nullable=True, comment="客户关键需求")
-    # ══════════════════════════════════════════
-    # Sheet 3 - 技术要求
-    # ══════════════════════════════════════════
-    core_performance = Column(Text, nullable=True, comment="核心性能参数JSON")
-    safety_compliance = Column(Text, nullable=True, comment="安全合规要求JSON")
-    optional_config = Column(Text, nullable=True, comment="选配要求")
-    # ══════════════════════════════════════════
-    # Sheet 4 - 成本核算
-    # ══════════════════════════════════════════
-    dev_cost_items = Column(Text, nullable=True, comment="开发费用明细JSON")
-    economic_indicators = Column(Text, nullable=True, comment="经济指标JSON")
-    mold_costs = Column(Text, nullable=True, comment="模具费用JSON")
-    prototype_costs_detail = Column(Text, nullable=True, comment="样机费用JSON")
-    test_costs = Column(Text, nullable=True, comment="测试费用JSON")
-    cert_costs = Column(Text, nullable=True, comment="认证费用JSON（自动生成）")
-    labor_costs = Column(Text, nullable=True, comment="人工费用JSON")
-    # ══════════════════════════════════════════
-    # Sheet 5 - 团队与职责
-    # ══════════════════════════════════════════
-    team_members = Column(Text, nullable=True, comment="团队成员JSON")
-    # ══════════════════════════════════════════
+    # 关联产品策划
+    product_plan_id = Column(String(36), ForeignKey('product_plans.id'), nullable=True, comment='关联产品策划ID')
     # Draft 机制
-    # ══════════════════════════════════════════
     is_draft = Column(Boolean, default=True, nullable=False, comment="是否草稿")
     approval_status = Column(String(20), default="pending", nullable=True, comment="审批状态: pending/approved/rejected")
     is_deleted = Column(Boolean, default=False, nullable=False, comment="软删除标记")
-    customer_name = Column(String(100), nullable=True, comment="customer_name")
-    other_requirements = Column(Text, nullable=True, comment="other_requirements")
-    accessory_config = Column(Text, nullable=True, comment="accessory_config")
-    feature_config = Column(Text, nullable=True, comment="feature_config")
-    fob_price = Column(String(50), nullable=True, comment="fob_price")
-    bom_cost_target = Column(String(50), nullable=True, comment="bom_cost_target")
-    bom_cost_ratio = Column(String(50), nullable=True, comment="bom_cost_ratio")
-    manufacturing_cost = Column(String(50), nullable=True, comment="manufacturing_cost")
-    gross_margin = Column(String(50), nullable=True, comment="gross_margin")
-    annual_sales_forecast = Column(String(50), nullable=True, comment="annual_sales_forecast")
-    product_lifecycle = Column(String(50), nullable=True, comment="product_lifecycle")
-    mold_inner = Column(Text, nullable=True, comment="mold_inner")
-    mold_outer = Column(Text, nullable=True, comment="mold_outer")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     program = relationship("Program", back_populates="projects")
+    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
     gates = relationship("ProjectGate", back_populates="project", cascade="all, delete-orphan")
     milestones = relationship("Milestone", back_populates="project", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")

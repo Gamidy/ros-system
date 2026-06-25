@@ -55,7 +55,6 @@ class EventTypes:
     """事件类型常量 — 三层事件分级 + 版本化"""
 
     # ── 已有事件 ──
-    PROPOSAL_APPROVED = "proposal.approved"
     TEST_DONE_WITH_NG = "test.done_with_ng"
     NG_THRESHOLD_REACHED = "test.ng_threshold_reached"
     ALERT_OVERDUE_FOUND = "alert.overdue_found"
@@ -77,9 +76,12 @@ class EventTypes:
     PLAN_NOTIFY_PM = "plan.notify_pm"
     PLAN_AUDIT_LOG = "plan.audit_log"
 
+    # ── Approval Events — 审批流事件 ──
+    APPROVAL_COMPLETED = "approval.completed"
+    APPROVAL_REJECTED = "approval.rejected"
+
     # ── 事件版本映射 ──
     _VERSIONS: Dict[str, str] = {
-        PROPOSAL_APPROVED: "v1",
         TEST_DONE_WITH_NG: "v1",
         NG_THRESHOLD_REACHED: "v1",
         ALERT_OVERDUE_FOUND: "v1",
@@ -94,6 +96,8 @@ class EventTypes:
         PLAN_BOM_INITIALIZED: "v1",
         PLAN_NOTIFY_PM: "v1",
         PLAN_AUDIT_LOG: "v1",
+        APPROVAL_COMPLETED: "v1",
+        APPROVAL_REJECTED: "v1",
     }
 
     @classmethod

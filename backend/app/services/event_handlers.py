@@ -274,13 +274,12 @@ def _register_all_events():
     """注册所有事件处理器 + Event Store"""
     # ── 已有事件 ──
     for evt in [
-        "proposal.approved",
         "test.done_with_ng",
         "alert.overdue_found",
     ]:
         bus.on(evt, store_event)
 
-    bus.on("proposal.approved", on_proposal_approved)
+    bus.on("plan.approved", on_proposal_approved)
     bus.on("test.done_with_ng", on_test_done_with_ng)
     bus.on("alert.overdue_found", on_alert_overdue_found)
 
@@ -311,6 +310,16 @@ def _register_all_events():
     # ── Side Effect Events（预留） ──
     bus.on("plan.audit_log", store_event)
     bus.on("plan.notify_pm", store_event)
+
+    # ── Approval Events — ProductPlan 审批集成 ──
+    from app.services.product_plan_approval import (
+        on_approval_completed,
+        on_proposal_rejected,
+    )
+    bus.on("approval.completed", on_approval_completed)
+    bus.on("approval.rejected", on_proposal_rejected)
+    bus.on("approval.completed", store_event)
+    bus.on("approval.rejected", store_event)
 
     logger.info(
         "事件系统初始化完成: %d 事件类型, Event Store 已激活",

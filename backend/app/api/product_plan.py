@@ -1,9 +1,9 @@
 """ProductPlan API — 产品策划 CRUD + 流程推进
 
-6个端点：
+6个端点 + 集成子表数据：
 - POST /product-plans — 创建策划
 - GET /product-plans — 列表（分页+筛选）
-- GET /product-plans/{id} — 详情
+- GET /product-plans/{id} — 详情（含 costs + 子表数据）
 - GET /product-plans/{id}/status — 流程状态
 - POST /product-plans/{id}/advance — 推进流程
 - GET /product-plans/{id}/next-action — 下一步引导
@@ -18,6 +18,12 @@ from app.core.security import get_current_user
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType, BOMType
+from app.models.product_plan_subs import (
+    ProductPlanInitiation,
+    ProductPlanMarket,
+    ProductPlanTechSpec,
+    ProductPlanTeam,
+)
 from app.services.product_plan_workflow import (
     create_product_plan as workflow_create,
     advance_stage as workflow_advance,
@@ -75,16 +81,30 @@ class PlanUpdate(BaseModel):
 class PlanOut(BaseModel):
     id: str
     name: str
-    series: Optional[str]
-    market: Optional[str]
-    competitor_id: Optional[int]
-    cost_target: Optional[str]
-    performance_target: Optional[str]
+    series: Optional[str] = None
+    market: Optional[str] = None
+    competitor_id: Optional[int] = None
+    cost_target: Optional[str] = None
+    performance_target: Optional[str] = None
+    # ---- 新增直接字段 ----
+    product_type: Optional[str] = None
+    target_market_detail: Optional[str] = None
+    climate_zone: Optional[str] = None
+    refrigerant: Optional[str] = None
+    capacity_range: Optional[str] = None
+    voltage_freq: Optional[str] = None
+    series_name: Optional[str] = None
+    energy_rating: Optional[str] = None
+    dev_category: Optional[str] = None
+    project_origin: Optional[str] = None
+    project_duration: Optional[str] = None
+    ip_ownership: Optional[str] = None
+    # ---- 现有字段 ----
     status: str
-    project_id: Optional[int]
-    created_by: Optional[str]
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    project_id: Optional[int] = None
+    created_by: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -106,6 +126,25 @@ class NextActionOut(BaseModel):
     can_advance: bool
 
 
+# ── 子表 Schemas（引用自 product_plan_subs）──
+
+from app.api.product_plan_subs import (
+    InitiationOut as _InitiationOut,
+    MarketOut as _MarketOut,
+    TechSpecOut as _TechSpecOut,
+    TeamOut as _TeamOut,
+)
+
+
+class PlanDetailOut(PlanOut):
+    """策划详情（含 costs + 子表数据）"""
+    costs: list[CostOut] = []
+    initiation: Optional[_InitiationOut] = None
+    market_info: Optional[_MarketOut] = None
+    tech_spec: Optional[_TechSpecOut] = None
+    team_members: list[_TeamOut] = []
+
+
 # ── 辅助函数 ──
 
 def _plan_to_dict(plan: ProductPlan) -> dict:
@@ -118,6 +157,20 @@ def _plan_to_dict(plan: ProductPlan) -> dict:
         "competitor_id": plan.competitor_id,
         "cost_target": plan.cost_target,
         "performance_target": plan.performance_target,
+        # ---- 新增直接字段 ----
+        "product_type": plan.product_type,
+        "target_market_detail": plan.target_market_detail,
+        "climate_zone": plan.climate_zone,
+        "refrigerant": plan.refrigerant,
+        "capacity_range": plan.capacity_range,
+        "voltage_freq": plan.voltage_freq,
+        "series_name": plan.series_name,
+        "energy_rating": plan.energy_rating,
+        "dev_category": plan.dev_category,
+        "project_origin": plan.project_origin,
+        "project_duration": plan.project_duration,
+        "ip_ownership": plan.ip_ownership,
+        # ---- 现有字段 ----
         "status": plan.status.value if plan.status else "draft",
         "project_id": plan.project_id,
         "created_by": plan.created_by,
@@ -138,6 +191,13 @@ def _cost_to_dict(c: Cost) -> dict:
         "remark": c.remark,
         "created_at": str(c.created_at) if c.created_at else None,
     }
+
+
+def _orm_to_dict(obj) -> Optional[dict]:
+    """将单个 ORM 对象转为扁平 dict"""
+    if obj is None:
+        return None
+    return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
 
 
 _STAGE_ORDER = [
@@ -215,19 +275,23 @@ def list_plans(
     }
 
 
-@router.get("/{plan_id}")
+@router.get("/{plan_id}", response_model=PlanDetailOut)
 def get_plan_detail(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
 ):
-    """策划详情（含 costs 列表）"""
+    """策划详情（含 costs + 子表数据）"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="策划不存在")
 
     result = _plan_to_dict(plan)
     result["costs"] = [_cost_to_dict(c) for c in (plan.costs or [])]
+    result["initiation"] = _orm_to_dict(plan.initiation)
+    result["market_info"] = _orm_to_dict(plan.market_info)
+    result["tech_spec"] = _orm_to_dict(plan.tech_spec)
+    result["team_members"] = [_orm_to_dict(m) for m in (plan.team_members or [])]
     return result
 
 

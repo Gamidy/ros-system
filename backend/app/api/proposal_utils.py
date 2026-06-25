@@ -95,7 +95,7 @@ def _change_status(db: Session, pa: ProposalApproval, new_status: str):
             p.approval_status = "approved"
             # ── 触发立项审批通过事件 ──
             bus.emit(
-                EventTypes.PROPOSAL_APPROVED,
+                EventTypes.PLAN_APPROVED,
                 project_id=pa.proposal_id,
                 project_name=p.name or pa.title,
                 project_code=p.code or "",

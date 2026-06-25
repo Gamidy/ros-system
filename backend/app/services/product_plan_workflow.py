@@ -4,11 +4,12 @@
 - 创建产品策划（DRAFT）
 - 推进流程（stage→stage），校验前置条件
 - 获取下一步动作（UX核心）
-- APPROVED → 自动生成 Project
+- APPROVED → 创建 ApprovalRequest（代替自动生成 Project）
 """
 from datetime import datetime
 import json
 import logging
+from typing import Tuple
 from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -120,7 +121,7 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
     # 取第一个合法目标阶段
     target = allowed_next[0]
 
-    # 校验条件
+    # 校验条件（字段级）
     requirements = STAGE_REQUIREMENTS.get(target, [])
     failures = [req for req in requirements if not req["check"](plan)]
     if failures:
@@ -130,13 +131,19 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
             detail=f"推进到「{STAGE_LABELS.get(target, target.value)}」前需要先完成: {'、'.join(missing)}",
         )
 
+    # 校验子表数据条件
+    ok, err_msg = _check_stage_requirements(plan, db)
+    if not ok:
+        raise HTTPException(status_code=400, detail=err_msg)
+
     # 更新状态
     plan.status = target
 
-    # APPROVED → 自动创建 Project
+    # APPROVED → 创建 ApprovalRequest（代替自动生成 Project）
     if target == ProductPlanStage.APPROVED:
-        project = _generate_project_from_plan(plan, db, username)
-        plan.project_id = project.id
+        from app.services.product_plan_approval import create_plan_approval
+        create_plan_approval(plan.id, db, username)
+        # Project 创建将在审批完成后进行
 
     db.commit()
     db.refresh(plan)
@@ -152,13 +159,22 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
                 "new_stage": STAGE_LABELS.get(target, target.value),
             }
             if target == ProductPlanStage.APPROVED:
-                event_kwargs["project_id"] = plan.project_id
+                # 审批流程另行处理 plan.approved 事件和 Project 创建
+                # 只发射副作用事件（审计+通知）
+                event_kwargs["project_id"] = None
                 event_kwargs["created_by"] = plan.created_by
-            # 发射业务事件 (异步，不阻塞主流程)
-            bus.emit_async(event_type, **event_kwargs)
-            # 发射副作用事件 (审计+通知)
-            bus.emit_async(EventTypes.PLAN_AUDIT_LOG, **event_kwargs)
-            bus.emit_async(EventTypes.PLAN_NOTIFY_PM, **event_kwargs)
+                bus.emit_async(EventTypes.PLAN_AUDIT_LOG, **event_kwargs)
+                bus.emit_async(EventTypes.PLAN_NOTIFY_PM, **event_kwargs)
+            else:
+                if target == ProductPlanStage.COMPETITOR:
+                    event_kwargs["project_id"] = None
+                elif target == ProductPlanStage.RELEASED:
+                    event_kwargs["project_id"] = plan.project_id
+                # 发射业务事件 (异步，不阻塞主流程)
+                bus.emit_async(event_type, **event_kwargs)
+                # 发射副作用事件 (审计+通知)
+                bus.emit_async(EventTypes.PLAN_AUDIT_LOG, **event_kwargs)
+                bus.emit_async(EventTypes.PLAN_NOTIFY_PM, **event_kwargs)
     except Exception as e:
         logger.error("advance_stage 事件发射失败: %s", e, exc_info=True)
 
@@ -213,8 +229,41 @@ def get_next_action(db: Session, plan_id: str) -> dict:
     }
 
 
+def _check_stage_requirements(plan: ProductPlan, db: Session) -> Tuple[bool, str]:
+    """检查推进到下一阶段所需的子表数据条件
+
+    Returns:
+        (is_ok: bool, error_message: str)
+    """
+    current = plan.status
+    allowed_next = PLAN_STAGE_TRANSITIONS.get(current, [])
+    if not allowed_next:
+        return True, ""
+
+    target = allowed_next[0]
+
+    if target == ProductPlanStage.DEFINITION:
+        initiation = plan.initiation
+        if not initiation or (not initiation.background_basis and not initiation.overall_goal):
+            return False, "推进到「产品定义」前需要先填写项目背景或总体目标"
+    elif target == ProductPlanStage.COSTING:
+        if not plan.costs or len(plan.costs) == 0:
+            return False, "推进到「成本目标」前需要至少一条成本记录"
+    elif target == ProductPlanStage.TECH_INPUT:
+        tech_spec = plan.tech_spec
+        if not tech_spec or not tech_spec.core_performance:
+            return False, "推进到「技术方案」前需要填写核心技术参数"
+    elif target == ProductPlanStage.PROJECT_INIT:
+        if not plan.market_info:
+            return False, "推进到「立项审批」前需要填写市场与客户需求"
+        if not plan.team_members or len(plan.team_members) == 0:
+            return False, "推进到「立项审批」前需要至少一名团队成员"
+
+    return True, ""
+
+
 def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -> Project:
-    """APPROVED 时自动生成 Project（将策划数据映射到项目字段）"""
+    """APPROVED 审批通过后生成 Project（将策划数据映射到项目字段）"""
     from datetime import date
 
     # 解析 cost_target JSON

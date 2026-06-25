@@ -29,11 +29,17 @@
               <el-table-column label="操作" width="220" fixed="right">
                 <template #default="{ row }">
                   <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
-                  <template v-if="row.request_type !== 'proposal'">
+                  <!-- TODO: 此分支将在后续版本移除 — proposal 重定向已弃用, 改为内联审批 -->
+                  <template v-if="row.request_type === 'proposal'">
+                    <el-button link type="primary" size="small" @click="goToProposal(row)">查看审批</el-button>
+                  </template>
+                  <template v-else-if="row.request_type === 'product_plan'">
+                    <el-button type="success" size="small" @click="showProductPlanDialog(row)">审批</el-button>
+                  </template>
+                  <template v-else>
                     <el-button type="success" size="small" @click="handleApprove(row)">通过</el-button>
                     <el-button type="danger" size="small" @click="handleReject(row)">驳回</el-button>
                   </template>
-                  <el-button v-else link type="primary" size="small" @click="goToProposal(row)">查看审批</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -166,6 +172,29 @@
       </template>
     </el-dialog>
 
+    <!-- 产品规划审批弹窗 -->
+    <el-dialog v-model="productPlanVisible" :title="'产品规划审批 — ' + (productPlanItem?.title || '')" width="520px">
+      <template v-if="productPlanItem">
+        <div class="detail-grid">
+          <span class="detail-label">产品规划名称:</span><span>{{ productPlanItem.title }}</span>
+          <span class="detail-label">当前阶段:</span><span>{{ planStageLabel }}</span>
+          <span class="detail-label">发起人:</span><span>{{ productPlanItem.applicant || productPlanItem.requester || '-' }}</span>
+          <span class="detail-label">申请编号:</span><span>{{ productPlanItem.id }}</span>
+          <span class="detail-label">提交时间:</span><span>{{ productPlanItem.submitted_at || productPlanItem.created_at || '-' }}</span>
+        </div>
+        <el-form style="margin-top: 16px" label-width="80px">
+          <el-form-item label="审批意见">
+            <el-input v-model="productPlanComment" type="textarea" rows="3" placeholder="请输入审批意见（可选）" maxlength="500" show-word-limit />
+          </el-form-item>
+        </el-form>
+      </template>
+      <template #footer>
+        <el-button type="danger" :loading="productPlanLoading" @click="rejectProductPlan">❌ 驳回</el-button>
+        <el-button type="primary" :loading="productPlanLoading" @click="approveProductPlan">✅ 通过</el-button>
+        <el-button @click="productPlanVisible = false">取消</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 编辑审批链弹窗 -->
     <el-dialog v-model="chainEditVisible" :title="editingChain ? '编辑审批链' : '新建审批链'" width="600px">
       <el-form :model="chainForm" label-width="80px">
@@ -196,7 +225,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
@@ -220,7 +249,7 @@ const statusFilter = ref('')
 
 const statusMap: Record<string, string> = { pending: '待审批', approved: '已通过', rejected: '已驳回' }
 const statusType: Record<string, string> = { pending: 'warning', approved: 'success', rejected: 'danger' }
-const typeMap: Record<string, string> = { ecr: 'ECR变更', ecn: 'ECN变更', bom: 'BOM变更', certification: '认证', proposal: '立项审批' }
+const typeMap: Record<string, string> = { ecr: 'ECR变更', ecn: 'ECN变更', bom: 'BOM变更', certification: '认证', proposal: '立项审批', product_plan: '产品规划' }
 
 // Detail dialog
 const detailVisible = ref(false)
@@ -315,8 +344,67 @@ async function doReject() {
   finally { rejecting.value = false }
 }
 
+// ⚠️ 已废弃: proposal 重定向将在后续版本移除, 改为内联审批弹窗
 function goToProposal(_row: any) {
   router.push('/approvals/proposals')
+}
+
+// 产品规划审批弹窗
+const productPlanVisible = ref(false)
+const productPlanItem = ref<any>(null)
+const productPlanComment = ref('')
+const productPlanLoading = ref(false)
+
+const planStageMap: Record<string, string> = {
+  draft: '草稿',
+  competitor: '竞品分析',
+  definition: '规格定义',
+  costing: '成本核算',
+  tech_input: '技术输入',
+  project_init: '项目启动',
+  approved: '已通过',
+  released: '已发布',
+}
+
+const planStageLabel = computed(() => {
+  const raw = productPlanItem.value?.stage || productPlanItem.value?.status || ''
+  return planStageMap[raw] || raw || '-'
+})
+
+function showProductPlanDialog(row: any) {
+  productPlanItem.value = row
+  productPlanComment.value = ''
+  productPlanVisible.value = true
+}
+
+async function approveProductPlan() {
+  if (!productPlanItem.value) return
+  productPlanLoading.value = true
+  try {
+    await api.post(`/approval/requests/${productPlanItem.value.id}/approve`, { comment: productPlanComment.value || '' })
+    ElMessage.success('审批通过')
+    productPlanVisible.value = false
+    productPlanItem.value = null
+    productPlanComment.value = ''
+    fetchList()
+    window.dispatchEvent(new CustomEvent('approval-updated'))
+  } catch { ElMessage.error('审批操作失败') }
+  finally { productPlanLoading.value = false }
+}
+
+async function rejectProductPlan() {
+  if (!productPlanItem.value) return
+  productPlanLoading.value = true
+  try {
+    await api.post(`/approval/requests/${productPlanItem.value.id}/reject`, { opinion: productPlanComment.value || '驳回' })
+    ElMessage.success('已驳回')
+    productPlanVisible.value = false
+    productPlanItem.value = null
+    productPlanComment.value = ''
+    fetchList()
+    window.dispatchEvent(new CustomEvent('approval-updated'))
+  } catch { ElMessage.error('驳回操作失败') }
+  finally { productPlanLoading.value = false }
 }
 
 // 审批链管理

@@ -1,0 +1,222 @@
+{
+  "audit_evidence_report": {
+    "generated_at": "2026-06-25T09:45:00+08:00",
+    "repository": "ros-system",
+    "total_commits": 122,
+    "commits_last_24h": 43,
+    "project_days": 9
+  },
+  "findings": {
+    "D2_large_commits": {
+      "title": "Commits exceeding 200 insertions in last 24 hours",
+      "severity": "VIOLATION",
+      "count": 22,
+      "details": [
+        {"hash": "c8f3aece", "insertions": 16330, "message": "feat: Phase 5 - Webhook + Docker部署 + SDK文档"},
+        {"hash": "b3d1c1eb", "insertions": 5991, "message": "feat: Phase 6 S2 - 认证中心完整交付"},
+        {"hash": "9c2b317e", "insertions": 4523, "message": "feat: Phase 6 S3 - ECR/ECO engineering change control"},
+        {"hash": "ca18d473", "insertions": 4365, "message": "feat: Phase 6 S1 - 实验中心（VR/Prototype/TestCenter/GateRule/TargetMa"},
+        {"hash": "a6ae3f20", "insertions": 4123, "message": "chore: Phase 5 checkpoint before S1 start"},
+        {"hash": "8da8e68e", "insertions": 3944, "message": "feat: P0-4 成本核算系统 — 7张核心表+32条API+6个前端页面"},
+        {"hash": "9fb493fa", "insertions": 2445, "message": "feat: P0-6 安规管理模块 — 安全标准库+安规检测项+供应商安规+预警"},
+        {"hash": "549e3693", "insertions": 1947, "message": "feat: Phase 5 - Event Timeline & Risk Dashboard 前端UI"},
+        {"hash": "c9bcd816", "insertions": 1714, "message": "feat: Phase 4 - Event Infrastructure Layer"},
+        {"hash": "bfdbf9a5", "insertions": 1487, "message": "feat: P0-8 DFM可制造性分析模块 — 检查项模板+分析报告+评分引擎"},
+        {"hash": "7b1b38d4", "insertions": 1406, "message": "fix: P0 security & functional fixes"},
+        {"hash": "5bcf015b", "insertions": 1398, "message": "feat: ProductPlan核心引擎Phase 1 — 9个子任务"},
+        {"hash": "fed1847b", "insertions": 1360, "message": "feat: Phase 5 - Event Timeline & Dashboard 后端API"},
+        {"hash": "b0937849", "insertions": 1182, "message": "feat: suggestion 1+2 - event bus + unified state machine framewor"},
+        {"hash": "8f023efd", "insertions": 1057, "message": "feat: Phase 5 - 多租户管理API+前端 (P5-6/P5-7)"},
+        {"hash": "e3439531", "insertions": 1037, "message": "feat: 产品策划模块P1改善 — 校验反馈/统计看板/路线图"},
+        {"hash": "9f7c4c33", "insertions": 1025, "message": "feat: P0-7 外协管理模块 — 外协厂商+外协订单+外协质检"},
+        {"hash": "44fea68f", "insertions": 544, "message": "fix: BOM 500 (missing org_id) + login page registration link"},
+        {"hash": "176c6b12", "insertions": 442, "message": "feat: Phase 5 - 多租户基础设施 (P5-5)"},
+        {"hash": "9d3f633e", "insertions": 287, "message": "feat: inject event bus emissions + state machine assertions into"},
+        {"hash": "2c815879", "insertions": 277, "message": "feat: P0-3 audit log enhancement - 7 new fields, log query API, r"},
+        {"hash": "525b3e76", "insertions": 211, "message": "fix: P0整改 — 修权限死路径+补S2菜单+删重复+侧边栏分组"}
+      ]
+    },
+    "C5_bare_except": {
+      "title": "Bare 'except:' clauses across all Python files",
+      "severity": "VIOLATION",
+      "count": 30,
+      "files_affected": 2,
+      "details": {
+        "audit_pm_browser.py": 25,
+        "audit_pm_v2.py": 5
+      },
+      "note": "No bare except found in backend/ source code. 30 occurrences are in root-level audit test scripts."
+    },
+    "C3_return_types_auth_py": {
+      "title": "Functions without return type hints in backend/app/api/auth.py",
+      "severity": "VIOLATION",
+      "total_defs": 12,
+      "defs_with_return_type": 1,
+      "defs_without_return_type": 11,
+      "percentage_typed": 8.3,
+      "details": {
+        "functions_with_type": [
+          {"line": 214, "name": "_enrich_user_out", "signature": "def _enrich_user_out(user: User) -> UserOut"}
+        ],
+        "functions_without_type": [
+          {"line": 22, "name": "login"},
+          {"line": 31, "name": "logout"},
+          {"line": 37, "name": "_require_admin_for_register"},
+          {"line": 46, "name": "register"},
+          {"line": 72, "name": "apply_account"},
+          {"line": 114, "name": "list_applications"},
+          {"line": 128, "name": "review_application"},
+          {"line": 168, "name": "get_me"},
+          {"line": 173, "name": "change_password"},
+          {"line": 187, "name": "forgot_password"},
+          {"line": 207, "name": "list_users"}
+        ]
+      }
+    },
+    "D4_return_type_annotations_api": {
+      "title": "Return type annotations across backend/app/api/* (D4 check)",
+      "severity": "CRITICAL_VIOLATION",
+      "total_defs": 524,
+      "defs_with_return_type": 76,
+      "defs_without_return_type": 448,
+      "coverage_percentage": 14.5,
+      "files_total": 53,
+      "files_with_any_type_hints": 24,
+      "files_with_zero_type_hints": 29,
+      "files_with_zero_types": [
+        "admin_cost_configs.py", "admin_role_mappings.py", "admin_role_templates.py",
+        "alerts.py", "audit_logs.py", "dashboard.py", "event_timeline.py",
+        "gate_rules.py", "knowledge.py", "pm_statistics.py", "proposal_approval.py",
+        "purchases.py", "risk_dashboard.py", "s2_cert_executions.py",
+        "s2_cert_requirements.py", "s2_cert_results.py", "s2_certificates.py",
+        "s2_change_impact.py", "s2_gate_rules.py", "safety.py",
+        "state_machine_api.py", "target_markets.py", "test_executions.py", "webhooks.py"
+      ]
+    },
+    "E1_E2_test_ratio": {
+      "title": "Test files vs total Python files (E1/E2)",
+      "severity": "VIOLATION",
+      "test_files": 3,
+      "total_python_files": 163,
+      "ratio_percentage": 1.8,
+      "note": "Only 3 test files under backend/tests/ for the entire codebase",
+      "test_files_list": [
+        "backend/tests/test_api.py",
+        "backend/tests/test_product_advanced.py",
+        "backend/tests/test_proposal_approval.py"
+      ]
+    },
+    "G1_agents_md_references": {
+      "title": "AGENTS.md references to vibe-coding or compliance (G1)",
+      "severity": "PASS",
+      "vibe_coding_mentioned": false,
+      "compliance_mentioned": false,
+      "note": "AGENTS.md contains coding standards (type hints, error handling, git practices) but no reference to 'vibe-coding' or 'compliance'"
+    },
+    "F1_security_issues": {
+      "title": "Security issue scan (F1)",
+      "severity": "LOW",
+      "findings": [
+        {
+          "check": "verify=False in requests/httpx",
+          "findings": 0,
+          "status": "PASS"
+        },
+        {
+          "check": "__import__() usage",
+          "findings": 1,
+          "status": "LOW",
+          "file": "backend/scripts/reset_passwords.py",
+          "line": 89,
+          "code": "__import__('datetime').datetime.now()",
+          "note": "Used in a password reset script to generate timestamp. Low severity - not a dynamic import of untrusted input."
+        },
+        {
+          "check": "exec() calls",
+          "findings": 0,
+          "status": "PASS",
+          "note": "Only mention is in a docstring ('docker exec')"
+        },
+        {
+          "check": "eval() calls",
+          "findings": 0,
+          "status": "PASS"
+        },
+        {
+          "check": "subprocess shell=True",
+          "findings": 0,
+          "status": "PASS"
+        }
+      ]
+    },
+    "C2_hardcoded_config": {
+      "title": "Hardcoded configuration patterns (C2)",
+      "severity": "LOW",
+      "findings": [
+        {
+          "check": "Hardcoded IP in CORS origins",
+          "severity": "LOW",
+          "file": "backend/app/core/config.py",
+          "line": 51,
+          "content": "\"http://139.196.15.52\"",
+          "note": "Production server IP hardcoded in CORS_ORIGINS list. Should use environment variable."
+        },
+        {
+          "check": "Default DB credentials in config.py",
+          "severity": "LOW",
+          "file": "backend/app/core/config.py",
+          "lines": "28-40",
+          "note": "DB_HOST=127.0.0.1, DB_USER=root, DB_PASSWORD='' defaults are acceptable as they're overridden via .env in production; DB_PASSWORD empty default is minor concern."
+        }
+      ]
+    },
+    "ISP_violations": {
+      "title": "Interface Segregation Principle - Classes with >4 public methods",
+      "severity": "WARNING",
+      "count": 8,
+      "classes": [
+        {"name": "EventStore", "public_methods": 7, "file": "backend/app/core/event_store.py"},
+        {"name": "EventBus", "public_methods": 6, "file": "backend/app/core/saga_engine.py"},
+        {"name": "TestProductRules", "public_methods": 8, "file": "backend/tests/test_product_advanced.py"},
+        {"name": "TestVersionTransitions", "public_methods": 6, "file": "backend/tests/test_product_advanced.py"},
+        {"name": "TestManufacturingVariant", "public_methods": 6, "file": "backend/tests/test_product_advanced.py"},
+        {"name": "TestProducts", "public_methods": 7, "file": "backend/tests/test_api.py"},
+        {"name": "TestBOM", "public_methods": 5, "file": "backend/tests/test_api.py"},
+        {"name": "TestProjects", "public_methods": 5, "file": "backend/tests/test_api.py"}
+      ],
+      "note": "4 of 8 are test classes (acceptable), but EventStore and EventBus are production classes potentially violating ISP"
+    },
+    "B2_large_files": {
+      "title": "Python files exceeding 800 lines (B2)",
+      "severity": "VIOLATION",
+      "count": 4,
+      "aggregate_excess_lines": 1611,
+      "files": [
+        {"path": "backend/app/schemas/__init__.py", "lines": 1841, "excess": 1041},
+        {"path": "backend/app/api/pm_workspace.py", "lines": 1400, "excess": 600},
+        {"path": "backend/app/api/projects.py", "lines": 972, "excess": 172},
+        {"path": "backend/app/api/proposal_approval.py", "lines": 879, "excess": 79}
+      ]
+    }
+  },
+  "summary": {
+    "total_checks": 10,
+    "critical_violations": 1,
+    "violations": 5,
+    "warnings": 1,
+    "low_severity": 2,
+    "passes": 1,
+    "items": {
+      "D2_large_commits": "VIOLATION",
+      "C5_bare_except": "VIOLATION",
+      "C3_return_types_auth_py": "VIOLATION",
+      "D4_return_type_annotations_api": "CRITICAL_VIOLATION",
+      "E1_E2_test_ratio": "VIOLATION",
+      "G1_agents_md_references": "PASS",
+      "F1_security_issues": "LOW",
+      "C2_hardcoded_config": "LOW",
+      "ISP_violations": "WARNING",
+      "B2_large_files": "VIOLATION"
+    }
+  }
+}

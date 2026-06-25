@@ -48,6 +48,20 @@ class ProductPlan(Base):
     name = Column(String(200), nullable=False, comment="策划名称")
     series = Column(String(100), nullable=True, comment="产品系列")
     market = Column(String(100), nullable=True, comment="目标市场")
+    # ---- 新增直接字段（从Project迁移，加快查询速度）----
+    product_type = Column(String(50), nullable=True, comment="产品类型")
+    target_market_detail = Column(String(100), nullable=True, comment="目标市场(详细)")
+    climate_zone = Column(String(50), nullable=True, comment="温带")
+    refrigerant = Column(String(50), nullable=True, comment="制冷剂")
+    capacity_range = Column(String(100), nullable=True, comment="覆盖容量")
+    voltage_freq = Column(String(50), nullable=True, comment="电压频率")
+    series_name = Column(String(50), nullable=True, comment="系列名称")
+    energy_rating = Column(String(20), nullable=True, comment="能效等级")
+    dev_category = Column(String(50), nullable=True, comment="开发类别")
+    project_origin = Column(String(100), nullable=True, comment="项目来源")
+    project_duration = Column(String(50), nullable=True, comment="项目周期")
+    ip_ownership = Column(String(100), nullable=True, comment="知识产权归属")
+    # ---- 现有字段 ----
     competitor_id = Column(Integer, ForeignKey("competitor_models.id"), nullable=True, comment="关联竞品ID")
     cost_target = Column(Text, nullable=True, comment="成本目标JSON: {target: float, currency: str}")
     performance_target = Column(Text, nullable=True, comment="技术指标目标JSON: [{param, target, unit}]")
@@ -64,6 +78,12 @@ class ProductPlan(Base):
     competitor = relationship("CompetitorModel", foreign_keys=[competitor_id])
     project = relationship("Project", foreign_keys=[project_id])
     costs = relationship("Cost", back_populates="product_plan", cascade="all, delete-orphan")
+    # ---- 新增子表关联 ----
+    initiation = relationship("ProductPlanInitiation", uselist=False, back_populates="product_plan", cascade="all, delete-orphan")
+    market_info = relationship("ProductPlanMarket", uselist=False, back_populates="product_plan", cascade="all, delete-orphan")
+    tech_spec = relationship("ProductPlanTechSpec", uselist=False, back_populates="product_plan", cascade="all, delete-orphan")
+    team_members = relationship("ProductPlanTeam", back_populates="product_plan", cascade="all, delete-orphan")
+    # ---- 多租户 ----
     org = relationship("Organization", foreign_keys=[org_id])
 
 

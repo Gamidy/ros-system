@@ -19,7 +19,7 @@ from app.api import (
     # Phase 6 — 产品管理扩展
     competitor, competitor_bench,
     pm_accessory, pm_roadmap, pm_statistics,
-    product_plan, proposal_utils,
+    product_plan, product_plan_subs, proposal_utils,
     # Phase 6 S3 — ECR/ECO 工程变更控制
     ecr, eco,
     safety,
@@ -49,7 +49,7 @@ __all__ = [
     "s2_gate_rules", "s2_change_impact",
     "competitor", "competitor_bench",
     "pm_accessory", "pm_roadmap", "pm_statistics",
-    "product_plan", "proposal_utils",
+    "product_plan", "product_plan_subs", "proposal_utils",
     "ecr", "eco",
     "safety",
     "manufacturability",
