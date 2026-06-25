@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../api'
-import { type RoleName, ROLE_LABELS, ALL_MENUS, type MenuItem } from '../types/roles'
+import { type RoleName, ROLE_LABELS, ALL_MENUS, MENU_GROUPS, type MenuItem, type MenuGroup } from '../types/roles'
 
 interface User {
   id: number
@@ -41,6 +41,15 @@ export const useAuthStore = defineStore('auth', () => {
   const visibleMenus = computed<MenuItem[]>(() => {
     const paths = allowedPaths.value
     return ALL_MENUS.filter(m => paths.has(m.path))
+  })
+
+  /** 按分组筛选的侧边栏菜单（基于服务端下发的 allowedPaths） */
+  const visibleGroups = computed<MenuGroup[]>(() => {
+    const paths = allowedPaths.value
+    return MENU_GROUPS.map(group => ({
+      ...group,
+      children: group.children.filter(m => paths.has(m.path))
+    })).filter(g => g.children.length > 0)
   })
 
   /** 检查某个路由路径是否有权限访问（公开页面 /login、/register 始终放行） */
@@ -100,7 +109,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user, token, loading,
     roleName, roleLabel,
-    allowedPaths, visibleMenus,
+    allowedPaths, visibleMenus, visibleGroups,
     hasRouteAccess,
     login, logout, init, fetchUser,
   }

@@ -3,7 +3,7 @@ import {
   Monitor, Goods, List, Folder, Document, WarningFilled,
   Stamp, Cpu, WarnTriangleFilled, Refresh, Select,
   ShoppingCart, DataAnalysis, Setting, Checked,
-  OfficeBuilding, User,
+  OfficeBuilding, User, Edit,
 } from '@element-plus/icons-vue'
 
 /** 系统支持的全部角色（与后端 permissions.py ALL_ROLES 对齐） */
@@ -62,6 +62,102 @@ export interface MenuItem {
   icon: Component   // Element Plus 图标组件
 }
 
+/** 菜单分组定义 */
+export interface MenuGroup {
+  title: string
+  icon: Component
+  children: MenuItem[]
+}
+
+/** 菜单分组配置 */
+export const MENU_GROUPS: MenuGroup[] = [
+  {
+    title: '决策',
+    icon: Monitor,
+    children: [
+      { path: '/dashboard', title: '驾驶舱', icon: Monitor },
+      { path: '/rd-dashboard', title: '研发总监', icon: DataAnalysis },
+      { path: '/risk-dashboard', title: '智能决策看板', icon: DataAnalysis },
+    ]
+  },
+  {
+    title: '策划与立项',
+    icon: Goods,
+    children: [
+      { path: '/product-plans', title: '产品策划', icon: DataAnalysis },
+      { path: '/pm-workspace', title: '工作台', icon: Monitor },
+      { path: '/competitor-bench', title: '竞品对标', icon: DataAnalysis },
+      { path: '/market-mgmt', title: '市场管理', icon: Stamp },
+      { path: '/approvals/proposals', title: '产品立项审批', icon: Checked },
+    ]
+  },
+  {
+    title: '研发执行',
+    icon: Folder,
+    children: [
+      { path: '/products', title: '产品主线', icon: Goods },
+      { path: '/bom', title: 'BOM物料管理', icon: List },
+      { path: '/projects', title: '项目管理', icon: Folder },
+      { path: '/prototypes', title: '样机管理', icon: Cpu },
+      { path: '/changes', title: '变更管理', icon: Refresh },
+      { path: '/ecr', title: 'ECR变更申请', icon: Edit },
+      { path: '/eco', title: 'ECO变更指令', icon: Edit },
+    ]
+  },
+  {
+    title: '验证合规',
+    icon: Document,
+    children: [
+      { path: '/tests', title: '实验与测试', icon: Document },
+      { path: '/tests/verification-requirements', title: '验证需求', icon: Document },
+      { path: '/tests/gate-rules', title: 'Gate规则引擎', icon: WarningFilled },
+      { path: '/tests/target-markets', title: '目标市场配置', icon: Stamp },
+      { path: '/s2/dashboard', title: '认证中心', icon: Stamp },
+      { path: '/s2/requirements', title: '认证需求', icon: Document },
+      { path: '/s2/projects', title: '认证项目', icon: Folder },
+      { path: '/s2/samples', title: '认证样机', icon: Cpu },
+      { path: '/s2/executions', title: '认证执行', icon: Select },
+      { path: '/s2/results', title: '认证结果', icon: DataAnalysis },
+      { path: '/s2/certificates', title: '证书管理', icon: Stamp },
+      { path: '/s2/gate-rules', title: '认证门禁规则', icon: WarningFilled },
+      { path: '/s2/impact', title: '变更影响分析', icon: DataAnalysis },
+      { path: '/safety/standards', title: '安全标准库', icon: Document },
+      { path: '/safety/inspection-items', title: '安规检测项', icon: Document },
+      { path: '/safety/supplier-qualifications', title: '供应商安规', icon: ShoppingCart },
+      { path: '/safety/alerts', title: '安规预警', icon: WarningFilled },
+      { path: '/dfm/checklist', title: 'DFM检查项', icon: Document },
+      { path: '/dfm/reports', title: 'DFM分析报告', icon: DataAnalysis },
+    ]
+  },
+  {
+    title: '供应链与成本',
+    icon: ShoppingCart,
+    children: [
+      { path: '/purchases', title: '采购管理', icon: ShoppingCart },
+      { path: '/outsource/partners', title: '外协厂商', icon: ShoppingCart },
+      { path: '/outsource/orders', title: '外协订单', icon: List },
+      { path: '/outsource/quality-records', title: '外协质检', icon: Document },
+      { path: '/cost-accounting', title: '成本核算', icon: DataAnalysis },
+      { path: '/mm', title: '模块管理', icon: DataAnalysis },
+    ]
+  },
+  {
+    title: '系统',
+    icon: Setting,
+    children: [
+      { path: '/admin-config', title: '系统设置', icon: Setting },
+      { path: '/admin/tenants', title: '多租户管理', icon: OfficeBuilding },
+      { path: '/admin/my-org', title: '我的组织', icon: User },
+      { path: '/event-timeline', title: '事件时间线', icon: DataAnalysis },
+      { path: '/saga-viewer', title: 'Saga事务', icon: Select },
+      { path: '/approvals', title: '审批管理', icon: Select },
+      { path: '/alerts', title: '预警体系', icon: WarningFilled },
+      { path: '/quality', title: '质量问题', icon: WarnTriangleFilled },
+      { path: '/certifications', title: '认证管理', icon: Stamp },
+    ]
+  },
+]
+
 /** 全部菜单 */
 export const ALL_MENUS: MenuItem[] = [
   { path: '/dashboard',      title: '驾驶舱',        icon: Monitor },
@@ -101,6 +197,16 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/outsource/partners',  title: '外协厂商',        icon: ShoppingCart },
   { path: '/outsource/orders',    title: '外协订单',        icon: List },
   { path: '/outsource/quality-records', title: '外协质检',  icon: Document },
+  // S2 认证中心
+  { path: '/s2/dashboard',    title: '认证中心',     icon: Stamp },
+  { path: '/s2/requirements', title: '认证需求',     icon: Document },
+  { path: '/s2/projects',     title: '认证项目',     icon: Folder },
+  { path: '/s2/samples',      title: '认证样机',     icon: Cpu },
+  { path: '/s2/executions',   title: '认证执行',     icon: Select },
+  { path: '/s2/results',      title: '认证结果',     icon: DataAnalysis },
+  { path: '/s2/certificates', title: '证书管理',     icon: Stamp },
+  { path: '/s2/gate-rules',   title: '认证门禁规则',  icon: WarningFilled },
+  { path: '/s2/impact',       title: '变更影响分析',  icon: DataAnalysis },
   // S4 成本核算
   { path: '/cost-accounting',      title: '成本核算',    icon: DataAnalysis },
   { path: '/cost-accounting/labor-rates', title: '工时费率', icon: DataAnalysis },

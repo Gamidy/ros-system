@@ -13,25 +13,30 @@
       </div>
       
       <nav class="sidebar-nav">
-        <router-link
-          v-for="menu in authStore.visibleMenus"
-          :key="menu.path"
-          :to="menu.path"
-          class="nav-item"
-          :class="{ active: route.path === menu.path }"
-          @click="mobileOpen = false"
+        <el-menu
+          :default-active="route.path"
+          :collapse="isCollapse"
+          router
+          class="sidebar-el-menu"
+          @select="mobileOpen = false"
         >
-          <el-badge v-if="menu.path.includes('approval') && pendingApprovalCount > 0" 
-            :value="pendingApprovalCount" :max="99" class="nav-badge">
-            <el-icon class="nav-icon">
-              <component :is="menu.icon" />
-            </el-icon>
-          </el-badge>
-          <el-icon v-else class="nav-icon">
-            <component :is="menu.icon" />
-          </el-icon>
-          <span class="nav-label" v-show="!isCollapse || mobileOpen">{{ menu.title }}</span>
-        </router-link>
+          <template v-for="group in authStore.visibleGroups" :key="group.title">
+            <el-sub-menu :index="group.title">
+              <template #title>
+                <el-icon><component :is="group.icon" /></el-icon>
+                <span>{{ group.title }}</span>
+              </template>
+              <el-menu-item
+                v-for="item in group.children"
+                :key="item.path"
+                :index="item.path"
+              >
+                <el-icon><component :is="item.icon" /></el-icon>
+                <span>{{ item.title }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+          </template>
+        </el-menu>
       </nav>
     </aside>
 
@@ -217,69 +222,78 @@ function handleLogout() {
 /* Sidebar Navigation */
 .sidebar-nav {
   flex: 1;
-  padding: 12px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   overflow-y: auto;
+  padding: 4px 0;
 }
 
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: var(--c-radius-sm);
+/* ── el-menu overrides for sidebar ── */
+.sidebar-el-menu {
+  border-right: none !important;
+  background: transparent !important;
+}
+.sidebar-el-menu:not(.el-menu--collapse) {
+  width: 240px;
+}
+/* sub-menu title styling */
+.sidebar-el-menu .el-sub-menu__title {
+  color: var(--c-text-secondary-dark) !important;
+  font-size: 13px;
+  font-weight: 600;
+  height: 44px;
+  line-height: 44px;
+  padding: 0 16px !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  transition: background var(--c-transition-fast);
+}
+.sidebar-el-menu .el-sub-menu__title:hover {
+  background: var(--c-bg-sidebar-hover) !important;
+  color: var(--c-text-primary-dark) !important;
+}
+/* sub-menu arrow icon */
+.sidebar-el-menu .el-sub-menu__title .el-icon {
   color: var(--c-text-secondary-dark);
-  text-decoration: none;
-  transition: all var(--c-transition-fast);
-  position: relative;
-  font-size: 14px;
-  font-weight: 500;
 }
-.nav-item:hover {
-  background: var(--c-bg-sidebar-hover);
-  color: var(--c-text-primary-dark);
+/* menu items inside sub-menus */
+.sidebar-el-menu .el-menu-item {
+  color: var(--c-text-secondary-dark) !important;
+  font-size: 13px;
+  height: 40px;
+  line-height: 40px;
+  padding: 0 16px 0 48px !important;
+  background: transparent !important;
+  border-radius: 0;
+  transition: background var(--c-transition-fast);
 }
-.nav-item.active {
-  background: var(--c-bg-sidebar-active);
-  color: white;
+.sidebar-el-menu .el-menu-item:hover {
+  background: var(--c-bg-sidebar-hover) !important;
+  color: var(--c-text-primary-dark) !important;
 }
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  background: var(--c-accent);
-  border-radius: 0 2px 2px 0;
+.sidebar-el-menu .el-menu-item.is-active {
+  color: white !important;
+  background: var(--c-bg-sidebar-active) !important;
 }
-
-.nav-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-  width: 24px;
-  text-align: center;
+.sidebar-el-menu .el-menu-item .el-icon {
+  color: inherit;
+  font-size: 16px;
 }
-
-.collapsed .nav-item {
-  padding: 10px;
+/* collapse mode */
+.sidebar-el-menu.el-menu--collapse .el-sub-menu__title {
+  padding: 0 14px !important;
   justify-content: center;
 }
-.collapsed .nav-item.active::before {
+.sidebar-el-menu.el-menu--collapse .el-sub-menu__title span {
   display: none;
 }
-
-.nav-badge :deep(.el-badge__content) {
-  background: var(--c-danger) !important;
-  border: none !important;
-  font-size: 10px;
-  height: 16px;
-  line-height: 16px;
-  padding: 0 5px;
-  font-weight: 600;
+/* remove default popup offset in collapse mode */
+.el-menu--collapse .el-menu .el-sub-menu,
+.el-menu--collapse .el-menu .el-menu-item {
+  min-width: 200px;
+}
+/* no extra dividers / borders */
+.sidebar-el-menu .el-menu-item,
+.sidebar-el-menu .el-sub-menu {
+  border-bottom: none !important;
 }
 
 /* Main Content Area */

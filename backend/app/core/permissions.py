@@ -1,7 +1,7 @@
 """角色-菜单权限映射模块"""
 from typing import Optional
 
-# 全部有效角色（13种正式角色 + engineer 为向后兼容的默认角色）
+# 全部有效角色（21种正式角色 + engineer 为向后兼容的默认角色）
 ALL_ROLES = [
     "admin",
     "general_manager",
@@ -163,11 +163,6 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
-        # P0-6 安规管理
-        'safety-standards', 'safety-inspection-items',
-        # P0-8 DFM
-        'dfm-checklist', 'dfm-reports',
-
         # P0-6 安规管理
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
@@ -363,18 +358,17 @@ MENU_PATH_MAP: dict[str, str] = {
     "saga-viewer": "/saga-viewer",
     "risk-dashboard": "/risk-dashboard",
     "admin-config": "/admin-config",
-    "verification-requirements": "/verification-requirements",
-    "gate-rules": "/gate-rules",
-    "target-markets": "/target-markets",
-    "test-executions": "/test-executions",
+    "verification-requirements": "/tests/verification-requirements",
+    "gate-rules": "/tests/gate-rules",
+    "target-markets": "/tests/target-markets",
     # Phase 6 S2 — 认证中心
-    "cert-requirements": "/cert-requirements",
-    "cert-projects": "/cert-projects",
-    "cert-samples": "/cert-samples",
-    "cert-executions": "/cert-executions",
-    "cert-results": "/cert-results",
-    "certificates": "/certificates",
-    "cert-gate-rules": "/cert-gate-rules",
+    "cert-requirements": "/s2/requirements",
+    "cert-projects": "/s2/projects",
+    "cert-samples": "/s2/samples",
+    "cert-executions": "/s2/executions",
+    "cert-results": "/s2/results",
+    "certificates": "/s2/certificates",
+    "cert-gate-rules": "/s2/gate-rules",
     # Phase 6 S3 — ECR/ECO
     "ecr": "/ecr",
     "eco": "/eco",

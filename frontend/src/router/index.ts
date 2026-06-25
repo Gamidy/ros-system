@@ -204,12 +204,6 @@ const router = createRouter({
           meta: { title: '工作台', menu: 'pm-workspace' },
         },
         {
-          path: 'pm-workspace-test',
-          name: 'PMWorkspaceTest',
-          component: () => import('../views/pm/TestView.vue'),
-          meta: { title: '测试页', menu: 'pm-workspace' },
-        },
-        {
           path: 'competitor-bench',
           name: 'CompetitorBench',
           component: () => import('../views/pm/CompetitorStandalone.vue'),
