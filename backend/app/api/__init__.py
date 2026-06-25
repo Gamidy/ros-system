@@ -58,4 +58,5 @@ __all__ = [
     "admin_cost_configs", "admin_role_mappings",
     "admin_role_templates", "admin_tenant",
     "rd_panel",
+    "cost_accounting",
 ]

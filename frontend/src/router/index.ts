@@ -363,6 +363,43 @@ const router = createRouter({
           component: () => import('../views/outsource/OutsourceQualityTab.vue'),
           meta: { title: '外协质检', menu: 'outsource-quality' },
         },
+        // S4 成本核算
+        {
+          path: 'cost-accounting',
+          name: 'CostAccounting',
+          component: () => import('../views/cost-accounting/CostSheetList.vue'),
+          meta: { title: '成本核算', menu: 'cost-accounting' },
+        },
+        {
+          path: 'cost-accounting/sheets/:id',
+          name: 'CostSheetDetail',
+          component: () => import('../views/cost-accounting/CostSheetDetail.vue'),
+          meta: { title: '核算单详情', menu: 'cost-accounting' },
+        },
+        {
+          path: 'cost-accounting/labor-rates',
+          name: 'CostLaborRates',
+          component: () => import('../views/cost-accounting/LaborRateConfig.vue'),
+          meta: { title: '工时费率', menu: 'cost-accounting' },
+        },
+        {
+          path: 'cost-accounting/overhead-rules',
+          name: 'CostOverheadRules',
+          component: () => import('../views/cost-accounting/OverheadRuleConfig.vue'),
+          meta: { title: '分摊规则', menu: 'cost-accounting' },
+        },
+        {
+          path: 'cost-accounting/periods',
+          name: 'CostPeriods',
+          component: () => import('../views/cost-accounting/CostPeriodManage.vue'),
+          meta: { title: '核算期间', menu: 'cost-accounting' },
+        },
+        {
+          path: 'cost-accounting/analysis',
+          name: 'CostAnalysis',
+          component: () => import('../views/cost-accounting/CostAnalysisView.vue'),
+          meta: { title: '成本分析', menu: 'cost-accounting' },
+        },
       ],
     },
   ],

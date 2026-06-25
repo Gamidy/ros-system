@@ -84,6 +84,8 @@ ALL_MENUS = [
     "outsource-partners",      # 外协厂商
     "outsource-orders",        # 外协订单
     "outsource-quality",       # 外协质检
+    # S4 — 成本核算
+    "cost-accounting",         # 成本核算
 ]
 
 # 角色 → 菜单 映射表
@@ -105,8 +107,10 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
  'ecr', 'eco',
  # P0-6 安规管理
  'safety-standards', 'safety-inspection-items', 'safety-supplier-qual', 'safety-alerts',
- ],
- "product_manager": [
+ # S4 成本核算
+ 'cost-accounting',
+],
+"product_manager": [
         "dashboard", "products", "bom", "projects",
         'certifications', 'alerts', 'approvals', 'pm-workspace',
         'competitor_bench', 'market_mgmt', 'proposal_approvals',
@@ -115,6 +119,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        # S4 成本核算
+        'cost-accounting',
     ],
     "systems_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -273,6 +279,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
     "finance_manager": [  # 财务经理 — 成本核算
         "dashboard", "products", "bom",
         "projects", "purchases", "alerts", "approvals",
+        # S4 成本核算
+        "cost-accounting",
     ],
     "process_manager": [  # 工艺经理 — 管理工艺+审批
         "dashboard", "products", "bom", "projects",
@@ -382,6 +390,8 @@ MENU_PATH_MAP: dict[str, str] = {
     "outsource-partners": "/outsource/partners",
     "outsource-orders": "/outsource/orders",
     "outsource-quality": "/outsource/quality-records",
+    # S4 成本核算
+    "cost-accounting": "/cost-accounting",
 }
 
 
@@ -422,6 +432,8 @@ API_MENU_MAP: dict[str, str] = {
     # Phase 6 S3 — ECR/ECO
     "ecr": "changes",
     "eco": "changes",
+    # S4 成本核算
+    "cost-accounting": "cost-accounting",
 }
 
 def require_menu(menu_name: str):

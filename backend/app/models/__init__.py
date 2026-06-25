@@ -51,6 +51,11 @@ from app.models.outsource import (
     OutsourcePartner, OutsourceOrder, OutsourceOrderItem,
     OutsourceQualityRecord, OutsourceQualityFile,
 )
+from app.models.cost_accounting import (
+    CostAccountingPeriod, CostAccountingSheet, CostAccountingItem,
+    LaborRateConfig, ProductLaborCost,
+    OverheadAllocationRule, ProductOverheadCost,
+)
 
 __all__ = [
     "User",
@@ -108,4 +113,13 @@ __all__ = [
     "OutsourceOrderItem",
     "OutsourceQualityRecord",
     "OutsourceQualityFile",
+
+    # cost accounting
+    "CostAccountingPeriod",
+    "CostAccountingSheet",
+    "CostAccountingItem",
+    "LaborRateConfig",
+    "ProductLaborCost",
+    "OverheadAllocationRule",
+    "ProductOverheadCost",
 ]
