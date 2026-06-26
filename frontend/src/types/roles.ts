@@ -138,6 +138,10 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/outsource/orders', title: '外协订单', icon: List },
       { path: '/outsource/quality-records', title: '外协质检', icon: Document },
       { path: '/cost-accounting', title: '成本核算', icon: DataAnalysis },
+      { path: '/cost-accounting/labor-rates', title: '工时费率', icon: DataAnalysis },
+      { path: '/cost-accounting/overhead-rules', title: '分摊规则', icon: DataAnalysis },
+      { path: '/cost-accounting/periods', title: '核算期间', icon: Document },
+      { path: '/cost-accounting/analysis', title: '成本分析', icon: DataAnalysis },
       { path: '/mm', title: '模块管理', icon: DataAnalysis },
     ]
   },

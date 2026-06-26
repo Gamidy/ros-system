@@ -264,7 +264,8 @@ def _check_stage_requirements(plan: ProductPlan, db: Session) -> Tuple[bool, str
 
 def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -> Project:
     """APPROVED 审批通过后生成 Project（将策划数据映射到项目字段）"""
-    from datetime import date
+    from datetime import date, timedelta
+    import re
 
     # 解析 cost_target JSON
     cost_target_data = {}
@@ -289,6 +290,93 @@ def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -
             if c.cost_type == CostType.TARGET and c.target_value:
                 target_cost += c.target_value
 
+    # ── 从子表读取关键数据 ──
+    initiation = plan.initiation       # ProductPlanInitiation or None
+    market_info = plan.market_info     # ProductPlanMarket or None
+    tech_spec = plan.tech_spec         # ProductPlanTechSpec or None
+
+    # 构建 description（汇总子表关键信息）
+    desc_parts = []
+    if initiation:
+        parts = []
+        for label, val in [
+            ("目标市场", initiation.target_market),
+            ("产品类型", initiation.product_type),
+            ("温带", initiation.climate_zone),
+            ("制冷剂", initiation.refrigerant),
+            ("覆盖容量", initiation.capacity_range),
+            ("电压频率", initiation.voltage_freq),
+            ("能效等级", initiation.energy_rating),
+            ("客户", initiation.customer_name),
+            ("FOB目标价", initiation.fob_price),
+            ("BOM成本目标", initiation.bom_cost_target),
+            ("年销量预测", initiation.annual_sales_forecast),
+            ("产品生命周期", initiation.product_lifecycle),
+        ]:
+            if val:
+                parts.append(f"{label}: {val}")
+        if initiation.background_basis:
+            parts.append(f"背景: {initiation.background_basis[:200]}")
+        if initiation.overall_goal:
+            parts.append(f"总体目标: {initiation.overall_goal[:200]}")
+        if parts:
+            desc_parts.append("【立项信息】" + "; ".join(parts))
+
+    if market_info:
+        parts = []
+        for label, val in [
+            ("主销容量", market_info.main_capacity),
+            ("能效要求", market_info.energy_efficiency_req),
+            ("目标售价", market_info.target_price),
+        ]:
+            if val:
+                parts.append(f"{label}: {val}")
+        if market_info.customer_requirements:
+            parts.append(f"客户需求: {market_info.customer_requirements[:200]}")
+        if market_info.cert_requirements:
+            parts.append(f"认证要求: {market_info.cert_requirements[:200]}")
+        if parts:
+            desc_parts.append("【市场信息】" + "; ".join(parts))
+
+    if tech_spec:
+        parts = []
+        if tech_spec.core_performance:
+            parts.append(f"核心性能: {tech_spec.core_performance[:200]}")
+        if tech_spec.safety_compliance:
+            parts.append(f"安全合规: {tech_spec.safety_compliance[:200]}")
+        if tech_spec.optional_config:
+            parts.append(f"选配要求: {tech_spec.optional_config[:200]}")
+        if parts:
+            desc_parts.append("【技术要求】" + "; ".join(parts))
+
+    description = "\n".join(desc_parts) if desc_parts else None
+
+    # 计算 start_date / target_end_date
+    start_date = today
+    target_end_date = None
+    if initiation:
+        if initiation.required_date:
+            target_end_date = initiation.required_date
+        elif initiation.project_duration:
+            match = re.search(r'(\d+)', initiation.project_duration)
+            if match:
+                months = int(match.group(1))
+                target_month = start_date.month + months
+                target_year = start_date.year + (target_month - 1) // 12
+                target_month = ((target_month - 1) % 12) + 1
+                try:
+                    target_end_date = date(target_year, target_month, start_date.day)
+                except ValueError:
+                    target_end_date = date(target_year, target_month, 28)
+
+    # 融合 market_policy：plan.market + initiation.target_market
+    market_policy = plan.market or ""
+    if initiation and initiation.target_market:
+        if market_policy:
+            market_policy += f" / {initiation.target_market}"
+        else:
+            market_policy = initiation.target_market
+
     project = Project(
         code=code,
         name=project_name,
@@ -298,9 +386,12 @@ def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -
         status="planning",
         owner=username,
         budget=int(target_cost) if target_cost > 0 else None,
-        market_policy=plan.market,
+        market_policy=market_policy or None,
         annual_planning_ref=plan.name,
-        product_type=plan.series,
+        description=description,
+        start_date=start_date,
+        target_end_date=target_end_date,
+        product_plan_id=plan.id,
     )
     db.add(project)
     db.flush()  # 获取 project.id

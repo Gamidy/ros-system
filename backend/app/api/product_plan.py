@@ -86,19 +86,7 @@ class PlanOut(BaseModel):
     competitor_id: Optional[int] = None
     cost_target: Optional[str] = None
     performance_target: Optional[str] = None
-    # ---- 新增直接字段 ----
-    product_type: Optional[str] = None
     target_market_detail: Optional[str] = None
-    climate_zone: Optional[str] = None
-    refrigerant: Optional[str] = None
-    capacity_range: Optional[str] = None
-    voltage_freq: Optional[str] = None
-    series_name: Optional[str] = None
-    energy_rating: Optional[str] = None
-    dev_category: Optional[str] = None
-    project_origin: Optional[str] = None
-    project_duration: Optional[str] = None
-    ip_ownership: Optional[str] = None
     # ---- 现有字段 ----
     status: str
     project_id: Optional[int] = None
@@ -157,19 +145,19 @@ def _plan_to_dict(plan: ProductPlan) -> dict:
         "competitor_id": plan.competitor_id,
         "cost_target": plan.cost_target,
         "performance_target": plan.performance_target,
-        # ---- 新增直接字段 ----
-        "product_type": plan.product_type,
+        # ---- 子表字段（通过 initiation 访问）----
+        "product_type": plan.initiation.product_type if plan.initiation else None,
         "target_market_detail": plan.target_market_detail,
-        "climate_zone": plan.climate_zone,
-        "refrigerant": plan.refrigerant,
-        "capacity_range": plan.capacity_range,
-        "voltage_freq": plan.voltage_freq,
-        "series_name": plan.series_name,
-        "energy_rating": plan.energy_rating,
-        "dev_category": plan.dev_category,
-        "project_origin": plan.project_origin,
-        "project_duration": plan.project_duration,
-        "ip_ownership": plan.ip_ownership,
+        "climate_zone": plan.initiation.climate_zone if plan.initiation else None,
+        "refrigerant": plan.initiation.refrigerant if plan.initiation else None,
+        "capacity_range": plan.initiation.capacity_range if plan.initiation else None,
+        "voltage_freq": plan.initiation.voltage_freq if plan.initiation else None,
+        "series_name": plan.initiation.series_name if plan.initiation else None,
+        "energy_rating": plan.initiation.energy_rating if plan.initiation else None,
+        "dev_category": plan.initiation.dev_category if plan.initiation else None,
+        "project_origin": plan.initiation.project_origin if plan.initiation else None,
+        "project_duration": plan.initiation.project_duration if plan.initiation else None,
+        "ip_ownership": plan.initiation.ip_ownership if plan.initiation else None,
         # ---- 现有字段 ----
         "status": plan.status.value if plan.status else "draft",
         "project_id": plan.project_id,

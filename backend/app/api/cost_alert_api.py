@@ -18,7 +18,7 @@ from app.core.security import require_menu
 from app.models.cost_alert_rule import CostAlertRule, AlertEvent
 from app.services.cost_alert_service import check_cost_alerts
 
-router = APIRouter(prefix="/api/cost-alert-rules", tags=["成本超标预警引擎"])
+router = APIRouter(prefix="/cost-alert-rules", tags=["成本超标预警引擎"])
 
 
 # ── Schemas ──────────────────────────────────────────────────────────

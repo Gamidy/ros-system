@@ -13,6 +13,7 @@ from app.api import auth, products, bom, projects, tests, certifications, alerts
 from app.api import verification_requirements, prototypes, test_executions, gate_rules, target_markets
 from app.api import s2_cert_requirements, s2_cert_projects, s2_cert_samples, s2_cert_executions, s2_cert_results, s2_certificates, s2_gate_rules, s2_change_impact
 from app.api import ecr, eco
+from app.api import cost_alert_api
 from app.api import audit_logs
 from app.api import safety
 from app.api import manufacturability
@@ -138,6 +139,8 @@ app.include_router(manufacturability.router)
 app.include_router(outsource.router)
 app.include_router(cost_accounting.router)
 app.include_router(bi_analytics.router)
+# ── 成本超标预警引擎 ──
+app.include_router(cost_alert_api.router, prefix="/api")
 # ── D3 用户通知偏好配置 ──
 app.include_router(user_notification_api.router)
 # ── D4 AI辅助策划 ──

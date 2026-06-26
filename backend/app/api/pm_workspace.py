@@ -1,12 +1,12 @@
 """产品经理(PM)工作台API — 聚合视图 + 快捷CRUD + Product Initiation Draft 管理
 
 提供 PM 角色专属的项目管理工作台:
-- GET  /api/pm/workspace      — 聚合面板数据
-- POST /api/pm/project        — 一站式快捷创建项目 (正式)
-- POST /api/pm/project/draft  — 保存草稿项目
+- GET  /api/pm/workspace          — 聚合面板数据
+- GET  /api/pm/proposals          — 我的提案列表
+- POST /api/pm/project/draft      — 保存草稿项目
 - PUT  /api/pm/project/draft/{pid} — 更新草稿项目
-- POST /api/pm/project/submit/{pid} — 草稿提交为正式项目
-- PATCH /api/pm/project/{pid} — 快捷更新项目字段
+- POST /api/pm/proposals/submit   — 提交立项审批
+- POST /api/pm/proposals/{id}/withdraw — 撤回立项审批
 """
 from datetime import datetime, date
 import json
@@ -22,6 +22,8 @@ from app.models.user import User
 from app.models.project import Project, Program
 from app.models.product import Product, Platform
 from app.models.annual_plan import AnnualPlan
+from app.models.product_plan import ProductPlan, ProductPlanStage
+from app.models.product_plan_subs import ProductPlanInitiation, ProductPlanMarket, ProductPlanTechSpec, ProductPlanTeam
 from app.core.security import require_role
 from app.schemas import ProjectCreate, ProjectOut
 from app.api.pm_proposal_utils import (
@@ -51,7 +53,28 @@ def _require_pm(current_user: User = Depends(get_current_user)) -> User:
 # ══════════════════════════════════════════════════════════════
 
 def _project_to_dict(p: Project) -> dict:
-    """将 Project ORM 对象转为包含所有 Initiation 字段的 dict"""
+    """将 Project ORM 对象转为包含所有 Initiation 字段的 dict
+    
+    当项目有关联 ProductPlan 时，从子表读取 Sheet1-5 字段；
+    无关联时返回空值（向后兼容）。
+    """
+    # 从 ProductPlan 子表解析字段
+    init = None
+    market = None
+    tech = None
+    team_list = None
+    if p.product_plan_id:
+        plan = p.product_plan
+        if plan:
+            init = plan.initiation
+            market = plan.market_info
+            tech = plan.tech_spec
+            team_list = plan.team_members
+
+    def _v(obj, attr, default=None):
+        """Safe attribute access"""
+        return getattr(obj, attr, default) if obj else default
+
     return {
         "id": p.id,
         "code": p.code,
@@ -74,65 +97,70 @@ def _project_to_dict(p: Project) -> dict:
         "leader_id": p.leader_id,
         "dev_modules": p.dev_modules,
         "change_impacts": p.change_impacts,
-        # Sheet 1 - 项目概述
-        "product_type": p.product_type,
-        "target_market": p.target_market,
-        "climate_zone": p.climate_zone,
-        "refrigerant": p.refrigerant,
-        "capacity_range": p.capacity_range,
-        "voltage_freq": p.voltage_freq,
-        "series_name": p.series_name,
-        "energy_rating": p.energy_rating,
-        "ip_ownership": p.ip_ownership,
-        "project_duration": p.project_duration,
-        "dev_category": p.dev_category,
-        "project_origin": p.project_origin,
-        "background_basis": p.background_basis,
-        "overall_goal": p.overall_goal,
-        "tech_goal": p.tech_goal,
-        "cost_goal": p.cost_goal,
-        "sales_goal": p.sales_goal,
-        "cert_goal": p.cert_goal,
-        "schedule_goal": p.schedule_goal,
-        "patent_goal": p.patent_goal,
-        "other_goals": p.other_goals,
-        "deliverables": p.deliverables,
-        "sample_qty": p.sample_qty,
-        "required_date": str(p.required_date) if p.required_date else None,
-        # Sheet 2 - 市场与客户需求
-        "main_capacity": p.main_capacity,
-        "energy_efficiency_req": p.energy_efficiency_req,
-        "cert_requirements": p.cert_requirements,
-        "target_price": p.target_price,
-        "customer_requirements": p.customer_requirements,
-        # Sheet 3 - 技术要求
-        "core_performance": p.core_performance,
-        "safety_compliance": p.safety_compliance,
-        "optional_config": p.optional_config,
-        # Sheet 4 - 成本核算
-        "dev_cost_items": p.dev_cost_items,
-        "economic_indicators": p.economic_indicators,
-        "mold_costs": p.mold_costs,
-        "prototype_costs_detail": p.prototype_costs_detail,
-        "test_costs": p.test_costs,
-        "cert_costs": p.cert_costs,
-        "labor_costs": p.labor_costs,
-        # Sheet 5 - 团队与职责
-        "team_members": p.team_members,
-        # New fields (Excel alignment)
-        "customer_name": p.customer_name,
-        "other_requirements": p.other_requirements,
-        "accessory_config": p.accessory_config,
-        "feature_config": p.feature_config,
-        "fob_price": p.fob_price,
-        "bom_cost_target": p.bom_cost_target,
-        "bom_cost_ratio": p.bom_cost_ratio,
-        "manufacturing_cost": p.manufacturing_cost,
-        "gross_margin": p.gross_margin,
-        "annual_sales_forecast": p.annual_sales_forecast,
-        "product_lifecycle": p.product_lifecycle,
-        "mold_inner": p.mold_inner,
-        "mold_outer": p.mold_outer,
+        # Sheet 1 - 项目概述 (from ProductPlanInitiation)
+        "product_type": _v(init, "product_type"),
+        "target_market": _v(init, "target_market"),
+        "climate_zone": _v(init, "climate_zone"),
+        "refrigerant": _v(init, "refrigerant"),
+        "capacity_range": _v(init, "capacity_range"),
+        "voltage_freq": _v(init, "voltage_freq"),
+        "series_name": _v(init, "series_name"),
+        "energy_rating": _v(init, "energy_rating"),
+        "ip_ownership": _v(init, "ip_ownership"),
+        "project_duration": _v(init, "project_duration"),
+        "dev_category": _v(init, "dev_category"),
+        "project_origin": _v(init, "project_origin"),
+        "background_basis": _v(init, "background_basis"),
+        "overall_goal": _v(init, "overall_goal"),
+        "tech_goal": _v(init, "tech_goal"),
+        "cost_goal": _v(init, "cost_goal"),
+        "sales_goal": _v(init, "sales_goal"),
+        "cert_goal": _v(init, "cert_goal"),
+        "schedule_goal": _v(init, "schedule_goal"),
+        "patent_goal": _v(init, "patent_goal"),
+        "other_goals": _v(init, "other_goals"),
+        "deliverables": _v(init, "deliverables"),
+        "sample_qty": _v(init, "sample_qty"),
+        "required_date": str(_v(init, "required_date")) if _v(init, "required_date") else None,
+        # Sheet 2 - 市场与客户需求 (from ProductPlanMarket)
+        "main_capacity": _v(market, "main_capacity"),
+        "energy_efficiency_req": _v(market, "energy_efficiency_req"),
+        "cert_requirements": _v(market, "cert_requirements"),
+        "target_price": _v(market, "target_price"),
+        "customer_requirements": _v(market, "customer_requirements"),
+        # Sheet 3 - 技术要求 (from ProductPlanTechSpec)
+        "core_performance": _v(tech, "core_performance"),
+        "safety_compliance": _v(tech, "safety_compliance"),
+        "optional_config": _v(tech, "optional_config"),
+        # Sheet 4 - 成本核算 (from ProductPlanInitiation)
+        "dev_cost_items": _v(init, "dev_cost_items"),
+        "economic_indicators": _v(init, "economic_indicators"),
+        "mold_costs": _v(init, "mold_costs"),
+        "prototype_costs_detail": _v(init, "prototype_costs_detail"),
+        "test_costs": _v(init, "test_costs"),
+        "cert_costs": _v(init, "cert_costs"),
+        "labor_costs": _v(init, "labor_costs"),
+        # Sheet 5 - 团队 (from ProductPlanTeam 1:N)
+        "team_members": json.dumps([{
+            "role_name": t.role_name,
+            "member_name": t.member_name,
+            "department": t.department,
+            "responsibility": t.responsibility,
+        } for t in (team_list or [])], ensure_ascii=False) if team_list else None,
+        # New fields (Excel alignment) — from ProductPlanInitiation
+        "customer_name": _v(init, "customer_name"),
+        "other_requirements": _v(init, "other_requirements"),
+        "accessory_config": _v(init, "accessory_config"),
+        "feature_config": _v(init, "feature_config"),
+        "fob_price": _v(init, "fob_price"),
+        "bom_cost_target": _v(init, "bom_cost_target"),
+        "bom_cost_ratio": _v(init, "bom_cost_ratio"),
+        "manufacturing_cost": _v(init, "manufacturing_cost"),
+        "gross_margin": _v(init, "gross_margin"),
+        "annual_sales_forecast": _v(init, "annual_sales_forecast"),
+        "product_lifecycle": _v(init, "product_lifecycle"),
+        "mold_inner": _v(init, "mold_inner"),
+        "mold_outer": _v(init, "mold_outer"),
         # Draft
         "is_draft": p.is_draft,
         "created_at": str(p.created_at) if p.created_at else None,
@@ -362,7 +390,8 @@ def _apply_project_fields(
     # Sheet 5
     team_members: str | None = None,
 ):
-    """将非 None 参数写入 Project 对象（is not None 判断）"""
+    """将非 None 参数写入 Project 对象（基础字段直接写，Sheet1-5 写 ProductPlan 子表）"""
+    # ---- 基础 Project 字段 ----
     if name is not None:
         p.name = name.strip()
     if description is not None:
@@ -387,295 +416,161 @@ def _apply_project_fields(
         p.program_id = program_id
     if leader_id is not None:
         p.leader_id = leader_id
-    # Sheet 1
+
+    # ---- Sheet1-5 字段写入 ProductPlan 子表 ----
+    plan = p.product_plan if p.product_plan_id else None
+    if plan is None:
+        # 无关联 ProductPlan，直接跳过（不报错，向后兼容）
+        return
+
+    # 确保子表记录存在
+    if not plan.initiation:
+        plan.initiation = ProductPlanInitiation(product_plan_id=plan.id)
+    if not plan.market_info:
+        plan.market_info = ProductPlanMarket(product_plan_id=plan.id)
+    if not plan.tech_spec:
+        plan.tech_spec = ProductPlanTechSpec(product_plan_id=plan.id)
+
+    init = plan.initiation
+    market = plan.market_info
+    tech = plan.tech_spec
+
+    # Sheet 1 → ProductPlanInitiation
     if product_type is not None:
-        p.product_type = product_type
+        init.product_type = product_type
     if target_market is not None:
-        p.target_market = target_market
+        init.target_market = target_market
     if climate_zone is not None:
-        p.climate_zone = climate_zone
+        init.climate_zone = climate_zone
     if refrigerant is not None:
-        p.refrigerant = refrigerant
+        init.refrigerant = refrigerant
     if capacity_range is not None:
-        p.capacity_range = capacity_range
+        init.capacity_range = capacity_range
     if voltage_freq is not None:
-        p.voltage_freq = voltage_freq
+        init.voltage_freq = voltage_freq
     if series_name is not None:
-        p.series_name = series_name
+        init.series_name = series_name
     if energy_rating is not None:
-        p.energy_rating = energy_rating
+        init.energy_rating = energy_rating
     if ip_ownership is not None:
-        p.ip_ownership = ip_ownership
+        init.ip_ownership = ip_ownership
     if project_duration is not None:
-        p.project_duration = project_duration
+        init.project_duration = project_duration
     if dev_category is not None:
-        p.dev_category = dev_category
+        init.dev_category = dev_category
     if project_origin is not None:
-        p.project_origin = project_origin
+        init.project_origin = project_origin
     if background_basis is not None:
-        p.background_basis = background_basis
+        init.background_basis = background_basis
     if overall_goal is not None:
-        p.overall_goal = overall_goal
+        init.overall_goal = overall_goal
     if tech_goal is not None:
-        p.tech_goal = tech_goal
+        init.tech_goal = tech_goal
     if cost_goal is not None:
-        p.cost_goal = cost_goal
+        init.cost_goal = cost_goal
     if sales_goal is not None:
-        p.sales_goal = sales_goal
+        init.sales_goal = sales_goal
     if cert_goal is not None:
-        p.cert_goal = cert_goal
+        init.cert_goal = cert_goal
     if schedule_goal is not None:
-        p.schedule_goal = schedule_goal
+        init.schedule_goal = schedule_goal
     if patent_goal is not None:
-        p.patent_goal = patent_goal
+        init.patent_goal = patent_goal
     if other_goals is not None:
-        p.other_goals = other_goals
+        init.other_goals = other_goals
     if deliverables is not None:
-        p.deliverables = deliverables
+        init.deliverables = deliverables
     if sample_qty is not None:
-        p.sample_qty = sample_qty
+        init.sample_qty = sample_qty
     if required_date is not None:
-        p.required_date = required_date
-    # Sheet 2
+        init.required_date = required_date
+
+    # Sheet 2 → ProductPlanMarket
     if main_capacity is not None:
-        p.main_capacity = main_capacity
+        market.main_capacity = main_capacity
     if energy_efficiency_req is not None:
-        p.energy_efficiency_req = energy_efficiency_req
+        market.energy_efficiency_req = energy_efficiency_req
     if cert_requirements is not None:
-        p.cert_requirements = cert_requirements
+        market.cert_requirements = cert_requirements
     if target_price is not None:
-        p.target_price = target_price
+        market.target_price = target_price
     if customer_requirements is not None:
-        p.customer_requirements = customer_requirements
-    # Sheet 3
+        market.customer_requirements = customer_requirements
+
+    # Sheet 3 → ProductPlanTechSpec
     if core_performance is not None:
-        p.core_performance = core_performance
+        tech.core_performance = core_performance
     if safety_compliance is not None:
-        p.safety_compliance = safety_compliance
+        tech.safety_compliance = safety_compliance
     if optional_config is not None:
-        p.optional_config = optional_config
-    # Sheet 4
+        tech.optional_config = optional_config
+
+    # Sheet 4 (costs) → ProductPlanInitiation
     if dev_cost_items is not None:
-        p.dev_cost_items = dev_cost_items
+        init.dev_cost_items = dev_cost_items
     if economic_indicators is not None:
-        p.economic_indicators = economic_indicators
+        init.economic_indicators = economic_indicators
     if mold_costs is not None:
-        p.mold_costs = mold_costs
+        init.mold_costs = mold_costs
     if prototype_costs_detail is not None:
-        p.prototype_costs_detail = prototype_costs_detail
+        init.prototype_costs_detail = prototype_costs_detail
     if test_costs is not None:
-        p.test_costs = test_costs
+        init.test_costs = test_costs
     if cert_costs is not None:
-        p.cert_costs = cert_costs
+        init.cert_costs = cert_costs
     if labor_costs is not None:
-        p.labor_costs = labor_costs
-    # Sheet 5
+        init.labor_costs = labor_costs
+
+    # New fields → ProductPlanInitiation
     if customer_name is not None:
-        p.customer_name = customer_name
+        init.customer_name = customer_name
     if other_requirements is not None:
-        p.other_requirements = other_requirements
+        init.other_requirements = other_requirements
     if accessory_config is not None:
-        p.accessory_config = accessory_config
+        init.accessory_config = accessory_config
     if feature_config is not None:
-        p.feature_config = feature_config
+        init.feature_config = feature_config
     if fob_price is not None:
-        p.fob_price = fob_price
+        init.fob_price = fob_price
     if bom_cost_target is not None:
-        p.bom_cost_target = bom_cost_target
+        init.bom_cost_target = bom_cost_target
     if bom_cost_ratio is not None:
-        p.bom_cost_ratio = bom_cost_ratio
+        init.bom_cost_ratio = bom_cost_ratio
     if manufacturing_cost is not None:
-        p.manufacturing_cost = manufacturing_cost
+        init.manufacturing_cost = manufacturing_cost
     if gross_margin is not None:
-        p.gross_margin = gross_margin
+        init.gross_margin = gross_margin
     if annual_sales_forecast is not None:
-        p.annual_sales_forecast = annual_sales_forecast
+        init.annual_sales_forecast = annual_sales_forecast
     if product_lifecycle is not None:
-        p.product_lifecycle = product_lifecycle
+        init.product_lifecycle = product_lifecycle
     if mold_inner is not None:
-        p.mold_inner = mold_inner
+        init.mold_inner = mold_inner
     if mold_outer is not None:
-        p.mold_outer = mold_outer
-    # Sheet 5
+        init.mold_outer = mold_outer
+
+    # Sheet 5 (team) → ProductPlanTeam (1:N, 替换策略)
     if team_members is not None:
-        p.team_members = team_members
+        # 清除旧的团队成员
+        for old_t in list(plan.team_members):
+            plan.team_members.remove(old_t)
+        # 解析 JSON 并创建新成员
+        try:
+            members = json.loads(team_members) if isinstance(team_members, str) else team_members
+            if isinstance(members, list):
+                for m in members:
+                    plan.team_members.append(ProductPlanTeam(
+                        product_plan_id=plan.id,
+                        role_name=m.get("role_name", ""),
+                        member_name=m.get("member_name"),
+                        department=m.get("department"),
+                        responsibility=m.get("responsibility"),
+                    ))
+        except (json.JSONDecodeError, TypeError):
+            pass  # 静默忽略解析失败
 
 
-# ══════════════════════════════════════════════════════════════
-# POST /api/pm/project — PM 一站式快捷创建项目
-# ══════════════════════════════════════════════════════════════
 
-@router.post("/project")
-def pm_create_project(
-    name: str = Body(..., max_length=200),
-    description: str | None = Body(None),
-    market_policy: str | None = Body(None, max_length=200),
-    annual_planning_ref: str | None = Body(None, max_length=100),
-    budget: int | None = Body(None),
-    product_code: str | None = Body(None, max_length=50),
-    project_class: str = Body("B", pattern="^(T|A|B|C)$"),
-    source: str | None = Body(None, max_length=50),
-    target_end_date: date | None = Body(None),
-    start_date: date | None = Body(None),  # BUGFIX: Added missing start_date parameter
-    program_id: int | None = Body(None),
-    leader_id: int | None = Body(None),
-    # Sheet 1 - 项目概述
-    product_type: str | None = Body(None, max_length=50),
-    target_market: str | None = Body(None, max_length=100),
-    climate_zone: str | None = Body(None, max_length=50),
-    refrigerant: str | None = Body(None, max_length=50),
-    capacity_range: str | None = Body(None, max_length=100),
-    voltage_freq: str | None = Body(None, max_length=50),
-    series_name: str | None = Body(None, max_length=50),
-    energy_rating: str | None = Body(None, max_length=20),
-    ip_ownership: str | None = Body(None, max_length=100),
-    project_duration: str | None = Body(None, max_length=50),
-    dev_category: str | None = Body(None, max_length=50),
-    project_origin: str | None = Body(None, max_length=100),
-    background_basis: str | None = Body(None),
-    overall_goal: str | None = Body(None),
-    tech_goal: str | None = Body(None),
-    cost_goal: str | None = Body(None),
-    sales_goal: str | None = Body(None),
-    cert_goal: str | None = Body(None),
-    schedule_goal: str | None = Body(None),
-    patent_goal: str | None = Body(None),
-    other_goals: str | None = Body(None),
-    deliverables: str | None = Body(None),
-    sample_qty: int | None = Body(None),
-    required_date: date | None = Body(None),
-    # Sheet 2 - 市场与客户需求
-    main_capacity: str | None = Body(None, max_length=50),
-    energy_efficiency_req: str | None = Body(None, max_length=100),
-    cert_requirements: str | None = Body(None),
-    target_price: str | None = Body(None, max_length=50),
-    customer_requirements: str | None = Body(None),
-    # Sheet 3 - 技术要求
-    core_performance: str | None = Body(None),
-    safety_compliance: str | None = Body(None),
-    optional_config: str | None = Body(None),
-    # Sheet 4 - 成本核算
-    dev_cost_items: str | None = Body(None),
-    economic_indicators: str | None = Body(None),
-    mold_costs: str | None = Body(None),
-    prototype_costs_detail: str | None = Body(None),
-    test_costs: str | None = Body(None),
-    cert_costs: str | None = Body(None),
-    # Sheet 5 - 团队与职责
-    team_members: str | None = Body(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_pm),
-):
-    """PM 快捷创建正式项目 — 自动以当前 PM 为 owner, 自动生成 code, is_draft=False"""
-    if not name or not name.strip():
-        raise HTTPException(status_code=400, detail="项目名称不能为空")
-
-    # 自动生成项目编号
-    code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
-    while db.query(Project).filter(Project.code == code, Project.is_deleted == False).first():
-        code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
-
-    p = Project(
-        code=code,
-        name=name.strip(),
-        project_class=project_class,
-        source=source,
-        target_end_date=target_end_date,
-        owner=current_user.username,
-        status="planning",
-        is_draft=False,
-        program_id=program_id,
-        leader_id=leader_id,
-    )
-    # 应用所有可选字段
-    _apply_project_fields(
-        p,
-        name=name,
-        description=description,
-        market_policy=market_policy,
-        annual_planning_ref=annual_planning_ref,
-        budget=budget,
-        product_code=product_code,
-        project_class=project_class,
-        source=source,
-        target_end_date=target_end_date,
-        start_date=start_date,
-        program_id=program_id,
-        leader_id=leader_id,
-        product_type=product_type,
-        target_market=target_market,
-        climate_zone=climate_zone,
-        refrigerant=refrigerant,
-        capacity_range=capacity_range,
-        voltage_freq=voltage_freq,
-        series_name=series_name,
-        energy_rating=energy_rating,
-        ip_ownership=ip_ownership,
-        project_duration=project_duration,
-        dev_category=dev_category,
-        project_origin=project_origin,
-        background_basis=background_basis,
-        overall_goal=overall_goal,
-        tech_goal=tech_goal,
-        cost_goal=cost_goal,
-        sales_goal=sales_goal,
-        cert_goal=cert_goal,
-        schedule_goal=schedule_goal,
-        patent_goal=patent_goal,
-        other_goals=other_goals,
-        deliverables=deliverables,
-        sample_qty=sample_qty,
-        required_date=required_date,
-        main_capacity=main_capacity,
-        energy_efficiency_req=energy_efficiency_req,
-        cert_requirements=cert_requirements,
-        target_price=target_price,
-        customer_requirements=customer_requirements,
-        core_performance=core_performance,
-        safety_compliance=safety_compliance,
-        optional_config=optional_config,
-        dev_cost_items=dev_cost_items,
-        economic_indicators=economic_indicators,
-        mold_costs=mold_costs,
-        prototype_costs_detail=prototype_costs_detail,
-        team_members=team_members,
-    )
-
-    # ── 自动计算：制冷量 BTU → 瓦特，注入 core_performance ──
-    if capacity_range:
-        p.core_performance = inject_cooling_capacity_to_core_performance(
-            p.core_performance, capacity_range
-        )
-    # ── 自动计算：人月费用，写入 labor_costs ──
-    if project_duration or team_members:
-        p.labor_costs = generate_labor_costs_json(project_duration, team_members)
-
-    try:
-        db.add(p)
-        db.flush()
-
-        # 根据项目等级自动生成 Gate 模板
-        from app.api.projects import _get_gate_template
-        from app.models.project import ProjectGate
-        template = _get_gate_template(project_class)
-        for gate_def in template:
-            db.add(ProjectGate(
-                project_id=p.id,
-                gate_code=gate_def["code"],
-                gate_name=gate_def["name"],
-                seq=gate_def["seq"],
-                decision_level=gate_def["decision_level"],
-                is_high_risk_zone=gate_def["is_high_risk_zone"],
-                is_hidden=gate_def["is_hidden"],
-            ))
-
-        db.commit()
-        db.refresh(p)
-    except Exception:
-        db.rollback()
-        raise
-
-    return _project_to_dict(p)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -770,7 +665,28 @@ def pm_create_draft(
         program_id=program_id,
         leader_id=leader_id,
     )
-    # 应用所有可选字段
+    db.add(p)
+    db.flush()
+
+    # ── 创建 ProductPlan（DRAFT）+ 子表记录 ──
+    plan = ProductPlan(
+        name=p.name,
+        status=ProductPlanStage.DRAFT,
+        created_by=current_user.username,
+    )
+    db.add(plan)
+    db.flush()
+    p.product_plan_id = plan.id
+
+    # 创建子表空记录
+    init = ProductPlanInitiation(product_plan_id=plan.id)
+    market = ProductPlanMarket(product_plan_id=plan.id)
+    tech = ProductPlanTechSpec(product_plan_id=plan.id)
+    db.add(init)
+    db.add(market)
+    db.add(tech)
+
+    # 应用所有可选字段（现在会写入 ProductPlan 子表）
     _apply_project_fields(
         p,
         name=name,
@@ -838,16 +754,15 @@ def pm_create_draft(
     )
 
     # ── 自动计算：制冷量 BTU → 瓦特，注入 core_performance ──
-    if capacity_range:
-        p.core_performance = inject_cooling_capacity_to_core_performance(
-            p.core_performance, capacity_range
+    if capacity_range and plan.tech_spec:
+        plan.tech_spec.core_performance = inject_cooling_capacity_to_core_performance(
+            plan.tech_spec.core_performance, capacity_range
         )
     # ── 自动计算：人月费用，写入 labor_costs ──
     if project_duration or team_members:
-        p.labor_costs = generate_labor_costs_json(project_duration, team_members)
+        plan.initiation.labor_costs = generate_labor_costs_json(project_duration, team_members)
 
     try:
-        db.add(p)
         db.commit()
         db.refresh(p)
     except Exception:
@@ -1019,17 +934,20 @@ def pm_update_draft(
         )
 
         # ── 自动计算：制冷量 BTU → 瓦特 ──
-        if capacity_range and p.capacity_range:
-            p.core_performance = inject_cooling_capacity_to_core_performance(
-                p.core_performance, p.capacity_range
+        if capacity_range and p.product_plan and p.product_plan.tech_spec:
+            plan_tech = p.product_plan.tech_spec
+            plan_tech.core_performance = inject_cooling_capacity_to_core_performance(
+                plan_tech.core_performance, capacity_range
             )
         # ── 自动计算：人月费用 ──
         if project_duration is not None or team_members is not None:
             from app.api.pm_proposal_utils import generate_labor_costs_json as _gen_labor
-            p.labor_costs = _gen_labor(
-                project_duration if project_duration is not None else p.project_duration,
-                team_members if team_members is not None else p.team_members,
-            )
+            if p.product_plan and p.product_plan.initiation:
+                plan_init = p.product_plan.initiation
+                plan_init.labor_costs = _gen_labor(
+                    project_duration if project_duration is not None else plan_init.project_duration,
+                    team_members if team_members is not None else None,
+                )
 
         db.commit()
         db.refresh(p)
@@ -1040,133 +958,7 @@ def pm_update_draft(
     return _project_to_dict(p)
 
 
-# ══════════════════════════════════════════════════════════════
-# POST /api/pm/project/submit/{pid} — 草稿提交为正式项目
-# ══════════════════════════════════════════════════════════════
 
-@router.post("/project/submit/{pid}")
-def pm_submit_draft(
-    pid: int,
-    start_date: date | None = Body(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_pm),
-):
-    """草稿提交为正式项目 — is_draft=False, status='planning', 自动生成 code 和 Gate 模板"""
-    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
-    if not p:
-        raise HTTPException(status_code=404, detail="项目不存在")
-
-    # 验证当前用户是项目 owner
-    if p.owner != current_user.username:
-        raise HTTPException(status_code=403, detail="仅项目负责人可提交此项目")
-
-    # 验证是否为草稿
-    if not p.is_draft:
-        raise HTTPException(status_code=400, detail="该项目已提交，无法重复提交")
-
-    try:
-        # 自动生成项目编号 (如果还没有)
-        if not p.code:
-            code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
-            while db.query(Project).filter(Project.code == code, Project.is_deleted == False).first():
-                code = f"PRJ-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
-            p.code = code
-
-        # 转为正式项目
-        p.is_draft = False
-        p.status = "planning"
-
-        # ── 提交时自动生成认证费用（写入 cert_costs）──
-        if p.safety_compliance:
-            cert_rows = get_cert_costs_from_compliance(p.safety_compliance)
-            p.cert_costs = json.dumps(cert_rows, ensure_ascii=False, default=str)
-        # ── 提交时自动计算人月费用（写入 labor_costs）──
-        if p.project_duration or p.team_members:
-            p.labor_costs = generate_labor_costs_json(p.project_duration, p.team_members)
-        # ── 提交时自动计算制冷量 ──
-        if p.capacity_range:
-            p.core_performance = inject_cooling_capacity_to_core_performance(
-                p.core_performance, p.capacity_range
-            )
-
-        db.flush()
-
-        # 自动生成 Gate 模板 (如果还没有)
-        from app.api.projects import _get_gate_template
-        from app.models.project import ProjectGate
-        existing_gates = db.query(ProjectGate).filter(
-            ProjectGate.project_id == pid
-        ).count()
-        if existing_gates == 0:
-            project_class = p.project_class or "B"
-            template = _get_gate_template(project_class)
-            for gate_def in template:
-                db.add(ProjectGate(
-                    project_id=p.id,
-                    gate_code=gate_def["code"],
-                    gate_name=gate_def["name"],
-                    seq=gate_def["seq"],
-                    decision_level=gate_def["decision_level"],
-                    is_high_risk_zone=gate_def["is_high_risk_zone"],
-                    is_hidden=gate_def["is_hidden"],
-                ))
-
-        db.commit()
-        db.refresh(p)
-    except Exception:
-        db.rollback()
-        raise
-
-    return _project_to_dict(p)
-
-
-# ══════════════════════════════════════════════════════════════
-# PATCH /api/pm/project/{pid} — PM 快捷更新项目
-# ══════════════════════════════════════════════════════════════
-
-@router.patch("/project/{pid}")
-def pm_update_project(
-    pid: int,
-    description: str | None = Body(None),
-    market_policy: str | None = Body(None, max_length=200),
-    annual_planning_ref: str | None = Body(None, max_length=100),
-    budget: int | None = Body(None),
-    target_end_date: date | None = Body(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_pm),
-):
-    """PM 快捷更新项目 — 仅 owner 本人可编辑"""
-    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
-    if not p:
-        raise HTTPException(status_code=404, detail="项目不存在")
-
-    # 验证当前用户是项目 owner
-    if p.owner != current_user.username:
-        raise HTTPException(status_code=403, detail="仅项目负责人可更新此项目")
-
-    # 只有草稿状态的项目才能编辑（防覆盖已提交的项目）
-    if not p.is_draft:
-        raise HTTPException(status_code=400, detail="已提交或审批中的项目不可编辑，如需修改请撤回审批")
-
-    try:
-        if description is not None:
-            p.description = description
-        if market_policy is not None:
-            p.market_policy = market_policy
-        if annual_planning_ref is not None:
-            p.annual_planning_ref = annual_planning_ref
-        if budget is not None:
-            p.budget = budget
-        if target_end_date is not None:
-            p.target_end_date = target_end_date
-
-        db.commit()
-        db.refresh(p)
-    except Exception:
-        db.rollback()
-        raise
-
-    return _project_to_dict(p)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1397,4 +1189,124 @@ def get_capacity_cost_config(
         "proto_unit_cost": proto_unit_cost,
         "test_unit_price": test_unit_price,
         "indirect_cost": indirect_cost,
+    }
+
+
+# ══════════════════════════════════════════════════════════════
+# POST /api/pm/proposals/submit — 提交立项审批
+# ══════════════════════════════════════════════════════════════
+
+
+@router.post("/proposals/submit")
+def submit_proposal(
+    project_id: int = Body(..., description="项目ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_pm),
+):
+    """提交项目立项 — 推进关联 ProductPlan 到 PROJECT_INIT 并创建审批请求"""
+    # 查找项目
+    p = db.query(Project).filter(Project.id == project_id, Project.is_deleted == False).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    # 验证当前用户是项目 owner
+    if p.owner != current_user.username:
+        raise HTTPException(status_code=403, detail="仅项目负责人可提交立项")
+
+    # 查找关联 ProductPlan
+    plan_id = p.product_plan_id
+    if not plan_id:
+        raise HTTPException(status_code=400, detail="项目未关联产品策划，无法提交审批")
+
+    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="关联的产品策划不存在")
+
+    from app.services.product_plan_workflow import advance_stage
+
+    # 将 ProductPlan 逐步推进到 PROJECT_INIT
+    stage_order = [
+        ProductPlanStage.DRAFT,
+        ProductPlanStage.COMPETITOR,
+        ProductPlanStage.DEFINITION,
+        ProductPlanStage.COSTING,
+        ProductPlanStage.TECH_INPUT,
+        ProductPlanStage.PROJECT_INIT,
+    ]
+
+    target_stage = ProductPlanStage.PROJECT_INIT
+    current = plan.status
+
+    if current in stage_order:
+        current_idx = stage_order.index(current)
+        target_idx = stage_order.index(target_stage)
+        if current_idx < target_idx:
+            for step in range(current_idx, target_idx):
+                plan = advance_stage(db, plan_id, current_user.username)
+        elif current_idx > target_idx:
+            raise HTTPException(
+                status_code=400,
+                detail=f"产品策划已超出立项阶段（当前: {ProductPlanStage.PROJECT_INIT.value}），无法重复提交",
+            )
+
+    # 创建审批请求
+    from app.services.product_plan_approval import create_plan_approval
+    approval = create_plan_approval(plan_id, db, current_user.username)
+
+    return {
+        "plan_id": plan_id,
+        "plan_status": plan.status.value,
+        "approval_id": approval.id,
+        "message": "项目已提交审批",
+    }
+
+
+# ══════════════════════════════════════════════════════════════
+# POST /api/pm/proposals/{proposal_id}/withdraw — 撤回立项审批
+# ══════════════════════════════════════════════════════════════
+
+
+@router.post("/proposals/{proposal_id}/withdraw")
+def withdraw_proposal(
+    proposal_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_pm),
+):
+    """撤回立项审批请求 — 仅申请人可撤回，撤回后回退 ProductPlan 阶段"""
+    req = db.query(ApprovalRequest).filter(ApprovalRequest.id == proposal_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="审批请求不存在")
+
+    # 仅申请人可撤回
+    if req.requester != current_user.username:
+        raise HTTPException(status_code=403, detail="仅申请人可撤回审批")
+
+    # 仅待审批状态可撤回
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail=f"当前审批状态为「{req.status}」，无法撤回")
+
+    # 更新审批状态
+    req.status = "withdrawn"
+
+    # 如果是产品策划审批，回退 ProductPlan 到 TECH_INPUT 阶段
+    if req.request_type == "product_plan":
+        plan_id = None
+        if req.step_meta:
+            try:
+                meta = json.loads(req.step_meta) if isinstance(req.step_meta, str) else req.step_meta
+                plan_id = meta.get("plan_id")
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        if plan_id:
+            plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+            if plan and plan.status == ProductPlanStage.PROJECT_INIT:
+                plan.status = ProductPlanStage.TECH_INPUT
+
+    db.commit()
+
+    return {
+        "id": req.id,
+        "status": req.status,
+        "message": "审批已撤回",
     }

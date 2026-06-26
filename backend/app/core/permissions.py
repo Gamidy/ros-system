@@ -425,7 +425,7 @@ API_MENU_MAP: dict[str, str] = {
     "prototypes": "prototypes",
     "verification-requirements": "verification-requirements",
     "gate-rules": "gate-rules",
-    "target-markets": "target-markets",
+    "target-markets": "market_mgmt",
     "test-executions": "test-executions",
     # Phase 6 S2 — 认证中心
     "s2/certification-requirements": "cert-requirements",

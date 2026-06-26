@@ -44,18 +44,19 @@ from app.models.product_plan_subs import (
 # Columns we try to copy from Project → ProductPlan direct fields.
 # The script validates each column exists on the actual table before using it.
 PRODUCT_PLAN_DIRECT_MAP = {
-    "product_type": "product_type",
+    # 以下 11 个字段已迁移到 ProductPlanInitiation 子表，不再写入 ProductPlan 直接字段
+    # product_type → product_type (now in product_plan_initiations)
+    # climate_zone → climate_zone (now in product_plan_initiations)
+    # refrigerant → refrigerant (now in product_plan_initiations)
+    # capacity_range → capacity_range (now in product_plan_initiations)
+    # voltage_freq → voltage_freq (now in product_plan_initiations)
+    # series_name → series_name (now in product_plan_initiations)
+    # energy_rating → energy_rating (now in product_plan_initiations)
+    # dev_category → dev_category (now in product_plan_initiations)
+    # project_origin → project_origin (now in product_plan_initiations)
+    # project_duration → project_duration (now in product_plan_initiations)
+    # ip_ownership → ip_ownership (now in product_plan_initiations)
     "target_market": "target_market_detail",  # Project.target_market → ProductPlan.target_market_detail
-    "climate_zone": "climate_zone",
-    "refrigerant": "refrigerant",
-    "capacity_range": "capacity_range",
-    "voltage_freq": "voltage_freq",
-    "series_name": "series_name",
-    "energy_rating": "energy_rating",
-    "dev_category": "dev_category",
-    "project_origin": "project_origin",
-    "project_duration": "project_duration",
-    "ip_ownership": "ip_ownership",
 }
 
 # Sheet1 fields → ProductPlanInitiation

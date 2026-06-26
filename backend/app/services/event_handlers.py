@@ -15,6 +15,7 @@ from app.models.project import ProjectGate
 from app.models.test import TestRequest, QualityIssue
 from app.models.alert import Alert, Notification
 from .events import bus, EventTypes, store_event
+from app.services.notification.consumer import register_handlers as register_notification_handlers
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +273,9 @@ def on_alert_overdue_found(alert_id: int, target_type: str, target_id: int, **kw
 
 def _register_all_events():
     """注册所有事件处理器 + Event Store"""
+    # ── 注册通知事件处理器（事件驱动推送引擎）──
+    register_notification_handlers()
+
     # ── 已有事件 ──
     for evt in [
         "test.done_with_ng",

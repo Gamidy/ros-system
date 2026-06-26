@@ -1,7 +1,7 @@
 """项目立项审批模型 — ProposalApproval 表
 
 ⚠️ DEPRECATED (P4): 新审批走 ApprovalRequest 驱动
-    此表仅做兼容读取和数据镜像（通过 _sync_pa_from_ar）
+    此表仅做兼容读取和数据镜像
     后续版本将移除本模型
 
 审批流程:
