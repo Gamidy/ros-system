@@ -134,7 +134,7 @@
 <!-- ─── 移动端: 5步分步表单 ─── -->
 <template v-if="isMobile && plan">
 <el-steps :active="mobileStep" finish-status="success" simple style="margin-bottom:12px;overflow-x:auto;">
-<el-step v-for="(s, i) in mobileSteps" :key="i" :title="s.label" />
+<el-step v-for="(s, i) in mobileSteps" :key="i" :title="s.label" :status="stepStatus(s.key)" />
 </el-steps>
 <div class="mobile-step-form" style="padding-bottom:72px">
 <!-- Step 0: 项目概述 -->
@@ -257,24 +257,26 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import * as planAPI from '../../api/productPlan'
+import { useSubTableProgress } from '../../composables/useSubTableProgress'
 
 const route = useRoute()
 const planId = route.params.id as string
 const { isMobile } = useResponsive()
 
-// ── Sub-tabs definition ──
-const subTabs = [
-{ key: 'initiation', label: '项目概述' },
-{ key: 'market', label: '市场与客户' },
-{ key: 'techSpec', label: '技术要求' },
-{ key: 'costingNew', label: '成本核算' },
-{ key: 'team', label: '团队' },
-]
-const activeTab = ref('initiation')
+// ── Sub-table progress (useSubTableProgress) ──
+const {
+  subTabs,
+  activeTab,
+  tabStatus,
+  refreshStatus,
+  setSubTableDone,
+  guideClick: guideClickFromComposable,
+} = useSubTableProgress(planId)
 
 // ── Mobile 5-step ──
 const mobileStep = ref(0)
 const savingAll = ref(false)
+const savingStep = ref(false)
 const mobileSteps = [
 { label: '项目概述', key: 'initiation' },
 { label: '市场客户', key: 'market' },
@@ -282,21 +284,53 @@ const mobileSteps = [
 { label: '成本核算', key: 'costingNew' },
 { label: '团队', key: 'team' },
 ]
-function nextStep() { if (mobileStep.value < mobileSteps.length - 1) mobileStep.value++ }
-function prevStep() { if (mobileStep.value > 0) mobileStep.value-- }
 
-// ── PlanStatusGuide: tab completion / guide click sync ──
+/** Auto-save current mobile step before navigating */
+async function saveCurrentStep(stepIdx: number) {
+  const key = mobileSteps[stepIdx].key
+  savingStep.value = true
+  try {
+    switch (key) {
+      case 'initiation':
+        await planAPI.upsertPlanInitiation(planId, initiationForm)
+        setSubTableDone('initiation', true)
+        break
+      case 'market':
+        await planAPI.upsertPlanMarket(planId, marketForm)
+        setSubTableDone('market', true)
+        break
+      case 'techSpec':
+        await planAPI.upsertPlanTechSpec(planId, techSpecForm)
+        setSubTableDone('techSpec', true)
+        break
+      // costingNew / team — 通过弹窗管理，无需自动保存
+    }
+  } catch { /* silent — auto-save 不应阻塞导航 */ }
+  finally { savingStep.value = false }
+}
+
+async function nextStep() {
+  if (mobileStep.value >= mobileSteps.length - 1) return
+  await saveCurrentStep(mobileStep.value)
+  mobileStep.value++
+}
+async function prevStep() {
+  if (mobileStep.value <= 0) return
+  await saveCurrentStep(mobileStep.value)
+  mobileStep.value--
+}
+
+/** Guide 引导条点击 — 同步 activeTab + 移动端切换步骤 */
 function guideClick(key: string, idx: number) {
-  activeTab.value = key
+  guideClickFromComposable(key, idx)
   if (isMobile.value) mobileStep.value = idx
 }
-const tabStatus = computed<Record<string, string>>(() => ({
-initiation: initiationForm.background ? 'done' : 'progress',
-market: marketForm.main_capacity ? 'done' : 'progress',
-techSpec: techSpecForm.core_performance ? 'done' : 'progress',
-costingNew: costs.value.length > 0 ? 'done' : 'progress',
-team: teamMembers.value.length > 0 ? 'done' : 'progress',
-}))
+
+/** 移动端步骤完成状态 — 已完成步骤显示✓ */
+function stepStatus(key: string): 'success' | undefined {
+  if (tabStatus.value[key] === 'done') return 'success'
+  return undefined
+}
 
 // ── Data ──
 const plan = ref<any>(null)
@@ -320,7 +354,7 @@ try { const res = await planAPI.getPlanInitiation(planId); if (res.data) Object.
 }
 async function saveInitiation() {
 savingInitiation.value = true
-try { await planAPI.upsertPlanInitiation(planId, initiationForm); ElMessage.success('项目概述保存成功') } catch { /* handled */ }
+try { await planAPI.upsertPlanInitiation(planId, initiationForm); ElMessage.success('项目概述保存成功'); setSubTableDone('initiation', true) } catch { /* handled */ }
 finally { savingInitiation.value = false }
 }
 
@@ -333,7 +367,7 @@ try { const res = await planAPI.getPlanMarket(planId); if (res.data) Object.assi
 }
 async function saveMarket() {
 savingMarket.value = true
-try { await planAPI.upsertPlanMarket(planId, marketForm); ElMessage.success('市场与客户需求保存成功') } catch { /* handled */ }
+try { await planAPI.upsertPlanMarket(planId, marketForm); ElMessage.success('市场与客户需求保存成功'); setSubTableDone('market', true) } catch { /* handled */ }
 finally { savingMarket.value = false }
 }
 
@@ -346,7 +380,7 @@ try { const res = await planAPI.getPlanTechSpec(planId); if (res.data) Object.as
 }
 async function saveTechSpec() {
 savingTechSpec.value = true
-try { await planAPI.upsertPlanTechSpec(planId, techSpecForm); ElMessage.success('技术要求保存成功') } catch { /* handled */ }
+try { await planAPI.upsertPlanTechSpec(planId, techSpecForm); ElMessage.success('技术要求保存成功'); setSubTableDone('techSpec', true) } catch { /* handled */ }
 finally { savingTechSpec.value = false }
 }
 
@@ -359,7 +393,7 @@ const editingTeamId = ref<number | null>(null)
 const savingTeam = ref(false)
 
 async function fetchTeam() {
-try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || [] } catch { teamMembers.value = [] }
+try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || []; setSubTableDone('team', teamMembers.value.length > 0) } catch { teamMembers.value = []; setSubTableDone('team', false) }
 }
 function editTeamMember(row: any) {
 teamDialogMode.value = 'edit'; editingTeamId.value = row.id
@@ -388,6 +422,7 @@ try {
 const res = await api.get(`/product-plans/${planId}`)
 plan.value = res.data
 costs.value = res.data.costs || []
+setSubTableDone('costingNew', costs.value.length > 0)
 editForm.value = { name: res.data.name || '', series: res.data.series || '', market: res.data.market || '', competitor_id: res.data.competitor_id ?? null }
 } catch { /* handled */ }
 finally { loading.value = false }
@@ -401,11 +436,11 @@ finally { saving.value = false }
 // ── 成本 ──
 async function addCost() {
 addingCost.value = true
-try { await api.post(`/product-plans/${planId}/costs`, costForm.value); ElMessage.success('成本添加成功'); showCostDialog.value = false; costForm.value = { item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' }; await fetchPlan() } catch { /* handled */ }
+try { await api.post(`/product-plans/${planId}/costs`, costForm.value); ElMessage.success('成本添加成功'); showCostDialog.value = false; costForm.value = { item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' }; await fetchPlan(); setSubTableDone('costingNew', true) } catch { /* handled */ }
 finally { addingCost.value = false }
 }
 async function deleteCost(row: any) {
-try { await api.delete(`/product-plans/${planId}/costs/${row.id}`); ElMessage.success('已删除'); await fetchPlan() } catch { /* handled */ }
+try { await api.delete(`/product-plans/${planId}/costs/${row.id}`); ElMessage.success('已删除'); await fetchPlan(); setSubTableDone('costingNew', costs.value.length > 0) } catch { /* handled */ }
 }
 
 // ── BOM类型 ──
@@ -460,7 +495,10 @@ try { await api.post(`/product-plans/${planId}/advance`, { comment: approvalComm
 finally { submittingApproval.value = false }
 }
 
-onMounted(() => { fetchPlan(); fetchInitiation(); fetchMarket(); fetchTechSpec(); fetchTeam() })
+onMounted(() => {
+  fetchPlan(); fetchInitiation(); fetchMarket(); fetchTechSpec(); fetchTeam()
+  refreshStatus()
+})
 </script>
 
 <style scoped>
