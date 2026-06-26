@@ -413,6 +413,12 @@ const router = createRouter({
           meta: { title: '核算期间', menu: 'cost-accounting' },
         },
         {
+          path: 'cost-accounting/overview',
+          name: 'CostOverview',
+          component: () => import('../views/cost-accounting/CostOverview.vue'),
+          meta: { title: '成本概览', menu: 'cost-accounting' },
+        },
+        {
           path: 'cost-accounting/analysis',
           name: 'CostAnalysis',
           component: () => import('../views/cost-accounting/CostAnalysisView.vue'),

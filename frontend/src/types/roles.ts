@@ -143,6 +143,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/cost-accounting/labor-rates', title: '工时费率', icon: DataAnalysis },
       { path: '/cost-accounting/overhead-rules', title: '分摊规则', icon: DataAnalysis },
       { path: '/cost-accounting/periods', title: '核算期间', icon: Document },
+      { path: '/cost-accounting/overview', title: '成本概览', icon: DataAnalysis },
       { path: '/cost-accounting/analysis', title: '成本分析', icon: DataAnalysis },
       { path: '/mm', title: '模块管理', icon: DataAnalysis },
     ]
@@ -220,6 +221,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/cost-accounting/labor-rates', title: '工时费率', icon: DataAnalysis },
   { path: '/cost-accounting/overhead-rules', title: '分摊规则', icon: DataAnalysis },
   { path: '/cost-accounting/periods',    title: '核算期间', icon: Document },
+  { path: '/cost-accounting/overview', title: '成本概览', icon: DataAnalysis },
   { path: '/cost-accounting/analysis',   title: '成本分析', icon: DataAnalysis },
 ]
 

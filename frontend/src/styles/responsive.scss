@@ -1,0 +1,419 @@
+/* ============================================
+   Responsive SCSS Utilities
+   Breakpoint variables, mixins, helper classes,
+   and global mobile overrides for Element Plus
+   components and custom grid/flex layouts.
+   ============================================ */
+
+// ──────────────────────────────────────────────
+// 1. SCSS Breakpoint Variables
+// ──────────────────────────────────────────────
+$breakpoint-mobile:  768px;   // mobile:  < 768px
+$breakpoint-tablet:  1024px;  // tablet:  >= 768px && < 1024px
+$breakpoint-desktop: 1024px;  // desktop: >= 1024px
+
+// Deprecated alias
+$bp-mobile: $breakpoint-mobile;
+$bp-tablet: $breakpoint-tablet;
+$bp-desktop: $breakpoint-desktop;
+
+// ──────────────────────────────────────────────
+// 2. Responsive Mixins
+//    Use in component <style lang="scss"> blocks:
+//      @include mobile { ... }
+//      @include tablet { ... }
+//      @include desktop { ... }
+//      @include tablet-down { ... }  // < 1024px
+// ──────────────────────────────────────────────
+@mixin mobile {
+  @media (max-width: #{$breakpoint-mobile - 1px}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: $breakpoint-mobile) and (max-width: #{$breakpoint-tablet - 1px}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: $breakpoint-desktop) {
+    @content;
+  }
+}
+
+@mixin tablet-down {
+  @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @content;
+  }
+}
+
+@mixin mobile-tablet {
+  @media (max-width: #{$breakpoint-tablet - 1px}) {
+    @content;
+  }
+}
+
+// ──────────────────────────────────────────────
+// 3. CSS Custom Properties (matches composable)
+//    Also provides spacing/typography/layout tokens.
+// ──────────────────────────────────────────────
+:root {
+  // ── Spacing scale ──
+  --r-spacing-xs: 4px;
+  --r-spacing-sm: 8px;
+  --r-spacing-md: 12px;
+  --r-spacing-lg: 16px;
+  --r-spacing-xl: 20px;
+  --r-spacing-2xl: 24px;
+
+  // ── Typography ──
+  --r-font-xs: 11px;
+  --r-font-sm: 12px;
+  --r-font-md: 13px;
+  --r-font-lg: 14px;
+  --r-font-xl: 16px;
+  --r-font-2xl: 18px;
+  --r-font-3xl: 20px;
+
+  // ── Touch target minimum (≥44px per WCAG) ──
+  --r-touch-min: 44px;
+
+  // ── Layout ──
+  --r-sidebar-width: 240px;
+  --r-sidebar-collapsed-width: 64px;
+  --r-header-height: 64px;
+}
+
+// ── Mobile (<768px) overrides ──
+@include mobile {
+  :root {
+    --r-spacing-xs: 2px;
+    --r-spacing-sm: 4px;
+    --r-spacing-md: 8px;
+    --r-spacing-lg: 12px;
+    --r-spacing-xl: 16px;
+    --r-spacing-2xl: 20px;
+
+    --r-font-xs: 10px;
+    --r-font-sm: 11px;
+    --r-font-md: 12px;
+    --r-font-lg: 13px;
+    --r-font-xl: 14px;
+    --r-font-2xl: 16px;
+    --r-font-3xl: 18px;
+
+    --r-header-height: 56px;
+  }
+
+  // ── Ensure all interactive elements meet 44px touch target ──
+  .el-button,
+  .el-menu-item,
+  .el-sub-menu__title,
+  .el-select,
+  .el-input__wrapper,
+  .el-radio,
+  .el-checkbox,
+  .el-switch,
+  .el-tag,
+  button,
+  [role='button'],
+  a {
+    min-height: var(--r-touch-min);
+  }
+}
+
+// ── Tablet (768px–1023px) adjusts ──
+@include tablet {
+  :root {
+    --r-spacing-lg: 14px;
+    --r-spacing-xl: 18px;
+
+    --r-font-lg: 13px;
+    --r-font-xl: 15px;
+  }
+}
+
+// ──────────────────────────────────────────────
+// 4. Visibility Helper Classes
+//    .mobile-only   — hidden on ≥ tablet
+//    .desktop-only  — hidden on < desktop
+//    .tablet-only   — hidden outside tablet range
+//    .mobile-tablet-only — hidden on desktop
+// ──────────────────────────────────────────────
+@include desktop {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+@include mobile-tablet {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+@include mobile {
+  .tablet-only {
+    display: none !important;
+  }
+}
+
+@include tablet {
+  .mobile-only,
+  .tablet-only {
+    display: block; // reset if previously hidden
+  }
+}
+
+@include desktop {
+  .mobile-tablet-only {
+    display: none !important;
+  }
+}
+
+// ──────────────────────────────────────────────
+// 5. Overflow Table (横向滚动el-table)
+//    Add class .overflow-table to any el-table
+//    wrapper to enable horizontal scrolling on
+//    small screens without breaking layout.
+//
+//    Usage: <el-table class="overflow-table" ...>
+// ──────────────────────────────────────────────
+.overflow-table {
+  // The outer wrapper (el-table's auto-generated container)
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  // Ensure the table itself respects min-width
+  .el-table__body-wrapper,
+  .el-table__header-wrapper {
+    overflow: visible;
+  }
+
+  .el-table__body,
+  .el-table__header {
+    min-width: max-content;
+  }
+
+  // Shadow indicators for scrollable content
+  background:
+    linear-gradient(to right, white 30%, transparent),
+    linear-gradient(to left, white 30%, transparent),
+    linear-gradient(to right, rgba(0,0,0,0.08), transparent),
+    linear-gradient(to left, rgba(0,0,0,0.08), transparent);
+  background-repeat: no-repeat;
+  background-size:
+    40px 100%,
+    40px 100%,
+    10px 100%,
+    10px 100%;
+  background-attachment: local, local, scroll, scroll;
+  background-position:
+    left center,
+    right center,
+    left center,
+    right center;
+}
+
+// ──────────────────────────────────────────────
+// 6. Mobile Overrides for Common Components
+//    These match the custom classes used across
+//    86+ views (stats-grid, stat-card, filter-bar)
+//    as well as Element Plus defaults.
+// ──────────────────────────────────────────────
+
+// ── 6a. Element Plus el-table ──
+@include mobile-tablet {
+  .el-table {
+    font-size: var(--r-font-sm) !important;
+  }
+
+  // Reduce cell padding on small screens
+  .el-table .cell {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  // Stack table rows as cards on very narrow screens (<480px)
+  @media (max-width: 479px) {
+    .el-table--striped .el-table__body tr.el-table__row {
+      // Keep striped style
+    }
+
+    // Force horizontal scroll if table has many columns
+    .el-table:not(.overflow-table) {
+      .el-table__body-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+  }
+}
+
+// ── 6b. Element Plus el-card ──
+@include mobile-tablet {
+  .el-card {
+    border-radius: 6px;
+  }
+
+  .el-card__body {
+    padding: var(--r-spacing-md) !important;
+  }
+
+  // Cards in a grid — stack vertically
+  .el-card.is-always-shadow {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+}
+
+// ── 6c. Element Plus el-form ──
+@include mobile-tablet {
+  .el-form {
+    // Labels above fields on mobile
+    .el-form-item {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      margin-bottom: var(--r-spacing-md);
+    }
+
+    .el-form-item__label {
+      text-align: left;
+      padding: 0 0 4px;
+      line-height: 1.4;
+      font-size: var(--r-font-sm);
+      font-weight: 500;
+    }
+
+    .el-form-item__content {
+      margin-left: 0 !important;
+      width: 100%;
+    }
+
+    .el-input,
+    .el-select,
+    .el-date-editor,
+    .el-textarea {
+      width: 100% !important;
+    }
+
+    // Buttons in forms — full width
+    .el-form-item .el-button {
+      width: 100%;
+    }
+  }
+}
+
+// ── 6d. Element Plus el-dialog ──
+@include mobile-tablet {
+  .el-dialog {
+    --el-dialog-width: 92vw !important;
+    margin-top: 5vh !important;
+    border-radius: 8px;
+  }
+
+  .el-dialog__body {
+    padding: var(--r-spacing-lg) !important;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .el-dialog__header {
+    padding: var(--r-spacing-md) var(--r-spacing-lg) !important;
+  }
+
+  .el-dialog__footer {
+    padding: var(--r-spacing-md) var(--r-spacing-lg) !important;
+  }
+}
+
+// ── 6e. Element Plus el-drawer ──
+@include mobile-tablet {
+  .el-drawer {
+    // Ensure drawer doesn't take full width on mobile
+    max-width: 85vw;
+  }
+}
+
+// ── 6f. Custom grid/flex layout classes ──
+//     Used extensively in 86+ views
+@include mobile-tablet {
+  // stats-grid: multi-column stats cards
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--r-spacing-sm);
+  }
+
+  // stat-card: individual stat card
+  .stat-card {
+    padding: var(--r-spacing-md) !important;
+
+    .stat-value {
+      font-size: var(--r-font-xl) !important;
+    }
+
+    .stat-label {
+      font-size: var(--r-font-xs) !important;
+    }
+  }
+
+  // filter-bar: horizontal filter row
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--r-spacing-sm);
+    padding: var(--r-spacing-sm);
+
+    > * {
+      flex: 1 1 100%;
+
+      @media (min-width: 480px) {
+        flex: 1 1 calc(50% - var(--r-spacing-sm));
+      }
+    }
+
+    .el-button {
+      flex: 1;
+    }
+  }
+
+  // action-bar: horizontal action buttons
+  .action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--r-spacing-sm);
+
+    .el-button {
+      flex: 1;
+    }
+  }
+}
+
+// ── 6g. Tiny screens (<480px) — single column ──
+@media (max-width: 479px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .filter-bar > * {
+    flex: 1 1 100% !important;
+  }
+}
+
+// ──────────────────────────────────────────────
+// 7. Page Content Padding for Mobile
+// ──────────────────────────────────────────────
+@include mobile-tablet {
+  .page-container,
+  .main-content {
+    padding: var(--r-spacing-sm) !important;
+  }
+
+  // Reduce padding on section cards
+  .section-card {
+    padding: var(--r-spacing-md) !important;
+  }
+}

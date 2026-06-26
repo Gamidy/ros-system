@@ -3,7 +3,8 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import './styles/claude-theme.css'  // Claude风格主题覆盖
-import './styles/responsive.css'     // 响应式布局变量
+import './styles/responsive.css'     // 响应式CSS变量 (兼容旧引用)
+import './styles/responsive.scss'    // 响应式SCSS工具 (断点变量/混入/覆盖样式)
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
