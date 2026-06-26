@@ -204,6 +204,18 @@ const router = createRouter({
           meta: { title: '工作台', menu: 'pm-workspace' },
         },
         {
+          path: 'proposals',
+          name: 'Proposals',
+          component: () => import('../views/pm/ProposalsView.vue'),
+          meta: { title: '提案管理', menu: 'proposals' },
+        },
+        {
+          path: 'planning/calendar',
+          name: 'PlanningCalendar',
+          component: () => import('../views/pm/PlanningCalendarView.vue'),
+          meta: { title: '年度规划日历', menu: 'planning-calendar' },
+        },
+        {
           path: 'competitor-bench',
           name: 'CompetitorBench',
           component: () => import('../views/pm/CompetitorStandalone.vue'),

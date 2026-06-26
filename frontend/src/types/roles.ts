@@ -86,6 +86,8 @@ export const MENU_GROUPS: MenuGroup[] = [
     children: [
       { path: '/product-plans', title: '产品策划', icon: DataAnalysis },
       { path: '/pm-workspace', title: '工作台', icon: Monitor },
+      { path: '/proposals', title: '提案管理', icon: Edit },
+      { path: '/planning/calendar', title: '年度规划日历', icon: DataAnalysis },
       { path: '/competitor-bench', title: '竞品对标', icon: DataAnalysis },
       { path: '/market-mgmt', title: '市场管理', icon: Stamp },
     ]
@@ -179,8 +181,10 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/purchases',      title: '采购管理',       icon: ShoppingCart },
   { path: '/pm-workspace',   title: '工作台',         icon: Monitor },
   { path: '/competitor-bench',   title: '竞品对标',     icon: DataAnalysis },
-  { path: '/market-mgmt',        title: '市场管理',     icon: Stamp },
-  { path: '/product-plans',      title: '产品策划',     icon: DataAnalysis },
+  { path: '/market-mgmt',        title: '市场管理',       icon: Stamp },
+  { path: '/product-plans',      title: '产品策划',       icon: DataAnalysis },
+  { path: '/proposals',          title: '提案管理',       icon: Edit },
+  { path: '/planning/calendar',  title: '年度规划日历',   icon: DataAnalysis },
   { path: '/event-timeline',    title: '事件时间线',    icon: DataAnalysis },
   { path: '/saga-viewer',      title: 'Saga事务',      icon: Select },
   { path: '/risk-dashboard',  title: '智能决策看板',  icon: DataAnalysis },
