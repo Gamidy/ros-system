@@ -89,6 +89,8 @@ ALL_MENUS = [
     "bi-analytics",            # BI分析看板
     # D3 — 消息通知
     "notification-settings",   # 用户通知偏好设置
+    # P1-T5 — 事件监控面板
+    "event-monitor",           # 事件监控面板
 ]
 
 # 角色 → 菜单 映射表
@@ -114,6 +116,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cost-accounting',
         # D1 BI分析看板
         'bi-analytics',
+        # P1-T5 事件监控面板
+        'event-monitor',
     ],
     "product_manager": [
         "dashboard", "products", "bom", "projects",
@@ -216,6 +220,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'dfm-checklist', 'dfm-reports',
         # P0-7 外协管理
         'outsource-partners', 'outsource-orders', 'outsource-quality',
+        # P1-T5 事件监控面板
+        'event-monitor',
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -380,6 +386,8 @@ MENU_PATH_MAP: dict[str, str] = {
     "outsource-quality": "/outsource/quality-records",
     # S4 成本核算
     "cost-accounting": "/cost-accounting",
+    # P1-T5 事件监控面板
+    "event-monitor": "/monitor/events",
 }
 
 # API路径 → 菜单名映射（用于 require_menu 权限校验）

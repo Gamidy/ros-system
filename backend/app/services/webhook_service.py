@@ -5,6 +5,8 @@
 - HMAC-SHA256 签名验证
 - 指数退避重试 (1s → 4s → 16s，最多3次)
 - 失败的投递日志手动重试
+- 测试事件发送
+- 发送日志查询
 """
 import asyncio
 import hashlib
@@ -12,13 +14,15 @@ import hmac
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 
 from app.core.database import SessionLocal
-from app.models.webhook import WebhookDeliveryLog, WebhookSubscription
+from app.models.webhook import WebhookDeliveryLog
+from app.models.webhook_subscription import WebhookSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +41,8 @@ class WebhookDispatcher:
     async def dispatch(self, event_type: str, payload: Dict[str, Any]) -> None:
         """根据事件类型查询匹配的启用的订阅，并发推送
 
-        遍历匹配的订阅列表，为每个订阅创建异步推送任务，
-        使用 ``asyncio.gather`` 并发执行。
+        使用新模型 ``WebhookSubscription`` 的 ``event_type`` 字段
+        做等值匹配，替代了旧版 JSON 数组查询。
 
         Args:
             event_type: 事件类型字符串（如 ``"plan.approved"``）
@@ -49,26 +53,14 @@ class WebhookDispatcher:
             subscriptions = (
                 db.query(WebhookSubscription)
                 .filter(
-                    WebhookSubscription.is_active == True,
-                    # 使用 JSON_CONTAINS 语义：events JSON 列中包含 event_type
-                    WebhookSubscription.events.as_string().contains(event_type),
+                    WebhookSubscription.enabled == True,
+                    WebhookSubscription.event_type == event_type,
                 )
                 .all()
             )
         except Exception as e:
-            logger.warning(f"通过JSON查询Webhook订阅失败: {e}")
-            # MySQL JSON_CONTAINS 或 SQLite JSON 兼容
-            # Fallback：全量读取后过滤（兼容 SQLite 开发环境）
-            try:
-                all_subs = (
-                    db.query(WebhookSubscription)
-                    .filter(WebhookSubscription.is_active == True)
-                    .all()
-                )
-                subscriptions = [s for s in all_subs if event_type in (s.events or [])]
-            except Exception as fallback_e:
-                logger.error("查询 webhook 订阅失败: %s", fallback_e)
-                return
+            logger.error("查询 webhook 订阅失败: %s", e)
+            return
         finally:
             db.close()
 
@@ -134,7 +126,6 @@ class WebhookDispatcher:
                 )
 
                 if success:
-                    self._update_last_triggered(subscription.id)
                     logger.info(
                         "Webhook 推送成功: sub_id=%s, url=%s, event=%s, attempt=%d",
                         subscription.id, subscription.url, event_type, attempt,
@@ -274,7 +265,6 @@ class WebhookDispatcher:
                 db.commit()
 
                 if success:
-                    self._update_last_triggered(subscription.id)
                     logger.info(
                         "重试成功: delivery_id=%s, status=%s",
                         delivery_id, response.status_code,
@@ -299,12 +289,139 @@ class WebhookDispatcher:
         finally:
             db.close()
 
+    def send_test(self, subscription: WebhookSubscription) -> dict:
+        """发送测试事件到指定订阅（同步）
+
+        构造一个 ``test.webhook`` 事件，同步发送到订阅 URL，
+        并记录投递日志。使用指数退避重试（最多3次）。
+
+        Args:
+            subscription: WebhookSubscription 实例
+
+        Returns:
+            dict: {"success": bool, "error": Optional[str]}
+        """
+        test_payload = {
+            "test": True,
+            "message": "这是一条 ROS Webhook 测试通知",
+            "subscription_name": subscription.name,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+        body = {
+            "event_type": "test.webhook",
+            "payload": test_payload,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        payload_str = json.dumps(body, ensure_ascii=False, default=str)
+        signature = self._sign_payload(payload_str, subscription.secret or "")
+
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "ROS-Webhook/1.0",
+        }
+        if signature:
+            headers["X-ROS-Signature"] = signature
+
+        last_error: Optional[str] = None
+        import httpx as sync_httpx
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = sync_httpx.post(
+                    subscription.url,
+                    content=payload_str,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                success = 200 <= response.status_code < 300
+
+                # 记录投递日志
+                self._log_delivery(
+                    subscription_id=subscription.id,
+                    event_type="test.webhook",
+                    payload=payload_str,
+                    response_status=response.status_code,
+                    response_body=response.text,
+                    success=success,
+                    retry_count=attempt - 1,
+                )
+
+                if success:
+                    logger.info(
+                        "Webhook 测试推送成功: sub_id=%s, url=%s, attempt=%d",
+                        subscription.id, subscription.url, attempt,
+                    )
+                    return {"success": True}
+
+                last_error = f"HTTP {response.status_code}: {response.text[:200]}"
+                logger.warning(
+                    "Webhook 测试推送失败 (attempt %d/%d): sub_id=%s, %s",
+                    attempt, MAX_RETRIES, subscription.id, last_error,
+                )
+
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(
+                    "Webhook 测试推送异常 (attempt %d/%d): sub_id=%s, error=%s",
+                    attempt, MAX_RETRIES, subscription.id, last_error,
+                )
+
+            # 指数退避
+            if attempt < MAX_RETRIES:
+                delay = RETRY_DELAYS[attempt - 1] if attempt - 1 < len(RETRY_DELAYS) else 16
+                import time
+                time.sleep(delay)
+
+        # 所有重试均失败 — 确保最后记录一次日志
+        self._log_delivery(
+            subscription_id=subscription.id,
+            event_type="test.webhook",
+            payload=payload_str,
+            response_status=None,
+            response_body=last_error[:500] if last_error else "未知错误",
+            success=False,
+            retry_count=MAX_RETRIES,
+        )
+
+        logger.error(
+            "Webhook 测试推送最终失败: sub_id=%s, url=%s, error=%s",
+            subscription.id, subscription.url, last_error,
+        )
+        return {"success": False, "error": last_error}
+
+    def get_logs(self, subscription_id: int, limit: int = 50) -> List[WebhookDeliveryLog]:
+        """获取指定订阅的投递日志
+
+        Args:
+            subscription_id: 订阅 ID
+            limit: 最大返回条数（默认50，最大200）
+
+        Returns:
+            list[WebhookDeliveryLog]: 按投递时间降序排列的日志列表
+        """
+        db: Session = SessionLocal()
+        try:
+            logs = (
+                db.query(WebhookDeliveryLog)
+                .filter(WebhookDeliveryLog.subscription_id == subscription_id)
+                .order_by(desc(WebhookDeliveryLog.attempted_at))
+                .limit(min(limit, 200))
+                .all()
+            )
+            return logs
+        except Exception as e:
+            logger.error("查询投递日志失败: sub_id=%s, error=%s", subscription_id, e)
+            return []
+        finally:
+            db.close()
+
     def _log_delivery(
         self,
         subscription_id: int,
         event_type: str,
         payload: str,
-        response_status: int,
+        response_status: Optional[int],
         response_body: str,
         success: bool,
         retry_count: int,
@@ -327,7 +444,7 @@ class WebhookDispatcher:
                 event_type=event_type,
                 payload=payload,
                 response_status=response_status,
-                response_body=response_body[:500],
+                response_body=response_body[:500] if response_body else "",
                 success=success,
                 retry_count=retry_count,
                 attempted_at=datetime.now(timezone.utc),
@@ -336,27 +453,6 @@ class WebhookDispatcher:
             db.commit()
         except Exception as e:
             logger.error("投递日志记录失败: %s", e)
-        finally:
-            db.close()
-
-    def _update_last_triggered(self, subscription_id: int) -> None:
-        """更新订阅的最后触发时间为当前时间
-
-        Args:
-            subscription_id: 订阅 ID
-        """
-        db: Session = SessionLocal()
-        try:
-            sub = (
-                db.query(WebhookSubscription)
-                .filter(WebhookSubscription.id == subscription_id)
-                .first()
-            )
-            if sub:
-                sub.last_triggered_at = datetime.now(timezone.utc)
-                db.commit()
-        except Exception as e:
-            logger.warning("更新 last_triggered_at 失败: %s", e)
         finally:
             db.close()
 

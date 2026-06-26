@@ -437,6 +437,13 @@ const router = createRouter({
           component: () => import('../views/bi/CostAnalytics.vue'),
           meta: { title: 'BI成本分析', menu: 'bi' },
         },
+        // P1-T5 — 前端事件监控面板
+        {
+          path: 'monitor/events',
+          name: 'EventMonitor',
+          component: () => import('../views/monitor/EventMonitorView.vue'),
+          meta: { title: '事件监控面板', menu: 'event-monitor' },
+        },
       ],
     },
   ],
