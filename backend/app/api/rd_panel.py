@@ -28,7 +28,7 @@ def _require_rd_director(current_user: User = Depends(get_current_user)) -> User
 def rd_panel(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_rd_director),
-):
+) -> dict:
     """研发总监面板 — 聚合项目统计/进度/风险/审批/延期"""
     today = date.today()
     thirty_days_ago = today - timedelta(days=30)

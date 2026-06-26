@@ -17,9 +17,9 @@ router = APIRouter(tags=["状态转换查询"])
 def query_state_transitions(
     model: str = Query(..., description="模型名称"),
     current: str | None = Query(None, description="当前状态，为空时返回所有可能状态"),
-):
+) -> dict:
     """
-    查询指定模型的状态转换规则。
+    查询状态转换：根据模型名和当前状态，返回所有可能的下一状态及触发条件。
 
     - 如果 `current` 有值，返回从该状态出发的合法目标状态列表。
     - 如果 `current` 为空，返回该模型所有可能的状态（去重）。
@@ -44,6 +44,6 @@ def query_state_transitions(
 
 
 @router.get("/state-models")
-def list_state_models():
+def list_state_models() -> dict:
     """返回所有已注册的状态机模型名列表。"""
     return {"models": get_all_model_names()}

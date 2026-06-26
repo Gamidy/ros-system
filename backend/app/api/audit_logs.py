@@ -47,7 +47,7 @@ def list_audit_logs(
     keyword: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """查询审计日志（仅 admin 可访问）"""
     # 权限检查
     from app.core.permissions import is_super_role
@@ -97,7 +97,7 @@ def audit_stats(
     days: int = Query(7, ge=1, le=90),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """审计日志统计（仅 admin）"""
     from app.core.permissions import is_super_role
     if not is_super_role(current_user.role):

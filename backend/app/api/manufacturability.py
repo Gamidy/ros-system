@@ -109,7 +109,7 @@ def list_checklist(
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> DFMChecklistListOut:
     """获取DFM检查项模板列表"""
     query = db.query(DFMChecklist)
     if category:
@@ -133,7 +133,7 @@ def list_checklist(
 
 @router.get("/checklist/{cid}", response_model=DFMChecklistOut)
 def get_checklist_item(cid: int, db: Session = Depends(get_db),
-                        current_user: User = Depends(get_current_user)):
+                        current_user: User = Depends(get_current_user)) -> DFMChecklistOut:
     item = db.query(DFMChecklist).filter(DFMChecklist.id == cid).first()
     if not item:
         raise HTTPException(status_code=404, detail="检查项不存在")
@@ -143,7 +143,7 @@ def get_checklist_item(cid: int, db: Session = Depends(get_db),
 @router.post("/checklist", response_model=DFMChecklistOut,
              dependencies=[Depends(require_role("admin", "rd_director", "structural_engineer", "process_engineer"))])
 def create_checklist_item(data: DFMChecklistCreate, db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_user)):
+                           current_user: User = Depends(get_current_user)) -> DFMChecklistOut:
     item = DFMChecklist(**data.model_dump())
     db.add(item)
     db.commit()
@@ -154,7 +154,7 @@ def create_checklist_item(data: DFMChecklistCreate, db: Session = Depends(get_db
 @router.put("/checklist/{cid}", response_model=DFMChecklistOut,
             dependencies=[Depends(require_role("admin", "rd_director", "structural_engineer", "process_engineer"))])
 def update_checklist_item(cid: int, data: DFMChecklistUpdate, db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_user)):
+                           current_user: User = Depends(get_current_user)) -> DFMChecklistOut:
     item = db.query(DFMChecklist).filter(DFMChecklist.id == cid).first()
     if not item:
         raise HTTPException(status_code=404, detail="检查项不存在")
@@ -167,7 +167,7 @@ def update_checklist_item(cid: int, data: DFMChecklistUpdate, db: Session = Depe
 
 @router.delete("/checklist/{cid}", dependencies=[Depends(require_role("admin"))])
 def delete_checklist_item(cid: int, db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_user)):
+                           current_user: User = Depends(get_current_user)) -> dict:
     item = db.query(DFMChecklist).filter(DFMChecklist.id == cid).first()
     if not item:
         raise HTTPException(status_code=404, detail="检查项不存在")
@@ -183,7 +183,7 @@ def list_score_weights(
     product_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> DFMScoreWeightListOut:
     query = db.query(DFMScoreWeight)
     if product_type:
         query = query.filter(DFMScoreWeight.product_type == product_type)
@@ -194,7 +194,7 @@ def list_score_weights(
 @router.post("/score-weights", response_model=DFMScoreWeightOut,
              dependencies=[Depends(require_role("admin", "rd_director"))])
 def create_score_weight(data: DFMScoreWeightCreate, db: Session = Depends(get_db),
-                         current_user: User = Depends(get_current_user)):
+                         current_user: User = Depends(get_current_user)) -> DFMScoreWeightOut:
     item = DFMScoreWeight(**data.model_dump())
     db.add(item)
     db.commit()
@@ -205,7 +205,7 @@ def create_score_weight(data: DFMScoreWeightCreate, db: Session = Depends(get_db
 @router.put("/score-weights/{wid}", response_model=DFMScoreWeightOut,
             dependencies=[Depends(require_role("admin", "rd_director"))])
 def update_score_weight(wid: int, data: DFMScoreWeightUpdate, db: Session = Depends(get_db),
-                         current_user: User = Depends(get_current_user)):
+                         current_user: User = Depends(get_current_user)) -> DFMScoreWeightOut:
     item = db.query(DFMScoreWeight).filter(DFMScoreWeight.id == wid).first()
     if not item:
         raise HTTPException(status_code=404, detail="权重配置不存在")
@@ -218,7 +218,7 @@ def update_score_weight(wid: int, data: DFMScoreWeightUpdate, db: Session = Depe
 
 @router.delete("/score-weights/{wid}", dependencies=[Depends(require_role("admin"))])
 def delete_score_weight(wid: int, db: Session = Depends(get_db),
-                         current_user: User = Depends(get_current_user)):
+                         current_user: User = Depends(get_current_user)) -> dict:
     item = db.query(DFMScoreWeight).filter(DFMScoreWeight.id == wid).first()
     if not item:
         raise HTTPException(status_code=404, detail="权重配置不存在")
@@ -239,7 +239,7 @@ def list_reports(
     keyword: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> DFMReportListOut:
     query = db.query(DFMReport)
     if project_id:
         query = query.filter(DFMReport.project_id == project_id)
@@ -265,7 +265,7 @@ def list_reports(
 
 @router.get("/reports/{rid}", response_model=DFMReportOut)
 def get_report(rid: int, db: Session = Depends(get_db),
-                current_user: User = Depends(get_current_user)):
+                current_user: User = Depends(get_current_user)) -> DFMReportOut:
     report = db.query(DFMReport).options(
         joinedload(DFMReport.items)
     ).filter(DFMReport.id == rid).first()
@@ -279,7 +279,7 @@ def get_report(rid: int, db: Session = Depends(get_db),
 @router.post("/reports", response_model=DFMReportOut,
              dependencies=[Depends(require_role("admin", "rd_director", "structural_engineer", "process_engineer", "quality_engineer"))])
 def create_report(data: DFMReportCreate, db: Session = Depends(get_db),
-                   current_user: User = Depends(get_current_user)):
+                   current_user: User = Depends(get_current_user)) -> DFMReportOut:
     report = DFMReport(**data.model_dump())
     report.report_no = auto_generate_report_no(db)
     db.add(report)
@@ -291,7 +291,7 @@ def create_report(data: DFMReportCreate, db: Session = Depends(get_db),
 @router.put("/reports/{rid}", response_model=DFMReportOut,
             dependencies=[Depends(require_role("admin", "rd_director", "structural_engineer", "process_engineer"))])
 def update_report(rid: int, data: DFMReportUpdate, db: Session = Depends(get_db),
-                   current_user: User = Depends(get_current_user)):
+                   current_user: User = Depends(get_current_user)) -> DFMReportOut:
     report = db.query(DFMReport).options(
         joinedload(DFMReport.items)
     ).filter(DFMReport.id == rid).first()
@@ -312,7 +312,7 @@ def update_report(rid: int, data: DFMReportUpdate, db: Session = Depends(get_db)
 
 @router.delete("/reports/{rid}", dependencies=[Depends(require_role("admin"))])
 def delete_report(rid: int, db: Session = Depends(get_db),
-                   current_user: User = Depends(get_current_user)):
+                   current_user: User = Depends(get_current_user)) -> dict:
     report = db.query(DFMReport).filter(DFMReport.id == rid).first()
     if not report:
         raise HTTPException(status_code=404, detail="DFM报告不存在")
@@ -323,7 +323,7 @@ def delete_report(rid: int, db: Session = Depends(get_db),
 
 @router.get("/reports/{rid}/score", response_model=DFMScoreResult)
 def get_report_score(rid: int, db: Session = Depends(get_db),
-                      current_user: User = Depends(get_current_user)):
+                      current_user: User = Depends(get_current_user)) -> DFMScoreResult:
     report = db.query(DFMReport).filter(DFMReport.id == rid).first()
     if not report:
         raise HTTPException(status_code=404, detail="DFM报告不存在")
@@ -334,7 +334,7 @@ def get_report_score(rid: int, db: Session = Depends(get_db),
 
 @router.get("/reports/{rid}/items", response_model=list[DFMReportItemOut])
 def list_report_items(rid: int, db: Session = Depends(get_db),
-                       current_user: User = Depends(get_current_user)):
+                       current_user: User = Depends(get_current_user)) -> list:
     items = db.query(DFMReportItem).filter(
         DFMReportItem.report_id == rid
     ).order_by(DFMReportItem.sort_order, DFMReportItem.id).all()
@@ -344,7 +344,7 @@ def list_report_items(rid: int, db: Session = Depends(get_db),
 @router.post("/report-items", response_model=DFMReportItemOut,
              dependencies=[Depends(require_role("admin", "rd_director", "structural_engineer", "process_engineer", "quality_engineer"))])
 def create_report_item(data: DFMReportItemCreate, db: Session = Depends(get_db),
-                        current_user: User = Depends(get_current_user)):
+                        current_user: User = Depends(get_current_user)) -> DFMReportItemOut:
     report = db.query(DFMReport).filter(DFMReport.id == data.report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="DFM报告不存在")
@@ -361,7 +361,7 @@ def create_report_item(data: DFMReportItemCreate, db: Session = Depends(get_db),
 @router.put("/report-items/{iid}", response_model=DFMReportItemOut,
             dependencies=[Depends(require_role("admin", "rd_director", "structural_engineer", "process_engineer", "quality_engineer"))])
 def update_report_item(iid: int, data: DFMReportItemUpdate, db: Session = Depends(get_db),
-                        current_user: User = Depends(get_current_user)):
+                        current_user: User = Depends(get_current_user)) -> DFMReportItemOut:
     item = db.query(DFMReportItem).filter(DFMReportItem.id == iid).first()
     if not item:
         raise HTTPException(status_code=404, detail="问题项不存在")
@@ -374,7 +374,7 @@ def update_report_item(iid: int, data: DFMReportItemUpdate, db: Session = Depend
 
 @router.delete("/report-items/{iid}", dependencies=[Depends(require_role("admin"))])
 def delete_report_item(iid: int, db: Session = Depends(get_db),
-                        current_user: User = Depends(get_current_user)):
+                        current_user: User = Depends(get_current_user)) -> dict:
     item = db.query(DFMReportItem).filter(DFMReportItem.id == iid).first()
     if not item:
         raise HTTPException(status_code=404, detail="问题项不存在")

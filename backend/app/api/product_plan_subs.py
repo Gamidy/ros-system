@@ -16,7 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import date
+import enum
+from datetime import date, datetime
 from app.core.database import get_db
 from app.core.permissions import require_menu
 from app.models.product_plan import ProductPlan
@@ -86,7 +87,7 @@ class InitiationOut(BaseModel):
     deliverables: Optional[str] = None
     sample_qty: Optional[int] = None
     required_date: Optional[str] = None
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -108,7 +109,7 @@ class MarketOut(BaseModel):
     cert_requirements: Optional[str] = None
     target_price: Optional[str] = None
     customer_requirements: Optional[str] = None
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -126,20 +127,13 @@ class TechSpecOut(BaseModel):
     core_performance: Optional[str] = None
     safety_compliance: Optional[str] = None
     optional_config: Optional[str] = None
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
 class TeamCreate(BaseModel):
-    role_name: str
-    member_name: Optional[str] = None
-    department: Optional[str] = None
-    responsibility: Optional[str] = None
-
-
-class TeamUpdate(BaseModel):
     role_name: Optional[str] = None
     member_name: Optional[str] = None
     department: Optional[str] = None
@@ -149,14 +143,21 @@ class TeamUpdate(BaseModel):
 class TeamOut(BaseModel):
     id: int
     product_plan_id: str
-    role_name: str
+    role_name: Optional[str] = None
     member_name: Optional[str] = None
     department: Optional[str] = None
     responsibility: Optional[str] = None
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class TeamUpdate(BaseModel):
+    role_name: Optional[str] = None
+    member_name: Optional[str] = None
+    department: Optional[str] = None
+    responsibility: Optional[str] = None
 
 
 # ── Helper ──
@@ -175,7 +176,7 @@ def get_initiation(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """获取立项信息"""
     _get_plan_or_404(db, plan_id)
     initiation = db.query(ProductPlanInitiation).filter(
@@ -192,7 +193,7 @@ def upsert_initiation(
     data: InitiationCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """创建或更新立项信息"""
     _get_plan_or_404(db, plan_id)
     initiation = db.query(ProductPlanInitiation).filter(
@@ -219,7 +220,7 @@ def get_market(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """获取市场信息"""
     _get_plan_or_404(db, plan_id)
     market = db.query(ProductPlanMarket).filter(
@@ -236,7 +237,7 @@ def upsert_market(
     data: MarketCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """创建或更新市场信息"""
     _get_plan_or_404(db, plan_id)
     market = db.query(ProductPlanMarket).filter(
@@ -263,7 +264,7 @@ def get_tech_spec(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """获取技术规格"""
     _get_plan_or_404(db, plan_id)
     tech = db.query(ProductPlanTechSpec).filter(
@@ -280,7 +281,7 @@ def upsert_tech_spec(
     data: TechSpecCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """创建或更新技术规格"""
     _get_plan_or_404(db, plan_id)
     tech = db.query(ProductPlanTechSpec).filter(
@@ -307,7 +308,7 @@ def list_team_members(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> list:
     """获取团队成员列表"""
     _get_plan_or_404(db, plan_id)
     members = db.query(ProductPlanTeam).filter(
@@ -322,7 +323,7 @@ def add_team_member(
     data: TeamCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """添加团队成员"""
     _get_plan_or_404(db, plan_id)
     member = ProductPlanTeam(product_plan_id=plan_id, **data.model_dump())
@@ -339,7 +340,7 @@ def update_team_member(
     data: TeamUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """更新团队成员"""
     _get_plan_or_404(db, plan_id)
     member = db.query(ProductPlanTeam).filter(
@@ -362,7 +363,7 @@ def delete_team_member(
     member_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """删除团队成员"""
     _get_plan_or_404(db, plan_id)
     member = db.query(ProductPlanTeam).filter(

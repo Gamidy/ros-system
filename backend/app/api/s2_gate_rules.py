@@ -20,7 +20,7 @@ def list_gate_rules(
     cert_type: str = Query("", description="按认证类型筛选"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-gate-rules")),
-):
+) -> list[CertificationGateRuleOut]:
     """认证门禁规则列表"""
     q = db.query(CertificationGateRule)
     if gate_code:
@@ -36,7 +36,7 @@ def create_gate_rule(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("cert-gate-rules")),
-):
+) -> CertificationGateRuleOut:
     """创建认证门禁规则"""
     rule = CertificationGateRule(
         **data.model_dump(exclude_unset=True),
@@ -53,7 +53,7 @@ def get_gate_rule(
     rule_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-gate-rules")),
-):
+) -> CertificationGateRuleOut:
     """认证门禁规则详情"""
     rule = db.query(CertificationGateRule).filter(CertificationGateRule.id == rule_id).first()
     if not rule:
@@ -67,7 +67,7 @@ def update_gate_rule(
     data: CertificationGateRuleUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-gate-rules")),
-):
+) -> CertificationGateRuleOut:
     """更新认证门禁规则"""
     rule = db.query(CertificationGateRule).filter(CertificationGateRule.id == rule_id).first()
     if not rule:
@@ -84,7 +84,7 @@ def delete_gate_rule(
     rule_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-gate-rules")),
-):
+) -> dict:
     """删除认证门禁规则"""
     rule = db.query(CertificationGateRule).filter(CertificationGateRule.id == rule_id).first()
     if not rule:

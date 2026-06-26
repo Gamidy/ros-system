@@ -268,7 +268,7 @@ def _serialize(item: CompetitorModel) -> dict:
 def list_markets_with_standards(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list:
     """返回所有激活的市场列表（含能效标准），用于前端下拉"""
     from app.models.product import Market
     items = db.query(Market).filter(
@@ -302,7 +302,7 @@ def list_markets_with_standards(
 def list_all_markets(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list:
     """返回全部市场（含激活和停用的），PM管理用"""
     from app.models.product import Market
     items = db.query(Market).order_by(Market.region, Market.code).all()
@@ -335,7 +335,7 @@ def create_market(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """新增市场"""
     from app.models.product import Market
     code = data.get("code", "").strip().upper()
@@ -375,7 +375,7 @@ def update_market(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """更新市场信息"""
     from app.models.product import Market
     m = db.query(Market).filter(Market.code == code).first()
@@ -397,7 +397,7 @@ def delete_market(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """删除市场"""
     from app.models.product import Market
     m = db.query(Market).filter(Market.code == code).first()
@@ -429,7 +429,7 @@ def list_competitors(
     page_size: int = Query(20, ge=1, le=200, description="每页条数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict:
     """查询竞品列表，支持 market/brand/capacity/energy_rating/product_type 过滤与分页（AND 交叉过滤）"""
     q = db.query(CompetitorModel)
     if market:
@@ -460,7 +460,7 @@ def get_competitor(
     cid: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict:
     """获取单条竞品详情"""
     item = db.query(CompetitorModel).filter(CompetitorModel.id == cid).first()
     if not item:
@@ -476,7 +476,7 @@ def create_competitor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """新增竞品记录"""
     item = CompetitorModel(**data.model_dump())
     db.add(item)
@@ -492,7 +492,7 @@ def update_competitor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """更新竞品记录"""
     item = db.query(CompetitorModel).filter(CompetitorModel.id == cid).first()
     if not item:
@@ -510,7 +510,7 @@ def delete_competitor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """删除竞品记录"""
     item = db.query(CompetitorModel).filter(CompetitorModel.id == cid).first()
     if not item:
@@ -527,7 +527,7 @@ def check_completeness(
     market: str = Query(..., description="目标市场"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict:
     """检查指定市场所有竞品数据的完整性"""
     items = db.query(CompetitorModel).filter(CompetitorModel.market == market).all()
     results = []
@@ -557,7 +557,7 @@ def check_completeness(
 def benchmark_competitors(
     market: str = Query(..., description="目标市场（必填），如'越南'"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """对标查询：返回指定市场下所有竞品的对比数据"""
     items = (
         db.query(CompetitorModel)
@@ -582,7 +582,7 @@ def list_market_certifications(
     cert_type: Optional[str] = Query(None, description="按认证类型过滤: safety/energy/emc/environmental"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list:
     """列出指定市场的认证要求"""
     from app.models.pm_config import MarketCertification
     q = db.query(MarketCertification).filter(MarketCertification.market_code == code)
@@ -611,7 +611,7 @@ def create_market_certification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """新增市场认证要求"""
     from app.models.pm_config import MarketCertification
     from app.models.product import Market
@@ -639,7 +639,7 @@ def update_market_certification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """更新认证要求"""
     from app.models.pm_config import MarketCertification
     c = db.query(MarketCertification).filter(
@@ -662,7 +662,7 @@ def delete_market_certification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """删除认证要求"""
     from app.models.pm_config import MarketCertification
     c = db.query(MarketCertification).filter(
@@ -685,7 +685,7 @@ def list_market_compressors(
     code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list:
     """列出指定市场的压缩机信息"""
     from app.models.pm_config import MarketCompressor
     items = db.query(MarketCompressor).filter(
@@ -712,7 +712,7 @@ def create_market_compressor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """新增市场压缩机信息"""
     from app.models.pm_config import MarketCompressor
     from app.models.product import Market
@@ -739,7 +739,7 @@ def update_market_compressor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """更新压缩机信息"""
     from app.models.pm_config import MarketCompressor
     c = db.query(MarketCompressor).filter(
@@ -762,7 +762,7 @@ def delete_market_compressor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
-):
+) -> dict:
     """删除压缩机信息"""
     from app.models.pm_config import MarketCompressor
     c = db.query(MarketCompressor).filter(

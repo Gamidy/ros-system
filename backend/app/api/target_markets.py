@@ -26,7 +26,7 @@ def list_target_markets(
     market_code: str = Query("", description="市场代码"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> list[TargetMarketOut]:
     q = db.query(TargetMarket)
     if market_code:
         q = q.filter(TargetMarket.market_code == market_code)
@@ -39,7 +39,7 @@ def create_target_market(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> TargetMarketOut:
     tm = TargetMarket(
         **data.model_dump(),
         org_id=getattr(current_user, "org_id", None),
@@ -55,7 +55,7 @@ def get_target_market(
     tid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> TargetMarketOut:
     tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
     if not tm:
         raise HTTPException(status_code=404, detail="目标市场不存在")
@@ -68,7 +68,7 @@ def update_target_market(
     data: TargetMarketCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> TargetMarketOut:
     tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
     if not tm:
         raise HTTPException(status_code=404, detail="目标市场不存在")
@@ -85,7 +85,7 @@ def delete_target_market(
     tid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> dict:
     tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
     if not tm:
         raise HTTPException(status_code=404, detail="目标市场不存在")
@@ -102,7 +102,7 @@ def add_required_test(
     data: RequiredTestCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> RequiredTestOut:
     tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
     if not tm:
         raise HTTPException(status_code=404, detail="目标市场不存在")
@@ -119,7 +119,7 @@ def delete_required_test(
     rtid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> dict:
     rt = db.query(RequiredTest).filter(
         RequiredTest.id == rtid,
         RequiredTest.target_market_id == tid,
@@ -139,7 +139,7 @@ def add_required_certification(
     data: RequiredCertificationCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> RequiredCertificationOut:
     tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
     if not tm:
         raise HTTPException(status_code=404, detail="目标市场不存在")
@@ -156,7 +156,7 @@ def delete_required_certification(
     rcid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> dict:
     rc = db.query(RequiredCertification).filter(
         RequiredCertification.id == rcid,
         RequiredCertification.target_market_id == tid,
@@ -176,7 +176,7 @@ def add_required_standard(
     data: RequiredStandardCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> RequiredStandardOut:
     tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
     if not tm:
         raise HTTPException(status_code=404, detail="目标市场不存在")
@@ -193,7 +193,7 @@ def delete_required_standard(
     rsid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> dict:
     rs = db.query(RequiredStandard).filter(
         RequiredStandard.id == rsid,
         RequiredStandard.target_market_id == tid,
@@ -212,7 +212,7 @@ def get_target_market_by_code(
     market_code: str = Query(..., description="市场代码"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("market_mgmt")),
-):
+) -> TargetMarketOut:
     tm = db.query(TargetMarket).filter(
         TargetMarket.market_code == market_code
     ).first()

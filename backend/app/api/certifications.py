@@ -57,7 +57,7 @@ def list_certs(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> list[CertificationOut]:
     q = db.query(Certification)
     if product_code:
         q = q.filter(Certification.product_code == product_code)
@@ -75,7 +75,7 @@ def create_cert(
     data: CertificationCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> CertificationOut:
     cert = Certification(**data.model_dump(), cert_no=_gen_cert_no())
     db.add(cert)
     db.commit()
@@ -92,7 +92,7 @@ def list_protos(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("prototypes")),
-):
+) -> list[PrototypeOut]:
     q = db.query(Prototype)
     if product_code:
         q = q.filter(Prototype.product_code == product_code)
@@ -108,7 +108,7 @@ def create_proto(
     data: PrototypeCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> PrototypeOut:
     if data.quantity < 1:
         raise HTTPException(status_code=400, detail="样机数量必须≥1")
     proto = Prototype(**data.model_dump(), proto_no=_gen_proto_no())
@@ -119,7 +119,7 @@ def create_proto(
 
 
 @router.get("/prototypes/{pid}", response_model=PrototypeOut)
-def get_proto(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("prototypes"))):
+def get_proto(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("prototypes"))) -> PrototypeOut:
     p = db.query(Prototype).filter(Prototype.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="样机记录不存在")
@@ -135,7 +135,7 @@ def list_issues(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("quality")),
-):
+) -> list[QualityIssueOut]:
     q = db.query(QualityIssue)
     if product_code:
         q = q.filter(QualityIssue.product_code == product_code)
@@ -151,7 +151,7 @@ def create_issue(
     data: QualityIssueCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> QualityIssueOut:
     issue = QualityIssue(**data.model_dump(), issue_no=_gen_issue_no())
     db.add(issue)
     db.commit()
@@ -165,7 +165,7 @@ def update_issue(
     data: IssueUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> dict:
     issue = db.query(QualityIssue).filter(QualityIssue.id == iid).first()
     if not issue:
         raise HTTPException(status_code=404, detail="品质问题不存在")
@@ -194,7 +194,7 @@ def list_ecrs(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> list[ECROut]:
     q = db.query(ECR)
     if change_type:
         q = q.filter(ECR.change_type == change_type)
@@ -208,7 +208,7 @@ def create_ecr(
     data: ECRCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> ECROut:
     ecr = ECR(**data.model_dump(), ecr_no=_gen_ecr_no())
     db.add(ecr)
     db.commit()
@@ -222,7 +222,7 @@ def process_ecr(
     action: str = Query(..., description="approve 或 reject"),
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> dict:
     ecr = db.query(ECR).filter(ECR.id == eid).first()
     if not ecr:
         raise HTTPException(status_code=404, detail="ECR不存在")
@@ -244,7 +244,7 @@ def list_ecns(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> list[ECNOut]:
     q = db.query(ECN)
     if status:
         q = q.filter(ECN.status == status)
@@ -256,7 +256,7 @@ def create_ecn(
     data: ECNCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> ECNOut:
     if data.ecr_id:
         ecr = db.query(ECR).filter(ECR.id == data.ecr_id).first()
         if not ecr:
@@ -272,7 +272,7 @@ def create_ecn(
 # NOTE: 必须在所有具体路径之后声明，避免 /{cid} 捕获 /prototypes 等
 
 @router.get("/{cid}", response_model=CertificationOut)
-def get_cert(cid: int, db: Session = Depends(get_db), _=Depends(require_menu("certifications"))):
+def get_cert(cid: int, db: Session = Depends(get_db), _=Depends(require_menu("certifications"))) -> CertificationOut:
     c = db.query(Certification).filter(Certification.id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="认证记录不存在")
@@ -291,7 +291,7 @@ def update_cert(
     remark: str = Query("", description="备注"),
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "systems_engineer", "quality_engineer")),
-):
+) -> dict:
     c = db.query(Certification).filter(Certification.id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="认证记录不存在")

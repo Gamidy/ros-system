@@ -21,7 +21,7 @@ def get_cert_standards(
     market: str = Query(..., description="目标市场，如越南、通用"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """获取指定市场的安规标准列表"""
     items = (
         db.query(CertStandard)
@@ -51,7 +51,7 @@ def get_perf_defaults(
     capacity: str = Query(None, description="冷量段，如07K、09K、12K、18K、24K"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """获取指定市场+冷量段的性能默认参数（capacity可选）"""
     query = db.query(PerfDefault).filter(PerfDefault.market == market)
     if capacity:
@@ -79,7 +79,7 @@ def get_feature_defaults(
     market: str = Query(..., description="目标市场，如越南、泰国、印尼、中东"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """获取指定市场的功能默认配置"""
     items = (
         db.query(FeatureDefault)

@@ -36,7 +36,7 @@ def _project_to_roadmap_item(p: Project) -> dict:
 def pm_roadmap(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """返回产品路线图数据：按年份分组的年度规划 + 关联项目列表"""
 
     # 1. 获取所有年度规划

@@ -25,7 +25,7 @@ def list_notifications(
     channel: str = Query("", description="通知渠道"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-):
+) -> list:
     q = db.query(Notification)
     if target_user:
         q = q.filter(Notification.target_user == target_user)
@@ -41,7 +41,7 @@ def mark_notification_read(
     nid: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "project_admin", "procurement", "quality_engineer", "finance_manager", "product_manager", "process_engineer", "production", "security_officer")),
-):
+) -> dict:
     notif = db.query(Notification).filter(Notification.id == nid).first()
     if not notif:
         raise HTTPException(status_code=404, detail="通知记录不存在")
@@ -60,7 +60,7 @@ def list_alerts(
     alert_type: str = Query("", description="预警类型"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-):
+) -> list:
     """获取预警记录列表，支持按 is_read / level / alert_type 筛选"""
     q = db.query(Alert)
     if is_read is not None:
@@ -79,7 +79,7 @@ def list_alert_rules(
     is_enabled: bool = Query(None, description="是否启用"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-):
+) -> list:
     """获取预警规则列表，支持按 is_enabled 筛选"""
     q = db.query(AlertRule)
     if is_enabled is not None:
@@ -93,7 +93,7 @@ def list_alert_rules(
 def check_overdue(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "project_admin", "procurement", "quality_engineer", "finance_manager", "product_manager", "process_engineer", "production", "security_officer")),
-):
+) -> dict:
     """检查超期项目/认证/测试，自动创建 overdue 预警记录"""
     today = date.today()
     created_count = 0

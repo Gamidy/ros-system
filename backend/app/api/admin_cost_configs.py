@@ -72,7 +72,7 @@ class TrialQtyConfigOut(BaseModel):
 def list_capacity_unit_costs(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> list:
     """查询所有能力段单价"""
     return db.query(CapacityUnitCost).order_by(CapacityUnitCost.btu).all()
 
@@ -82,7 +82,7 @@ def batch_update_capacity_unit_costs(
     data: List[CapacityUnitCostItem],
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> dict:
     """批量更新能力段单价 — 先清空再全量插入"""
     # 清空旧数据
     db.query(CapacityUnitCost).delete()
@@ -105,7 +105,7 @@ def batch_update_capacity_unit_costs(
 @router.get("/indirect-cost/current", response_model=IndirectCostOut)
 def get_current_indirect_cost(
     db: Session = Depends(get_db),
-):
+) -> dict:
     """查询当前间接成本配置（默认key='default'）"""
     cost = db.query(IndirectCostConfig).filter(
         IndirectCostConfig.key == "default"
@@ -120,7 +120,7 @@ def update_indirect_cost(
     data: IndirectCostUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> dict:
     """创建或更新间接成本配置（upsert by key）"""
     existing = db.query(IndirectCostConfig).filter(
         IndirectCostConfig.key == data.key
@@ -148,7 +148,7 @@ def batch_update_trial_qty_configs(
     data: List[TrialQtyConfigItem],
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> dict:
     """批量更新试制数量配置 — 先清空再全量插入"""
     # 清空旧数据
     db.query(TrialQtyConfig).delete()

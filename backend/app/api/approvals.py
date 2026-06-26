@@ -92,7 +92,7 @@ def _ensure_default_chains(db: Session):
 # ══════════════════════════════════════════════════
 
 @router.get("/chains", response_model=list[ApprovalChainOut])
-def list_approval_chains(db: Session = Depends(get_db), _=Depends(require_menu("approvals"))):
+def list_approval_chains(db: Session = Depends(get_db), _=Depends(require_menu("approvals"))) -> list[ApprovalChainOut]:
     """列出所有审批链（含步骤）"""
     _ensure_default_chains(db)
     chains = db.query(ApprovalChain).order_by(ApprovalChain.id).all()
@@ -104,7 +104,7 @@ def create_approval_chain(
     data: ApprovalChainCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager")),
-):
+) -> ApprovalChainOut:
     """创建审批链（需要admin角色）"""
     if db.query(ApprovalChain).filter(ApprovalChain.code == data.code).first():
         raise HTTPException(status_code=400, detail="审批链编码已存在")
@@ -131,7 +131,7 @@ def create_approval_chain(
 
 
 @router.get("/chains/{chain_id}", response_model=ApprovalChainOut)
-def get_approval_chain(chain_id: int, db: Session = Depends(get_db), _=Depends(require_menu("approvals"))):
+def get_approval_chain(chain_id: int, db: Session = Depends(get_db), _=Depends(require_menu("approvals"))) -> ApprovalChainOut:
     """查看审批链详情"""
     chain = db.query(ApprovalChain).filter(ApprovalChain.id == chain_id).first()
     if not chain:
@@ -148,7 +148,7 @@ def submit_approval_request(
     data: ApprovalRequestCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager", "rd_director", "module_manager", "module_manager_struct", "module_manager_sys", "procurement_director", "process_manager", "project_admin")),
-):
+) -> ApprovalRequestOut:
     """提交审批请求"""
     chain = db.query(ApprovalChain).filter(ApprovalChain.id == data.chain_id).first()
     if not chain:
@@ -175,7 +175,7 @@ def list_approval_requests(
     requester: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_menu("approvals")),
-):
+) -> list[ApprovalRequestOut]:
     """列出审批请求，支持按status/requester过滤"""
     from app.core.permissions import is_super_role
     q = db.query(ApprovalRequest)
@@ -195,7 +195,7 @@ def list_approval_requests(
 def list_pending_approval_requests(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_menu("approvals")),
-):
+) -> list[ApprovalRequestOut]:
     """待我审批的列表（按当前用户角色匹配当前步骤的角色）"""
     from app.core.permissions import is_super_role
     _ensure_default_chains(db)
@@ -228,7 +228,7 @@ def get_approval_request(
     request_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("approvals")),
-):
+) -> ApprovalRequestOut:
     """查看审批请求详情"""
     req = db.query(ApprovalRequest).filter(ApprovalRequest.id == request_id).first()
     if not req:
@@ -242,7 +242,7 @@ def approve_approval_request(
     decision: ApprovalDecision,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager", "rd_director", "module_manager", "module_manager_struct", "module_manager_sys", "procurement_director", "process_manager", "project_admin")),
-):
+) -> ApprovalRequestOut:
     """审批通过"""
     return _make_decision(request_id, "approved", decision, db, current_user)
 
@@ -253,7 +253,7 @@ def reject_approval_request(
     decision: ApprovalDecision,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager", "rd_director", "module_manager", "module_manager_struct", "module_manager_sys", "procurement_director", "process_manager", "project_admin")),
-):
+) -> ApprovalRequestOut:
     """审批驳回"""
     return _make_decision(request_id, "rejected", decision, db, current_user)
 

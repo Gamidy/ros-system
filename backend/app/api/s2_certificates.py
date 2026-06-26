@@ -23,7 +23,7 @@ def list_certificates(
     cert_no: str = Query("", description="按证书编号搜索"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> list[CertificateOut]:
     """证书列表"""
     q = db.query(Certificate)
     if cert_type:
@@ -40,7 +40,7 @@ def list_expiring_certificates(
     days: int = Query(30, description="到期天数范围"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> list[CertificateOut]:
     """快到期证书列表（默认30天内）"""
     today = date.today()
     deadline = today + timedelta(days=days)
@@ -60,7 +60,7 @@ def create_certificate(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("certifications")),
-):
+) -> CertificateOut:
     """创建证书"""
     cert = Certificate(
         **data.model_dump(exclude_unset=True),
@@ -78,7 +78,7 @@ def update_certificate(
     data: CertificateUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> CertificateOut:
     """更新证书"""
     cert = db.query(Certificate).filter(Certificate.id == cert_id).first()
     if not cert:
@@ -96,7 +96,7 @@ def renew_certificate(
     data: dict,
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> CertificateOut:
     """续证 — 创建新版本
 
     原证书标记为过期，创建新版本记录
@@ -145,7 +145,7 @@ def suspend_certificate(
     data: dict = {},
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> dict:
     """暂停证书"""
     cert = db.query(Certificate).filter(Certificate.id == cert_id).first()
     if not cert:
@@ -163,7 +163,7 @@ def revoke_certificate(
     data: dict = {},
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> dict:
     """注销证书"""
     cert = db.query(Certificate).filter(Certificate.id == cert_id).first()
     if not cert:

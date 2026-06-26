@@ -22,7 +22,7 @@ RESET_TOKEN_EXPIRE_HOURS = 24
 
 
 @router.post("/forgot-password")
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)) -> dict:
     """忘记密码 — 通过用户名发起重置
 
     不暴露用户是否存在，总是返回相同消息。
@@ -54,7 +54,7 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/verify-reset-token")
-def verify_reset_token(req: VerifyResetTokenRequest, db: Session = Depends(get_db)):
+def verify_reset_token(req: VerifyResetTokenRequest, db: Session = Depends(get_db)) -> dict:
     """验证重置令牌 — 验证token有效期 → 更新密码 → 标记token已使用"""
     reset_token = db.query(PasswordResetToken).filter(
         PasswordResetToken.token == req.token,
@@ -90,7 +90,7 @@ def admin_reset_password(
     req: AdminResetPasswordRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
-):
+) -> dict:
     """管理员直接重置用户密码 — 仅限 admin 角色"""
     user = db.query(User).filter(User.id == req.user_id).first()
     if not user:

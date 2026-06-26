@@ -274,7 +274,7 @@ def on_startup():
 
 
 @app.get("/health")
-def health():
+def health() -> dict:
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
 
 
@@ -282,7 +282,7 @@ def health():
 
 
 @app.get("/api/v2/infra/health")
-def infra_health():
+def infra_health() -> dict:
     """Phase 4 基础设施健康检查"""
     checks = {"redis": False, "celery": False, "event_store": False}
 

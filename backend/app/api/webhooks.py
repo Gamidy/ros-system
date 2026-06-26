@@ -92,7 +92,7 @@ def create_subscription(
         "admin", "general_manager", "rd_director",
         "project_admin", "product_manager",
     )),
-):
+) -> dict:
     """创建 Webhook 订阅
 
     需要 admin / general_manager / rd_director / project_admin / product_manager 角色。
@@ -117,7 +117,7 @@ def list_subscriptions(
     is_active: Optional[bool] = Query(None, description="是否启用"),
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
-):
+) -> list:
     """获取 Webhook 订阅列表
 
     支持按 is_active 筛选，按创建时间降序排列。
@@ -138,7 +138,7 @@ def update_subscription(
         "admin", "general_manager", "rd_director",
         "project_admin", "product_manager",
     )),
-):
+) -> dict:
     """更新 Webhook 订阅
 
     仅更新请求中显式设置的字段（PATCH 语义）。
@@ -162,7 +162,7 @@ def delete_subscription(
         "admin", "general_manager", "rd_director",
         "project_admin", "product_manager",
     )),
-):
+) -> dict:
     """删除 Webhook 订阅
 
     硬删除，同时级联的投递日志不受影响。
@@ -183,7 +183,7 @@ def test_subscription(
         "admin", "general_manager", "rd_director",
         "project_admin", "product_manager",
     )),
-):
+) -> dict:
     """发送测试事件到指定订阅
 
     构造一个 ``test.webhook`` 事件，通过 WebhookDispatcher 异步发送。
@@ -229,7 +229,7 @@ def list_deliveries(
     limit: int = Query(50, ge=1, le=200, description="返回条数（最多200）"),
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
-):
+) -> list:
     """获取 Webhook 投递日志列表
 
     支持按 subscription_id、success 过滤，按投递时间降序排列。
@@ -251,7 +251,7 @@ def retry_delivery(
         "admin", "general_manager", "rd_director",
         "project_admin", "product_manager",
     )),
-):
+) -> dict:
     """手动重试失败的投递
 
     调用 WebhookDispatcher.retry_failed() 同步重试并更新投递日志。

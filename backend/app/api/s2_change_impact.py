@@ -17,7 +17,7 @@ def list_impact_records(
     prototype_id: int = Query(0, description="按样机筛选"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> list:
     """变更影响分析记录列表"""
     q = db.query(ChangeImpactRecord)
     if prototype_id:
@@ -30,7 +30,7 @@ def get_impact_record(
     record_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> dict:
     """变更影响分析记录详情"""
     record = db.query(ChangeImpactRecord).filter(ChangeImpactRecord.id == record_id).first()
     if not record:

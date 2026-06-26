@@ -29,7 +29,7 @@ def list_prototypes(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("prototypes")),
-):
+) -> list[PrototypeOut]:
     q = db.query(Prototype)
     if project_id is not None:
         q = q.filter(Prototype.project_id == project_id)
@@ -46,7 +46,7 @@ def create_prototype(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("prototypes")),
-):
+) -> PrototypeOut:
     proto = Prototype(
         **data.model_dump(),
         proto_no=_gen_proto_no(),
@@ -63,7 +63,7 @@ def get_prototype(
     pid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("prototypes")),
-):
+) -> PrototypeOut:
     proto = db.query(Prototype).filter(Prototype.id == pid).first()
     if not proto:
         raise HTTPException(status_code=404, detail="样机不存在")
@@ -76,7 +76,7 @@ def update_prototype(
     data: PrototypeCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("prototypes")),
-):
+) -> PrototypeOut:
     proto = db.query(Prototype).filter(Prototype.id == pid).first()
     if not proto:
         raise HTTPException(status_code=404, detail="样机不存在")
@@ -94,7 +94,7 @@ def patch_prototype_status(
     status: str = Query(..., description="目标状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("prototypes")),
-):
+) -> dict:
     proto = db.query(Prototype).filter(Prototype.id == pid).first()
     if not proto:
         raise HTTPException(status_code=404, detail="样机不存在")
@@ -143,7 +143,7 @@ def get_prototype_judgments(
     pid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("prototypes")),
-):
+) -> list:
     """该样机的所有 TestResult（判定）"""
     proto = db.query(Prototype).filter(Prototype.id == pid).first()
     if not proto:
@@ -158,7 +158,7 @@ def upgrade_prototype(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("prototypes")),
-):
+) -> dict:
     """版本升级：归档旧判定，创建新版"""
     proto = db.query(Prototype).filter(Prototype.id == pid).first()
     if not proto:

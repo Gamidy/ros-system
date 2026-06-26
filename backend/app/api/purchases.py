@@ -29,7 +29,7 @@ def list_suppliers(
     status: str = "",
     db: Session = Depends(get_db),
     _=Depends(require_menu("purchases")),
-):
+) -> list[SupplierOut]:
     """列出所有供应商，支持关键词/状态筛选"""
     q = db.query(Supplier)
     if keyword:
@@ -43,7 +43,7 @@ def list_suppliers(
 
 
 @router.post("/suppliers", response_model=SupplierOut)
-def create_supplier(data: SupplierCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))):
+def create_supplier(data: SupplierCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))) -> SupplierOut:
     """创建供应商 — code全局唯一"""
     if db.query(Supplier).filter(Supplier.code == data.code).first():
         raise HTTPException(status_code=400, detail="供应商编码已存在")
@@ -65,7 +65,7 @@ def list_orders(
     date_to: str = "",
     db: Session = Depends(get_db),
     _=Depends(require_menu("purchases")),
-):
+) -> list[PurchaseOrderOut]:
     """列出采购订单，支持按status/supplier/requester/日期范围筛选"""
     q = db.query(PurchaseOrder)
     if status:
@@ -85,7 +85,7 @@ def list_orders(
 
 
 @router.post("/orders", response_model=PurchaseOrderOut)
-def create_order(data: PurchaseOrderCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))):
+def create_order(data: PurchaseOrderCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))) -> PurchaseOrderOut:
     """创建采购订单 — 自动生成单号"""
     # 自动生成 order_no: PO-YYYYMMDD-XXXX
     today_str = date.today().strftime("%Y%m%d")
@@ -140,7 +140,7 @@ def create_order(data: PurchaseOrderCreate, db: Session = Depends(get_db), _=Dep
 
 
 @router.get("/orders/{order_id}", response_model=PurchaseOrderDetailOut)
-def get_order(order_id: int, db: Session = Depends(get_db), _=Depends(require_menu("purchases"))):
+def get_order(order_id: int, db: Session = Depends(get_db), _=Depends(require_menu("purchases"))) -> PurchaseOrderDetailOut:
     """查看订单详情（含items）"""
     order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
     if not order:
@@ -149,7 +149,7 @@ def get_order(order_id: int, db: Session = Depends(get_db), _=Depends(require_me
 
 
 @router.patch("/orders/{order_id}", response_model=PurchaseOrderOut)
-def update_order_status(order_id: int, data: PurchaseOrderStatusUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))):
+def update_order_status(order_id: int, data: PurchaseOrderStatusUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))) -> PurchaseOrderOut:
     """更新订单状态"""
     order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
     if not order:
@@ -181,7 +181,7 @@ def update_order_status(order_id: int, data: PurchaseOrderStatusUpdate, db: Sess
 # ══════════════════════════════════════════════════
 
 @router.post("/orders/{order_id}/items", response_model=PurchaseOrderItemOut)
-def add_order_item(order_id: int, data: PurchaseOrderItemCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))):
+def add_order_item(order_id: int, data: PurchaseOrderItemCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))) -> PurchaseOrderItemOut:
     """添加订单项"""
     order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
     if not order:
@@ -204,7 +204,7 @@ def add_order_item(order_id: int, data: PurchaseOrderItemCreate, db: Session = D
 
 
 @router.patch("/orders/{order_id}/items/{item_id}", response_model=PurchaseOrderItemOut)
-def update_order_item(order_id: int, item_id: int, data: PurchaseOrderItemUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))):
+def update_order_item(order_id: int, item_id: int, data: PurchaseOrderItemUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))) -> PurchaseOrderItemOut:
     """更新订单项"""
     item = db.query(PurchaseOrderItem).filter(
         PurchaseOrderItem.id == item_id,
@@ -239,7 +239,7 @@ def update_order_item(order_id: int, item_id: int, data: PurchaseOrderItemUpdate
 # ══════════════════════════════════════════════════
 
 @router.get("/dashboard", response_model=PurchaseDashboardOut)
-def purchase_dashboard(db: Session = Depends(get_db), _=Depends(require_menu("purchases"))):
+def purchase_dashboard(db: Session = Depends(get_db), _=Depends(require_menu("purchases"))) -> PurchaseDashboardOut:
     """采购仪表盘数据（待审批数、本月采购额等）"""
     # 待审批订单数
     pending_count = db.query(PurchaseOrder).filter(
@@ -291,7 +291,7 @@ def list_outsource_requests(
     product_code: str = "",
     db: Session = Depends(get_db),
     _=Depends(require_menu("purchases")),
-):
+) -> list[OutsourceRequestOut]:
     """列出外协送样申请"""
     q = db.query(OutsourceRequest)
     if status:
@@ -307,7 +307,7 @@ def create_outsource_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "procurement")),
-):
+) -> OutsourceRequestOut:
     """创建外协送样申请 — 自动生成请求编号 OS-YYYYMMDD-XXXX"""
     today_str = date.today().strftime("%Y%m%d")
     prefix = f"OS-{today_str}-"
@@ -337,7 +337,7 @@ def create_outsource_request(
 
 
 @router.get("/outsource-requests/{req_id}", response_model=OutsourceRequestOut)
-def get_outsource_request(req_id: int, db: Session = Depends(get_db), _=Depends(require_menu("purchases"))):
+def get_outsource_request(req_id: int, db: Session = Depends(get_db), _=Depends(require_menu("purchases"))) -> OutsourceRequestOut:
     """查看外协送样申请详情"""
     req = db.query(OutsourceRequest).filter(OutsourceRequest.id == req_id).first()
     if not req:
@@ -351,7 +351,7 @@ def update_outsource_request(
     data: OutsourceRequestUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "procurement")),
-):
+) -> OutsourceRequestOut:
     """更新外协送样申请（状态/交期/说明）"""
     req = db.query(OutsourceRequest).filter(OutsourceRequest.id == req_id).first()
     if not req:

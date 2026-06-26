@@ -149,7 +149,7 @@ def list_programs(
     status: str | None = Query(None),
     db: Session = Depends(get_db),
     _=Depends(require_menu("projects")),
-):
+) -> list:
     q = db.query(Program)
     if status:
         q = q.filter(Program.status == status)
@@ -161,7 +161,7 @@ def create_program(
     req: ProgramCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     if db.query(Program).filter(Program.code == req.code).first():
         raise HTTPException(status_code=400, detail="项目群编号已存在")
     p = Program(code=req.code, name=req.name, description=req.description,
@@ -173,7 +173,7 @@ def create_program(
 
 
 @program_router.get("/{pid}")
-def get_program(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+def get_program(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))) -> dict:
     p = db.query(Program).filter(Program.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目群不存在")
@@ -220,7 +220,7 @@ def list_projects(
     page_size: int = Query(20, ge=1, le=100, description="每页条数，最大100"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("projects")),
-):
+) -> dict:
     q = db.query(Project).filter(Project.is_deleted == False)
     if program_id is not None:
         q = q.filter(Project.program_id == program_id)
@@ -272,7 +272,7 @@ def create_project(
     req: ProjectCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> ProjectOut:
     from app.core.sanitize import sanitize_html
 
     # 手动校验项目名称
@@ -367,7 +367,7 @@ def create_project(
 
 
 @project_router.get("/{pid}", response_model=ProjectOut)
-def get_project_detail(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+def get_project_detail(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))) -> ProjectOut:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -427,7 +427,7 @@ def update_project(
     body: ProjectUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     from app.core.sanitize import sanitize_html
 
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
@@ -496,7 +496,7 @@ def delete_project(
     pid: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "project_admin")),
-):
+) -> dict:
     """软删除项目：设置 is_deleted=True，不物理删除数据"""
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
@@ -511,7 +511,7 @@ def delete_project(
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/gates")
-def list_gates(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+def list_gates(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))) -> list:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -532,7 +532,7 @@ def create_gate(
     planned_date: date | None = None,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -557,7 +557,7 @@ def bulk_create_gates(
     pid: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     """根据项目等级自动生成全部M1~M9 Gate，或覆盖不全的"""
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
@@ -601,7 +601,7 @@ def update_gate_status(
     reviewer: str | None = None,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     gate = db.query(ProjectGate).filter(
         ProjectGate.project_id == pid,
         ProjectGate.gate_code == gate_code,
@@ -632,7 +632,7 @@ def update_gate_status(
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/tasks")
-def list_tasks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+def list_tasks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))) -> list:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -645,7 +645,7 @@ def create_task(
     req: TaskCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -679,7 +679,7 @@ def update_task(
     description: str | None = None,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     t = db.query(Task).filter(Task.id == tid, Task.project_id == pid).first()
     if not t:
         raise HTTPException(status_code=404, detail="任务不存在")
@@ -709,7 +709,7 @@ def update_task(
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/milestones")
-def list_milestones(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+def list_milestones(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))) -> list:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -722,7 +722,7 @@ def create_milestone(
     req: MilestoneCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -744,7 +744,7 @@ def achieve_milestone(
     actual_date: date | None = None,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     m = db.query(Milestone).filter(
         Milestone.id == mid, Milestone.project_id == pid
     ).first()
@@ -779,7 +779,7 @@ def achieve_milestone(
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/delay-chain")
-def get_delay_chain(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+def get_delay_chain(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))) -> dict:
     """延期传导链预警: 计算里程碑依赖链的延期放大效应
     
     示例输出:
@@ -907,7 +907,7 @@ def get_delay_chain(pid: int, db: Session = Depends(get_db), _=Depends(require_m
 # ══════════════════════════════════════════════════════════════
 
 @project_router.get("/{pid}/risks")
-def list_risks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))):
+def list_risks(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("projects"))) -> list:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -920,7 +920,7 @@ def create_risk(
     req: RiskCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -951,7 +951,7 @@ def update_risk(
     risk_level: str | None = None,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
-):
+) -> dict:
     r = db.query(Risk).filter(Risk.id == rid, Risk.project_id == pid).first()
     if not r:
         raise HTTPException(status_code=404, detail="风险不存在")

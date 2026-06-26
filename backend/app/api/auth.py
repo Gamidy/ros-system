@@ -18,7 +18,7 @@ router = APIRouter(prefix="/auth", tags=["认证"])
 
 
 @router.post("/login", response_model=Token)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(req: LoginRequest, db: Session = Depends(get_db)) -> Token:
     user = db.query(User).filter(User.username == req.username).first()
     if not user or not verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
@@ -27,7 +27,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/logout")
-def logout(token: str = Security(oauth2_scheme)):
+def logout(token: str = Security(oauth2_scheme)) -> dict:
     """登出：将当前 token 加入黑名单使其失效"""
     invalidate_token(token)
     return {"message": "已登出"}
@@ -46,7 +46,7 @@ def register(
     req: UserCreate,
     db: Session = Depends(get_db),
     _admin_check: Optional[User] = Depends(_require_admin_for_register()),
-):
+) -> UserOut:
     if db.query(User).filter(User.username == req.username).first():
         raise HTTPException(status_code=400, detail="用户名已存在")
     # 接受请求中的 role 参数，但禁止 admin 和 general_manager 特权角色
@@ -68,7 +68,7 @@ def register(
 
 
 @router.post("/apply", response_model=AccountApplicationOut)
-def apply_account(req: AccountApplicationCreate, db: Session = Depends(get_db)):
+def apply_account(req: AccountApplicationCreate, db: Session = Depends(get_db)) -> AccountApplicationOut:
     """账号申请 — 开放接口，无需登录"""
     if db.query(User).filter(User.username == req.username).first():
         raise HTTPException(status_code=400, detail="用户名已存在")
@@ -113,7 +113,7 @@ def apply_account(req: AccountApplicationCreate, db: Session = Depends(get_db)):
 def list_applications(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
-):
+) -> list[AccountApplicationOut]:
     """管理员查看所有账号申请"""
     return (
         db.query(User)
@@ -129,7 +129,7 @@ def review_application(
     req: AccountApplicationReview,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
-):
+) -> AccountApplicationOut:
     """管理员审核账号申请"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -164,7 +164,7 @@ def review_application(
 
 
 @router.get("/me", response_model=UserOut)
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
     return _enrich_user_out(current_user)
 
 
@@ -173,7 +173,7 @@ def change_password(
     req: ChangePasswordRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict:
     """修改当前用户密码"""
     if not verify_password(req.old_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="原密码错误")
@@ -186,7 +186,7 @@ def change_password(
 def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager")),
-):
+) -> list[UserOut]:
     return [_enrich_user_out(u) for u in db.query(User).all()]
 
 

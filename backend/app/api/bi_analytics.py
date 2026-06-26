@@ -29,7 +29,7 @@ def bi_planning(
     year: Optional[int] = Query(None, description="筛选年份"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> dict:
     """策划维度聚合统计
 
     返回: 完成率 / 阶段分布柱状图 / 审批时效P50-P90 / 月度趋势
@@ -137,7 +137,7 @@ def bi_projects(
     year: Optional[int] = Query(None, description="筛选年份"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> dict:
     """项目维度聚合统计
 
     返回: M1-M9 Gate通关率 / 阶段停留时长
@@ -268,7 +268,7 @@ def bi_cost(
     year: Optional[int] = Query(None, description="筛选年份"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> dict:
     """成本维度聚合统计
 
     返回: 预算执行率 / 超标项目TopN

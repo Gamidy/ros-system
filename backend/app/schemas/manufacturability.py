@@ -1,4 +1,5 @@
 """DFM可制造性分析模块 — Pydantic Schema"""
+
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Any
 from datetime import datetime

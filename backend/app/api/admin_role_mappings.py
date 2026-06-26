@@ -45,7 +45,7 @@ class RoleMappingPublicOut(BaseModel):
 def list_role_mappings(
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> list:
     """查询所有角色→岗位映射（仅admin）"""
     return db.query(RolePositionMapping).order_by(RolePositionMapping.id).all()
 
@@ -55,7 +55,7 @@ def create_role_mapping(
     data: RoleMappingCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> dict:
     """创建角色→岗位映射"""
     mapping = RolePositionMapping(
         project_role=data.project_role,
@@ -72,7 +72,7 @@ def delete_role_mapping(
     mapping_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> dict:
     """删除角色→岗位映射"""
     mapping = db.query(RolePositionMapping).filter(RolePositionMapping.id == mapping_id).first()
     if not mapping:
@@ -88,6 +88,6 @@ def delete_role_mapping(
 def list_role_mappings_public(
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
-):
+) -> list:
     """查询角色列表（脱敏版：仅返回角色名，所有登录用户可读）"""
     return db.query(RolePositionMapping).order_by(RolePositionMapping.id).all()

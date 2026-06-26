@@ -67,7 +67,7 @@ def list_knowledge(
     keyword: Optional[str] = Query(None, description="全文搜索关键词"),
     status: Optional[str] = Query("active", description="按状态筛选"),
     db: Session = Depends(get_db),
-):
+) -> list[KnowledgeOut]:
     """知识库列表 — 支持分类筛选、全文搜索、状态筛选"""
     q = db.query(KnowledgeItem)
 
@@ -90,7 +90,7 @@ def list_knowledge(
 
 
 @router.get("/items/{item_id}", response_model=KnowledgeOut)
-def get_knowledge_item(item_id: int, db: Session = Depends(get_db)):
+def get_knowledge_item(item_id: int, db: Session = Depends(get_db)) -> KnowledgeOut:
     """知识库条目详情"""
     item = db.query(KnowledgeItem).filter(KnowledgeItem.id == item_id).first()
     if not item:
@@ -103,7 +103,7 @@ def create_knowledge(
     data: KnowledgeCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> KnowledgeOut:
     """创建知识库条目（需登录）"""
     # 检查同分类同编码是否已存在
     existing = db.query(KnowledgeItem).filter(
@@ -139,7 +139,7 @@ def update_knowledge(
     data: KnowledgeUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> KnowledgeOut:
     """更新知识库条目（需登录，自动版本+1）"""
     item = db.query(KnowledgeItem).filter(KnowledgeItem.id == item_id).first()
     if not item:
@@ -172,7 +172,7 @@ def delete_knowledge(
 
 
 @router.get("/categories")
-def get_categories(db: Session = Depends(get_db)):
+def get_categories(db: Session = Depends(get_db)) -> list:
     """获取所有分类"""
     rows = db.query(KnowledgeItem.category).distinct().all()
     return sorted(set(r[0] for r in rows if r[0]))
@@ -182,7 +182,7 @@ def get_categories(db: Session = Depends(get_db)):
 def get_team_members(
     role: Optional[str] = Query(None, description="按系统角色筛选"),
     db: Session = Depends(get_db),
-):
+) -> list:
     """获取活跃用户列表（供团队选择）"""
     q = db.query(User).filter(User.is_active == True)
     if role:

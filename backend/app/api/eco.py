@@ -136,7 +136,7 @@ def _item_to_out(item: ECOItem) -> dict:
 def eco_changes_dashboard(
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> ECOChDashboardOut:
     """ECO变更看板: 按状态统计 + 按类型分布 + 本月新增 + 待验证 + 最近变更"""
     # 按状态统计
     status_rows = db.query(ECO.status, func.count(ECO.id)).group_by(ECO.status).all()
@@ -192,7 +192,7 @@ def list_ecos(
     page_size: int = Query(20, ge=1, le=100, description="每页条数"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> list[ECOOut]:
     """ECO列表查询 — 支持状态/关键词/日期范围过滤及分页"""
     q = db.query(ECO)
 
@@ -226,7 +226,7 @@ def create_eco(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECOOut:
     """创建ECO — 自动生成编号，可同时创建明细项"""
     # 校验关联ECR
     if data.ecr_id is not None:
@@ -276,7 +276,7 @@ def get_eco(
     eco_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> ECODetailOut:
     """获取ECO详情 — 含明细项列表 + 关联ECR信息"""
     eco = (
         db.query(ECO)
@@ -295,7 +295,7 @@ def update_eco(
     data: ECOUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> ECOOut:
     """更新ECO基本信息 — 仅DRAFT状态允许"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.DRAFT.value], "更新")
@@ -313,7 +313,7 @@ def delete_eco(
     eco_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> None:
     """删除ECO — 仅DRAFT状态允许（级联删除明细项）"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.DRAFT.value], "删除")
@@ -330,7 +330,7 @@ def implement_eco(
     eco_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> ECOOut:
     """开始实施: DRAFT → IMPLEMENTING"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.DRAFT.value], "开始实施")
@@ -347,7 +347,7 @@ def verify_eco(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECOOut:
     """验证通过: IMPLEMENTING → VERIFIED，记录验证人/验证时间"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.IMPLEMENTING.value], "验证")
@@ -366,7 +366,7 @@ def effective_eco(
     eco_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> ECOOut:
     """生效: VERIFIED → EFFECTIVE（预留BOM联动接口）"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.VERIFIED.value], "生效")
@@ -384,7 +384,7 @@ def close_eco(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECOOut:
     """关闭: EFFECTIVE → CLOSED，记录关闭人/关闭时间"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.EFFECTIVE.value], "关闭")
@@ -403,7 +403,7 @@ def cancel_eco(
     eco_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> ECOOut:
     """取消: 任意状态 → CANCELLED（已关闭/已取消状态的ECO不可取消）"""
     eco = _get_eco_or_404(db, eco_id)
     if eco.status in (ECOStatus.CLOSED.value, ECOStatus.CANCELLED.value):
@@ -426,7 +426,7 @@ def add_eco_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECOItemOut:
     """新增ECO明细项 — 仅DRAFT/IMPLEMENTING状态允许"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.DRAFT.value, ECOStatus.IMPLEMENTING.value], "新增明细项")
@@ -463,7 +463,7 @@ def update_eco_item(
     data: ECOItemUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> ECOItemOut:
     """更新ECO明细项 — 仅DRAFT/IMPLEMENTING状态允许"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.DRAFT.value, ECOStatus.IMPLEMENTING.value], "更新明细项")
@@ -485,7 +485,7 @@ def delete_eco_item(
     item_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
-):
+) -> None:
     """删除ECO明细项 — 仅DRAFT/IMPLEMENTING状态允许"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.DRAFT.value, ECOStatus.IMPLEMENTING.value], "删除明细项")

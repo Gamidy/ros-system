@@ -28,13 +28,13 @@ router = APIRouter(prefix="/products", tags=["产品主线"])
 # ══════════════════════════════════════════════════
 
 @router.get("/markets", response_model=list[MarketOut])
-def list_markets(db: Session = Depends(get_db), _=Depends(require_menu("products"))):
+def list_markets(db: Session = Depends(get_db), _=Depends(require_menu("products"))) -> list[MarketOut]:
     """列出所有市场"""
     return db.query(Market).all()
 
 
 @router.post("/markets", response_model=MarketOut)
-def create_market(data: MarketCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def create_market(data: MarketCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> MarketOut:
     """添加新市场"""
     if db.query(Market).filter(Market.code == data.code.upper()).first():
         raise HTTPException(status_code=400, detail="市场代码已存在")
@@ -50,7 +50,7 @@ def create_market(data: MarketCreate, db: Session = Depends(get_db), _=Depends(r
 # ══════════════════════════════════════════════════
 
 @router.post("/rules/evaluate-version", response_model=VersionRuleResponse)
-def evaluate_version_change(data: VersionRuleRequest, _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def evaluate_version_change(data: VersionRuleRequest, _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> VersionRuleResponse:
     """评估变更是否需要创建新Version（PR-06, PR-09, PR-10）"""
     result = product_rules.evaluate_version_change(
         change_description=data.change_description,
@@ -71,7 +71,7 @@ def list_platforms(
     status: Optional[str] = None,
     db: Session = Depends(get_db),
     _=Depends(require_menu("products")),
-):
+) -> list[PlatformOut]:
     """列出所有平台，可按类型/状态筛选"""
     q = db.query(Platform)
     if platform_type:
@@ -82,7 +82,7 @@ def list_platforms(
 
 
 @router.post("/platforms", response_model=PlatformOut)
-def create_platform(data: PlatformCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def create_platform(data: PlatformCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> PlatformOut:
     """创建新平台（PR-02: 按结构尺寸定义）"""
     if db.query(Platform).filter(Platform.code == data.code).first():
         raise HTTPException(status_code=400, detail="平台编码已存在")
@@ -92,7 +92,7 @@ def create_platform(data: PlatformCreate, db: Session = Depends(get_db), _=Depen
 
 
 @router.get("/platforms/{pid}", response_model=PlatformOut)
-def get_platform(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))):
+def get_platform(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))) -> PlatformOut:
     p = db.query(Platform).filter(Platform.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="平台不存在")
@@ -100,7 +100,7 @@ def get_platform(pid: int, db: Session = Depends(get_db), _=Depends(require_menu
 
 
 @router.patch("/platforms/{pid}", response_model=PlatformOut)
-def update_platform(pid: int, data: PlatformUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def update_platform(pid: int, data: PlatformUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> PlatformOut:
     """更新平台信息"""
     p = db.query(Platform).filter(Platform.id == pid).first()
     if not p:
@@ -123,7 +123,7 @@ def list_products(
     status: Optional[str] = None,
     db: Session = Depends(get_db),
     _=Depends(require_menu("products")),
-):
+) -> list[ProductOut]:
     """列出所有产品，可按平台/市场/容量筛选"""
     q = db.query(Product)
     if platform_id:
@@ -140,7 +140,7 @@ def list_products(
 
 
 @router.post("", response_model=ProductOut)
-def create_product(data: ProductCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def create_product(data: ProductCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> ProductOut:
     """创建新产品（PR-11: Product = Market × Capacity × Platform）"""
     if db.query(Product).filter(Product.code == data.code).first():
         raise HTTPException(status_code=400, detail="产品编码已存在")
@@ -184,7 +184,7 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db), _=Depends
 
 
 @router.get("/{pid}", response_model=ProductOut)
-def get_product(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))):
+def get_product(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))) -> ProductOut:
     p = db.query(Product).filter(Product.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="产品不存在")
@@ -192,7 +192,7 @@ def get_product(pid: int, db: Session = Depends(get_db), _=Depends(require_menu(
 
 
 @router.patch("/{pid}", response_model=ProductOut)
-def update_product(pid: int, data: ProductUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def update_product(pid: int, data: ProductUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> ProductOut:
     """更新产品信息"""
     p = db.query(Product).filter(Product.id == pid).first()
     if not p:
@@ -208,7 +208,7 @@ def update_product(pid: int, data: ProductUpdate, db: Session = Depends(get_db),
 # ══════════════════════════════════════════════════
 
 @router.post("/{pid}/markets", response_model=ProductOut)
-def assign_markets(pid: int, data: ProductMarketAssign, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def assign_markets(pid: int, data: ProductMarketAssign, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> ProductOut:
     """为产品分配目标市场（PR-08: Market ≠ Product, 多对多）"""
     p = db.query(Product).filter(Product.id == pid).first()
     if not p:
@@ -231,7 +231,7 @@ def assign_markets(pid: int, data: ProductMarketAssign, db: Session = Depends(ge
 # ══════════════════════════════════════════════════
 
 @router.get("/{pid}/versions", response_model=list[VersionOut])
-def list_versions(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))):
+def list_versions(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))) -> list[VersionOut]:
     """列出产品的所有版本"""
     if not db.query(Product).filter(Product.id == pid).first():
         raise HTTPException(status_code=404, detail="产品不存在")
@@ -239,7 +239,7 @@ def list_versions(pid: int, db: Session = Depends(get_db), _=Depends(require_men
 
 
 @router.post("/{pid}/versions", response_model=VersionOut)
-def create_version(pid: int, data: VersionCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def create_version(pid: int, data: VersionCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> VersionOut:
     """创建产品新版本"""
     if not db.query(Product).filter(Product.id == pid).first():
         raise HTTPException(status_code=404, detail="产品不存在")
@@ -259,7 +259,7 @@ def create_version(pid: int, data: VersionCreate, db: Session = Depends(get_db),
 @router.patch("/versions/{vid}/status", response_model=VersionOut)
 def update_version_status(
     vid: int, data: VersionStatusUpdate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))
-):
+) -> VersionOut:
     """更新Version生命周期状态（带转换校验）"""
     v = db.query(Version).filter(Version.id == vid).first()
     if not v:
@@ -285,7 +285,7 @@ def update_version_status(
 # ══════════════════════════════════════════════════
 
 @router.post("/versions/{vid}/variants", response_model=ManufacturingVariantOut)
-def create_variant(vid: int, data: ManufacturingVariantCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))):
+def create_variant(vid: int, data: ManufacturingVariantCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "systems_engineer"))) -> ManufacturingVariantOut:
     """
     创建制造变体（PR-10: Product Version ≠ MBOM Version）
     同一Version下不同工厂可有不同MBOM
@@ -304,7 +304,7 @@ def create_variant(vid: int, data: ManufacturingVariantCreate, db: Session = Dep
 
 
 @router.get("/versions/{vid}/variants", response_model=list[ManufacturingVariantOut])
-def list_variants(vid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))):
+def list_variants(vid: int, db: Session = Depends(get_db), _=Depends(require_menu("products"))) -> list[ManufacturingVariantOut]:
     """列出版本的所有制造变体"""
     return db.query(ManufacturingVariant).filter(ManufacturingVariant.version_id == vid).all()
 

@@ -30,7 +30,7 @@ def list_verification_requirements(
     project_id: int = Query(None, description="项目ID"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> list:
     q = db.query(VerificationRequirement)
     if category:
         q = q.filter(VerificationRequirement.category == category)
@@ -49,7 +49,7 @@ def create_verification_requirement(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     vr = VerificationRequirement(
         **data.model_dump(),
         vr_code=_gen_vr_code(),
@@ -67,7 +67,7 @@ def get_verification_requirement(
     rid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
         raise HTTPException(status_code=404, detail="验证需求不存在")
@@ -80,7 +80,7 @@ def update_verification_requirement(
     data: VerificationRequirementCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
         raise HTTPException(status_code=404, detail="验证需求不存在")
@@ -98,7 +98,7 @@ def patch_vr_status(
     status: str = Query(..., description="目标状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
         raise HTTPException(status_code=404, detail="验证需求不存在")
@@ -114,7 +114,7 @@ def generate_vr_from_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     """从 ProductPlan 自动生成 VR（骨架实现）"""
     from app.models.product_plan import ProductPlan
 

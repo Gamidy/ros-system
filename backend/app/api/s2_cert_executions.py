@@ -20,7 +20,7 @@ def list_cert_executions(
     status: str = Query("", description="按状态筛选"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> list[CertificationExecutionOut]:
     """认证执行列表"""
     q = db.query(CertificationExecution)
     if cert_sample_id:
@@ -36,7 +36,7 @@ def create_cert_execution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("certifications")),
-):
+) -> CertificationExecutionOut:
     """创建认证执行"""
     execution = CertificationExecution(
         **data.model_dump(exclude_unset=True),
@@ -54,7 +54,7 @@ def update_cert_execution(
     data: CertificationExecutionUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("certifications")),
-):
+) -> CertificationExecutionOut:
     """更新认证执行"""
     execution = db.query(CertificationExecution).filter(CertificationExecution.id == ce_id).first()
     if not execution:

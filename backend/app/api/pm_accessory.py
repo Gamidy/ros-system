@@ -20,7 +20,7 @@ def get_accessory_defaults(
     market: str = Query(..., description="目标市场，如'通用'"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """获取指定市场的配件默认列表"""
     items = (
         db.query(AccessoryDefault)

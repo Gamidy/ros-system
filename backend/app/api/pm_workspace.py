@@ -176,7 +176,7 @@ def _project_to_dict(p: Project) -> dict:
 def list_active_programs(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> list:
     """返回所有活跃项目群，供立项时选择"""
     programs = db.query(Program).filter(Program.status == "active").all()
     return [{"id": p.id, "name": p.name, "code": p.code} for p in programs]
@@ -190,7 +190,7 @@ def list_active_programs(
 def pm_workspace(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """返回 PM 工作台聚合数据"""
     owner_name = current_user.username
 
@@ -277,7 +277,7 @@ def list_my_proposals(
     status: str = Query("all", description="过滤状态: draft(草稿) / submitted(已提交) / all(全部)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """返回当前用户的所有提案（含草稿和已提交）
     
     - 查询 projects 表: owner=current_user, is_deleted=False
@@ -651,7 +651,7 @@ def pm_create_draft(
     mold_outer: str | None = Body(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """PM 保存草稿项目 — is_draft=True, status='draft', 不生成 code 和 Gate 模板"""
     if not name or not name.strip():
         raise HTTPException(status_code=400, detail="项目名称不能为空")
@@ -852,7 +852,7 @@ def pm_update_draft(
     mold_outer: str | None = Body(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """PM 更新草稿项目 — 仅 owner 本人可编辑, 使用 is not None 判断"""
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
@@ -986,7 +986,7 @@ def _planning_item_to_dict(ap: AnnualPlan, project_count: int = 0) -> dict:
 def list_planning_items(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("product_manager")),
-):
+) -> list:
     """获取年度规划列表，附加每个规划关联的项目数"""
     plans = db.query(AnnualPlan).order_by(AnnualPlan.year.desc(), AnnualPlan.created_at.desc()).all()
     result = []
@@ -1004,7 +1004,7 @@ def create_planning_item(
     doc_ref: str | None = Body(None, max_length=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("product_manager")),
-):
+) -> dict:
     """创建年度规划条目"""
     if not name or not name.strip():
         raise HTTPException(status_code=400, detail="规划名称不能为空")
@@ -1046,7 +1046,7 @@ def update_planning_item(
     doc_ref: str | None = Body(None, max_length=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("product_manager")),
-):
+) -> dict:
     """更新年度规划条目"""
     ap = db.query(AnnualPlan).filter(AnnualPlan.id == plan_id).first()
     if not ap:
@@ -1088,7 +1088,7 @@ def delete_planning_item(
     plan_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("product_manager")),
-):
+) -> dict:
     """删除年度规划条目"""
     ap = db.query(AnnualPlan).filter(AnnualPlan.id == plan_id).first()
     if not ap:
@@ -1138,7 +1138,7 @@ def get_capacity_cost_config(
     capacity_range: str = Query(..., description="冷量段，如 12K, 07K, 18K"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """返回该冷量段对应的完整成本配置。
     
     从 system_config 表读取 mfg_cost_threshold, capacity_unit_cost_map, 
@@ -1204,7 +1204,7 @@ def submit_proposal(
     project_id: int = Body(..., description="项目ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """提交项目立项 — 推进关联 ProductPlan 到 PROJECT_INIT 并创建审批请求"""
     # 查找项目
     p = db.query(Project).filter(Project.id == project_id, Project.is_deleted == False).first()
@@ -1273,7 +1273,7 @@ def withdraw_proposal(
     proposal_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """撤回立项审批请求 — 仅申请人可撤回，撤回后回退 ProductPlan 阶段"""
     req = db.query(ApprovalRequest).filter(ApprovalRequest.id == proposal_id).first()
     if not req:

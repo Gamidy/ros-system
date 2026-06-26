@@ -222,7 +222,7 @@ def create_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """创建产品策划（DRAFT）"""
     plan = workflow_create(db, data.model_dump(), current_user.username)
     return _plan_to_dict(plan)
@@ -237,7 +237,7 @@ def list_plans(
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """产品策划列表（分页+筛选）"""
     q = db.query(ProductPlan)
 
@@ -268,7 +268,7 @@ def get_plan_detail(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """策划详情（含 costs + 子表数据）"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
@@ -288,7 +288,7 @@ def get_plan_status(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """流程状态详情"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
@@ -314,7 +314,7 @@ def advance_plan_stage(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """推进策划流程"""
     plan = workflow_advance(db, plan_id, current_user.username)
     result = _plan_to_dict(plan)
@@ -329,7 +329,7 @@ def get_next_action(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """获取下一步动作引导"""
     return workflow_next_action(db, plan_id)
 
@@ -341,7 +341,7 @@ def update_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """更新策划基本信息"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
@@ -362,7 +362,7 @@ def delete_plan(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """删除产品策划"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
@@ -380,7 +380,7 @@ def create_cost(
     data: CostCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """添加成本记录"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
@@ -412,7 +412,7 @@ def delete_cost(
     cost_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-):
+) -> dict:
     """删除成本记录"""
     cost = db.query(Cost).filter(Cost.id == cost_id, Cost.product_plan_id == plan_id).first()
     if not cost:

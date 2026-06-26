@@ -32,7 +32,7 @@ router = APIRouter(prefix="/dashboard", tags=["驾驶舱"])
 # ═══════════════ 驾驶舱汇总（新版多层聚合） ═══════════════
 
 @router.get("/summary", response_model=DashboardResponse)
-def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("dashboard"))):
+def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("dashboard"))) -> DashboardResponse:
     today = date.today()
     ninety_days = today + timedelta(days=90)
 
@@ -299,7 +299,7 @@ def list_alerts(
     alert_type: str = Query("", description="预警类型"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-):
+) -> list[AlertOut]:
     q = db.query(Alert)
     if level is not None:
         q = q.filter(Alert.level == level)
@@ -315,7 +315,7 @@ def resolve_alert(
     aid: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "project_admin", "product_manager", "quality_engineer")),
-):
+) -> dict:
     alert = db.query(Alert).filter(Alert.id == aid).first()
     if not alert:
         raise HTTPException(status_code=404, detail="预警记录不存在")
@@ -333,7 +333,7 @@ def list_alert_rules(
     is_enabled: bool = Query(None, description="是否启用"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-):
+) -> list[AlertRuleOut]:
     q = db.query(AlertRule)
     if target_type:
         q = q.filter(AlertRule.target_type == target_type)
@@ -347,7 +347,7 @@ def create_alert_rule(
     data: AlertRuleCreate,
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
-):
+) -> AlertRuleOut:
     # check duplicate name
     existing = db.query(AlertRule).filter(AlertRule.name == data.name).first()
     if existing:
@@ -364,7 +364,7 @@ def get_dashboard_trends(
     days: int = Query(30, description="统计天数"),
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
-):
+) -> dict:
     """返回最近N天每日项目创建数量，用于趋势图"""
     from datetime import date as dt_date
     start = dt_date.today() - timedelta(days=days)

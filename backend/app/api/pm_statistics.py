@@ -22,7 +22,7 @@ router = APIRouter(prefix="/pm", tags=["产品经理工作台-统计"])
 def pm_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_pm),
-):
+) -> dict:
     """返回 PM 工作台统计聚合数据"""
     owner_name = current_user.username
     today = date.today()

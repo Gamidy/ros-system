@@ -53,7 +53,7 @@ class NotificationPrefOut(BaseModel):
 def get_notification_prefs(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """获取当前用户的全部通知偏好配置"""
     prefs = (
         db.query(UserNotificationPref)
@@ -68,7 +68,7 @@ def upsert_notification_pref(
     pref_in: NotificationPrefIn,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """创建或更新当前用户在指定通道的通知偏好（单通道全量替换）"""
     existing = (
         db.query(UserNotificationPref)

@@ -95,7 +95,7 @@ def create_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECROut:
     """创建 ECR 草稿，自动生成编号，状态为 DRAFT"""
     code = _generate_ecr_code(db)
 
@@ -154,7 +154,7 @@ def list_ecrs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> dict:
     """查询 ECR 列表，支持状态/类型/紧急度/提交人/关键词/日期范围筛选，分页返回"""
     q = db.query(ECRRequest)
 
@@ -228,7 +228,7 @@ def get_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECRDetailOut:
     """获取 ECR 详情，含附件列表和关联的 ECO 信息"""
     ecr = _check_ecr_exists(db, ecr_id)
 
@@ -286,7 +286,7 @@ def update_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECROut:
     """更新 ECR 草稿（仅 DRAFT 状态允许更新）"""
     ecr = _check_ecr_exists(db, ecr_id)
     if ecr.status != ECRStatus.DRAFT.value:
@@ -334,7 +334,7 @@ def delete_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> dict:
     """删除 ECR 草稿（仅 DRAFT 状态允许删除）"""
     ecr = _check_ecr_exists(db, ecr_id)
     if ecr.status != ECRStatus.DRAFT.value:
@@ -364,7 +364,7 @@ def submit_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECROut:
     """提交 ECR 审批：状态 DRAFT → SUBMITTED，创建对应的 ApprovalRequest"""
     ecr = _check_ecr_exists(db, ecr_id)
     _check_status_transition(ecr.status, ECRStatus.SUBMITTED.value)
@@ -404,7 +404,7 @@ def withdraw_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECROut:
     """撤回 ECR 审批：状态 SUBMITTED → DRAFT，关闭 ApprovalRequest"""
     ecr = _check_ecr_exists(db, ecr_id)
     _check_status_transition(ecr.status, ECRStatus.DRAFT.value)
@@ -436,7 +436,7 @@ def review_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECROut:
     """开始评审 ECR：状态 SUBMITTED → REVIEWING"""
     ecr = _check_ecr_exists(db, ecr_id)
     _check_status_transition(ecr.status, ECRStatus.REVIEWING.value)
@@ -461,7 +461,7 @@ def approve_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECROut:
     """批准 ECR：状态 REVIEWING → APPROVED，同步更新 ApprovalRequest 状态"""
     ecr = _check_ecr_exists(db, ecr_id)
     _check_status_transition(ecr.status, ECRStatus.APPROVED.value)
@@ -497,7 +497,7 @@ def reject_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECROut:
     """驳回 ECR：状态 REVIEWING → REJECTED，需要提供驳回原因"""
     ecr = _check_ecr_exists(db, ecr_id)
     _check_status_transition(ecr.status, ECRStatus.REJECTED.value)
@@ -533,7 +533,7 @@ def convert_ecr(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECRDetailOut:
     """将已批准的 ECR 转为 ECO 草稿：APPROVED → CONVERTED"""
     ecr = _check_ecr_exists(db, ecr_id)
     _check_status_transition(ecr.status, ECRStatus.CONVERTED.value)
@@ -620,7 +620,7 @@ async def upload_attachment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> ECRAttachmentOut:
     """为 ECR 上传附件（任意状态均可上传）"""
     ecr = _check_ecr_exists(db, ecr_id)
 
@@ -678,7 +678,7 @@ def delete_attachment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("changes")),
-):
+) -> dict:
     """删除 ECR 的指定附件"""
     # 验证 ECR 存在
     _check_ecr_exists(db, ecr_id)

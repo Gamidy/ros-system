@@ -49,7 +49,7 @@ def list_partners(
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> OutsourcePartnerListOut:
     query = db.query(OutsourcePartner)
     if partner_type:
         query = query.filter(OutsourcePartner.partner_type == partner_type)
@@ -71,7 +71,7 @@ def list_partners(
 
 @router.get("/partners/{pid}", response_model=OutsourcePartnerOut)
 def get_partner(pid: int, db: Session = Depends(get_db),
-                 current_user: User = Depends(get_current_user)):
+                 current_user: User = Depends(get_current_user)) -> OutsourcePartnerOut:
     partner = db.query(OutsourcePartner).filter(OutsourcePartner.id == pid).first()
     if not partner:
         raise HTTPException(status_code=404, detail="外协厂商不存在")
@@ -83,7 +83,7 @@ def get_partner(pid: int, db: Session = Depends(get_db),
 @router.post("/partners", response_model=OutsourcePartnerOut,
              dependencies=[Depends(require_role("admin", "procurement", "rd_director"))])
 def create_partner(data: OutsourcePartnerCreate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(get_current_user)) -> OutsourcePartnerOut:
     # 检查编码唯一
     existing = db.query(OutsourcePartner).filter(OutsourcePartner.code == data.code).first()
     if existing:
@@ -98,7 +98,7 @@ def create_partner(data: OutsourcePartnerCreate, db: Session = Depends(get_db),
 @router.put("/partners/{pid}", response_model=OutsourcePartnerOut,
             dependencies=[Depends(require_role("admin", "procurement", "rd_director"))])
 def update_partner(pid: int, data: OutsourcePartnerUpdate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(get_current_user)) -> OutsourcePartnerOut:
     partner = db.query(OutsourcePartner).filter(OutsourcePartner.id == pid).first()
     if not partner:
         raise HTTPException(status_code=404, detail="外协厂商不存在")
@@ -111,7 +111,7 @@ def update_partner(pid: int, data: OutsourcePartnerUpdate, db: Session = Depends
 
 @router.delete("/partners/{pid}", dependencies=[Depends(require_role("admin"))])
 def delete_partner(pid: int, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(get_current_user)) -> dict:
     partner = db.query(OutsourcePartner).filter(OutsourcePartner.id == pid).first()
     if not partner:
         raise HTTPException(status_code=404, detail="外协厂商不存在")
@@ -133,7 +133,7 @@ def list_orders(
     keyword: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> OutsourceOrderListOut:
     query = db.query(OutsourceOrder).options(
         joinedload(OutsourceOrder.partner),
         joinedload(OutsourceOrder.items),
@@ -163,7 +163,7 @@ def list_orders(
 
 @router.get("/orders/{oid}", response_model=OutsourceOrderOut)
 def get_order(oid: int, db: Session = Depends(get_db),
-               current_user: User = Depends(get_current_user)):
+               current_user: User = Depends(get_current_user)) -> OutsourceOrderOut:
     order = db.query(OutsourceOrder).options(
         joinedload(OutsourceOrder.partner),
         joinedload(OutsourceOrder.items),
@@ -182,7 +182,7 @@ def get_order(oid: int, db: Session = Depends(get_db),
              dependencies=[Depends(require_role("admin", "procurement", "rd_director",
                                                   "structural_engineer", "systems_engineer"))])
 def create_order(data: OutsourceOrderCreate, db: Session = Depends(get_db),
-                  current_user: User = Depends(get_current_user)):
+                  current_user: User = Depends(get_current_user)) -> OutsourceOrderOut:
     partner = db.query(OutsourcePartner).filter(OutsourcePartner.id == data.partner_id).first()
     if not partner:
         raise HTTPException(status_code=404, detail="外协厂商不存在")
@@ -204,7 +204,7 @@ def create_order(data: OutsourceOrderCreate, db: Session = Depends(get_db),
 @router.put("/orders/{oid}", response_model=OutsourceOrderOut,
             dependencies=[Depends(require_role("admin", "procurement", "rd_director"))])
 def update_order(oid: int, data: OutsourceOrderUpdate, db: Session = Depends(get_db),
-                  current_user: User = Depends(get_current_user)):
+                  current_user: User = Depends(get_current_user)) -> OutsourceOrderOut:
     order = db.query(OutsourceOrder).options(
         joinedload(OutsourceOrder.partner),
         joinedload(OutsourceOrder.items),
@@ -223,7 +223,7 @@ def update_order(oid: int, data: OutsourceOrderUpdate, db: Session = Depends(get
 
 @router.delete("/orders/{oid}", dependencies=[Depends(require_role("admin"))])
 def delete_order(oid: int, db: Session = Depends(get_db),
-                  current_user: User = Depends(get_current_user)):
+                  current_user: User = Depends(get_current_user)) -> dict:
     order = db.query(OutsourceOrder).filter(OutsourceOrder.id == oid).first()
     if not order:
         raise HTTPException(status_code=404, detail="外协订单不存在")
@@ -243,7 +243,7 @@ def list_quality_records(
     result: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> OutsourceQualityRecordListOut:
     query = db.query(OutsourceQualityRecord).options(
         joinedload(OutsourceQualityRecord.order))
     if order_id:
@@ -266,7 +266,7 @@ def list_quality_records(
 @router.post("/quality-records", response_model=OutsourceQualityRecordOut,
              dependencies=[Depends(require_role("admin", "quality_engineer", "procurement"))])
 def create_quality_record(data: OutsourceQualityRecordCreate, db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_user)):
+                           current_user: User = Depends(get_current_user)) -> OutsourceQualityRecordOut:
     order = db.query(OutsourceOrder).filter(OutsourceOrder.id == data.order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="外协订单不存在")
@@ -282,7 +282,7 @@ def create_quality_record(data: OutsourceQualityRecordCreate, db: Session = Depe
 @router.put("/quality-records/{qid}", response_model=OutsourceQualityRecordOut,
             dependencies=[Depends(require_role("admin", "quality_engineer"))])
 def update_quality_record(qid: int, data: OutsourceQualityRecordUpdate, db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_user)):
+                           current_user: User = Depends(get_current_user)) -> OutsourceQualityRecordOut:
     record = db.query(OutsourceQualityRecord).options(
         joinedload(OutsourceQualityRecord.order)
     ).filter(OutsourceQualityRecord.id == qid).first()
@@ -299,7 +299,7 @@ def update_quality_record(qid: int, data: OutsourceQualityRecordUpdate, db: Sess
 
 @router.delete("/quality-records/{qid}", dependencies=[Depends(require_role("admin"))])
 def delete_quality_record(qid: int, db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_user)):
+                           current_user: User = Depends(get_current_user)) -> dict:
     record = db.query(OutsourceQualityRecord).filter(OutsourceQualityRecord.id == qid).first()
     if not record:
         raise HTTPException(status_code=404, detail="质检记录不存在")

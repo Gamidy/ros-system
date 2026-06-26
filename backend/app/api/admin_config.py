@@ -44,14 +44,14 @@ def _get_config_dict(db: Session) -> dict:
 
 
 @router.get("")
-def get_config(db: Session = Depends(get_db), user=Depends(get_current_user)):
+def get_config(db: Session = Depends(get_db), user=Depends(get_current_user)) -> dict:
     """获取完整系统配置（仅admin）"""
     _require_admin(user)
     return {"data": _get_config_dict(db)}
 
 
 @router.get("/public")
-def get_public_config(db: Session = Depends(get_db)):
+def get_public_config(db: Session = Depends(get_db)) -> dict:
     """获取公开系统配置（无需登录即可访问，仅返回UI渲染和计算所需的非敏感配置）"""
     full = _get_config_dict(db)
     public = {k: v for k, v in full.items() if k in PUBLIC_KEYS}
@@ -64,7 +64,7 @@ def update_config(
     value: str,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
-):
+) -> dict:
     """更新单个配置项（仅admin）"""
     _require_admin(user)
     if key not in DEFAULTS:
@@ -85,7 +85,7 @@ def update_config_batch(
     data: dict,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
-):
+) -> dict:
     """批量更新配置（仅admin）"""
     _require_admin(user)
     for key, value in data.items():

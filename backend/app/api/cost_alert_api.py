@@ -86,7 +86,7 @@ def list_rules(
     enabled: Optional[bool] = Query(None, description="按启用状态筛选"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> list[CostAlertRuleOut]:
     """获取成本超标预警规则列表"""
     q = db.query(CostAlertRule)
     if enabled is not None:
@@ -99,7 +99,7 @@ def create_rule(
     body: CostAlertRuleCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> CostAlertRuleOut:
     """创建成本超标预警规则"""
     rule = CostAlertRule(**body.model_dump())
     db.add(rule)
@@ -114,7 +114,7 @@ def update_rule(
     body: CostAlertRuleUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> CostAlertRuleOut:
     """更新成本超标预警规则"""
     rule = db.query(CostAlertRule).filter(CostAlertRule.id == rule_id).first()
     if not rule:
@@ -151,7 +151,7 @@ def list_events(
     limit: int = Query(50, ge=1, le=500, description="返回条数"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> list[AlertEventOut]:
     """获取成本超标事件列表（按创建时间倒序）"""
     q = db.query(AlertEvent)
     if rule_id is not None:
@@ -167,7 +167,7 @@ def list_events(
 def trigger_check(
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> dict:
     """手动触发成本超标检查"""
     new_events = check_cost_alerts(db)
     return {

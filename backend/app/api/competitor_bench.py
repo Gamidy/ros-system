@@ -49,7 +49,7 @@ def _serialize(item: CompetitorModel) -> dict:
 def benchmark_competitors(
     market: str = Query(..., description="目标市场（必填），如'越南'"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """对标查询：返回指定市场下所有竞品的对比数据（无需登录）"""
     items = (
         db.query(CompetitorModel)

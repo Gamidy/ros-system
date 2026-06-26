@@ -46,7 +46,7 @@ def list_team_role_templates(
     project_type: str = Query("", description="按项目类型筛选，留空返回全部"),
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> list:
     """查询团队角色模板，可按project_type筛选"""
     q = db.query(TeamRoleTemplate)
     if project_type:
@@ -59,7 +59,7 @@ def batch_upsert_team_role_templates(
     data: RoleTemplateBatch,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> dict:
     """批量创建/更新团队角色模板 — 对指定project_type先删除旧数据再批量插入"""
     # 删除该 project_type 下的所有旧记录
     db.query(TeamRoleTemplate).filter(
@@ -86,7 +86,7 @@ def delete_team_role_template(
     template_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin")),
-):
+) -> dict:
     """删除单条团队角色模板"""
     tpl = db.query(TeamRoleTemplate).filter(TeamRoleTemplate.id == template_id).first()
     if not tpl:

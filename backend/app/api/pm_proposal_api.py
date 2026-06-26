@@ -42,7 +42,7 @@ def api_cert_standards_by_market(
     market: str = Query(..., description="目标市场，如'越南'、'通用'"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """按目标市场查询认证标准模板。
 
     返回该市场所有认证标准行，含标准名、关键要求、验证方式、认证周期。
@@ -64,7 +64,7 @@ def api_team_role_template(
     project_type: str = Query(..., description="项目类型，如'全新开发'、'改型'、'引用'"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """按项目类型加载预设团队角色模板。
 
     返回该类型下的角色清单，含角色名、默认人数、职责描述、排序。
@@ -85,7 +85,7 @@ def api_team_role_template(
 def api_user_workloads(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """查询所有活跃用户的当前项目负载。
 
     返回每个用户的项目参与数、负载率百分比。
@@ -121,7 +121,7 @@ def api_proposal_calc(
     safety_compliance: Optional[str] = Query(None, description="安全合规 JSON（action=cert_costs 时必填）"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_auth),
-):
+) -> dict:
     """通用自动计算端点。
 
     action 可选值:

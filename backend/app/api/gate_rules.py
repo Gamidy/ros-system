@@ -25,7 +25,7 @@ def list_gate_rules(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> list[GateRuleOut]:
     q = db.query(GateRule)
     if gate_code:
         q = q.filter(GateRule.gate_code == gate_code)
@@ -40,7 +40,7 @@ def create_gate_rule(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("tests")),
-):
+) -> GateRuleOut:
     items_data = data.items
     rule_data = data.model_dump(exclude={"items"})
     rule = GateRule(
@@ -66,7 +66,7 @@ def get_gate_rule(
     rid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> GateRuleOut:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Gate规则不存在")
@@ -79,7 +79,7 @@ def update_gate_rule(
     data: GateRuleCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> GateRuleOut:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Gate规则不存在")
@@ -108,7 +108,7 @@ def delete_gate_rule(
     rid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Gate规则不存在")
@@ -123,7 +123,7 @@ def patch_gate_rule_status(
     status: str = Query(..., description="目标状态 active/inactive"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Gate规则不存在")
@@ -138,7 +138,7 @@ def evaluate_gate_rule(
     data: GateRuleEvalRequest,
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> dict:
     """评估Gate规则 — 使用 GateRuleEngine"""
     engine = GateRuleEngine(db)
     result = engine.evaluate(

@@ -43,7 +43,7 @@ def list_tests(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> list[TestRequestOut]:
     q = db.query(TestRequest)
     if product_code:
         q = q.filter(TestRequest.product_code == product_code)
@@ -61,7 +61,7 @@ def create_test(
     data: TestRequestCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
-):
+) -> TestRequestOut:
     req = TestRequest(**data.model_dump(exclude_none=True), request_no=_gen_request_no())
     db.add(req)
     db.commit()
@@ -70,7 +70,7 @@ def create_test(
 
 
 @router.get("/{rid}", response_model=TestRequestOut)
-def get_test(rid: int, db: Session = Depends(get_db), _=Depends(require_menu("tests"))):
+def get_test(rid: int, db: Session = Depends(get_db), _=Depends(require_menu("tests"))) -> TestRequestOut:
     r = db.query(TestRequest).filter(TestRequest.id == rid).first()
     if not r:
         raise HTTPException(status_code=404, detail="测试申请不存在")
@@ -85,7 +85,7 @@ def update_test(
     ng_count: int = Query(None, description="不合格项数"),
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
-):
+) -> dict:
     r = db.query(TestRequest).filter(TestRequest.id == rid).first()
     if not r:
         raise HTTPException(status_code=404, detail="测试申请不存在")
@@ -121,7 +121,7 @@ def add_test_result(
     data: TestResultCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
-):
+) -> TestResultOut:
     tr = db.query(TestRequest).filter(TestRequest.id == rid).first()
     if not tr:
         raise HTTPException(status_code=404, detail="测试申请不存在")
@@ -145,7 +145,7 @@ def list_mq(
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("tests")),
-):
+) -> list[MQVerificationOut]:
     q = db.query(MQVerification)
     if product_code:
         q = q.filter(MQVerification.product_code == product_code)
@@ -159,7 +159,7 @@ def create_mq(
     data: MQVerificationCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
-):
+) -> MQVerificationOut:
     mq = MQVerification(**data.model_dump())
     db.add(mq)
     db.commit()
@@ -176,7 +176,7 @@ def update_mq(
     result_report: str = Query("", description="结果报告"),
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "systems_engineer", "quality_engineer")),
-):
+) -> dict:
     mq = db.query(MQVerification).filter(MQVerification.id == mid).first()
     if not mq:
         raise HTTPException(status_code=404, detail="MQ验证记录不存在")
