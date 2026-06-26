@@ -2,7 +2,7 @@ import type { Component } from 'vue'
 import {
   Monitor, Goods, List, Folder, Document, WarningFilled,
   Stamp, Cpu, WarnTriangleFilled, Refresh, Select,
-  ShoppingCart, DataAnalysis, Setting, Checked,
+  ShoppingCart, DataAnalysis, Setting,
   OfficeBuilding, User, Edit,
 } from '@element-plus/icons-vue'
 
@@ -88,7 +88,6 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/pm-workspace', title: '工作台', icon: Monitor },
       { path: '/competitor-bench', title: '竞品对标', icon: DataAnalysis },
       { path: '/market-mgmt', title: '市场管理', icon: Stamp },
-      { path: '/approvals/proposals', title: '产品立项审批', icon: Checked },
     ]
   },
   {
@@ -112,6 +111,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/tests/verification-requirements', title: '验证需求', icon: Document },
       { path: '/tests/gate-rules', title: 'Gate规则引擎', icon: WarningFilled },
       { path: '/tests/target-markets', title: '目标市场配置', icon: Stamp },
+      { path: '/tests/test-executions', title: '实验执行', icon: Select },
       { path: '/s2/dashboard', title: '认证中心', icon: Stamp },
       { path: '/s2/requirements', title: '认证需求', icon: Document },
       { path: '/s2/projects', title: '认证项目', icon: Folder },
@@ -175,9 +175,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/quality',        title: '质量问题',       icon: WarnTriangleFilled },
   { path: '/changes',        title: '变更管理',       icon: Refresh },
   { path: '/approvals',      title: '审批管理',       icon: Select },
-  { path: '/approvals/proposals', title: '产品立项审批', icon: Checked },
+  // P0-6 采购
   { path: '/purchases',      title: '采购管理',       icon: ShoppingCart },
-  { path: '/mm',            title: '模块管理',       icon: DataAnalysis },
   { path: '/pm-workspace',   title: '工作台',         icon: Monitor },
   { path: '/competitor-bench',   title: '竞品对标',     icon: DataAnalysis },
   { path: '/market-mgmt',        title: '市场管理',     icon: Stamp },
@@ -190,6 +189,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/admin/tenants',   title: '多租户管理',     icon: OfficeBuilding },
   { path: '/admin/my-org',    title: '我的组织',       icon: User },
   // P0-6 安规管理
+  { path: '/tests/test-executions', title: '实验执行', icon: Select },
   { path: '/safety/standards',  title: '安全标准库',       icon: Document },
   { path: '/safety/inspection-items', title: '安规检测项', icon: Document },
   { path: '/safety/supplier-qualifications', title: '供应商安规', icon: ShoppingCart },

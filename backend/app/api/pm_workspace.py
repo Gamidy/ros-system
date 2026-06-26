@@ -737,6 +737,8 @@ def pm_create_draft(
         economic_indicators=economic_indicators,
         mold_costs=mold_costs,
         prototype_costs_detail=prototype_costs_detail,
+        test_costs=test_costs,
+        cert_costs=cert_costs,
         team_members=team_members,
         customer_name=customer_name,
         other_requirements=other_requirements,
