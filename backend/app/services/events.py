@@ -17,6 +17,7 @@
 import asyncio
 import json
 import logging
+import threading
 from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,9 @@ class EventBus:
     _instance = None
     _handlers: Dict[str, List[EventHandler]]
 
+    _reg_lock: threading.Lock
+    _registered_types: Dict[str, dict]
+
     def __new__(cls) -> "EventBus":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -133,6 +137,10 @@ class EventBus:
     def __init__(self) -> None:
         if not hasattr(self, "_handlers"):
             self._handlers = {}
+        if not hasattr(self, "_reg_lock"):
+            self._reg_lock = threading.Lock()
+            self._registered_types = {}
+            self._seed_from_event_types()
 
     # ----- 同步模式 -----
 
@@ -304,6 +312,81 @@ class EventBus:
                 del self._handlers[event_type]
         except ValueError:
             pass
+
+    # ----- 动态事件类型注册 -----
+
+    def _seed_from_event_types(self) -> None:
+        """从 EventTypes 静态枚举导入作为初始种子数据"""
+        for attr_name in dir(EventTypes):
+            if attr_name.startswith("_"):
+                continue
+            val = getattr(EventTypes, attr_name)
+            if isinstance(val, str) and "." in val:
+                version_raw = EventTypes._VERSIONS.get(val, "v1")
+                version_num = int(version_raw.lstrip("v"))
+                self._registered_types[val] = {
+                    "event_type": val,
+                    "version": version_num,
+                    "source": "static",
+                }
+        logger.info("Seeded %d static event types from EventTypes", len(self._registered_types))
+
+    def register_event_type(self, event_type: str, version: int = 1) -> bool:
+        """注册新事件类型（幂等，已存在则跳过）
+
+        Args:
+            event_type: 事件类型字符串（如 "plan.custom_event"）
+            version: 事件版本号，默认 1
+
+        Returns:
+            True 表示首次注册，False 表示已存在
+        """
+        if not isinstance(event_type, str) or not event_type.strip():
+            raise ValueError("event_type must be a non-empty string")
+        if not isinstance(version, int) or version < 1:
+            raise ValueError("version must be a positive integer")
+        with self._reg_lock:
+            if event_type in self._registered_types:
+                logger.debug("Event type '%s' already registered, skipped", event_type)
+                return False
+            self._registered_types[event_type] = {
+                "event_type": event_type,
+                "version": version,
+                "source": "dynamic",
+            }
+            logger.info("Registered dynamic event type: %s (v%d)", event_type, version)
+            return True
+
+    def list_registered_types(self) -> List[dict]:
+        """列出所有已注册事件类型"""
+        with self._reg_lock:
+            return list(self._registered_types.values())
+
+    def unregister_event_type(self, event_type: str) -> bool:
+        """注销事件类型（仅允许注销动态注册的类型）
+
+        Args:
+            event_type: 事件类型字符串
+
+        Returns:
+            True 表示成功注销，False 表示不存在或不可注销
+        """
+        with self._reg_lock:
+            info = self._registered_types.get(event_type)
+            if info is None:
+                logger.debug("Event type '%s' not found, cannot unregister", event_type)
+                return False
+            if info.get("source") == "static":
+                logger.warning("Cannot unregister static event type: %s", event_type)
+                return False
+            del self._registered_types[event_type]
+            logger.info("Unregistered dynamic event type: %s", event_type)
+            return True
+
+    def is_registered(self, event_type: str) -> bool:
+        """检查事件类型是否已注册"""
+        with self._reg_lock:
+            return event_type in self._registered_types
 
     # ----- 辅助方法 -----
 
