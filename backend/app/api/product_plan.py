@@ -370,6 +370,10 @@ def update_plan(
     if not plan:
         raise HTTPException(status_code=404, detail="策划不存在")
 
+    # [P1-2] 数据级权限: 非管理员只能编辑自己创建的策划
+    if current_user.role not in ("admin", "general_manager") and plan.created_by != current_user.username:
+        raise HTTPException(status_code=403, detail="只能编辑自己创建的策划")
+
     update_data = data.model_dump(exclude_unset=True)
     for key, val in update_data.items():
         if val is not None and hasattr(plan, key):
@@ -384,12 +388,18 @@ def update_plan(
 def delete_plan(
     plan_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """删除产品策划"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="策划不存在")
+
+    # [P1-2] 数据级权限: 非管理员只能删除自己创建的策划
+    if current_user.role not in ("admin", "general_manager") and plan.created_by != current_user.username:
+        raise HTTPException(status_code=403, detail="只能删除自己创建的策划")
+
     db.delete(plan)
     db.commit()
     return {"ok": True}

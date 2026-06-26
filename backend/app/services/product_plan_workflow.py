@@ -82,18 +82,31 @@ STAGE_TO_EVENT: dict[ProductPlanStage, str] = {
 
 
 def _load_transitions(db: Session) -> list[WorkflowTransitionSpec]:
-    """从 DB 加载流程转换规则；DB 为空（迁移未运行）时回退到 PLAN_STAGE_TRANSITIONS 常量"""
+    """从 DB 加载流程转换规则；DB 为空时自动初始化种子数据"""
     specs = db.query(WorkflowTransitionSpec).order_by(WorkflowTransitionSpec.sort_order).all()
     if not specs:
-        for from_stage, to_stages in PLAN_STAGE_TRANSITIONS.items():
-            for idx, to_stage in enumerate(to_stages):
-                s = WorkflowTransitionSpec(
-                    from_stage=from_stage.value,
-                    to_stage=to_stage.value,
-                    sort_order=idx,
-                )
-                specs.append(s)
+        logger.info("WorkflowTransitionSpec 为空，写入默认转换规则...")
+        _init_default_transitions(db)
+        specs = db.query(WorkflowTransitionSpec).order_by(WorkflowTransitionSpec.sort_order).all()
     return specs
+
+
+def _init_default_transitions(db: Session):
+    """写入 WorkflowTransitionSpec 默认种子数据"""
+    from app.models.workflow_transition_spec import WorkflowTransitionSpec as WTS
+    defaults = [
+        WTS(from_stage="draft", to_stage="competitor", sort_order=1),
+        WTS(from_stage="competitor", to_stage="definition", sort_order=2, required_fields='["competitor_id","initiation","market_info"]'),
+        WTS(from_stage="definition", to_stage="costing", sort_order=3, required_fields='["cost_target"]'),
+        WTS(from_stage="costing", to_stage="tech_input", sort_order=4, required_fields='["performance_target","tech_spec"]'),
+        WTS(from_stage="tech_input", to_stage="project_init", sort_order=5, required_fields='["initiation","market_info","tech_spec","team_members"]'),
+        WTS(from_stage="project_init", to_stage="approved", sort_order=6, required_fields='["initiation","market_info","tech_spec","team_members","costs"]'),
+        WTS(from_stage="approved", to_stage="released", sort_order=7),
+    ]
+    for spec in defaults:
+        db.add(spec)
+    db.commit()
+    logger.info("WorkflowTransitionSpec 种子数据已写入 (%d 条)", len(defaults))
 
 
 def _load_requirements_for_stage(db: Session, stage: ProductPlanStage) -> list[dict]:

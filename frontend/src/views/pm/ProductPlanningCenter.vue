@@ -29,7 +29,7 @@
               </el-select>
             </el-col>
             <el-col :span="6">
-              <el-input v-model="searchText" placeholder="搜索策划名称" size="small" clearable @change="fetchPlans" />
+              <el-input v-model="searchText" placeholder="搜索策划名称" size="small" clearable @input="onSearchInput" />
             </el-col>
           </el-row>
           <!-- 移动端：状态筛选 + 可折叠搜索 -->
@@ -58,7 +58,7 @@
               placeholder="搜索策划名称"
               size="small"
               clearable
-              @change="fetchPlans"
+              @input="onSearchInput"
               class="mobile-search-input"
             />
           </div>
@@ -394,6 +394,87 @@ import api from '../../api'
 import { generatePlanDraft } from '../../api/ai'
 import GlobalActionCard from '../../components/GlobalActionCard.vue'
 
+// ── Types ──
+interface PlanItem {
+  id: string
+  name: string
+  series?: string
+  market?: string
+  status: string
+  created_at?: string
+  created_by?: string
+  project_links_count?: number
+}
+
+interface NextAction {
+  current_stage: string
+  next_stage: string | null
+  next_action: string
+  can_advance: boolean
+  missing_fields: string[]
+}
+
+interface TargetMarket {
+  id: number
+  market_code: string
+  market_name: string
+}
+
+interface AIDraftCorePerformance {
+  cooling_capacity_btu?: number
+  cooling_capacity_w?: number
+  cooling_eer?: number
+  refrigerant?: string
+  energy_rating?: string
+  voltage_freq?: string
+}
+
+interface AIDraftMarketPositioning {
+  target_market_segment?: string
+  suggested_price_range?: string
+  key_differentiators?: string[]
+}
+
+interface AIDraftTechSpecs {
+  noise_indoor_db_max?: number
+  noise_outdoor_db_max?: number
+  airflow_m3h?: number
+  dimensions_indoor?: string
+}
+
+interface AIDraftCostTargets {
+  target_factory_cost?: number
+  key_cost_drivers?: string[]
+}
+
+interface AIDraftRiskAssessment {
+  technical_risks?: string[]
+  market_risks?: string[]
+}
+
+interface AIDraftCompliance {
+  required_certifications?: string[]
+}
+
+interface AIDraftTimeline {
+  suggested_duration_months?: number
+}
+
+interface AIDraft {
+  plan_name?: string
+  product_type?: string
+  series?: string
+  target_market_detail?: string
+  capacity_range?: string
+  development_timeline?: AIDraftTimeline
+  core_performance?: AIDraftCorePerformance
+  market_positioning?: AIDraftMarketPositioning
+  technical_specs?: AIDraftTechSpecs
+  cost_targets?: AIDraftCostTargets
+  risk_assessment?: AIDraftRiskAssessment
+  compliance_requirements?: AIDraftCompliance
+}
+
 const router = useRouter()
 const AIIcon = MagicStick
 
@@ -403,7 +484,7 @@ const searchExpanded = ref(false)
 const hasMore = ref(true)
 
 // ── Data ──
-const plans = ref<any[]>([])
+const plans = ref<PlanItem[]>([])
 const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
@@ -414,7 +495,7 @@ const searchText = ref('')
 // ── 下一步动作 ──
 const selectedPlanId = ref<string | null>(null)
 const selectedPlanName = ref('')
-const selectedPlanNextAction = ref<any>(null)
+const selectedPlanNextAction = ref<NextAction | null>(null)
 const advancing = ref(false)
 
 // ── 创建 ──
@@ -424,19 +505,29 @@ const createForm = ref({ name: '', series: '', market: '', market_id: null as nu
 const createStep = ref(0) // 0=选择条件, 1=AI生成中, 2=预览确认
 
 // ── 目标市场列表 ──
-const targetMarkets = ref<any[]>([])
+const targetMarkets = ref<TargetMarket[]>([])
 
 // ── AI 生成 ──
 const aiGenerating = ref(false)
 const aiStreaming = ref(false)
 const aiStreamingText = ref('')
-const aiDraft = ref<any>(null)
+const aiDraft = ref<AIDraft | null>(null)
 const acceptingDraft = ref(false)
+
+// ── 搜索防抖 ──
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+function onSearchInput(val: string) {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    searchText.value = val
+    fetchPlans()
+  }, 300)
+}
 
 // ── 监听对话框打开时加载目标市场 ──
 function onMarketChange() {
   // 当市场改变时，自动填充市场名称
-  const market = targetMarkets.value.find((m: any) => m.id === createForm.value.market_id)
+  const market = targetMarkets.value.find((m: TargetMarket) => m.id === createForm.value.market_id)
   if (market) {
     createForm.value.market = market.market_code
   }
@@ -507,7 +598,7 @@ async function generateAIDraft() {
   }
 }
 
-function formatDraftForStream(draft: any): string {
+function formatDraftForStream(draft: AIDraft): string {
   const parts: string[] = []
   if (draft.plan_name) parts.push(`📋 策划名称: ${draft.plan_name}`)
   if (draft.product_type) parts.push(`🏭 产品类型: ${draft.product_type}`)
@@ -672,7 +763,7 @@ async function fetchPlans(resetPage = true) {
     hasMore.value = true
   }
   try {
-    const params: any = { page: page.value, page_size: pageSize.value }
+    const params: Record<string, string | number | undefined | null> = { page: page.value, page_size: pageSize.value }
     if (filterStatus.value) params.status = filterStatus.value
     if (searchText.value) params.search = searchText.value
     const res = await api.get('/product-plans', { params })
@@ -698,7 +789,7 @@ function toggleSearch() {
   searchExpanded.value = !searchExpanded.value
 }
 
-async function selectPlan(row: any) {
+async function selectPlan(row: PlanItem) {
   if (selectedPlanId.value === row.id) return
   selectedPlanId.value = row.id
   selectedPlanName.value = row.name
@@ -718,17 +809,17 @@ async function advancePlan(planId: string) {
     ElMessage.success('已推进到下一阶段')
     await fetchPlans()
     if (selectedPlanId.value === planId) {
-      await selectPlan({ id: planId, name: selectedPlanName.value })
+      await selectPlan({ id: planId, name: selectedPlanName.value, status: '' } as PlanItem)
     }
   } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
   finally { advancing.value = false }
 }
 
-function viewDetail(row: any) {
+function viewDetail(row: PlanItem) {
   router.push(`/product-plans/${row.id}`)
 }
 
-async function deletePlan(row: any) {
+async function deletePlan(row: PlanItem) {
   try {
     await ElMessageBox.confirm(`确认删除策划「${row.name}」？此操作不可恢复。`, '删除确认', {
       confirmButtonText: '确认删除', cancelButtonText: '取消', type: 'warning',

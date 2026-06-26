@@ -271,6 +271,42 @@ import api from '../../api'
 import * as planAPI from '../../api/productPlan'
 import { useSubTableProgress } from '../../composables/useSubTableProgress'
 
+// ── Types ──
+interface PlanInfo {
+  id: string
+  name: string
+  series?: string
+  market?: string
+  status: string
+  costs?: CostItem[]
+  competitor_id?: number | null
+  approver?: string | null
+  version_id?: number
+  created_at?: string
+  created_by?: string
+}
+
+interface CostItem {
+  id?: number
+  item_name: string
+  cost_type: string
+  target_value: number
+  actual_value: number
+  currency: string
+  remark?: string
+  version_id?: number
+}
+
+interface TeamMember {
+  id: number
+  name: string
+  role: string
+  department: string
+  email: string
+  phone: string
+  version_id?: number
+}
+
 const route = useRoute()
 const planId = route.params.id as string
 const { isMobile } = useResponsive()
@@ -345,8 +381,8 @@ function stepStatus(key: string): 'success' | undefined {
 }
 
 // ── Data ──
-const plan = ref<any>(null)
-const costs = ref<any[]>([])
+const plan = ref<PlanInfo | null>(null)
+const costs = ref<CostItem[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const editForm = ref({ name: '', series: '', market: '', competitor_id: null as number | null })
@@ -403,7 +439,7 @@ finally { savingTechSpec.value = false }
 }
 
 // ── 团队 ──
-const teamMembers = ref<any[]>([])
+const teamMembers = ref<TeamMember[]>([])
 const showTeamDialog = ref(false)
 const teamDialogMode = ref<'add' | 'edit'>('add')
 const teamForm = reactive({ name: '', role: '', department: '', email: '', phone: '' })
@@ -411,9 +447,9 @@ const editingTeamId = ref<number | null>(null)
 const savingTeam = ref(false)
 
 async function fetchTeam() {
-try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || []; teamVersion.value = teamMembers.value.length > 0 ? Math.max(...teamMembers.value.map((m: any) => m.version_id ?? 0)) : 0; setSubTableDone('team', teamMembers.value.length > 0) } catch (e: any) { teamMembers.value = []; teamVersion.value = 0; setSubTableDone('team', false); ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
+try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || []; teamVersion.value = teamMembers.value.length > 0 ? Math.max(...teamMembers.value.map((m: TeamMember) => m.version_id ?? 0)) : 0; setSubTableDone('team', teamMembers.value.length > 0) } catch (e: any) { teamMembers.value = []; teamVersion.value = 0; setSubTableDone('team', false); ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
-function editTeamMember(row: any) {
+function editTeamMember(row: TeamMember) {
 teamDialogMode.value = 'edit'; editingTeamId.value = row.id
 Object.assign(teamForm, { name: row.name, role: row.role, department: row.department, email: row.email, phone: row.phone, version_id: row.version_id })
 showTeamDialog.value = true
@@ -429,7 +465,7 @@ await fetchTeam()
 } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { savingTeam.value = false }
 }
-async function deleteTeamMember(row: any) {
+async function deleteTeamMember(row: TeamMember) {
 try { await ElMessageBox.confirm(`确定删除「${row.name}」?`, '确认', { type: 'warning' }); await planAPI.deletePlanTeamMember(planId, row.id); ElMessage.success('已删除'); await fetchTeam() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 
@@ -457,7 +493,7 @@ addingCost.value = true
 try { await api.post(`/product-plans/${planId}/costs`, costForm.value); ElMessage.success('成本添加成功'); showCostDialog.value = false; costForm.value = { item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' }; await fetchPlan(); setSubTableDone('costingNew', true) } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { addingCost.value = false }
 }
-async function deleteCost(row: any) {
+async function deleteCost(row: CostItem) {
 try { await api.delete(`/product-plans/${planId}/costs/${row.id}`); ElMessage.success('已删除'); await fetchPlan(); setSubTableDone('costingNew', costs.value.length > 0) } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 
