@@ -9,7 +9,7 @@
 - GET /product-plans/{id}/next-action — 下一步引导
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -68,6 +68,14 @@ class PlanCreate(BaseModel):
     competitor_id: Optional[int] = None
     cost_target: Optional[str] = None
     performance_target: Optional[str] = None
+    # [P0-2] 创建策划字段对齐
+    product_type: Optional[str] = None
+    market_id: Optional[str] = None
+
+
+class AdvancePlanRequest(BaseModel):
+    """推进流程请求体 — 审批意见"""
+    comment: Optional[str] = None
 
 
 class PlanUpdate(BaseModel):
@@ -272,7 +280,15 @@ def get_plan_detail(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """策划详情（含 costs + 子表数据）"""
-    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    # [P0-1] N+1 修复: 使用 selectinload 预加载所有关联
+    plan = db.query(ProductPlan).options(
+        selectinload(ProductPlan.costs),
+        selectinload(ProductPlan.project_links),
+        selectinload(ProductPlan.initiation),
+        selectinload(ProductPlan.market_info),
+        selectinload(ProductPlan.tech_spec),
+        selectinload(ProductPlan.team_members),
+    ).filter(ProductPlan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="策划不存在")
 
@@ -317,12 +333,13 @@ def get_plan_status(
 @router.post("/{plan_id}/advance")
 def advance_plan_stage(
     plan_id: str,
+    req: AdvancePlanRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("product-plans")),
 ) -> dict:
-    """推进策划流程"""
-    plan = workflow_advance(db, plan_id, current_user.username)
+    """推进策划流程（[P0-3] 支持审批意见参数）"""
+    plan = workflow_advance(db, plan_id, current_user.username, comment=req.comment)
     result = _plan_to_dict(plan)
     result["costs"] = [_cost_to_dict(c) for c in (plan.costs or [])]
     # 已关联项目通过 project_links 获取

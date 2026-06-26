@@ -317,7 +317,7 @@ async function saveCurrentStep(stepIdx: number) {
         break
       // costingNew / team — 通过弹窗管理，无需自动保存
     }
-  } catch { /* silent — auto-save 不应阻塞导航 */ }
+  } catch (e: any) { /* silent — auto-save 不应阻塞导航 */ ElMessage.error(e?.response?.data?.detail || e?.message || '自动保存失败') }
   finally { savingStep.value = false }
 }
 
@@ -368,11 +368,11 @@ const techSpecVersion = ref(0)
 const teamVersion = ref(0)
 
 async function fetchInitiation() {
-try { const res = await planAPI.getPlanInitiation(planId); if (res.data) { Object.assign(initiationForm, res.data); initiationVersion.value = res.data.version_id ?? 0 } } catch { /* 404 */ }
+try { const res = await planAPI.getPlanInitiation(planId); if (res.data) { Object.assign(initiationForm, res.data); initiationVersion.value = res.data.version_id ?? 0 } } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 async function saveInitiation() {
 savingInitiation.value = true
-try { const res = await planAPI.upsertPlanInitiation(planId, initiationForm); initiationVersion.value = res.data.version_id ?? 0; ElMessage.success('项目概述保存成功'); setSubTableDone('initiation', true) } catch { /* handled */ }
+try { const res = await planAPI.upsertPlanInitiation(planId, initiationForm); initiationVersion.value = res.data.version_id ?? 0; ElMessage.success('项目概述保存成功'); setSubTableDone('initiation', true) } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { savingInitiation.value = false }
 }
 
@@ -381,11 +381,11 @@ const marketForm = reactive({ main_capacity: '', energy_efficiency: '', cert_req
 const savingMarket = ref(false)
 
 async function fetchMarket() {
-try { const res = await planAPI.getPlanMarket(planId); if (res.data) { Object.assign(marketForm, res.data); marketVersion.value = res.data.version_id ?? 0 } } catch { /* 404 */ }
+try { const res = await planAPI.getPlanMarket(planId); if (res.data) { Object.assign(marketForm, res.data); marketVersion.value = res.data.version_id ?? 0 } } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 async function saveMarket() {
 savingMarket.value = true
-try { const res = await planAPI.upsertPlanMarket(planId, marketForm); marketVersion.value = res.data.version_id ?? 0; ElMessage.success('市场与客户需求保存成功'); setSubTableDone('market', true) } catch { /* handled */ }
+try { const res = await planAPI.upsertPlanMarket(planId, marketForm); marketVersion.value = res.data.version_id ?? 0; ElMessage.success('市场与客户需求保存成功'); setSubTableDone('market', true) } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { savingMarket.value = false }
 }
 
@@ -394,11 +394,11 @@ const techSpecForm = reactive({ core_performance: '', safety_compliance: '', opt
 const savingTechSpec = ref(false)
 
 async function fetchTechSpec() {
-try { const res = await planAPI.getPlanTechSpec(planId); if (res.data) { Object.assign(techSpecForm, res.data); techSpecVersion.value = res.data.version_id ?? 0 } } catch { /* 404 */ }
+try { const res = await planAPI.getPlanTechSpec(planId); if (res.data) { Object.assign(techSpecForm, res.data); techSpecVersion.value = res.data.version_id ?? 0 } } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 async function saveTechSpec() {
 savingTechSpec.value = true
-try { const res = await planAPI.upsertPlanTechSpec(planId, techSpecForm); techSpecVersion.value = res.data.version_id ?? 0; ElMessage.success('技术要求保存成功'); setSubTableDone('techSpec', true) } catch { /* handled */ }
+try { const res = await planAPI.upsertPlanTechSpec(planId, techSpecForm); techSpecVersion.value = res.data.version_id ?? 0; ElMessage.success('技术要求保存成功'); setSubTableDone('techSpec', true) } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { savingTechSpec.value = false }
 }
 
@@ -411,7 +411,7 @@ const editingTeamId = ref<number | null>(null)
 const savingTeam = ref(false)
 
 async function fetchTeam() {
-try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || []; teamVersion.value = teamMembers.value.length > 0 ? Math.max(...teamMembers.value.map((m: any) => m.version_id ?? 0)) : 0; setSubTableDone('team', teamMembers.value.length > 0) } catch { teamMembers.value = []; teamVersion.value = 0; setSubTableDone('team', false) }
+try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || []; teamVersion.value = teamMembers.value.length > 0 ? Math.max(...teamMembers.value.map((m: any) => m.version_id ?? 0)) : 0; setSubTableDone('team', teamMembers.value.length > 0) } catch (e: any) { teamMembers.value = []; teamVersion.value = 0; setSubTableDone('team', false); ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 function editTeamMember(row: any) {
 teamDialogMode.value = 'edit'; editingTeamId.value = row.id
@@ -426,11 +426,11 @@ else if (editingTeamId.value !== null) await planAPI.updatePlanTeamMember(planId
 ElMessage.success(teamDialogMode.value === 'add' ? '成员添加成功' : '成员更新成功')
 showTeamDialog.value = false; teamForm.name = ''; teamForm.role = ''; teamForm.department = ''; teamForm.email = ''; teamForm.phone = ''
 await fetchTeam()
-} catch { /* handled */ }
+} catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { savingTeam.value = false }
 }
 async function deleteTeamMember(row: any) {
-try { await ElMessageBox.confirm(`确定删除「${row.name}」?`, '确认', { type: 'warning' }); await planAPI.deletePlanTeamMember(planId, row.id); ElMessage.success('已删除'); await fetchTeam() } catch { /* cancel/error */ }
+try { await ElMessageBox.confirm(`确定删除「${row.name}」?`, '确认', { type: 'warning' }); await planAPI.deletePlanTeamMember(planId, row.id); ElMessage.success('已删除'); await fetchTeam() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 
 // ── 主API ──
@@ -442,23 +442,23 @@ plan.value = res.data
 costs.value = res.data.costs || []
 setSubTableDone('costingNew', costs.value.length > 0)
 editForm.value = { name: res.data.name || '', series: res.data.series || '', market: res.data.market || '', competitor_id: res.data.competitor_id ?? null }
-} catch { /* handled */ }
+} catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { loading.value = false }
 }
 async function saveQuickEdit() {
 saving.value = true
-try { await api.patch(`/product-plans/${planId}`, editForm.value); ElMessage.success('保存成功'); await fetchPlan() } catch { /* handled */ }
+try { await api.patch(`/product-plans/${planId}`, editForm.value); ElMessage.success('保存成功'); await fetchPlan() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { saving.value = false }
 }
 
 // ── 成本 ──
 async function addCost() {
 addingCost.value = true
-try { await api.post(`/product-plans/${planId}/costs`, costForm.value); ElMessage.success('成本添加成功'); showCostDialog.value = false; costForm.value = { item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' }; await fetchPlan(); setSubTableDone('costingNew', true) } catch { /* handled */ }
+try { await api.post(`/product-plans/${planId}/costs`, costForm.value); ElMessage.success('成本添加成功'); showCostDialog.value = false; costForm.value = { item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' }; await fetchPlan(); setSubTableDone('costingNew', true) } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { addingCost.value = false }
 }
 async function deleteCost(row: any) {
-try { await api.delete(`/product-plans/${planId}/costs/${row.id}`); ElMessage.success('已删除'); await fetchPlan(); setSubTableDone('costingNew', costs.value.length > 0) } catch { /* handled */ }
+try { await api.delete(`/product-plans/${planId}/costs/${row.id}`); ElMessage.success('已删除'); await fetchPlan(); setSubTableDone('costingNew', costs.value.length > 0) } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 
 // ── BOM类型 ──
@@ -471,7 +471,7 @@ const bomTypes = [
 
 // ── 阶段映射 ──
 const STAGE_LABELS: Record<string, string> = { draft: '草稿', competitor: '竞品分析', definition: '产品定义', costing: '成本目标', tech_input: '技术方案', project_init: '立项审批', approved: '已批准', released: '已发布' }
-const STAGE_TAGS: Record<string, string> = { draft: 'info', competitor: 'primary', definition: '', costing: 'warning', tech_input: 'primary', project_init: 'warning', approved: 'success', released: '' }
+const STAGE_TAGS: Record<string, string> = { draft: 'info', competitor: 'primary', definition: 'primary', costing: 'warning', tech_input: 'primary', project_init: 'warning', approved: 'success', released: 'success' }
 function stageLabel(s: string): string { return STAGE_LABELS[s] || s }
 function stageTagType(s: string): string { return STAGE_TAGS[s] || 'info' }
 
@@ -481,16 +481,16 @@ const isApprovalStage = computed(() => plan.value?.status === 'project_init')
 const canWithdraw = computed(() => plan.value && !['draft', 'project_init', 'released'].includes(plan.value.status))
 
 async function advancePlan() {
-try { await api.post(`/product-plans/${planId}/advance`); ElMessage.success('流程已推进'); await fetchPlan() } catch { /* handled */ }
+try { await api.post(`/product-plans/${planId}/advance`); ElMessage.success('流程已推进'); await fetchPlan() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 async function approvePlan() {
-try { await api.post(`/product-plans/${planId}/approve`); ElMessage.success('已通过'); await fetchPlan() } catch { /* handled */ }
+try { await api.post(`/product-plans/${planId}/approve`); ElMessage.success('已通过'); await fetchPlan() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 async function rejectPlan() {
-try { await api.post(`/product-plans/${planId}/reject`); ElMessage.success('已驳回'); await fetchPlan() } catch { /* handled */ }
+try { await api.post(`/product-plans/${planId}/reject`); ElMessage.success('已驳回'); await fetchPlan() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 async function withdrawPlan() {
-try { await api.post(`/product-plans/${planId}/withdraw`); ElMessage.success('已撤回'); await fetchPlan() } catch { /* handled */ }
+try { await api.post(`/product-plans/${planId}/withdraw`); ElMessage.success('已撤回'); await fetchPlan() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 
 // ── 移动端保存全部 ──
@@ -502,19 +502,25 @@ await planAPI.upsertPlanInitiation(planId, initiationForm)
 await planAPI.upsertPlanMarket(planId, marketForm)
 await planAPI.upsertPlanTechSpec(planId, techSpecForm)
 ElMessage.success('全部保存成功')
-} catch { /* handled */ }
+} catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { savingAll.value = false }
 }
 
 // ── 移动端审批 ──
 async function submitApproval() {
 submittingApproval.value = true
-try { await api.post(`/product-plans/${planId}/advance`, { comment: approvalComment.value }); ElMessage.success('审批已提交'); approvalComment.value = ''; showApprovalDrawer.value = false; await fetchPlan() } catch { /* handled */ }
+try { await api.post(`/product-plans/${planId}/advance`, { comment: approvalComment.value }); ElMessage.success('审批已提交'); approvalComment.value = ''; showApprovalDrawer.value = false; await fetchPlan() } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 finally { submittingApproval.value = false }
 }
 
-onMounted(() => {
-  fetchPlan(); fetchInitiation(); fetchMarket(); fetchTechSpec(); fetchTeam()
+onMounted(async () => {
+  await Promise.all([
+    fetchPlan(),
+    fetchInitiation(),
+    fetchMarket(),
+    fetchTechSpec(),
+    fetchTeam(),
+  ])
   refreshStatus()
 })
 </script>

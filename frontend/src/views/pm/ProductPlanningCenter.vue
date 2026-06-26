@@ -170,7 +170,7 @@
                   <span class="field-value">{{ plan.created_by || '-' }}</span>
                 </div>
                 <div class="card-field">
-                  <span class="field-label">截止日期</span>
+                  <span class="field-label">创建时间</span>
                   <span class="field-value">{{ plan.created_at?.substring(0, 10) || '-' }}</span>
                 </div>
                 <div class="card-field">
@@ -458,8 +458,8 @@ async function fetchTargetMarkets() {
   try {
     const res = await api.get('/target-markets')
     targetMarkets.value = res.data || []
-  } catch {
-    targetMarkets.value = []
+  } catch (e: any) {
+    targetMarkets.value = []; ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试')
   }
 }
 
@@ -642,9 +642,9 @@ const STAGE_LABELS: Record<string, string> = {
   approved: '已批准', released: '已发布',
 }
 const STAGE_TAGS: Record<string, string> = {
-  draft: 'info', competitor: 'primary', definition: '',
+  draft: 'info', competitor: 'primary', definition: 'primary',
   costing: 'warning', tech_input: 'primary', project_init: 'warning',
-  approved: 'success', released: '',
+  approved: 'success', released: 'success',
 }
 
 function stageLabel(s: string): string { return STAGE_LABELS[s] || s }
@@ -684,7 +684,7 @@ async function fetchPlans(resetPage = true) {
     }
     total.value = res.data.total || 0
     hasMore.value = items.length >= pageSize.value
-  } catch { /* handled */ }
+  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
   finally { loading.value = false }
 }
 
@@ -706,8 +706,8 @@ async function selectPlan(row: any) {
     const res = await api.get(`/product-plans/${row.id}/next-action`)
     selectedPlanNextAction.value = res.data
     nextActionStepIndex.value = res.data.can_advance ? 1 : 0
-  } catch {
-    selectedPlanNextAction.value = null
+  } catch (e: any) {
+    selectedPlanNextAction.value = null; ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试')
   }
 }
 
@@ -720,7 +720,7 @@ async function advancePlan(planId: string) {
     if (selectedPlanId.value === planId) {
       await selectPlan({ id: planId, name: selectedPlanName.value })
     }
-  } catch { /* handled */ }
+  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
   finally { advancing.value = false }
 }
 
@@ -736,7 +736,7 @@ async function deletePlan(row: any) {
     await api.delete(`/product-plans/${row.id}`)
     ElMessage.success('已删除')
     await fetchPlans()
-  } catch { /* cancelled or error */ }
+  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
 }
 
 async function createPlan() {
@@ -756,7 +756,7 @@ async function createPlan() {
     showCreateDialog.value = false
     createForm.value = { name: '', series: '', market: '', market_id: null, product_type: '' }
     await fetchPlans()
-  } catch { /* handled */ }
+  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
   finally { creating.value = false }
 }
 

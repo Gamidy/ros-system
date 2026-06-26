@@ -77,7 +77,7 @@ def _get_or_create_plan_approval_chain(db: Session) -> ApprovalChain:
 # ════════════════════════════════════════════════════════
 
 
-def create_plan_approval(plan_id: str, db: Session, current_user: str) -> ApprovalRequest:
+def create_plan_approval(plan_id: str, db: Session, current_user: str, comment: Optional[str] = None) -> ApprovalRequest:
     """为 ProductPlan 创建审批请求
 
     Args:
@@ -112,6 +112,7 @@ def create_plan_approval(plan_id: str, db: Session, current_user: str) -> Approv
             "plan_id": plan_id,
             "plan_name": plan.name,
             "created_by": plan.created_by,
+            "comment": comment,
         },
     )
     db.add(request)

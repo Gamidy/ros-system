@@ -141,7 +141,7 @@ def create_product_plan(db: Session, data: dict, username: str) -> ProductPlan:
     return plan
 
 
-def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
+def advance_stage(db: Session, plan_id: str, username: str, comment: Optional[str] = None) -> ProductPlan:
     """推进 ProductPlan 到一个新的 stage
 
     流程：
@@ -187,7 +187,7 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
     # APPROVED → 创建 ApprovalRequest（代替自动生成 Project）
     if target == ProductPlanStage.APPROVED:
         from app.services.product_plan_approval import create_plan_approval
-        create_plan_approval(plan.id, db, username)
+        create_plan_approval(plan.id, db, username, comment=comment)
         # Project 创建将在审批完成后进行
 
     db.commit()
