@@ -1,0 +1,770 @@
+{
+  "plan_metadata": {
+    "title": "ROS系统架构改进实施计划 — P0 W2/W3 + P1 + P2",
+    "version": "1.0",
+    "generated_by": "AI-A (架构规划者)",
+    "date": "2026-06-27",
+    "workspace": "/Users/gamidy/ros-source/ros-system",
+    "branch": "merge-cloud-style",
+    "last_commit": "a367fa5 (fix: 修复AI-Z审核发现的3个Critical + TS编译错误)"
+  },
+  "codebase_findings": {
+    "p0_w2_audit_summary": {
+      "deprecated_column": "Project.product_plan_id (String(36), ForeignKey, comment='[DEPRECATED]')",
+      "viewonly_relationship": "Project.product_plan (viewonly=True) already correct",
+      "active_writes_to_deprecated_field": {
+        "_generate_project_from_plan": {
+          "file": "backend/app/services/product_plan_workflow.py",
+          "line": 460,
+          "code": "product_plan_id=plan.id  (still writes to deprecated field)",
+          "severity": "CRITICAL - main production path"
+        },
+        "verification_requirements.py": {
+          "file": "backend/app/api/verification_requirements.py",
+          "line": 132,
+          "code": "product_plan_id=plan.id if isinstance(plan.id, int) else None (BUG - ProductPlan.id is String UUID)",
+          "severity": "BUG - type mismatch, always writes None"
+        }
+      },
+      "new_linkage_correctly_used_in": [
+        "product_plan_approval.py:193 - ProductPlanProjectLink creation",
+        "pm_workspace.py:687 - ProductPlanProjectLink creation",
+        "saga_engine.py:285 - ProductPlanProjectLink creation"
+      ],
+      "no_direct_project_product_plan_id_refs_in": [
+        "api/*.py",
+        "schemas/project.py",
+        "frontend/src/**/*"
+      ]
+    },
+    "p1_event_bus_summary": {
+      "existing": {
+        "EventBus": "events.py - singleton, sync+async (Redis/Celery + threading)",
+        "EventTypes": "3-tier event classification + versioning",
+        "SagaCoordinator": "saga_engine.py - complete with compensation",
+        "EventStore": "event_store.py - persistence + timeline + replay",
+        "EventHandlers": "event_handlers.py - notification/test/approval",
+        "ProductPlanSaga": "create_project -> create_gate -> notify_pm",
+        "EventLog Model": "event_log.py - with plan_id/saga_id/state_snapshot"
+      },
+      "missing": [
+        "No event log query/management API endpoints",
+        "No webhook subscription/event subscription endpoints",
+        "No frontend event monitoring panel",
+        "Event types hardcoded in EventTypes class, no dynamic registration"
+      ]
+    },
+    "p2_cert_impact_summary": {
+      "existing": {
+        "ChangeImpactRule": "change_impact.py - rule model",
+        "ChangeImpactRecord": "change_impact.py - impact record",
+        "ChangeImpactEngine": "change_impact_engine.py - rule matching engine",
+        "List/Detail API": "s2_change_impact.py - read-only list+detail",
+        "Schemas": "phase6_s2.py - rule/record schemas"
+      },
+      "missing_or_incomplete": [
+        "No rule CRUD endpoints",
+        "ECR/ECO trigger not implemented (ecr_id is null, analyze_bom_change is stub)",
+        "No frontend impact visualization",
+        "No automatic trigger on Prototype change",
+        "No cert relationship graph (Cert <-> ECR <-> ECO <-> Prototype)"
+      ]
+    }
+  },
+  "phase_tasks": [
+    {
+      "id": "P0W2-T1",
+      "title": "Remove product_plan_id write from _generate_project_from_plan",
+      "domain_tags": [
+        "P0",
+        "ProductPlan-Project decoupling",
+        "backend model"
+      ],
+      "risk_level": "critical",
+      "estimated_complexity": "low",
+      "estimated_minutes": 15,
+      "assignee": "AI-C",
+      "file_path": "backend/app/services/product_plan_workflow.py",
+      "dependencies": [],
+      "description": "Line 460 of _generate_project_from_plan still sets product_plan_id=plan.id (deprecated). Remove this parameter. The caller on_approval_completed already creates ProductPlanProjectLink."
+    },
+    {
+      "id": "P0W2-T2",
+      "title": "Fix VerificationRequirement.product_plan_id type mismatch",
+      "domain_tags": [
+        "P0",
+        "backend model",
+        "data type"
+      ],
+      "risk_level": "high",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 30,
+      "assignee": "AI-C",
+      "file_path": "backend/app/models/verification_requirement.py",
+      "dependencies": [],
+      "description": "VerificationRequirement.product_plan_id is Integer but ProductPlan.id is String(36) UUID. Fix: change column type to String(36) + ForeignKey; fix write logic in verification_requirements.py:132; update phase6_s1.py schemas."
+    },
+    {
+      "id": "P0W2-T3",
+      "title": "Audit VerificationRequirement.product_plan_id usage beyond Project",
+      "domain_tags": [
+        "P0",
+        "audit",
+        "model cleanup"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "low",
+      "estimated_minutes": 20,
+      "assignee": "AI-C",
+      "file_path": "backend/app/models/verification_requirement.py",
+      "dependencies": [],
+      "description": "VR.product_plan_id is independent from Project (VR directly links to Plan for digital thread). Audit usage. Recommend keep but fix type."
+    },
+    {
+      "id": "P0W2-T4",
+      "title": "Audit dual-trigger for plan.approved (approval layer vs Saga layer)",
+      "domain_tags": [
+        "P0",
+        "P1",
+        "event",
+        "Saga"
+      ],
+      "risk_level": "critical",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 45,
+      "assignee": "AI-F",
+      "file_path": "backend/app/services/product_plan_approval.py",
+      "dependencies": [
+        "P0W2-T1"
+      ],
+      "description": "on_approval_completed creates Project + Link, then emit_async 'plan.approved'. saga_engine.on_plan_approved also creates Project + Link via Saga. Check for double-creation risk. on_approval_completed already creates Project before emitting event, so Saga's _action_create_project could create a 2nd Project."
+    },
+    {
+      "id": "P0W2-T5",
+      "title": "Clean up VR schema product_plan_id type",
+      "domain_tags": [
+        "P0",
+        "backend schema"
+      ],
+      "risk_level": "low",
+      "estimated_complexity": "low",
+      "estimated_minutes": 10,
+      "assignee": "AI-C",
+      "file_path": "backend/app/schemas/phase6_s1.py",
+      "dependencies": [
+        "P0W2-T2"
+      ],
+      "description": "Update phase6_s1.py VR schema product_plan_id to str (UUID string) to match ProductPlan.id type."
+    },
+    {
+      "id": "P0W3-T1",
+      "title": "Create data consistency verification script for ProductPlanProjectLink vs Project",
+      "domain_tags": [
+        "P0",
+        "verification",
+        "data"
+      ],
+      "risk_level": "high",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 60,
+      "assignee": "AI-D",
+      "file_path": "backend/app/scripts/verify_plan_project_links.py",
+      "dependencies": [
+        "P0W2-T1"
+      ],
+      "description": "Script to verify: 1) All Projects from ProductPlan have ProductPlanProjectLink; 2) No orphan ProductPlanProjectLink; 3) No Project linked to multiple Plans through old+new ways; 4) Auto-fix missing links."
+    },
+    {
+      "id": "P0W3-T2",
+      "title": "Search and clean all direct Project.product_plan_id references in codebase",
+      "domain_tags": [
+        "P0",
+        "cleanup",
+        "refactor"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "low",
+      "estimated_minutes": 30,
+      "assignee": "AI-G",
+      "file_path": "backend/",
+      "dependencies": [
+        "P0W2-T1",
+        "P0W2-T2"
+      ],
+      "description": "Global search for Project.product_plan_id, project.product_plan_id in backend and frontend. Confirm no reads/writes outside model definition."
+    },
+    {
+      "id": "P0W3-T3",
+      "title": "Final cleanup of Project.product_plan_id DEPRECATED column",
+      "domain_tags": [
+        "P0",
+        "DB migration",
+        "cleanup"
+      ],
+      "risk_level": "high",
+      "estimated_complexity": "high",
+      "estimated_minutes": 90,
+      "assignee": "AI-D",
+      "file_path": "backend/app/models/project.py",
+      "dependencies": [
+        "P0W3-T1",
+        "P0W3-T2"
+      ],
+      "description": "After verification: 1) Remove FK constraint + relationship; 2) Keep column as nullable isolated (for backward compat); 3) Remove DEPRECATED comment; 4) Remove viewonly relationship."
+    },
+    {
+      "id": "P0W3-T4",
+      "title": "Update Pydantic schemas to remove Project.product_plan_id",
+      "domain_tags": [
+        "P0",
+        "backend schema"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "low",
+      "estimated_minutes": 15,
+      "assignee": "AI-C",
+      "file_path": "backend/app/schemas/project.py",
+      "dependencies": [
+        "P0W3-T3"
+      ],
+      "description": "Add ProductPlanProjectLink related fields (plan_ids: list[str]) to replace product_plan_id in ProjectCreate/Out."
+    },
+    {
+      "id": "P1-T1",
+      "title": "Create independent Event Log management API",
+      "domain_tags": [
+        "P1",
+        "event bus",
+        "API"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 120,
+      "assignee": "AI-C",
+      "file_path": "backend/app/api/event_logs.py",
+      "dependencies": [],
+      "description": "Create new file: GET /api/events (paginated, filterable), GET /api/events/{id}, GET /api/events/plan/{plan_id}/timeline, GET /api/events/saga/{saga_id}. Reuse EventStore methods."
+    },
+    {
+      "id": "P1-T2",
+      "title": "Create webhook subscription/registration endpoints",
+      "domain_tags": [
+        "P1",
+        "event bus",
+        "webhook"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "high",
+      "estimated_minutes": 180,
+      "assignee": "AI-E",
+      "file_path": "backend/app/api/webhooks.py",
+      "dependencies": [
+        "P1-T1"
+      ],
+      "description": "Create WebhookSubscription model + API: POST/DELETE/GET webhooks, GET webhook logs. Reuse existing webhook_service.py. Add retry (exponential backoff, max 3)."
+    },
+    {
+      "id": "P1-T3",
+      "title": "Refactor on_plan_approved to eliminate double Project creation",
+      "domain_tags": [
+        "P1",
+        "event",
+        "Saga",
+        "refactor"
+      ],
+      "risk_level": "critical",
+      "estimated_complexity": "high",
+      "estimated_minutes": 120,
+      "assignee": "AI-F",
+      "file_path": "backend/app/services/event_handlers.py",
+      "dependencies": [
+        "P0W2-T4"
+      ],
+      "description": "Option B (recommended): approval creates Project+Link, emit plan.approved with project_id param. Saga checks project_id, skips create_project step. Modify event_handlers.py:342 on_plan_approved to handle project_id parameter."
+    },
+    {
+      "id": "P1-T4",
+      "title": "Add dynamic event type registration capability",
+      "domain_tags": [
+        "P1",
+        "event bus",
+        "management"
+      ],
+      "risk_level": "low",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 90,
+      "assignee": "AI-C",
+      "file_path": "backend/app/services/events.py",
+      "dependencies": [
+        "P1-T1"
+      ],
+      "description": "Extend EventBus: add register_type(event_type, version), list_registered_types(). Keep static EventTypes as seed. Add GET /api/events/types endpoint."
+    },
+    {
+      "id": "P1-T5",
+      "title": "Frontend event monitoring panel (event stream visualization)",
+      "domain_tags": [
+        "P1",
+        "frontend",
+        "monitor"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "high",
+      "estimated_minutes": 240,
+      "assignee": "AI-B",
+      "file_path": "frontend/src/views/monitor/EventMonitorView.vue",
+      "dependencies": [
+        "P1-T1",
+        "P1-T4"
+      ],
+      "description": "Event monitoring page: real-time event list (polling), filter by type/plan_id/status, event detail dialog, Saga execution tree, Event Timeline visualization."
+    },
+    {
+      "id": "P1-T6",
+      "title": "Add event replay endpoint for admin",
+      "domain_tags": [
+        "P1",
+        "event",
+        "admin API"
+      ],
+      "risk_level": "high",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 60,
+      "assignee": "AI-C",
+      "file_path": "backend/app/api/event_logs.py",
+      "dependencies": [
+        "P1-T1"
+      ],
+      "description": "POST /api/events/plan/{plan_id}/replay (admin only) - replay events to rebuild state. POST /api/events/plan/{plan_id}/reemit/{event_id} - re-emit specific event."
+    },
+    {
+      "id": "P1-T7",
+      "title": "Refactor Saga from inline calls to event-driven",
+      "domain_tags": [
+        "P1",
+        "Saga",
+        "event-driven"
+      ],
+      "risk_level": "high",
+      "estimated_complexity": "high",
+      "estimated_minutes": 180,
+      "assignee": "AI-F",
+      "file_path": "backend/app/core/saga_engine.py",
+      "dependencies": [
+        "P1-T3"
+      ],
+      "description": "Current Saga uses synchronous step execution. Refactor: Saga steps become EventBus event/handler pairs. SagaCoordinator becomes orchestrator that emits events in sequence. Keep sync fallback for compatibility."
+    },
+    {
+      "id": "P2-T1",
+      "title": "Create ChangeImpactRule CRUD API",
+      "domain_tags": [
+        "P2",
+        "cert impact analysis",
+        "API"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 120,
+      "assignee": "AI-C",
+      "file_path": "backend/app/api/s2_change_impact.py",
+      "dependencies": [],
+      "description": "Add to existing s2_change_impact.py: POST/PUT/DELETE /rules, GET /rules paginated. Schemas already defined in phase6_s2.py."
+    },
+    {
+      "id": "P2-T2",
+      "title": "Implement ECR/ECO triggered impact analysis",
+      "domain_tags": [
+        "P2",
+        "ECR/ECO",
+        "cert impact"
+      ],
+      "risk_level": "high",
+      "estimated_complexity": "high",
+      "estimated_minutes": 180,
+      "assignee": "AI-C",
+      "file_path": "backend/app/services/change_impact_engine.py",
+      "dependencies": [
+        "P2-T1"
+      ],
+      "description": "Implement ECR/ECO triggered analysis: analyze_by_ecr(), analyze_by_eco(). Fill ChangeImpactRecord.ecr_id. Implement analyze_bom_change() stub. Add EventBus listeners for ECR/ECO status changes."
+    },
+    {
+      "id": "P2-T3",
+      "title": "Implement Prototype change auto-trigger for impact analysis",
+      "domain_tags": [
+        "P2",
+        "Prototype",
+        "cert impact"
+      ],
+      "risk_level": "high",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 90,
+      "assignee": "AI-C",
+      "file_path": "backend/app/services/change_impact_engine.py",
+      "dependencies": [
+        "P2-T2"
+      ],
+      "description": "Auto-call ChangeImpactEngine.analyze_prototype_change on Prototype update. Add EventBus handler for 'prototype.updated'. Generate record and notify stakeholders."
+    },
+    {
+      "id": "P2-T4",
+      "title": "Frontend: Cert impact chain visualization",
+      "domain_tags": [
+        "P2",
+        "frontend",
+        "visualization"
+      ],
+      "risk_level": "medium",
+      "estimated_complexity": "high",
+      "estimated_minutes": 300,
+      "assignee": "AI-B",
+      "file_path": "frontend/src/views/cert/CertImpactView.vue",
+      "dependencies": [
+        "P2-T1",
+        "P2-T3"
+      ],
+      "description": "Impact chain visualization: record list table, relationship graph (force-directed or tree), rule CRUD UI, drill-down showing impacted certificates list."
+    },
+    {
+      "id": "P2-T5",
+      "title": "Frontend: Rule management page",
+      "domain_tags": [
+        "P2",
+        "frontend",
+        "rule management"
+      ],
+      "risk_level": "low",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 120,
+      "assignee": "AI-B",
+      "file_path": "frontend/src/views/cert/CertRulesView.vue",
+      "dependencies": [
+        "P2-T1",
+        "P2-T4"
+      ],
+      "description": "Independent rule management page: rule list (trigger_type/value/impact_level/cert_types), create/edit dialog, enable/disable toggle, rule templates. Add to S2 cert menu."
+    },
+    {
+      "id": "P2-T6",
+      "title": "Add impact analysis statistics/report API",
+      "domain_tags": [
+        "P2",
+        "backend",
+        "report"
+      ],
+      "risk_level": "low",
+      "estimated_complexity": "medium",
+      "estimated_minutes": 60,
+      "assignee": "AI-E",
+      "file_path": "backend/app/api/s2_change_impact.py",
+      "dependencies": [
+        "P2-T2"
+      ],
+      "description": "Add stats endpoint: GET /api/s2/change-impact/stats (count by impact level), filter by ecr_id, CSV export."
+    }
+  ],
+  "execution_phases": [
+    {
+      "phase": 1,
+      "name": "P0 W2 - Audit & Fix (High Priority)",
+      "estimated_duration_minutes": 120,
+      "tasks": [
+        "P0W2-T1",
+        "P0W2-T2",
+        "P0W2-T3"
+      ],
+      "parallel_groups": [
+        [
+          "P0W2-T1",
+          "P0W2-T3"
+        ],
+        [
+          "P0W2-T2"
+        ]
+      ],
+      "goal": "Eliminate all writes to deprecated field, fix type bugs"
+    },
+    {
+      "phase": 2,
+      "name": "P0 W2 - Saga/Approval Dual Path Risk",
+      "estimated_duration_minutes": 45,
+      "tasks": [
+        "P0W2-T4"
+      ],
+      "parallel_groups": [
+        [
+          "P0W2-T4"
+        ]
+      ],
+      "goal": "Understand and prevent double Project creation on plan.approved",
+      "dependencies": [
+        "phase_1"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "P0 W2 - Schema Cleanup",
+      "estimated_duration_minutes": 10,
+      "tasks": [
+        "P0W2-T5"
+      ],
+      "parallel_groups": [
+        [
+          "P0W2-T5"
+        ]
+      ],
+      "dependencies": [
+        "phase_1"
+      ],
+      "goal": "Complete schema alignment"
+    },
+    {
+      "phase": 4,
+      "name": "P0 W3 - Verify & Clean",
+      "estimated_duration_minutes": 195,
+      "tasks": [
+        "P0W3-T1",
+        "P0W3-T2",
+        "P0W3-T3",
+        "P0W3-T4"
+      ],
+      "parallel_groups": [
+        [
+          "P0W3-T1"
+        ],
+        [
+          "P0W3-T2"
+        ],
+        [
+          "P0W3-T3"
+        ],
+        [
+          "P0W3-T4"
+        ]
+      ],
+      "goal": "Zero legacy references, data consistent, final DEPRECATED removal",
+      "dependencies": [
+        "phase_1",
+        "phase_3"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "P1 - Event Bus Infrastructure",
+      "estimated_duration_minutes": 390,
+      "tasks": [
+        "P1-T1",
+        "P1-T4"
+      ],
+      "parallel_groups": [
+        [
+          "P1-T1"
+        ],
+        [
+          "P1-T4"
+        ]
+      ],
+      "goal": "Independent event bus API and management capability",
+      "dependencies": []
+    },
+    {
+      "phase": 6,
+      "name": "P1 - Webhook + Frontend",
+      "estimated_duration_minutes": 420,
+      "tasks": [
+        "P1-T2",
+        "P1-T5"
+      ],
+      "parallel_groups": [
+        [
+          "P1-T2"
+        ],
+        [
+          "P1-T5"
+        ]
+      ],
+      "goal": "Webhook subscriptions + frontend monitoring panel",
+      "dependencies": [
+        "phase_5"
+      ]
+    },
+    {
+      "phase": 7,
+      "name": "P1 - Saga Refactor + Replay",
+      "estimated_duration_minutes": 360,
+      "tasks": [
+        "P1-T3",
+        "P1-T6",
+        "P1-T7"
+      ],
+      "parallel_groups": [
+        [
+          "P1-T3"
+        ],
+        [
+          "P1-T6"
+        ],
+        [
+          "P1-T7"
+        ]
+      ],
+      "goal": "Saga from inline to event-driven, eliminate double creation, add replay",
+      "dependencies": [
+        "phase_2",
+        "phase_5"
+      ]
+    },
+    {
+      "phase": 8,
+      "name": "P2 - Rules CRUD + ECR/Proto Trigger",
+      "estimated_duration_minutes": 390,
+      "tasks": [
+        "P2-T1",
+        "P2-T2",
+        "P2-T3"
+      ],
+      "parallel_groups": [
+        [
+          "P2-T1"
+        ],
+        [
+          "P2-T2",
+          "P2-T3"
+        ]
+      ],
+      "goal": "Rule management, ECR/ECO trigger, Prototype auto-analysis",
+      "dependencies": []
+    },
+    {
+      "phase": 9,
+      "name": "P2 - Frontend Visualization + Reports",
+      "estimated_duration_minutes": 480,
+      "tasks": [
+        "P2-T4",
+        "P2-T5",
+        "P2-T6"
+      ],
+      "parallel_groups": [
+        [
+          "P2-T4",
+          "P2-T5"
+        ],
+        [
+          "P2-T6"
+        ]
+      ],
+      "goal": "Impact chain visualization + rule management frontend + stats API",
+      "dependencies": [
+        "phase_8"
+      ]
+    }
+  ],
+  "risk_assessment": {
+    "P0W2-T1": {
+      "risk_level": "critical",
+      "likelihood": "high (100% - confirmed production path issue)",
+      "impact": "Each plan approval writes to deprecated field unnecessarily",
+      "mitigation": "Simple param removal, verify ProductPlanProjectLink exists in caller"
+    },
+    "P0W2-T2": {
+      "risk_level": "high",
+      "likelihood": "high",
+      "impact": "ProductPlan.id UUID String written to Integer column - always None, VR->Plan link lost",
+      "mitigation": "Change column type + FK, fix API write logic"
+    },
+    "P0W2-T4": {
+      "risk_level": "critical",
+      "likelihood": "high",
+      "impact": "Could create duplicate Projects for same Plan approval",
+      "mitigation": "Add idempotent protection (project_id param check in saga)"
+    },
+    "P0W3-T3": {
+      "risk_level": "high",
+      "likelihood": "medium",
+      "impact": "Column deletion could break production DB migration compat",
+      "mitigation": "Keep column, drop FK+relationship only. Next major version: drop column"
+    },
+    "P1-T3": {
+      "risk_level": "critical",
+      "likelihood": "high",
+      "impact": "Without fix, P0W2-T4 risk persists",
+      "mitigation": "Option B: approval creates Project, saga skips create"
+    },
+    "P1-T7": {
+      "risk_level": "high",
+      "likelihood": "medium",
+      "impact": "Event-driven Saga may introduce timing/ordering issues",
+      "mitigation": "Keep sync fallback, event-driven as optional mode first"
+    },
+    "P2-T2": {
+      "risk_level": "high",
+      "likelihood": "medium",
+      "impact": "ECR/ECO changes don't auto-trigger cert impact analysis",
+      "mitigation": "Start with manual trigger API, auto-trigger in next phase"
+    },
+    "P0W3-T1": {
+      "risk_level": "high",
+      "likelihood": "medium",
+      "impact": "Existing data may have Projects missing ProductPlanProjectLink",
+      "mitigation": "Script auto-fills missing links"
+    }
+  },
+  "assignee_capacity": {
+    "AI-B (Frontend Vue/TypeScript)": [
+      "P1-T5",
+      "P2-T4",
+      "P2-T5"
+    ],
+    "AI-C (Backend API+Model)": [
+      "P0W2-T1",
+      "P0W2-T2",
+      "P0W2-T3",
+      "P0W2-T5",
+      "P0W3-T4",
+      "P1-T1",
+      "P1-T4",
+      "P1-T6",
+      "P2-T1",
+      "P2-T2",
+      "P2-T3"
+    ],
+    "AI-D (DB/Migration/Schema)": [
+      "P0W3-T1",
+      "P0W3-T3"
+    ],
+    "AI-E (API Integration)": [
+      "P1-T2",
+      "P2-T6"
+    ],
+    "AI-F (Full-stack/DevOps)": [
+      "P0W2-T4",
+      "P1-T3",
+      "P1-T7"
+    ],
+    "AI-G (General Maintenance)": [
+      "P0W3-T2"
+    ]
+  },
+  "summary_statistics": {
+    "total_tasks": 22,
+    "total_estimated_minutes": 2585,
+    "total_estimated_hours": 43.1,
+    "execution_phases": 9,
+    "critical_risk_tasks": [
+      "P0W2-T1",
+      "P0W2-T4",
+      "P1-T3"
+    ],
+    "high_risk_tasks": [
+      "P0W2-T2",
+      "P0W3-T1",
+      "P0W3-T3",
+      "P1-T6",
+      "P1-T7",
+      "P2-T2",
+      "P2-T3"
+    ],
+    "critical_path": "P0W2-T1 -> P0W2-T4 -> P1-T3 -> P1-T7 (P0 -> Saga refactor mainline)"
+  }
+}

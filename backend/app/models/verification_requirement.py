@@ -33,7 +33,7 @@ class VerificationRequirement(Base):
 
     # 关联
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True, comment="关联项目")
-    product_plan_id = Column(Integer, ForeignKey("product_plans.id"), nullable=True, comment="关联产品策划")
+    product_plan_id = Column(String(36), ForeignKey("product_plans.id"), nullable=True, comment="关联产品策划")
     gate_code = Column(String(10), nullable=True, comment="关联Gate: M4/M5/M6")
 
     # 状态

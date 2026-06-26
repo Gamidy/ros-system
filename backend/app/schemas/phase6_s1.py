@@ -18,7 +18,7 @@ class VerificationRequirementCreate(BaseModel):
     source_id: Optional[str] = None
     source_detail: Optional[str] = None
     project_id: Optional[int] = None
-    product_plan_id: Optional[int] = None
+    product_plan_id: Optional[str] = None
     gate_code: Optional[str] = None
     remark: Optional[str] = None
 
@@ -34,7 +34,7 @@ class VerificationRequirementOut(VerificationRequirementCreate):
 
 
 class VerificationRequirementGenerateRequest(BaseModel):
-    product_plan_id: int
+    product_plan_id: str
     auto_generate: bool = True
 
 

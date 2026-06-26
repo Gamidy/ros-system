@@ -129,7 +129,7 @@ def generate_vr_from_plan(
         category="performance",
         source_type="product_plan",
         source_id=str(plan.id),
-        product_plan_id=plan.id if isinstance(plan.id, int) else None,
+        product_plan_id=str(plan.id),
         status="pending",
         org_id=getattr(current_user, "org_id", None),
     )

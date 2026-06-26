@@ -457,7 +457,6 @@ def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -
         description=description,
         start_date=start_date,
         target_end_date=target_end_date,
-        product_plan_id=plan.id,
     )
     db.add(project)
     db.flush()  # 获取 project.id

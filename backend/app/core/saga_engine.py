@@ -252,8 +252,13 @@ class SagaCoordinator:
 # ════════════════════════════════════════════════════════
 
 
-def _action_create_project(plan_id: str, plan_name: str, **kwargs) -> Tuple[bool, dict]:
+def _action_create_project(plan_id: str, plan_name: str, project_id=None, **kwargs) -> Tuple[bool, dict]:
     """创建项目（正向操作）"""
+    # ── 守卫：如果 project_id 已存在，跳过创建 ──
+    if project_id is not None:
+        logger.info("Saga: 项目已存在, 跳过创建: project_id=%s", project_id)
+        return True, {"project_id": project_id, "skipped": True}
+
     from app.models.project import Project
     from app.models.product_plan import ProductPlan
     from datetime import datetime
