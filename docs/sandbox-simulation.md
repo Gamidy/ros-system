@@ -104,7 +104,7 @@ Gate & Task 执行
 |--------|------|---------|
 | 阶段转换 | ProductPlan 完整走完 8 阶段路径 | 检查 status 字段的时间戳变化 |
 | 审批流转 | ApprovalRequest.step_meta 包含所有审批人决策 | 解析 JSON 确认 step_meta 结构完整 |
-| 自动联动 | ProductPlan.approved → Project.product_plan_id 非空 | 确认所有 approved 的 ProductPlan 有对应 Project |
+|| 自动联动 | ProductPlan.approved → ProductPlanProjectLink 记录存在 | 确认所有 approved 的 ProductPlan 有对应 Project（通过 ProductPlanProjectLink 关联） |
 | 驳回回退 | rejected 的 ProductPlan status 为 DRAFT | `SELECT id, status FROM product_plans WHERE id IN (rejected 的请求)` |
 | Gate 状态机 | Gate M1-M4 的 status 合理流转 | `SELECT gate_code, status FROM project_gates ORDER BY project_id, seq` |
 
