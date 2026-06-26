@@ -85,8 +85,12 @@ class ProductPlanProjectLink(Base):
     id = Column(Integer, primary_key=True)
     product_plan_id = Column(String(36), ForeignKey("product_plans.id", ondelete="CASCADE"), nullable=False)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    link_type = Column(String(20), default="primary", comment="链接类型: primary/reference/snapshot")
+    link_type = Column(String(20), default="primary", comment="链接类型: primary/alternative/aborted/snapshot/reference")
     snapshot_data = Column(Text, nullable=True, comment="策划快照JSON（可选）")
+    version_major = Column(Integer, default=1, comment="主版本号")
+    version_minor = Column(Integer, default=0, comment="次版本号")
+    snapshot_schema_version = Column(Integer, default=1, comment="快照数据schema版本")
+    scenario_group_id = Column(String(36), nullable=True, comment="方案分组ID(AB评估用)")
     created_at = Column(DateTime, default=func.now())
 
     product_plan = relationship("ProductPlan", back_populates="project_links")

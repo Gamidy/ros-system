@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import require_menu
-from app.models.product_plan import ProductPlan, ProductPlanStage
+from app.models.product_plan import ProductPlan, ProductPlanStage, ProductPlanProjectLink
 from app.models.project import Project, ProjectGate
 from app.models.approval import ApprovalRequest, ApprovalRecord
 from app.models.cost_accounting import CostAccountingSheet, SheetStatus
@@ -370,7 +370,8 @@ def bi_cost(
     actual_spend = (
         db.query(func.sum(CostAccountingSheet.total_cost_actual))
         .join(ProductPlan, ProductPlan.id == CostAccountingSheet.product_plan_id)
-        .join(Project, Project.product_plan_id == ProductPlan.id)
+        .join(ProductPlanProjectLink, ProductPlanProjectLink.product_plan_id == ProductPlan.id)
+        .join(Project, Project.id == ProductPlanProjectLink.project_id)
         .filter(
             Project.is_deleted == False,
             Project.budget.isnot(None),

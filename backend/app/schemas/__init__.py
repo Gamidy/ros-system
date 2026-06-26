@@ -294,8 +294,7 @@ from .ecr_eco import (
 
 # ═══════════════ 产品策划-项目关联 ═══════════════
 from .product_plan_link import (
-    ProductPlanLinkCreate,
-    ProductPlanLinkUpdate,
-    ProductPlanLinkOut,
-    ProductPlanLinkListOut,
+    ProductPlanProjectLinkOut,
+    ProductPlanProjectLinkCreate,
+    ProductPlanProjectLinkUpdate,
 )

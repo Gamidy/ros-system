@@ -60,7 +60,7 @@ class Project(Base):
     annual_planning_ref = Column(String(100), nullable=True, comment="年度规划关联")
     budget = Column(Integer, nullable=True, comment="项目预算(元)")
     # 关联产品策划
-    product_plan_id = Column(String(36), ForeignKey('product_plans.id'), nullable=True, comment='关联产品策划ID')
+    product_plan_id = Column(String(36), ForeignKey('product_plans.id'), nullable=True, comment='[DEPRECATED] 请使用 ProductPlanProjectLink 替代。关联产品策划ID')
     # Draft 机制
     is_draft = Column(Boolean, default=True, nullable=False, comment="是否草稿")
     approval_status = Column(String(20), default="pending", nullable=True, comment="审批状态: pending/approved/rejected")
@@ -69,7 +69,8 @@ class Project(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     program = relationship("Program", back_populates="projects")
-    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
+    # [DEPRECATED] 请使用 ProductPlanProjectLink 替代
+    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id], viewonly=True)
     gates = relationship("ProjectGate", back_populates="project", cascade="all, delete-orphan")
     milestones = relationship("Milestone", back_populates="project", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")

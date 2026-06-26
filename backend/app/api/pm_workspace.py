@@ -22,7 +22,7 @@ from app.models.user import User
 from app.models.project import Project, Program
 from app.models.product import Product, Platform
 from app.models.annual_plan import AnnualPlan
-from app.models.product_plan import ProductPlan, ProductPlanStage
+from app.models.product_plan import ProductPlan, ProductPlanStage, ProductPlanProjectLink
 from app.models.product_plan_subs import ProductPlanInitiation, ProductPlanMarket, ProductPlanTechSpec, ProductPlanTeam
 from app.core.security import require_role
 from app.schemas import ProjectCreate, ProjectOut
@@ -63,8 +63,9 @@ def _project_to_dict(p: Project) -> dict:
     market = None
     tech = None
     team_list = None
-    if p.product_plan_id:
-        plan = p.product_plan
+    link = next((link for link in p.product_plan_links if link.link_type == 'primary'), None)
+    if link:
+        plan = link.product_plan
         if plan:
             init = plan.initiation
             market = plan.market_info
@@ -418,7 +419,8 @@ def _apply_project_fields(
         p.leader_id = leader_id
 
     # ---- Sheet1-5 字段写入 ProductPlan 子表 ----
-    plan = p.product_plan if p.product_plan_id else None
+    link = next((link for link in p.product_plan_links if link.link_type == 'primary'), None)
+    plan = link.product_plan if link else None
     if plan is None:
         # 无关联 ProductPlan，直接跳过（不报错，向后兼容）
         return
@@ -676,7 +678,13 @@ def pm_create_draft(
     )
     db.add(plan)
     db.flush()
-    p.product_plan_id = plan.id
+
+    # 改为通过 ProductPlanProjectLink 关联
+    existing = db.query(ProductPlanProjectLink).filter(ProductPlanProjectLink.project_id == p.id).first()
+    if existing:
+        existing.link_type = 'primary'
+    else:
+        db.add(ProductPlanProjectLink(product_plan_id=plan.id, project_id=p.id, link_type='primary'))
 
     # 创建子表空记录
     init = ProductPlanInitiation(product_plan_id=plan.id)
@@ -937,16 +945,18 @@ def pm_update_draft(
         )
 
         # ── 自动计算：制冷量 BTU → 瓦特 ──
-        if capacity_range and p.product_plan and p.product_plan.tech_spec:
-            plan_tech = p.product_plan.tech_spec
+        link = next((link for link in (p.product_plan_links or []) if link.link_type == 'primary'), None)
+        plan = link.product_plan if link else None
+        if capacity_range and plan and plan.tech_spec:
+            plan_tech = plan.tech_spec
             plan_tech.core_performance = inject_cooling_capacity_to_core_performance(
                 plan_tech.core_performance, capacity_range
             )
         # ── 自动计算：人月费用 ──
         if project_duration is not None or team_members is not None:
             from app.api.pm_proposal_utils import generate_labor_costs_json as _gen_labor
-            if p.product_plan and p.product_plan.initiation:
-                plan_init = p.product_plan.initiation
+            if plan and plan.initiation:
+                plan_init = plan.initiation
                 plan_init.labor_costs = _gen_labor(
                     project_duration if project_duration is not None else plan_init.project_duration,
                     team_members if team_members is not None else None,
@@ -1220,8 +1230,12 @@ def submit_proposal(
     if p.owner != current_user.username:
         raise HTTPException(status_code=403, detail="仅项目负责人可提交立项")
 
-    # 查找关联 ProductPlan
-    plan_id = p.product_plan_id
+    # 通过 ProductPlanProjectLink 查找关联 ProductPlan
+    link = db.query(ProductPlanProjectLink).filter(
+        ProductPlanProjectLink.project_id == p.id,
+        ProductPlanProjectLink.link_type == 'primary'
+    ).first()
+    plan_id = link.product_plan_id if link else None
     if not plan_id:
         raise HTTPException(status_code=400, detail="项目未关联产品策划，无法提交审批")
 
