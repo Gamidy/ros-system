@@ -430,12 +430,17 @@ def generate_sheet(
     if existing:
         raise HTTPException(400, f"该产品在该期间已有核算单({existing.sheet_no})，请使用重新核算")
 
-    # 1. 物料成本 — 通过Project→product_code→BOM链路
+    # 1. 物料成本 — 通过Project→product_code→BOM链路（从 project_links 获取 primary project_id）
     material_actual = 0.0
     material_target = 0.0
-    if plan.project_id:
+    primary_project_id = None
+    for link in (plan.project_links or []):
+        if link.link_type == 'primary':
+            primary_project_id = link.project_id
+            break
+    if primary_project_id:
         from app.models.project import Project
-        project = db.query(Project).filter(Project.id == plan.project_id).first()
+        project = db.query(Project).filter(Project.id == primary_project_id).first()
         if project and project.product_code:
             from app.models.bom import BOM
             bom = db.query(BOM).filter(BOM.product_code == project.product_code)

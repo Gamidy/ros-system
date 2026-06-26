@@ -18,6 +18,7 @@ from app.core.security import get_current_user
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType, BOMType
+from app.schemas.product_plan_link import ProductPlanLinkOut
 from app.models.product_plan_subs import (
     ProductPlanInitiation,
     ProductPlanMarket,
@@ -89,10 +90,10 @@ class PlanOut(BaseModel):
     target_market_detail: Optional[str] = None
     # ---- 现有字段 ----
     status: str
-    project_id: Optional[int] = None
     created_by: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+    project_links_count: int = 0
 
     class Config:
         from_attributes = True
@@ -127,6 +128,7 @@ from app.api.product_plan_subs import (
 class PlanDetailOut(PlanOut):
     """策划详情（含 costs + 子表数据）"""
     costs: list[CostOut] = []
+    project_links: list[ProductPlanLinkOut] = []
     initiation: Optional[_InitiationOut] = None
     market_info: Optional[_MarketOut] = None
     tech_spec: Optional[_TechSpecOut] = None
@@ -160,10 +162,10 @@ def _plan_to_dict(plan: ProductPlan) -> dict:
         "ip_ownership": plan.initiation.ip_ownership if plan.initiation else None,
         # ---- 现有字段 ----
         "status": plan.status.value if plan.status else "draft",
-        "project_id": plan.project_id,
         "created_by": plan.created_by,
         "created_at": str(plan.created_at) if plan.created_at else None,
         "updated_at": str(plan.updated_at) if plan.updated_at else None,
+        "project_links_count": len(plan.project_links) if plan.project_links else 0,
     }
 
 
@@ -276,6 +278,10 @@ def get_plan_detail(
 
     result = _plan_to_dict(plan)
     result["costs"] = [_cost_to_dict(c) for c in (plan.costs or [])]
+    result["project_links"] = [
+        ProductPlanLinkOut.model_validate(link)
+        for link in (plan.project_links or [])
+    ]
     result["initiation"] = _orm_to_dict(plan.initiation)
     result["market_info"] = _orm_to_dict(plan.market_info)
     result["tech_spec"] = _orm_to_dict(plan.tech_spec)
@@ -319,8 +325,8 @@ def advance_plan_stage(
     plan = workflow_advance(db, plan_id, current_user.username)
     result = _plan_to_dict(plan)
     result["costs"] = [_cost_to_dict(c) for c in (plan.costs or [])]
-    if plan.project_id:
-        result["project_id"] = plan.project_id
+    # 已关联项目通过 project_links 获取
+    result["project_links"] = [ProductPlanLinkOut.model_validate(l) for l in (plan.project_links or [])]
     return result
 
 

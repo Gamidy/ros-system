@@ -20,13 +20,14 @@ import enum
 from datetime import date, datetime
 from app.core.database import get_db
 from app.core.permissions import require_menu
-from app.models.product_plan import ProductPlan
+from app.models.product_plan import ProductPlan, ProductPlanProjectLink
 from app.models.product_plan_subs import (
     ProductPlanInitiation,
     ProductPlanMarket,
     ProductPlanTechSpec,
     ProductPlanTeam,
 )
+from app.schemas.product_plan_link import ProductPlanLinkCreate, ProductPlanLinkUpdate, ProductPlanLinkOut
 
 router = APIRouter(prefix="/product-plans", tags=["产品策划子表"])
 
@@ -373,5 +374,86 @@ def delete_team_member(
     if not member:
         raise HTTPException(status_code=404, detail="团队成员不存在")
     db.delete(member)
+    db.commit()
+    return {"ok": True}
+
+
+# ═══════════════ 项目关联 (Project Links) ═══════════════
+
+
+@router.get("/{plan_id}/project-links", response_model=list[ProductPlanLinkOut])
+def list_project_links(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("product-plans")),
+) -> list[ProductPlanLinkOut]:
+    """获取策划关联的项目列表"""
+    _get_plan_or_404(db, plan_id)
+    links = db.query(ProductPlanProjectLink).filter(
+        ProductPlanProjectLink.product_plan_id == plan_id,
+    ).all()
+    return [ProductPlanLinkOut.model_validate(l) for l in links]
+
+
+@router.post("/{plan_id}/project-links", response_model=ProductPlanLinkOut, status_code=201)
+def create_project_link(
+    plan_id: str,
+    data: ProductPlanLinkCreate,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("product-plans")),
+) -> ProductPlanLinkOut:
+    """创建策划-项目关联"""
+    _get_plan_or_404(db, plan_id)
+    link = ProductPlanProjectLink(
+        product_plan_id=plan_id,
+        project_id=data.project_id,
+        link_type=data.link_type,
+        snapshot_data=data.snapshot_data,
+    )
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return ProductPlanLinkOut.model_validate(link)
+
+
+@router.put("/{plan_id}/project-links/{link_id}", response_model=ProductPlanLinkOut)
+def update_project_link(
+    plan_id: str,
+    link_id: int,
+    data: ProductPlanLinkUpdate,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("product-plans")),
+) -> ProductPlanLinkOut:
+    """更新项目关联类型/快照"""
+    _get_plan_or_404(db, plan_id)
+    link = db.query(ProductPlanProjectLink).filter(
+        ProductPlanProjectLink.id == link_id,
+        ProductPlanProjectLink.product_plan_id == plan_id,
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="项目关联不存在")
+    link.link_type = data.link_type
+    link.snapshot_data = data.snapshot_data
+    db.commit()
+    db.refresh(link)
+    return ProductPlanLinkOut.model_validate(link)
+
+
+@router.delete("/{plan_id}/project-links/{link_id}")
+def delete_project_link(
+    plan_id: str,
+    link_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("product-plans")),
+) -> dict:
+    """删除项目关联"""
+    _get_plan_or_404(db, plan_id)
+    link = db.query(ProductPlanProjectLink).filter(
+        ProductPlanProjectLink.id == link_id,
+        ProductPlanProjectLink.product_plan_id == plan_id,
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="项目关联不存在")
+    db.delete(link)
     db.commit()
     return {"ok": True}

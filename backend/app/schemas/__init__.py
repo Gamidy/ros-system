@@ -291,3 +291,11 @@ from .ecr_eco import (
     ECOSummaryOut,
     ECOChDashboardOut,
 )
+
+# ═══════════════ 产品策划-项目关联 ═══════════════
+from .product_plan_link import (
+    ProductPlanLinkCreate,
+    ProductPlanLinkUpdate,
+    ProductPlanLinkOut,
+    ProductPlanLinkListOut,
+)

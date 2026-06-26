@@ -9,7 +9,7 @@
 from datetime import datetime
 import json
 import logging
-from typing import Tuple
+from typing import Tuple, Optional
 from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -169,7 +169,7 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
                 if target == ProductPlanStage.COMPETITOR:
                     event_kwargs["project_id"] = None
                 elif target == ProductPlanStage.RELEASED:
-                    event_kwargs["project_id"] = plan.project_id
+                    event_kwargs["project_id"] = _get_primary_project_id(plan)
                 # 发射业务事件 (异步，不阻塞主流程)
                 bus.emit_async(event_type, **event_kwargs)
                 # 发射副作用事件 (审计+通知)
@@ -260,6 +260,14 @@ def _check_stage_requirements(plan: ProductPlan, db: Session) -> Tuple[bool, str
             return False, "推进到「立项审批」前需要至少一名团队成员"
 
     return True, ""
+
+
+def _get_primary_project_id(plan) -> Optional[int]:
+    """从 project_links 获取第一个 link_type='primary' 的 project_id"""
+    for link in (plan.project_links or []):
+        if link.link_type == 'primary':
+            return link.project_id
+    return None
 
 
 def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -> Project:

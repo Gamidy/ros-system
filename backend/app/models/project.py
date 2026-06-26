@@ -78,6 +78,7 @@ class Project(Base):
                                               foreign_keys="VerificationRequirement.project_id")
     prototypes = relationship("Prototype", back_populates="project",
                                foreign_keys="Prototype.project_id")
+    product_plan_links = relationship("ProductPlanProjectLink", back_populates="project", cascade="all, delete-orphan")
 
 
 class ProjectGate(Base):

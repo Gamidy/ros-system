@@ -21,7 +21,7 @@ from app.models.capacity_unit_cost import CapacityUnitCost
 from app.models.indirect_cost_config import IndirectCostConfig
 from app.models.trial_qty_config import TrialQtyConfig
 from app.models.annual_plan import AnnualPlan
-from app.models.product_plan import ProductPlan, Cost, ProductPlanStage, CostType, BOMType
+from app.models.product_plan import ProductPlan, Cost, ProductPlanProjectLink, ProductPlanStage, CostType, BOMType
 from app.models.event_log import EventLog
 from app.models.verification_requirement import VerificationRequirement
 from app.models.test_execution import TestExecution
@@ -90,7 +90,7 @@ __all__ = [
     "IndirectCostConfig",
     "TrialQtyConfig",
     "AnnualPlan",
-    "ProductPlan", "Cost", "ProductPlanStage", "CostType", "BOMType",
+    "ProductPlan", "Cost", "ProductPlanProjectLink", "ProductPlanStage", "CostType", "BOMType",
     "VerificationRequirement",
     "TestExecution",
     "GateRule", "GateRuleItem", "GateEvalRecord",

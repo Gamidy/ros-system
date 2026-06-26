@@ -186,9 +186,11 @@ def on_approval_completed(request_id: int, request_type: str, **kwargs):
 
         # 创建 Project
         from app.services.product_plan_workflow import _generate_project_from_plan
+        from app.models.product_plan import ProductPlanProjectLink
         username = kwargs.get("username", request.requester)
         project = _generate_project_from_plan(plan, db, username)
-        plan.project_id = project.id
+        link = ProductPlanProjectLink(product_plan_id=plan.id, project_id=project.id, link_type='primary')
+        db.add(link)
 
         db.commit()
         db.refresh(plan)

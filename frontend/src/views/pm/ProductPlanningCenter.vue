@@ -118,7 +118,7 @@
             </el-table-column>
             <el-table-column label="关联项目" width="100">
               <template #default="{ row }">
-                <el-tag v-if="row.project_id" size="small" type="success">已关联</el-tag>
+                <el-tag v-if="row.project_links_count > 0" size="small" type="success">已关联</el-tag>
                 <span v-else class="no-project">-</span>
               </template>
             </el-table-column>

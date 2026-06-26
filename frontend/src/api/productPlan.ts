@@ -24,3 +24,9 @@ export function listPlanTeam(planId: string) { return api.get(`/product-plans/${
 export function addPlanTeamMember(planId: string, data: any) { return api.post(`/product-plans/${planId}/team`, data) }
 export function updatePlanTeamMember(planId: string, id: number, data: any) { return api.put(`/product-plans/${planId}/team/${id}`, data) }
 export function deletePlanTeamMember(planId: string, id: number) { return api.delete(`/product-plans/${planId}/team/${id}`) }
+
+// ── 项目关联 (Project Links) ──
+export function listPlanProjectLinks(planId: string, params?: Record<string, any>) { return api.get(`/product-plans/${planId}/project-links`, { params }) }
+export function createPlanProjectLink(planId: string, data: Record<string, any>) { return api.post(`/product-plans/${planId}/project-links`, data) }
+export function updatePlanProjectLink(planId: string, linkId: number, data: Record<string, any>) { return api.put(`/product-plans/${planId}/project-links/${linkId}`, data) }
+export function deletePlanProjectLink(planId: string, linkId: number) { return api.delete(`/product-plans/${planId}/project-links/${linkId}`) }

@@ -280,8 +280,10 @@ def _action_create_project(plan_id: str, plan_name: str, **kwargs) -> Tuple[bool
         project_id = project.id
 
         # 关联 plan 到 project
+        from app.models.product_plan import ProductPlanProjectLink
         if plan:
-            plan.project_id = project_id
+            link = ProductPlanProjectLink(product_plan_id=plan.id, project_id=project_id, link_type='primary')
+            db.add(link)
         db.commit()
         logger.info("Saga: 项目已创建: id=%s, code=%s, name=%s", project_id, code, plan_name_clean)
         return True, {"project_id": project_id, "project_code": code}

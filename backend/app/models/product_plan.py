@@ -57,7 +57,6 @@ class ProductPlan(Base):
     cost_target = Column(Text, nullable=True, comment="成本目标JSON: {target: float, currency: str}")
     performance_target = Column(Text, nullable=True, comment="技术指标目标JSON: [{param, target, unit}]")
     status = Column(SAEnum(ProductPlanStage), default=ProductPlanStage.DRAFT, nullable=False, comment="流程阶段")
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True, comment="关联项目ID（APPROVED后赋值）")
     # ---- 多租户 ----
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     # ---- 时间戳 ----
@@ -67,7 +66,6 @@ class ProductPlan(Base):
 
     # 关联
     competitor = relationship("CompetitorModel", foreign_keys=[competitor_id])
-    project = relationship("Project", foreign_keys=[project_id])
     costs = relationship("Cost", back_populates="product_plan", cascade="all, delete-orphan")
     # ---- 新增子表关联 ----
     initiation = relationship("ProductPlanInitiation", uselist=False, back_populates="product_plan", cascade="all, delete-orphan")
@@ -76,6 +74,23 @@ class ProductPlan(Base):
     team_members = relationship("ProductPlanTeam", back_populates="product_plan", cascade="all, delete-orphan")
     # ---- 多租户 ----
     org = relationship("Organization", foreign_keys=[org_id])
+    # ---- 多项目关联 ----
+    project_links = relationship("ProductPlanProjectLink", back_populates="product_plan", cascade="all, delete-orphan")
+
+
+class ProductPlanProjectLink(Base):
+    """产品策划 ↔ 项目 多对多关联表（支持快照）"""
+    __tablename__ = "product_plan_project_links"
+
+    id = Column(Integer, primary_key=True)
+    product_plan_id = Column(String(36), ForeignKey("product_plans.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    link_type = Column(String(20), default="primary", comment="链接类型: primary/reference/snapshot")
+    snapshot_data = Column(Text, nullable=True, comment="策划快照JSON（可选）")
+    created_at = Column(DateTime, default=func.now())
+
+    product_plan = relationship("ProductPlan", back_populates="project_links")
+    project = relationship("Project", back_populates="product_plan_links")
 
 
 class Cost(Base):
