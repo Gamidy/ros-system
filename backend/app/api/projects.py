@@ -343,7 +343,7 @@ def create_project(
         db.refresh(p)
 
         # 如果设置了 target_market，自动触发认证需求生成
-        if p.target_market:
+        if req.target_market:
             try:
                 from app.services.cert_auto_gen import CertAutoGenService
                 service = CertAutoGenService(db)
@@ -522,7 +522,26 @@ def list_gates(pid: int, db: Session = Depends(get_db), _=Depends(require_menu("
     gates = db.query(ProjectGate).filter(
         ProjectGate.project_id == pid
     ).order_by(ProjectGate.seq).all()
-    return gates
+    return [
+        {
+            "id": g.id,
+            "project_id": g.project_id,
+            "gate_code": g.gate_code,
+            "gate_name": g.gate_name,
+            "seq": g.seq,
+            "decision_level": g.decision_level,
+            "pass_conditions": g.pass_conditions,
+            "is_high_risk_zone": g.is_high_risk_zone,
+            "is_hidden": g.is_hidden,
+            "status": g.status,
+            "planned_date": g.planned_date.isoformat() if g.planned_date else None,
+            "actual_date": g.actual_date.isoformat() if g.actual_date else None,
+            "decision": g.decision,
+            "reviewer": g.reviewer,
+            "created_at": g.created_at.isoformat() if g.created_at else None,
+        }
+        for g in gates
+    ]
 
 
 @project_router.post("/{pid}/gates")
@@ -628,7 +647,24 @@ def update_gate_status(
 
     db.commit()
     db.refresh(gate)
-    return gate
+    return {
+        "id": gate.id,
+        "project_id": gate.project_id,
+        "gate_code": gate.gate_code,
+        "gate_name": gate.gate_name,
+        "seq": gate.seq,
+        "decision_level": gate.decision_level,
+        "pass_conditions": gate.pass_conditions,
+        "is_high_risk_zone": gate.is_high_risk_zone,
+        "is_hidden": gate.is_hidden,
+        "status": gate.status,
+        "planned_date": gate.planned_date.isoformat() if gate.planned_date else None,
+        "actual_date": gate.actual_date.isoformat() if gate.actual_date else None,
+        "decision": gate.decision,
+        "reviewer": gate.reviewer,
+        "created_at": gate.created_at.isoformat() if gate.created_at else None,
+        "ok": True,
+    }
 
 
 # ══════════════════════════════════════════════════════════════

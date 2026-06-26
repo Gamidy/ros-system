@@ -108,11 +108,11 @@ def create_plan_approval(plan_id: str, db: Session, current_user: str) -> Approv
         requester=current_user,
         status="pending",
         current_step=1,
-        step_meta=json.dumps({
+        step_meta={
             "plan_id": plan_id,
             "plan_name": plan.name,
             "created_by": plan.created_by,
-        }, ensure_ascii=False),
+        },
     )
     db.add(request)
     db.flush()

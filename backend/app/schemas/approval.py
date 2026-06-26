@@ -1,7 +1,8 @@
 """审批工作流 — Pydantic Schema"""
+import json
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import Optional, Any
 from datetime import datetime
 
 
@@ -57,12 +58,23 @@ class ApprovalRequestOut(BaseModel):
     requester: str
     status: str
     current_step: int
-    step_meta: Optional[dict] = None
+    step_meta: Optional[Any] = None
     steps: list[ApprovalStepOut] = []
     records: list["ApprovalRecordOut"] = []
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("step_meta", mode="before")
+    @classmethod
+    def parse_step_meta(cls, v: Any) -> Any:
+        """Parse step_meta from JSON string to dict if needed (SQLite stores JSON as TEXT)"""
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return v
+        return v
 
 
 class ApprovalRecordOut(BaseModel):

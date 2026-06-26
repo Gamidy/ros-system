@@ -207,7 +207,7 @@ def upsert_initiation(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """创建或更新立项信息"""
-    _get_plan_or_404(db, plan_id)
+    plan = _get_plan_or_404(db, plan_id)
     initiation = db.query(ProductPlanInitiation).filter(
         ProductPlanInitiation.product_plan_id == plan_id
     ).first()
@@ -224,7 +224,7 @@ def upsert_initiation(
             product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
         )
         db.add(initiation)
-    initiation.product_plan.updated_at = datetime.utcnow()
+    plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(initiation)
     return initiation
@@ -260,7 +260,7 @@ def upsert_market(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """创建或更新市场信息"""
-    _get_plan_or_404(db, plan_id)
+    plan = _get_plan_or_404(db, plan_id)
     market = db.query(ProductPlanMarket).filter(
         ProductPlanMarket.product_plan_id == plan_id
     ).first()
@@ -277,7 +277,7 @@ def upsert_market(
             product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
         )
         db.add(market)
-    market.product_plan.updated_at = datetime.utcnow()
+    plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(market)
     return market
@@ -313,7 +313,7 @@ def upsert_tech_spec(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """创建或更新技术规格"""
-    _get_plan_or_404(db, plan_id)
+    plan = _get_plan_or_404(db, plan_id)
     tech = db.query(ProductPlanTechSpec).filter(
         ProductPlanTechSpec.product_plan_id == plan_id
     ).first()
@@ -330,7 +330,7 @@ def upsert_tech_spec(
             product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
         )
         db.add(tech)
-    tech.product_plan.updated_at = datetime.utcnow()
+    plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(tech)
     return tech
