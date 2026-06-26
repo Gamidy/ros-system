@@ -268,6 +268,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import * as planAPI from '../../api/productPlan'
+import type { TeamMemberPayload } from '../../api/productPlan'
 import { useSubTableProgress } from '../../composables/useSubTableProgress'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
 
@@ -467,7 +468,7 @@ finally { savingTechSpec.value = false }
 const teamMembers = ref<TeamMember[]>([])
 const showTeamDialog = ref(false)
 const teamDialogMode = ref<'add' | 'edit'>('add')
-const teamForm = reactive({ name: '', role: '', department: '', email: '', phone: '' })
+const teamForm = reactive({ name: '', role: '', department: '', email: '', phone: '', version_id: undefined as number | undefined })
 const editingTeamId = ref<number | null>(null)
 const savingTeam = ref(false)
 
@@ -486,7 +487,7 @@ async function saveTeamMember() {
 savingTeam.value = true
 try {
 // 字段映射: 前端 {name,role,department,email,phone} → 后端 {role_name,member_name,department,email,phone}
-const payload: Record<string, any> = {
+const payload: TeamMemberPayload = {
 member_name: teamForm.name,
 role_name: teamForm.role,
 department: teamForm.department,
@@ -496,8 +497,8 @@ phone: teamForm.phone,
 if (teamDialogMode.value === 'add') await planAPI.addPlanTeamMember(planId, payload)
 else if (editingTeamId.value !== null) {
   // 更新时附带版本号做乐观锁
-  if ((teamForm as any).version_id !== undefined) {
-    payload.version_id = (teamForm as any).version_id
+  if (teamForm.version_id !== undefined) {
+    payload.version_id = teamForm.version_id
   }
   await planAPI.updatePlanTeamMember(planId, editingTeamId.value, payload)
 }

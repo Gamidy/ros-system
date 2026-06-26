@@ -65,6 +65,8 @@ export interface TeamMemberPayload {
   role_name: string
   department?: string
   responsibility?: string
+  email?: string
+  phone?: string
   version_id?: number
 }
 
@@ -75,10 +77,10 @@ export function createPlan(data: CreatePlanPayload) { return api.post('/product-
 export function getPlanDetail(id: string) { return api.get(`/product-plans/${id}`) }
 export function updatePlan(id: string, data: Record<string, any>) { return api.patch(`/product-plans/${id}`, data) }
 // ── 审批操作 ──
-export function approvePlan(planId: number) { return api.post(`/product-plans/${planId}/approve`) }
-export function rejectPlan(planId: number, comment?: string) { return api.post(`/product-plans/${planId}/reject`, { comment }) }
-export function withdrawPlan(planId: number) { return api.post(`/product-plans/${planId}/withdraw`) }
-export function updatePlanStage(planId: number, stage: string) { return api.patch(`/product-plans/${planId}/stage`, { stage }) }
+export function approvePlan(planId: string) { return api.post(`/product-plans/${planId}/approve`) }
+export function rejectPlan(planId: string, comment?: string) { return api.post(`/product-plans/${planId}/reject`, { comment }) }
+export function withdrawPlan(planId: string) { return api.post(`/product-plans/${planId}/withdraw`) }
+export function updatePlanStage(planId: string, stage: string) { return api.patch(`/product-plans/${planId}/stage`, { stage }) }
 
 // ── 项目概述 (Initiation) ──
 export function getPlanInitiation(planId: string) { return api.get(`/product-plans/${planId}/initiation`) }
