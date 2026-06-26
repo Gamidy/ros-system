@@ -55,7 +55,8 @@ class WebhookDispatcher:
                 )
                 .all()
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"通过JSON查询Webhook订阅失败: {e}")
             # MySQL JSON_CONTAINS 或 SQLite JSON 兼容
             # Fallback：全量读取后过滤（兼容 SQLite 开发环境）
             try:

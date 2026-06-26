@@ -102,7 +102,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if method in ("POST", "PUT", "PATCH"):
             try:
                 body_bytes = await request.body()
-            except Exception:
+            except Exception as e:
+                logger.warning(f"读取请求体失败: {e}")
                 pass
 
         response = await call_next(request)

@@ -108,7 +108,8 @@ def _fetch_tech_readiness(plan_id: str) -> dict:
                 }
         finally:
             db.close()
-    except Exception:
+    except Exception as e:
+        logger.warning(f"查询制造就绪度原始数据失败: {e}")
         pass
     return {}
 
@@ -163,8 +164,8 @@ def _fetch_all_plan_ids() -> List[str]:
             text("SELECT id FROM product_plans ORDER BY created_at DESC")
         ).fetchall()
         return [r[0] for r in rows]
-    except Exception:
-        logger.warning("查询 product_plans 失败，返回空列表")
+    except Exception as e:
+        logger.warning(f"查询 product_plans 失败: {e}")
         return []
     finally:
         db.close()

@@ -1,4 +1,5 @@
 """成本核算系统 API — 期间/费率/分摊/核算单/差异分析/导出"""
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -18,6 +19,8 @@ from app.models.cost_accounting import (
     PeriodStatus, SheetStatus, CostCategory, AllocationBase,
 )
 from app.models.indirect_cost_config import IndirectCostConfig
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/cost-accounting", tags=["cost-accounting"])
 
@@ -455,7 +458,8 @@ def generate_sheet(
                     summary = get_bom_cost_summary(bom.id, db)
                     if isinstance(summary, dict):
                         material_actual = float(summary.get("total_cost", 0))
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"获取BOM成本摘要失败: {e}")
                     pass
 
     # 解析目标成本

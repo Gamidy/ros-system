@@ -1,4 +1,5 @@
 """产品主线API: Platform → Product → Version + ManufacturingVariant + Market"""
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -19,6 +20,8 @@ from app.schemas import (
     MarketCreate, MarketOut, ProductMarketAssign,
     VersionRuleRequest, VersionRuleResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/products", tags=["产品主线"])
 
@@ -177,8 +180,9 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db), _=Depends
             ))
         db.commit()
         db.refresh(p)
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"产品创建失败: {e}")
         raise
     return _product_to_out(p)
 

@@ -136,7 +136,8 @@ def _fetch_target_markets(plan_id: str) -> List[str]:
                 return json.loads(raw) if raw.startswith("[") else [raw]
             return list(raw) if isinstance(raw, (list, tuple)) else []
         return ["中国"]
-    except Exception:
+    except Exception as e:
+        logger.warning(f"查询目标市场失败: {e}")
         return ["中国"]  # 默认中国市场
     finally:
         if db:
@@ -193,8 +194,8 @@ def _fetch_all_plan_ids() -> List[str]:
             text("SELECT id FROM product_plans ORDER BY created_at DESC")
         ).fetchall()
         return [r[0] for r in rows]
-    except Exception:
-        logger.warning("查询 product_plans 失败，返回空列表")
+    except Exception as e:
+        logger.warning(f"查询 product_plans 失败: {e}")
         return []
     finally:
         db.close()

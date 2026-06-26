@@ -1,4 +1,5 @@
 """竞品参数库 API — 竞品机型查询 & 对标分析"""
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -8,6 +9,8 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.models.user import User
 from app.models.competitor import CompetitorModel
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pm", tags=["竞品库"])
 
@@ -120,7 +123,8 @@ def _load_energy_standards_from_db(db) -> dict:
                 "type": "seasonal" if m.energy_standard in ("cspf", "iseer", "seer") else "single",
             }
         return result or MARKET_ENERGY_STANDARDS_FALLBACK
-    except Exception:
+    except Exception as e:
+        logger.warning(f"从数据库加载能效标准失败: {e}")
         return MARKET_ENERGY_STANDARDS_FALLBACK
 
 
@@ -131,7 +135,8 @@ def get_energy_standards(db=None) -> dict:
             db_standards = _load_energy_standards_from_db(db)
             if db_standards:
                 return db_standards
-        except Exception:
+        except Exception as e:
+            logger.warning(f"从数据库加载能效标准(备选)失败: {e}")
             pass
     return MARKET_ENERGY_STANDARDS_FALLBACK
 

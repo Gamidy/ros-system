@@ -292,7 +292,8 @@ def infra_health() -> dict:
         r = redis.Redis(host="127.0.0.1", port=6379, socket_connect_timeout=2)
         r.ping()
         checks["redis"] = True
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Redis健康检查失败: {e}")
         pass
 
     # Event Store
@@ -303,7 +304,8 @@ def infra_health() -> dict:
         EventStore._ensure_columns(db)
         checks["event_store"] = True
         db.close()
-    except Exception:
+    except Exception as e:
+        logger.warning(f"EventStore健康检查失败: {e}")
         pass
 
     # Celery ping（重试一次）
@@ -317,7 +319,8 @@ def infra_health() -> dict:
             time.sleep(0.5)
             r = celery_app.control.ping(timeout=1)
             checks["celery"] = len(r) > 0 if r else False
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Celery健康检查失败: {e}")
         pass
 
     all_ok = all(checks.values())

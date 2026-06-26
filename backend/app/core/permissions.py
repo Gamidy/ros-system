@@ -8,7 +8,6 @@ from .permissions_data import (
     ALL_MENUS,
     ROLE_MENU_MAP,
     MENU_PATH_MAP,
-    API_MENU_MAP,
 )
 
 

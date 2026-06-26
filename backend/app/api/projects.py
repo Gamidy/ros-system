@@ -1,6 +1,7 @@
 """项目管理API: Program群 → Project(T/A/B/C) → M1~M9 Gate → Task + 里程碑 + 风险"""
 from datetime import date, datetime
 import random
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -13,6 +14,8 @@ from app.schemas import (
     ProgramCreate, ProjectCreate, ProjectUpdate, ProjectOut, TaskCreate, RiskCreate,
     MilestoneCreate, GateStatusUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 program_router = APIRouter(prefix="/programs", tags=["项目群管理"])
 project_router = APIRouter(prefix="/projects", tags=["项目管理"])
@@ -345,10 +348,11 @@ def create_project(
                 from app.services.cert_auto_gen import CertAutoGenService
                 service = CertAutoGenService(db)
                 service.generate_from_project(p.id)
-            except Exception:
+            except Exception as e:
                 pass  # 认证需求生成是辅助功能，不应阻塞项目创建
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"项目创建失败: {e}")
         raise
     return {
         "id": p.id, "code": p.code, "name": p.name,

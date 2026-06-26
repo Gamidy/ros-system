@@ -1,6 +1,7 @@
 """样机管理 API — Phase 6 S1"""
 from datetime import date, datetime, timezone
 from uuid import uuid4
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -14,6 +15,8 @@ from app.schemas import (
     PrototypeCreate, PrototypeOut,
     TestResultOut,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/prototypes", tags=["样机管理"])
 
@@ -131,7 +134,8 @@ def patch_prototype_status(
                     org_id=getattr(proto, "org_id", None),
                 )
                 db.add(sample)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"自动创建认证样机失败: {e}")
             pass  # 自动创建认证样机是辅助功能，不应阻塞状态更新
 
     db.commit()

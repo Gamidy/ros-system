@@ -131,8 +131,8 @@ def create_plan_approval(plan_id: str, db: Session, current_user: str) -> Approv
             requester=current_user,
             username=current_user,
         )
-    except Exception:
-        logger.exception("approval.pending 事件发射失败")
+    except Exception as e:
+        logger.exception("approval.pending 事件发射失败: %s", e)
 
     return request
 

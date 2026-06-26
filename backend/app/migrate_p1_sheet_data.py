@@ -24,6 +24,7 @@ Safe to run multiple times — idempotent.
 import json
 import sys
 import uuid
+import logging
 
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
@@ -37,6 +38,8 @@ from app.models.product_plan_subs import (
     ProductPlanTechSpec,
     ProductPlanTeam,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ── Field mappings ──────────────────────────────────────────────────────────
@@ -173,7 +176,8 @@ def _get_sub_table_columns(table_name: str) -> set:
     """Return column names for a sub-table, or empty set if table doesn't exist."""
     try:
         return {c["name"] for c in inspect(engine).get_columns(table_name)}
-    except Exception:
+    except Exception as e:
+        logger.warning(f"get_columns failed for {table_name}: {e}")
         return set()
 
 

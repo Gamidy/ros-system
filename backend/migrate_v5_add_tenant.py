@@ -52,12 +52,14 @@ def table_exists(conn, table_name: str) -> bool:
             "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :name"
         ), {"name": table_name}).fetchone()
         return result is not None
-    except Exception:
+    except Exception as e:
+        logger.warning(f"table_exists 检查失败({table_name}): {e}")
         try:
             # 通用: 直接 SELECT 1
             conn.execute(text(f"SELECT 1 FROM {table_name} LIMIT 0"))
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(f"table_exists 备选检查失败({table_name}): {e}")
             return False
 
 
@@ -67,7 +69,8 @@ def column_exists(conn, table_name: str, column: str) -> bool:
         inspector = inspect(engine)
         cols = [c["name"] for c in inspector.get_columns(table_name)]
         return column in cols
-    except Exception:
+    except Exception as e:
+        logger.warning(f"column_exists 检查失败({table_name}.{column}): {e}")
         return False
 
 
@@ -148,7 +151,8 @@ def migrate():
                     f"CREATE INDEX ix_{table}_org_id ON {table}(org_id)"
                 ))
                 logger.info(f"  ✓ ix_{table}_org_id 索引已创建")
-            except Exception:
+            except Exception as e:
+                logger.warning(f"创建索引 ix_{table}_org_id 失败（可能已存在）: {e}")
                 # 索引可能已存在
                 pass
 

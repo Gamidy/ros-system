@@ -1,5 +1,6 @@
 """采购订单 API: 订单管理 + 供应商管理 + 仪表盘"""
 from datetime import date, datetime, timedelta
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -15,6 +16,8 @@ from app.schemas import (
     PurchaseDashboardOut,
     OutsourceRequestCreate, OutsourceRequestOut, OutsourceRequestUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/purchases", tags=["采购订单管理"])
 
@@ -133,8 +136,9 @@ def create_order(data: PurchaseOrderCreate, db: Session = Depends(get_db), _=Dep
 
         db.commit()
         db.refresh(order)
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"采购订单创建失败: {e}")
         raise
     return order
 

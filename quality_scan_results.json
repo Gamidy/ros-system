@@ -1,0 +1,96 @@
+{
+  "scan_timestamp": "2026-06-26T00:00:00Z",
+  "workspace": "/Users/gamidy/ros-source/ros-system",
+  "summary": "ROS系统质量/缺陷全景扫描 — 发现5大类问题共11项具体任务",
+  "tasks": [
+    {
+      "id": "q01",
+      "title": "移除 permissions.py 中 API_MENU_MAP 死 import",
+      "file": "backend/app/core/permissions.py",
+      "severity": "medium",
+      "estimated_minutes": 2,
+      "details": "第11行从 permissions_data.py 导入 API_MENU_MAP，但整个文件中从未使用。该变量定义在 permissions_data.py 第386行，是旧版 API 路径→菜单名映射，当前权限校验已改用 require_menu() + ROLE_MENU_MAP。删除该导入行即可。"
+    },
+    {
+      "id": "q02",
+      "title": "product_plan_subs.py 子表模型添加 back_populates 双向关系",
+      "file": "backend/app/models/product_plan_subs.py",
+      "severity": "low",
+      "estimated_minutes": 8,
+      "details": "父模型 product_plan.py 已在4个子表关系上设置了 back_populates=\"product_plan\"（第71-74行），但子表文件中的4个 relationship 声明缺少对应的 back_populates 参数：ProductPlanInitiation（第74行）、ProductPlanMarket（第92行）、ProductPlanTechSpec（第108行）、ProductPlanTeam（第125行）。应添加 back_populates=\"initiation\"/\"market_info\"/\"tech_spec\"/\"team_members\" 以完善双向ORM映射。对应 Sprint2 LOW#6。"
+    },
+    {
+      "id": "q03",
+      "title": "移除 api/product_plan_subs.py 中 import enum 死导入",
+      "file": "backend/app/api/product_plan_subs.py",
+      "severity": "low",
+      "estimated_minutes": 1,
+      "details": "第19行 `import enum` 在该文件中从未使用。文件内使用 pydantic.BaseModel + datetime 类型，没有 enum 用法。"
+    },
+    {
+      "id": "q04",
+      "title": "移除或标记 core/enums.py 中死函数 get_enum_values 和 get_enum_choices",
+      "file": "backend/app/core/enums.py",
+      "severity": "low",
+      "estimated_minutes": 3,
+      "details": "第271-278行定义了 get_enum_values() 和 get_enum_choices() 两个辅助函数，但全代码库搜索结果为0处调用。建议删除或标记为待用。"
+    },
+    {
+      "id": "q05a",
+      "title": "修复 api 层中 bare except Exception（丢失异常信息）",
+      "file": "backend/app/api/ (多个文件)",
+      "severity": "medium",
+      "estimated_minutes": 10,
+      "details": "以下文件使用 `except Exception:` 而非 `except Exception as e:`，违反 AGENTS.md 约定的错误处理规范，丢失异常上下文信息（合计9处）：\n- prototypes.py:134\n- pm_workspace.py:770,956,1033,1077,1108\n- purchases.py:136\n- competitor.py:123,134\n- products.py:180\n- cost_accounting.py:458\n- projects.py:348,350\n即使使用 `pass`，也建议添加 `as e:` 并用 `logger.debug()` 记录。"
+    },
+    {
+      "id": "q05b",
+      "title": "修复 core/middleware/main 层中 bare except Exception",
+      "file": "backend/app/ (core/, middleware/, main.py)",
+      "severity": "medium",
+      "estimated_minutes": 8,
+      "details": "以下文件使用 `except Exception:` 丢失异常信息（合计 to 处）：\n- core/event_store.py:36,59\n- middleware/audit.py:105\n- main.py:295,306,320"
+    },
+    {
+      "id": "q05c",
+      "title": "修复 services 层中 bare except Exception",
+      "file": "backend/app/services/ (多个文件)",
+      "severity": "medium",
+      "estimated_minutes": 12,
+      "details": "以下 services 文件使用 `except Exception:` 丢失异常信息（合计14处）：\n- services/product_plan_approval.py:134\n- services/webhook_service.py:58\n- services/events.py:43,160,279\n- services/cdf_service.py:139,196\n- services/ai/plan_generator.py:293\n- services/mrc_service.py:111,166\n- services/mq_service.py:175,195\n- workers/plan_worker.py:80"
+    },
+    {
+      "id": "q05d",
+      "title": "修复 migrate_*.py 中 bare except Exception",
+      "file": "backend/app/migrate_p1_sheet_data.py",
+      "severity": "low",
+      "estimated_minutes": 2,
+      "details": "migrate_p1_sheet_data.py:176 使用 `except Exception:` 未绑定异常变量。"
+    },
+    {
+      "id": "q06",
+      "title": "清理 database.py 中被注释的死代码 async get_redis",
+      "file": "backend/app/core/database.py",
+      "severity": "low",
+      "estimated_minutes": 1,
+      "details": "第35行 `# async def get_redis():` 是被注释掉的代码，应清理。"
+    },
+    {
+      "id": "q07",
+      "title": "检查 api/__init__.py 中 cost_accounting 导出一致性",
+      "file": "backend/app/api/__init__.py",
+      "severity": "low",
+      "estimated_minutes": 2,
+      "details": "cost_accounting 在 __all__ 中导出（第70行）但不在 `from app.api import (...)` 导入块中。Python 仍能通过子模块发现机制导入，但建议统一风格将其加入导入块以保持一致性。"
+    },
+    {
+      "id": "q08",
+      "title": "检查 PermissionsData 中 API_MENU_MAP 是否可整体移除",
+      "file": "backend/app/core/permissions_data.py",
+      "severity": "low",
+      "estimated_minutes": 5,
+      "details": "API_MENU_MAP 定义于第386-422行，且在 permissions.py 中已无人使用。应在确认无其他模块以 `from app.core.permissions_data import API_MENU_MAP` 方式引用后整体移除该字典及其所有条目。关联 q01。"
+    }
+  ],
+  "total_estimated": "54 min"
+}

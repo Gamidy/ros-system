@@ -767,8 +767,9 @@ def pm_create_draft(
     try:
         db.commit()
         db.refresh(p)
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"PM工作台草稿项目保存失败: {e}")
         raise
 
     return _project_to_dict(p)
@@ -953,8 +954,9 @@ def pm_update_draft(
 
         db.commit()
         db.refresh(p)
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"PM更新草稿项目失败: {e}")
         raise
 
     return _project_to_dict(p)
@@ -1030,8 +1032,9 @@ def create_planning_item(
         db.add(ap)
         db.commit()
         db.refresh(ap)
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"PM年度规划创建失败: {e}")
         raise
 
     return _planning_item_to_dict(ap, 0)
@@ -1074,8 +1077,9 @@ def update_planning_item(
         db.refresh(ap)
     except HTTPException:
         raise
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"PM年度规划更新失败: {e}")
         raise
 
     # 返回时附加 project_count (TODO: 等Project模型同步后恢复)
@@ -1105,8 +1109,9 @@ def delete_planning_item(
     try:
         db.delete(ap)
         db.commit()
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"PM年度规划删除失败: {e}")
         raise
 
     return {"detail": "年度规划已删除"}

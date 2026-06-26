@@ -77,7 +77,8 @@ def process_plan_approved(self, plan_id: str, plan_name: str, project_id: int, *
                 status="processed" if result.status == "completed" else "failed",
             )
             db.commit()
-        except Exception:
+        except Exception as e:
+            logger.warning(f"事件存储失败: plan_id={plan_id}, error={e}")
             db.rollback()
         finally:
             db.close()

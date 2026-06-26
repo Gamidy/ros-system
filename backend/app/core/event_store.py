@@ -33,7 +33,8 @@ def _safe_iso(dt) -> Optional[str]:
         return None
     try:
         return dt.isoformat()
-    except Exception:
+    except Exception as e:
+        logger.warning(f"datetime isoformat failed: {e}")
         return None
 
 
@@ -56,7 +57,8 @@ class EventStore:
         try:
             db.execute(text("SELECT plan_id FROM event_logs LIMIT 0"))
             return True  # 字段已存在
-        except Exception:
+        except Exception as e:
+            logger.warning(f"查询 event_logs 字段失败: {e}")
             pass
         try:
             db.execute(text(

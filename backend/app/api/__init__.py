@@ -34,6 +34,7 @@ from app.api import (
     # D1 BI分析看板
     bi_analytics,
     cost_alert_api,
+    cost_accounting,
     # D3 消息通知增强
     user_notification_api,
     # D4 AI辅助策划

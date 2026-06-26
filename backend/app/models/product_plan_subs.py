@@ -71,7 +71,7 @@ class ProductPlanInitiation(Base):
     version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
-    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
+    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id], back_populates="initiation")
 
 
 class ProductPlanMarket(Base):
@@ -89,7 +89,7 @@ class ProductPlanMarket(Base):
     version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
-    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
+    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id], back_populates="market_info")
 
 
 class ProductPlanTechSpec(Base):
@@ -105,7 +105,7 @@ class ProductPlanTechSpec(Base):
     version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
-    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
+    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id], back_populates="tech_spec")
 
 
 class ProductPlanTeam(Base):
@@ -122,4 +122,4 @@ class ProductPlanTeam(Base):
     version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
-    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
+    product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id], back_populates="team_members")

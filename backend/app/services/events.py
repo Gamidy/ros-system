@@ -40,7 +40,8 @@ def _check_celery() -> bool:
         r.ping()
         _has_celery = True
         logger.info("Celery/Redis 连接成功，将使用 Redis 异步队列")
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Redis 不可用: {e}")
         _has_celery = False
         logger.warning("Redis 不可用，emit_async 将使用 threading fallback")
     return _has_celery
@@ -157,8 +158,8 @@ class EventBus:
         for handler in handlers:
             try:
                 handler(**kwargs)
-            except Exception:
-                logger.exception("Handler %s failed for event '%s'", _handler_name(handler), event_type)
+            except Exception as e:
+                logger.exception("Handler %s failed for event '%s': %s", _handler_name(handler), event_type, e)
 
     # ----- 异步模式（Phase 4: Redis/Celery + Threading fallback） -----
 
@@ -276,10 +277,10 @@ class EventBus:
             for handler in handlers:
                 try:
                     handler(**kwargs)
-                except Exception:
+                except Exception as e:
                     logger.exception(
-                        "Async handler %s failed for event '%s'",
-                        _handler_name(handler), event_type,
+                        "Async handler %s failed for event '%s': %s",
+                        _handler_name(handler), event_type, e,
                     )
 
         t = threading.Thread(

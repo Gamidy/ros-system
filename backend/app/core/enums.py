@@ -268,11 +268,3 @@ class RecordStatus(str, Enum):
 
 # ═══════════════ 辅助工具 ═══════════════
 
-def get_enum_values(enum_cls) -> list[str]:
-    """获取枚举的所有值列表（用于 DB column check 约束）"""
-    return [e.value for e in enum_cls]
-
-
-def get_enum_choices(enum_cls) -> list[tuple[str, str]]:
-    """获取枚举的选择项（用于表单下拉）"""
-    return [(e.value, e.name) for e in enum_cls]

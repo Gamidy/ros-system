@@ -172,8 +172,8 @@ def _fetch_bom_items(db, plan_id: str) -> List[dict]:
             }
             for r in rows
         ]
-    except Exception:
-        logger.warning("BOM 物料查询失败（可能表不存在）: plan=%s", plan_id)
+    except Exception as e:
+        logger.warning(f"BOM 物料查询失败（可能表不存在）: plan=%s, error=%s", plan_id, e)
         return []
 
 
@@ -192,8 +192,8 @@ def _fetch_all_plan_ids() -> List[str]:
             text("SELECT id FROM product_plans ORDER BY created_at DESC")
         ).fetchall()
         return [r[0] for r in rows]
-    except Exception:
-        logger.warning("查询 product_plans 失败，返回空列表")
+    except Exception as e:
+        logger.warning(f"查询 product_plans 失败: {e}")
         return []
     finally:
         db.close()

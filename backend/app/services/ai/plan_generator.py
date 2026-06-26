@@ -290,7 +290,8 @@ async def generate_plan_draft(
             try:
                 from app.core.config import settings
                 api_key = getattr(settings, "AI_API_KEY", None) or getattr(settings, "DEEPSEEK_API_KEY", None)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"获取 settings AI_API_KEY 失败: {e}")
                 pass
 
         if not api_key:
