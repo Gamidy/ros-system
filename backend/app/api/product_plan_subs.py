@@ -144,6 +144,8 @@ class TeamCreate(BaseModel):
     member_name: Optional[str] = None
     department: Optional[str] = None
     responsibility: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class TeamOut(BaseModel):
@@ -153,6 +155,8 @@ class TeamOut(BaseModel):
     member_name: Optional[str] = None
     department: Optional[str] = None
     responsibility: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     created_at: Optional[datetime] = None
     version_id: int = 1
 
@@ -165,6 +169,8 @@ class TeamUpdate(BaseModel):
     member_name: Optional[str] = None
     department: Optional[str] = None
     responsibility: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     version_id: Optional[int] = None
 
 

@@ -461,8 +461,9 @@ async function handleSave() {
     }
     dialogVisible.value = false
     await fetchMarkets()
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.detail || '操作失败')
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
+    ElMessage.error(_err || '操作失败')
   } finally {
     saving.value = false
   }
@@ -541,8 +542,9 @@ async function handleSaveCert() {
     }
     certEditVisible.value = false
     await fetchCertifications()
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.detail || '操作失败')
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
+    ElMessage.error(_err || '操作失败')
   } finally {
     savingCert.value = false
   }
@@ -609,8 +611,9 @@ async function handleSaveComp() {
     }
     compEditVisible.value = false
     await fetchCompressors()
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.detail || '操作失败')
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
+    ElMessage.error(_err || '操作失败')
   } finally {
     savingComp.value = false
   }

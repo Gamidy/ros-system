@@ -118,6 +118,8 @@ class ProductPlanTeam(Base):
     member_name = Column(String(50), nullable=True, comment="成员姓名")
     department = Column(String(50), nullable=True, comment="部门")
     responsibility = Column(String(200), nullable=True, comment="职责说明")
+    email = Column(String(100), nullable=True, comment="邮箱")
+    phone = Column(String(20), nullable=True, comment="电话")
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())

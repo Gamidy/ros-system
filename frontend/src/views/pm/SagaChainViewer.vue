@@ -197,11 +197,16 @@ async function fetchSaga() {
   try {
     const res = await api.get(`/api/v2/events/saga/${encodeURIComponent(id)}`)
     sagaData.value = res.data
-  } catch (e: any) {
-    if (e?.response?.status === 404) {
-      errorMsg.value = '未找到该 Saga 记录'
+  } catch (e: unknown) {
+    if (e && typeof e === 'object' && 'response' in e) {
+      const resp = (e as {response?: {status?: number; data?: {detail?: string}}}).response
+      if (resp?.status === 404) {
+        errorMsg.value = '未找到该 Saga 记录'
+      } else {
+        errorMsg.value = resp?.data?.detail || '查询失败，请稍后重试'
+      }
     } else {
-      errorMsg.value = e?.response?.data?.detail || '查询失败，请稍后重试'
+      errorMsg.value = '查询失败，请稍后重试'
     }
   } finally {
     loading.value = false

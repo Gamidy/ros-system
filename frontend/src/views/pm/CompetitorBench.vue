@@ -21,7 +21,7 @@
         ✅ 所有竞品数据完整
       </div>
 
-      <el-table :data="benchmarkData" border size="small" class="bench-table">
+      <el-table :data="benchmarkData" border size="small" class="bench-table" empty-text="暂无竞品对标数据">
         <el-table-column prop="param_name" label="参数" width="110" />
         <el-table-column prop="our_target" label="我方目标" width="100">
           <template #default="{ row }">

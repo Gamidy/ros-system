@@ -98,7 +98,7 @@
 
         <!-- ═══════════ 桌面端：表格视图 ═══════════ -->
         <template v-if="!isMobile">
-          <el-table :data="plans" stripe border size="small" v-loading="loading" @row-click="selectPlan" highlight-current-row>
+          <el-table :data="plans" stripe border size="small" v-loading="loading" empty-text="暂无策划数据" @row-click="selectPlan" highlight-current-row>
             <el-table-column prop="name" label="策划名称" min-width="180">
               <template #default="{ row }">
                 <div class="plan-name-cell">{{ row.name }}</div>
@@ -123,7 +123,7 @@
               </template>
             </el-table-column>
             <el-table-column label="创建时间" width="160">
-              <template #default="{ row }">{{ row.created_at?.substring(0, 10) || '-' }}</template>
+              <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
             </el-table-column>
             <el-table-column label="操作" width="120" fixed="right">
               <template #default="{ row }">
@@ -171,7 +171,7 @@
                 </div>
                 <div class="card-field">
                   <span class="field-label">创建时间</span>
-                  <span class="field-value">{{ plan.created_at?.substring(0, 10) || '-' }}</span>
+                  <span class="field-value">{{ formatDateTime(plan.created_at) }}</span>
                 </div>
                 <div class="card-field">
                   <span class="field-label">下一步动作</span>
@@ -393,6 +393,8 @@ import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import { generatePlanDraft } from '../../api/ai'
 import GlobalActionCard from '../../components/GlobalActionCard.vue'
+import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
+import type { CreatePlanPayload } from '../../api/productPlan'
 
 // ── Types ──
 interface PlanItem {
@@ -549,8 +551,9 @@ async function fetchTargetMarkets() {
   try {
     const res = await api.get('/target-markets')
     targetMarkets.value = res.data || []
-  } catch (e: any) {
-    targetMarkets.value = []; ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试')
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+    targetMarkets.value = []; ElMessage.error(_err || '操作失败，请重试')
   }
 }
 
@@ -586,12 +589,12 @@ async function generateAIDraft() {
     // 短暂延迟后进入预览确认步骤
     await sleep(500)
     createStep.value = 2
-  } catch (e: any) {
+  } catch (e: unknown) {
     aiStreaming.value = false
     aiGenerating.value = false
     aiStreamingText.value = ''
-    const msg = e?.response?.data?.detail || e?.message || 'AI生成失败，请稍后重试'
-    ElMessage.error(msg)
+    const msg = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+    ElMessage.error(msg || 'AI生成失败，请稍后重试')
     createStep.value = 0
   } finally {
     aiGenerating.value = false
@@ -673,7 +676,7 @@ async function acceptDraft() {
   try {
     // 从 AI 草案中提取数据填充表单
     const draft = aiDraft.value
-    const payload: Record<string, any> = {
+    const payload: CreatePlanPayload = {
       name: draft.plan_name || createForm.value.name || '',
       series: draft.series || createForm.value.series || '',
       market: createForm.value.market || '',
@@ -689,8 +692,9 @@ async function acceptDraft() {
     aiStreamingText.value = ''
     createStep.value = 0
     await fetchPlans()
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.detail || e?.message || '创建策划失败')
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '创建策划失败')
   } finally {
     acceptingDraft.value = false
   }
@@ -727,19 +731,22 @@ function closeCreateDialog() {
 
 // ── 阶段映射 ──
 const STAGE_ORDER = ['draft', 'competitor', 'definition', 'costing', 'tech_input', 'project_init', 'approved', 'released']
-const STAGE_LABELS: Record<string, string> = {
-  draft: '草稿', competitor: '竞品分析', definition: '产品定义',
-  costing: '成本目标', tech_input: '技术方案', project_init: '立项审批',
-  approved: '已批准', released: '已发布',
-}
-const STAGE_TAGS: Record<string, string> = {
-  draft: 'info', competitor: 'primary', definition: 'primary',
-  costing: 'warning', tech_input: 'primary', project_init: 'warning',
-  approved: 'success', released: 'success',
-}
 
 function stageLabel(s: string): string { return STAGE_LABELS[s] || s }
 function stageTagType(s: string): string { return STAGE_TAGS[s] || 'info' }
+
+// 格式化时间 YYYY-MM-DD HH:mm
+function formatDateTime(dt?: string): string {
+  if (!dt) return '-'
+  try {
+    const d = new Date(dt)
+    if (isNaN(d.getTime())) return dt.substring(0, 16) || '-'
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  } catch {
+    return dt.substring(0, 16) || '-'
+  }
+}
 function stageProgress(s: string): number {
   const idx = STAGE_ORDER.indexOf(s)
   return idx >= 0 ? Math.round((idx / (STAGE_ORDER.length - 1)) * 100) : 0
@@ -775,7 +782,7 @@ async function fetchPlans(resetPage = true) {
     }
     total.value = res.data.total || 0
     hasMore.value = items.length >= pageSize.value
-  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
+  } catch (e: unknown) { const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null); ElMessage.error(_err || '操作失败，请重试') }
   finally { loading.value = false }
 }
 
@@ -797,8 +804,9 @@ async function selectPlan(row: PlanItem) {
     const res = await api.get(`/product-plans/${row.id}/next-action`)
     selectedPlanNextAction.value = res.data
     nextActionStepIndex.value = res.data.can_advance ? 1 : 0
-  } catch (e: any) {
-    selectedPlanNextAction.value = null; ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试')
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+    selectedPlanNextAction.value = null; ElMessage.error(_err || '操作失败，请重试')
   }
 }
 
@@ -811,7 +819,7 @@ async function advancePlan(planId: string) {
     if (selectedPlanId.value === planId) {
       await selectPlan({ id: planId, name: selectedPlanName.value, status: '' } as PlanItem)
     }
-  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
+  } catch (e: unknown) { const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null); ElMessage.error(_err || '操作失败，请重试') }
   finally { advancing.value = false }
 }
 
@@ -827,7 +835,7 @@ async function deletePlan(row: PlanItem) {
     await api.delete(`/product-plans/${row.id}`)
     ElMessage.success('已删除')
     await fetchPlans()
-  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
+  } catch (e: unknown) { const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null); ElMessage.error(_err || '操作失败，请重试') }
 }
 
 async function createPlan() {
@@ -837,7 +845,7 @@ async function createPlan() {
   }
   creating.value = true
   try {
-    const payload: Record<string, any> = { name: createForm.value.name }
+    const payload: CreatePlanPayload = { name: createForm.value.name }
     if (createForm.value.series) payload.series = createForm.value.series
     if (createForm.value.market) payload.market = createForm.value.market
     if (createForm.value.market_id) payload.market_id = createForm.value.market_id
@@ -847,7 +855,7 @@ async function createPlan() {
     showCreateDialog.value = false
     createForm.value = { name: '', series: '', market: '', market_id: null, product_type: '' }
     await fetchPlans()
-  } catch (e: any) { ElMessage.error(e?.response?.data?.detail || e?.message || '操作失败，请重试') }
+  } catch (e: unknown) { const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null); ElMessage.error(_err || '操作失败，请重试') }
   finally { creating.value = false }
 }
 

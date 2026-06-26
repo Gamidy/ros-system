@@ -317,8 +317,9 @@ async function handleReplay(evt: any) {
   try {
     const res = await api.post(`/api/v2/events/replay/${selectedPlanId.value}`)
     replayResult.value = res.data
-  } catch (e: any) {
-    replayResult.value = { success: false, error: e?.response?.data?.detail || '重放请求失败' }
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
+    replayResult.value = { success: false, error: _err || '重放请求失败' }
   } finally {
     replayingId.value = null
     replayLoading.value = false

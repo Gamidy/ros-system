@@ -184,8 +184,9 @@ async function handleReplay() {
     const res = await api.post(`/api/v2/events/replay/${planId}`)
     replayResult.value = res.data
     ElMessage.success('重放执行完成')
-  } catch (e: any) {
-    replayResult.value = { success: false, error: e?.response?.data?.detail || '重放请求失败' }
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
+    replayResult.value = { success: false, error: _err || '重放请求失败' }
     ElMessage.error('重放执行失败')
   } finally {
     replaying.value = false

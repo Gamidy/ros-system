@@ -1,28 +1,101 @@
 // ProductPlan API layer
 import api from './index'
 
-export function listPlans(params?: Record<string, any>) { return api.get('/product-plans', { params }) }
-export function createPlan(data: Record<string, any>) { return api.post('/product-plans', data) }
+// 策划列表查询参数
+export interface PlanListParams {
+  page?: number
+  page_size?: number
+  status?: string
+  search?: string
+  [key: string]: any
+}
+
+// ── Payload 接口定义 ──
+
+/** 创建策划 */
+export interface CreatePlanPayload {
+  name: string
+  series?: string
+  market?: string
+  market_id?: number | null
+  product_type?: string
+}
+
+/** 项目概述 (Initiation) */
+export interface InitiationPayload {
+  background?: string
+  type?: string
+  market?: string
+  refrigerant?: string
+  capacity?: string
+  voltage?: string
+  series?: string
+  energy?: string
+  dev_category?: string
+  origin?: string
+  duration?: number
+  ip?: string
+  goals?: string
+  deliverables?: string
+  sample_qty?: number
+  version_id?: number
+}
+
+/** 市场与客户需求 (Market) */
+export interface MarketPayload {
+  main_capacity?: string
+  energy_efficiency?: string
+  cert_requirements?: string
+  target_price?: number
+  customer_requirements?: string
+  version_id?: number
+}
+
+/** 技术要求 (TechSpec) */
+export interface TechSpecPayload {
+  core_performance?: string
+  safety_compliance?: string
+  optional_config?: string
+  version_id?: number
+}
+
+/** 团队成员 (Team) */
+export interface TeamMemberPayload {
+  member_name: string
+  role_name: string
+  department?: string
+  responsibility?: string
+  version_id?: number
+}
+
+// ── API 函数 ──
+
+export function listPlans(params?: PlanListParams) { return api.get('/product-plans', { params }) }
+export function createPlan(data: CreatePlanPayload) { return api.post('/product-plans', data) }
 export function getPlanDetail(id: string) { return api.get(`/product-plans/${id}`) }
 export function updatePlan(id: string, data: Record<string, any>) { return api.patch(`/product-plans/${id}`, data) }
-export function updatePlanStage(id: string, data: Record<string, any>) { return api.patch(`/product-plans/${id}/stage`, data) }
+// ── 审批操作 ──
+export function approvePlan(planId: number) { return api.post(`/product-plans/${planId}/approve`) }
+export function rejectPlan(planId: number, comment?: string) { return api.post(`/product-plans/${planId}/reject`, { comment }) }
+export function withdrawPlan(planId: number) { return api.post(`/product-plans/${planId}/withdraw`) }
+export function updatePlanStage(planId: number, stage: string) { return api.patch(`/product-plans/${planId}/stage`, { stage }) }
 
 // ── 项目概述 (Initiation) ──
 export function getPlanInitiation(planId: string) { return api.get(`/product-plans/${planId}/initiation`) }
-export function upsertPlanInitiation(planId: string, data: any) { return api.put(`/product-plans/${planId}/initiation`, data) }
+export function upsertPlanInitiation(planId: string, data: InitiationPayload) { return api.put(`/product-plans/${planId}/initiation`, data) }
 
 // ── 市场与客户需求 (Market) ──
 export function getPlanMarket(planId: string) { return api.get(`/product-plans/${planId}/market`) }
-export function upsertPlanMarket(planId: string, data: any) { return api.put(`/product-plans/${planId}/market`, data) }
+export function upsertPlanMarket(planId: string, data: MarketPayload) { return api.put(`/product-plans/${planId}/market`, data) }
 
 // ── 技术要求 (TechSpec) ──
 export function getPlanTechSpec(planId: string) { return api.get(`/product-plans/${planId}/tech-spec`) }
-export function upsertPlanTechSpec(planId: string, data: any) { return api.put(`/product-plans/${planId}/tech-spec`, data) }
+export function upsertPlanTechSpec(planId: string, data: TechSpecPayload) { return api.put(`/product-plans/${planId}/tech-spec`, data) }
 
 // ── 团队 (Team) ──
 export function listPlanTeam(planId: string) { return api.get(`/product-plans/${planId}/team`) }
-export function addPlanTeamMember(planId: string, data: any) { return api.post(`/product-plans/${planId}/team`, data) }
-export function updatePlanTeamMember(planId: string, id: number, data: any) { return api.put(`/product-plans/${planId}/team/${id}`, data) }
+export function addPlanTeamMember(planId: string, data: TeamMemberPayload) { return api.post(`/product-plans/${planId}/team`, data) }
+export function updatePlanTeamMember(planId: string, id: number, data: TeamMemberPayload) { return api.put(`/product-plans/${planId}/team/${id}`, data) }
 export function deletePlanTeamMember(planId: string, id: number) { return api.delete(`/product-plans/${planId}/team/${id}`) }
 
 // ── 项目关联 (Project Links) ──

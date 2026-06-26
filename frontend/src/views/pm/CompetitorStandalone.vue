@@ -636,8 +636,9 @@ async function handleSave() {
     }
     dialogVisible.value = false
     await fetchData()
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.detail || '保存失败')
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
+    ElMessage.error(_err || '保存失败')
   } finally {
     saving.value = false
   }
