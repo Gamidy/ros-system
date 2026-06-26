@@ -19,7 +19,10 @@
 <template v-if="!isMobile">
 <el-tabs v-model="activeTab" type="border-card" tab-position="left" v-if="plan">
 <!-- 项目概述 -->
-<el-tab-pane label="项目概述" name="initiation">
+<el-tab-pane name="initiation">
+  <template #label>
+    <span>项目概述 <el-tag size="small" type="primary" v-if="initiationVersion > 0">v{{initiationVersion}}</el-tag></span>
+  </template>
 <el-form :model="editForm" label-width="100" size="small" class="quick-edit">
 <el-row :gutter="12">
 <el-col :span="8"><el-form-item label="策划名称"><el-input v-model="editForm.name" /></el-form-item></el-col>
@@ -67,7 +70,10 @@
 </el-tab-pane>
 
 <!-- 市场与客户 -->
-<el-tab-pane label="市场与客户" name="market">
+<el-tab-pane name="market">
+  <template #label>
+    <span>市场与客户 <el-tag size="small" type="primary" v-if="marketVersion > 0">v{{marketVersion}}</el-tag></span>
+  </template>
 <el-form :model="marketForm" label-width="180" size="small">
 <el-form-item label="主要容量"><el-input v-model="marketForm.main_capacity" /></el-form-item>
 <el-form-item label="能效要求"><el-input v-model="marketForm.energy_efficiency" /></el-form-item>
@@ -79,7 +85,10 @@
 </el-tab-pane>
 
 <!-- 技术要求 -->
-<el-tab-pane label="技术要求" name="techSpec">
+<el-tab-pane name="techSpec">
+  <template #label>
+    <span>技术要求 <el-tag size="small" type="primary" v-if="techSpecVersion > 0">v{{techSpecVersion}}</el-tag></span>
+  </template>
 <el-form :model="techSpecForm" label-width="180" size="small">
 <el-form-item label="核心性能指标"><el-input v-model="techSpecForm.core_performance" type="textarea" :rows="3" placeholder="制冷量、制热量、COP等" /></el-form-item>
 <el-form-item label="安全合规要求"><el-input v-model="techSpecForm.safety_compliance" type="textarea" :rows="3" placeholder="CE、UL、CCC等" /></el-form-item>
@@ -103,7 +112,10 @@
 </el-tab-pane>
 
 <!-- 团队 -->
-<el-tab-pane label="团队" name="team">
+<el-tab-pane name="team">
+  <template #label>
+    <span>团队 <el-tag size="small" type="primary" v-if="teamVersion > 0">v{{teamVersion}}</el-tag></span>
+  </template>
 <div class="tab-toolbar"><el-button size="small" type="primary" @click="showTeamDialog = true; teamDialogMode = 'add'">+ 添加成员</el-button></div>
 <el-table :data="teamMembers" stripe border size="small" empty-text="暂无团队成员">
 <el-table-column prop="name" label="姓名" min-width="100" />
@@ -349,12 +361,18 @@ const showApprovalDrawer = ref(false)
 const initiationForm = reactive({ background: '', type: '', market: '', refrigerant: '', capacity: '', voltage: '', series: '', energy: '', dev_category: '', origin: '', duration: 0, ip: '', goals: '', deliverables: '', sample_qty: 0 })
 const savingInitiation = ref(false)
 
+// ── 子表版本号 ──
+const initiationVersion = ref(0)
+const marketVersion = ref(0)
+const techSpecVersion = ref(0)
+const teamVersion = ref(0)
+
 async function fetchInitiation() {
-try { const res = await planAPI.getPlanInitiation(planId); if (res.data) Object.assign(initiationForm, res.data) } catch { /* 404 */ }
+try { const res = await planAPI.getPlanInitiation(planId); if (res.data) { Object.assign(initiationForm, res.data); initiationVersion.value = res.data.version_id ?? 0 } } catch { /* 404 */ }
 }
 async function saveInitiation() {
 savingInitiation.value = true
-try { await planAPI.upsertPlanInitiation(planId, initiationForm); ElMessage.success('项目概述保存成功'); setSubTableDone('initiation', true) } catch { /* handled */ }
+try { const res = await planAPI.upsertPlanInitiation(planId, initiationForm); initiationVersion.value = res.data.version_id ?? 0; ElMessage.success('项目概述保存成功'); setSubTableDone('initiation', true) } catch { /* handled */ }
 finally { savingInitiation.value = false }
 }
 
@@ -363,11 +381,11 @@ const marketForm = reactive({ main_capacity: '', energy_efficiency: '', cert_req
 const savingMarket = ref(false)
 
 async function fetchMarket() {
-try { const res = await planAPI.getPlanMarket(planId); if (res.data) Object.assign(marketForm, res.data) } catch { /* 404 */ }
+try { const res = await planAPI.getPlanMarket(planId); if (res.data) { Object.assign(marketForm, res.data); marketVersion.value = res.data.version_id ?? 0 } } catch { /* 404 */ }
 }
 async function saveMarket() {
 savingMarket.value = true
-try { await planAPI.upsertPlanMarket(planId, marketForm); ElMessage.success('市场与客户需求保存成功'); setSubTableDone('market', true) } catch { /* handled */ }
+try { const res = await planAPI.upsertPlanMarket(planId, marketForm); marketVersion.value = res.data.version_id ?? 0; ElMessage.success('市场与客户需求保存成功'); setSubTableDone('market', true) } catch { /* handled */ }
 finally { savingMarket.value = false }
 }
 
@@ -376,11 +394,11 @@ const techSpecForm = reactive({ core_performance: '', safety_compliance: '', opt
 const savingTechSpec = ref(false)
 
 async function fetchTechSpec() {
-try { const res = await planAPI.getPlanTechSpec(planId); if (res.data) Object.assign(techSpecForm, res.data) } catch { /* 404 */ }
+try { const res = await planAPI.getPlanTechSpec(planId); if (res.data) { Object.assign(techSpecForm, res.data); techSpecVersion.value = res.data.version_id ?? 0 } } catch { /* 404 */ }
 }
 async function saveTechSpec() {
 savingTechSpec.value = true
-try { await planAPI.upsertPlanTechSpec(planId, techSpecForm); ElMessage.success('技术要求保存成功'); setSubTableDone('techSpec', true) } catch { /* handled */ }
+try { const res = await planAPI.upsertPlanTechSpec(planId, techSpecForm); techSpecVersion.value = res.data.version_id ?? 0; ElMessage.success('技术要求保存成功'); setSubTableDone('techSpec', true) } catch { /* handled */ }
 finally { savingTechSpec.value = false }
 }
 
@@ -393,11 +411,11 @@ const editingTeamId = ref<number | null>(null)
 const savingTeam = ref(false)
 
 async function fetchTeam() {
-try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || []; setSubTableDone('team', teamMembers.value.length > 0) } catch { teamMembers.value = []; setSubTableDone('team', false) }
+try { const res = await planAPI.listPlanTeam(planId); teamMembers.value = res.data || []; teamVersion.value = teamMembers.value.length > 0 ? Math.max(...teamMembers.value.map((m: any) => m.version_id ?? 0)) : 0; setSubTableDone('team', teamMembers.value.length > 0) } catch { teamMembers.value = []; teamVersion.value = 0; setSubTableDone('team', false) }
 }
 function editTeamMember(row: any) {
 teamDialogMode.value = 'edit'; editingTeamId.value = row.id
-Object.assign(teamForm, { name: row.name, role: row.role, department: row.department, email: row.email, phone: row.phone })
+Object.assign(teamForm, { name: row.name, role: row.role, department: row.department, email: row.email, phone: row.phone, version_id: row.version_id })
 showTeamDialog.value = true
 }
 async function saveTeamMember() {

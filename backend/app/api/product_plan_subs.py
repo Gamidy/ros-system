@@ -12,7 +12,7 @@ Endpoints under prefix /api/product-plans (router prefix=/product-plans, include
 - PUT    /{plan_id}/team/{id}      更新团队成员
 - DELETE /{plan_id}/team/{id}      删除团队成员
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -59,6 +59,7 @@ class InitiationCreate(BaseModel):
     deliverables: Optional[str] = None
     sample_qty: Optional[int] = None
     required_date: Optional[date] = None
+    version_id: Optional[int] = None
 
 
 class InitiationOut(BaseModel):
@@ -89,6 +90,7 @@ class InitiationOut(BaseModel):
     sample_qty: Optional[int] = None
     required_date: Optional[str] = None
     created_at: Optional[datetime] = None
+    version_id: int = 1
 
     class Config:
         from_attributes = True
@@ -100,6 +102,7 @@ class MarketCreate(BaseModel):
     cert_requirements: Optional[str] = None
     target_price: Optional[str] = None
     customer_requirements: Optional[str] = None
+    version_id: Optional[int] = None
 
 
 class MarketOut(BaseModel):
@@ -111,6 +114,7 @@ class MarketOut(BaseModel):
     target_price: Optional[str] = None
     customer_requirements: Optional[str] = None
     created_at: Optional[datetime] = None
+    version_id: int = 1
 
     class Config:
         from_attributes = True
@@ -120,6 +124,7 @@ class TechSpecCreate(BaseModel):
     core_performance: Optional[str] = None
     safety_compliance: Optional[str] = None
     optional_config: Optional[str] = None
+    version_id: Optional[int] = None
 
 
 class TechSpecOut(BaseModel):
@@ -129,6 +134,7 @@ class TechSpecOut(BaseModel):
     safety_compliance: Optional[str] = None
     optional_config: Optional[str] = None
     created_at: Optional[datetime] = None
+    version_id: int = 1
 
     class Config:
         from_attributes = True
@@ -149,6 +155,7 @@ class TeamOut(BaseModel):
     department: Optional[str] = None
     responsibility: Optional[str] = None
     created_at: Optional[datetime] = None
+    version_id: int = 1
 
     class Config:
         from_attributes = True
@@ -159,6 +166,7 @@ class TeamUpdate(BaseModel):
     member_name: Optional[str] = None
     department: Optional[str] = None
     responsibility: Optional[str] = None
+    version_id: Optional[int] = None
 
 
 # ── Helper ──
@@ -175,6 +183,7 @@ def _get_plan_or_404(db: Session, plan_id: str) -> ProductPlan:
 @router.get("/{plan_id}/initiation", response_model=InitiationOut)
 def get_initiation(
     plan_id: str,
+    version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
 ) -> dict:
@@ -185,6 +194,9 @@ def get_initiation(
     ).first()
     if not initiation:
         raise HTTPException(status_code=404, detail="立项信息不存在")
+    if version is not None:
+        if initiation.version_id != version:
+            raise HTTPException(412, detail=f"版本已变更(当前{initiation.version_id}，请求{version})，请刷新")
     return initiation
 
 
@@ -201,14 +213,19 @@ def upsert_initiation(
         ProductPlanInitiation.product_plan_id == plan_id
     ).first()
     if initiation:
-        for key, val in data.model_dump(exclude_unset=True).items():
+        # 可选乐观锁: 如果请求体传了 version_id 则做冲突检查
+        if data.version_id is not None and data.version_id != initiation.version_id:
+            raise HTTPException(409, detail="版本冲突，请刷新后重试")
+        for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
             if val is not None:
                 setattr(initiation, key, val)
+        initiation.version_id = (initiation.version_id or 0) + 1
     else:
         initiation = ProductPlanInitiation(
-            product_plan_id=plan_id, **data.model_dump(exclude_unset=True)
+            product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
         )
         db.add(initiation)
+    initiation.product_plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(initiation)
     return initiation
@@ -219,6 +236,7 @@ def upsert_initiation(
 @router.get("/{plan_id}/market", response_model=MarketOut)
 def get_market(
     plan_id: str,
+    version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
 ) -> dict:
@@ -229,6 +247,9 @@ def get_market(
     ).first()
     if not market:
         raise HTTPException(status_code=404, detail="市场信息不存在")
+    if version is not None:
+        if market.version_id != version:
+            raise HTTPException(412, detail=f"版本已变更(当前{market.version_id}，请求{version})，请刷新")
     return market
 
 
@@ -245,14 +266,19 @@ def upsert_market(
         ProductPlanMarket.product_plan_id == plan_id
     ).first()
     if market:
-        for key, val in data.model_dump(exclude_unset=True).items():
+        # 可选乐观锁: 如果请求体传了 version_id 则做冲突检查
+        if data.version_id is not None and data.version_id != market.version_id:
+            raise HTTPException(409, detail="版本冲突，请刷新后重试")
+        for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
             if val is not None:
                 setattr(market, key, val)
+        market.version_id = (market.version_id or 0) + 1
     else:
         market = ProductPlanMarket(
-            product_plan_id=plan_id, **data.model_dump(exclude_unset=True)
+            product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
         )
         db.add(market)
+    market.product_plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(market)
     return market
@@ -263,6 +289,7 @@ def upsert_market(
 @router.get("/{plan_id}/tech-spec", response_model=TechSpecOut)
 def get_tech_spec(
     plan_id: str,
+    version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
 ) -> dict:
@@ -273,6 +300,9 @@ def get_tech_spec(
     ).first()
     if not tech:
         raise HTTPException(status_code=404, detail="技术规格不存在")
+    if version is not None:
+        if tech.version_id != version:
+            raise HTTPException(412, detail=f"版本已变更(当前{tech.version_id}，请求{version})，请刷新")
     return tech
 
 
@@ -289,14 +319,19 @@ def upsert_tech_spec(
         ProductPlanTechSpec.product_plan_id == plan_id
     ).first()
     if tech:
-        for key, val in data.model_dump(exclude_unset=True).items():
+        # 可选乐观锁: 如果请求体传了 version_id 则做冲突检查
+        if data.version_id is not None and data.version_id != tech.version_id:
+            raise HTTPException(409, detail="版本冲突，请刷新后重试")
+        for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
             if val is not None:
                 setattr(tech, key, val)
+        tech.version_id = (tech.version_id or 0) + 1
     else:
         tech = ProductPlanTechSpec(
-            product_plan_id=plan_id, **data.model_dump(exclude_unset=True)
+            product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
         )
         db.add(tech)
+    tech.product_plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(tech)
     return tech
@@ -307,6 +342,7 @@ def upsert_tech_spec(
 @router.get("/{plan_id}/team", response_model=list[TeamOut])
 def list_team_members(
     plan_id: str,
+    version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
 ) -> list:
@@ -315,6 +351,9 @@ def list_team_members(
     members = db.query(ProductPlanTeam).filter(
         ProductPlanTeam.product_plan_id == plan_id
     ).all()
+    if version is not None and members:
+        if members[0].version_id != version:
+            raise HTTPException(412, detail=f"版本已变更(当前{members[0].version_id}，请求{version})，请刷新")
     return members
 
 
@@ -331,6 +370,9 @@ def add_team_member(
     db.add(member)
     db.commit()
     db.refresh(member)
+    # 同步父表更新时间
+    _get_plan_or_404(db, plan_id).updated_at = datetime.utcnow()
+    db.commit()
     return member
 
 
@@ -350,9 +392,14 @@ def update_team_member(
     ).first()
     if not member:
         raise HTTPException(status_code=404, detail="团队成员不存在")
-    for key, val in data.model_dump(exclude_unset=True).items():
+    # 可选乐观锁: 如果请求体传了 version_id 则做冲突检查
+    if data.version_id is not None and data.version_id != member.version_id:
+        raise HTTPException(409, detail="版本冲突，请刷新后重试")
+    for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
         if val is not None:
             setattr(member, key, val)
+    member.version_id = (member.version_id or 0) + 1
+    member.product_plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(member)
     return member
@@ -373,6 +420,10 @@ def delete_team_member(
     ).first()
     if not member:
         raise HTTPException(status_code=404, detail="团队成员不存在")
+    # 同步父表更新时间
+    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    if plan:
+        plan.updated_at = datetime.utcnow()
     db.delete(member)
     db.commit()
     return {"ok": True}

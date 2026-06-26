@@ -46,7 +46,30 @@ def upgrade() -> None:
         )
     )
 
-    # Step 3: 删旧列（SQLite 3.35+ 和 MariaDB 均支持）
+    # Step 3: 删旧列（先删FK约束再删列 — MariaDB需要）
+    conn = op.get_bind()
+    if conn.dialect.name == "mysql":
+        # MariaDB: 先查找FK名再删除
+        r = conn.execute(
+            sa.text(
+                "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_plans' "
+                "AND COLUMN_NAME = 'project_id' AND REFERENCED_TABLE_NAME IS NOT NULL LIMIT 1"
+            )
+        )
+        fk_row = r.fetchone()
+        if fk_row:
+            conn.execute(sa.text(f"ALTER TABLE product_plans DROP FOREIGN KEY {fk_row[0]}"))
+        r2 = conn.execute(
+            sa.text(
+                "SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_plans' "
+                "AND COLUMN_NAME = 'project_id' LIMIT 1"
+            )
+        )
+        idx_row = r2.fetchone()
+        if idx_row:
+            conn.execute(sa.text(f"ALTER TABLE product_plans DROP INDEX {idx_row[0]}"))
     with op.batch_alter_table("product_plans") as batch_op:
         batch_op.drop_column("project_id")
 

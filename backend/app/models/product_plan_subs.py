@@ -68,6 +68,7 @@ class ProductPlanInitiation(Base):
     mold_outer = Column(Text, nullable=True, comment="外销模具")
     # 多租户
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
     product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
@@ -85,6 +86,7 @@ class ProductPlanMarket(Base):
     target_price = Column(String(50), nullable=True, comment="目标售价USD")
     customer_requirements = Column(Text, nullable=True, comment="客户关键需求")
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
     product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
@@ -100,6 +102,7 @@ class ProductPlanTechSpec(Base):
     safety_compliance = Column(Text, nullable=True, comment="安全合规要求JSON")
     optional_config = Column(Text, nullable=True, comment="选配要求")
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
     product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
@@ -116,6 +119,7 @@ class ProductPlanTeam(Base):
     department = Column(String(50), nullable=True, comment="部门")
     responsibility = Column(String(200), nullable=True, comment="职责说明")
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    version_id = Column(Integer, default=1, nullable=False, comment="版本号, 每次更新+1")
     created_at = Column(DateTime, server_default=func.now())
 
     product_plan = relationship("ProductPlan", foreign_keys=[product_plan_id])
