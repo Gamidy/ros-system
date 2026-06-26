@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType
 from app.models.project import Project
 from app.services.events import bus, EventTypes
+from app.models.workflow_transition_spec import WorkflowTransitionSpec
 
 
 # ── 阶段转换规则 ──
@@ -80,6 +81,48 @@ STAGE_TO_EVENT: dict[ProductPlanStage, str] = {
 }
 
 
+def _load_transitions(db: Session) -> list[WorkflowTransitionSpec]:
+    """从 DB 加载流程转换规则；DB 为空（迁移未运行）时回退到 PLAN_STAGE_TRANSITIONS 常量"""
+    specs = db.query(WorkflowTransitionSpec).order_by(WorkflowTransitionSpec.sort_order).all()
+    if not specs:
+        for from_stage, to_stages in PLAN_STAGE_TRANSITIONS.items():
+            for idx, to_stage in enumerate(to_stages):
+                s = WorkflowTransitionSpec(
+                    from_stage=from_stage.value,
+                    to_stage=to_stage.value,
+                    sort_order=idx,
+                )
+                specs.append(s)
+    return specs
+
+
+def _load_requirements_for_stage(db: Session, stage: ProductPlanStage) -> list[dict]:
+    """从 DB 加载阶段前置条件；DB 为空时回退到 STAGE_REQUIREMENTS 常量
+
+    返回 list[dict]，每个 dict 含 field / label / check 键
+    """
+    specs = db.query(WorkflowTransitionSpec).filter(
+        WorkflowTransitionSpec.to_stage == stage.value
+    ).all()
+    if not specs:
+        return STAGE_REQUIREMENTS.get(stage, [])
+
+    requirements = []
+    for spec in specs:
+        if spec.required_fields:
+            try:
+                fields = json.loads(spec.required_fields)
+            except (json.JSONDecodeError, TypeError):
+                fields = []
+            for field in fields:
+                requirements.append({
+                    "field": field,
+                    "label": spec.required_label or field,
+                    "check": lambda p, f=field: bool(getattr(p, f, None)),
+                })
+    return requirements
+
+
 def create_product_plan(db: Session, data: dict, username: str) -> ProductPlan:
     """创建 DRAFT 状态产品策划"""
     plan = ProductPlan(
@@ -114,15 +157,17 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
         raise HTTPException(status_code=404, detail="策划不存在")
 
     current = plan.status
-    allowed_next = PLAN_STAGE_TRANSITIONS.get(current, [])
-    if not allowed_next:
+    transitions = _load_transitions(db)
+    allowed = [t for t in transitions if t.from_stage == current.value]
+    allowed.sort(key=lambda t: t.sort_order)
+    if not allowed:
         raise HTTPException(status_code=400, detail=f"当前阶段「{STAGE_LABELS.get(current, current.value)}」已无下一步")
 
     # 取第一个合法目标阶段
-    target = allowed_next[0]
+    target = ProductPlanStage(allowed[0].to_stage)
 
     # 校验条件（字段级）
-    requirements = STAGE_REQUIREMENTS.get(target, [])
+    requirements = _load_requirements_for_stage(db, target)
     failures = [req for req in requirements if not req["check"](plan)]
     if failures:
         missing = [f["label"] for f in failures]
@@ -132,7 +177,7 @@ def advance_stage(db: Session, plan_id: str, username: str) -> ProductPlan:
         )
 
     # 校验子表数据条件
-    ok, err_msg = _check_stage_requirements(plan, db)
+    ok, err_msg = _check_stage_requirements(plan, target, db)
     if not ok:
         raise HTTPException(status_code=400, detail=err_msg)
 
@@ -188,14 +233,16 @@ def get_next_action(db: Session, plan_id: str) -> dict:
         raise HTTPException(status_code=404, detail="策划不存在")
 
     current = plan.status
-    allowed_next = PLAN_STAGE_TRANSITIONS.get(current, [])
+    transitions = _load_transitions(db)
+    allowed = [t for t in transitions if t.from_stage == current.value]
+    allowed.sort(key=lambda t: t.sort_order)
     current_label = STAGE_LABELS.get(current, current.value)
 
     # 当前阶段的检查清单
-    current_requirements = STAGE_REQUIREMENTS.get(current, [])
+    current_requirements = _load_requirements_for_stage(db, current)
     missing_current = [req["label"] for req in current_requirements if not req["check"](plan)]
 
-    if not allowed_next:
+    if not allowed:
         # 已到最后阶段
         return {
             "current_stage": current_label,
@@ -205,9 +252,9 @@ def get_next_action(db: Session, plan_id: str) -> dict:
             "can_advance": False,
         }
 
-    target = allowed_next[0]
+    target = ProductPlanStage(allowed[0].to_stage)
     target_label = STAGE_LABELS.get(target, target.value)
-    target_requirements = STAGE_REQUIREMENTS.get(target, [])
+    target_requirements = _load_requirements_for_stage(db, target)
 
     # 推进到下一阶段还缺什么
     missing_for_next = [req["label"] for req in target_requirements if not req["check"](plan)]
@@ -229,19 +276,17 @@ def get_next_action(db: Session, plan_id: str) -> dict:
     }
 
 
-def _check_stage_requirements(plan: ProductPlan, db: Session) -> Tuple[bool, str]:
+def _check_stage_requirements(plan: ProductPlan, target: ProductPlanStage, db: Session) -> Tuple[bool, str]:
     """检查推进到下一阶段所需的子表数据条件
+
+    Args:
+        plan: 当前产品策划
+        target: 目标阶段（由调用方从 DB 规则推导）
+        db: 数据库会话
 
     Returns:
         (is_ok: bool, error_message: str)
     """
-    current = plan.status
-    allowed_next = PLAN_STAGE_TRANSITIONS.get(current, [])
-    if not allowed_next:
-        return True, ""
-
-    target = allowed_next[0]
-
     if target == ProductPlanStage.DEFINITION:
         initiation = plan.initiation
         if not initiation or (not initiation.background_basis and not initiation.overall_goal):
