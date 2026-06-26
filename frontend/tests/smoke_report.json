@@ -1,0 +1,104 @@
+{
+  "timestamp": "2026-06-26T09:44:16",
+  "base_url": "http://139.196.15.52/api",
+  "total": 19,
+  "passed": 14,
+  "failed": 5,
+  "results": [
+    {
+      "name": "POST /auth/login — 登录",
+      "ok": true,
+      "detail": "token 获取成功 (eyJhbGciOiJIUzI1NiIs...)"
+    },
+    {
+      "name": "GET /auth/me — 用户信息",
+      "ok": true,
+      "detail": "username=admin"
+    },
+    {
+      "name": "GET /product-plans — 策划列表",
+      "ok": false,
+      "detail": "status=500"
+    },
+    {
+      "name": "子表测试 #1 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #2 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #3 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #4 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #5 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #6 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #7 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #8 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "子表测试 #9 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    },
+    {
+      "name": "GET /pm/workspace — PM工作台",
+      "ok": false,
+      "detail": "status=403"
+    },
+    {
+      "name": "GET /pm/programs — PM立项规划",
+      "ok": false,
+      "detail": "status=403"
+    },
+    {
+      "name": "GET /products — 产品主线",
+      "ok": true,
+      "detail": "status=200, 8 条"
+    },
+    {
+      "name": "GET /pm/proposals — 提案管理",
+      "ok": false,
+      "detail": "status=403"
+    },
+    {
+      "name": "事件时间线 API",
+      "ok": false,
+      "detail": "status=404"
+    },
+    {
+      "name": "登录响应时间 (< 2s)",
+      "ok": true,
+      "detail": "avg=0.351s (n=3)"
+    },
+    {
+      "name": "策划列表响应时间 (跳过)",
+      "ok": true,
+      "detail": "无策划数据"
+    }
+  ]
+}
