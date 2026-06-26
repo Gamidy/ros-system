@@ -19,7 +19,7 @@ def list_cert_executions(
     cert_sample_id: int = Query(0, description="按认证样机筛选"),
     status: str = Query("", description="按状态筛选"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-executions")),
 ) -> list[CertificationExecutionOut]:
     """认证执行列表"""
     q = db.query(CertificationExecution)
@@ -35,7 +35,7 @@ def create_cert_execution(
     data: CertificationExecutionCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-executions")),
 ) -> CertificationExecutionOut:
     """创建认证执行"""
     execution = CertificationExecution(
@@ -53,7 +53,7 @@ def update_cert_execution(
     ce_id: int,
     data: CertificationExecutionUpdate,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-executions")),
 ) -> CertificationExecutionOut:
     """更新认证执行"""
     execution = db.query(CertificationExecution).filter(CertificationExecution.id == ce_id).first()

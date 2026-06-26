@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/s2/change-impact", tags=["S2-变更影响分析"
 def list_impact_records(
     prototype_id: int = Query(0, description="按样机筛选"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-change-impact")),
 ) -> list:
     """变更影响分析记录列表"""
     q = db.query(ChangeImpactRecord)
@@ -29,7 +29,7 @@ def list_impact_records(
 def get_impact_record(
     record_id: int,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-change-impact")),
 ) -> dict:
     """变更影响分析记录详情"""
     record = db.query(ChangeImpactRecord).filter(ChangeImpactRecord.id == record_id).first()

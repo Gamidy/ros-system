@@ -1,6 +1,6 @@
 """ROS 系统配置 — 多profile支持（开发/生产）"""
 import os
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 
@@ -43,6 +43,16 @@ class Settings(BaseSettings):
         default="ros-secret-key-change-in-production",
         validation_alias="JWT_SECRET_KEY"
     )
+
+    @model_validator(mode="after")
+    def _validate_secret_key(self) -> "Settings":
+        """生产环境禁止使用默认密钥"""
+        if self.ENV == "production" and self.SECRET_KEY == "ros-secret-key-change-in-production":
+            raise ValueError(
+                "生产环境必须通过 JWT_SECRET_KEY 环境变量设置密钥，"
+                "禁止使用默认值 'ros-secret-key-change-in-production'"
+            )
+        return self
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 

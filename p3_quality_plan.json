@@ -1,0 +1,79 @@
+{
+  "plan_name": "ROS系统P3质量基建实施规划",
+  "generated_at": "2026-06-26",
+  "total_estimated_days": 6.5,
+  "parallel_execution_groups": {
+    "group_A_并行": ["T1", "T2", "T4"],
+    "group_B_并行": ["T3", "T5"],
+    "说明": "T1(大文件拆分), T2(前三业务路径测试), T4(API类型注解) 可同时启动，互不依赖。T3依赖T2的测试基础设施搭建成果，T5依赖T4的类型注解约定。"
+  },
+  "execution_order_suggestion": [
+    "第1批并行启动: T1(大文件拆分) + T2(前三路径测试) + T4(API类型注解)",
+    "第2批: T3(后三路径测试) 在T2的测试基础设施完成后启动; T5在T4类型模式定型后启动",
+    "T1完成后需验证回归: 所有 `from app.schemas import` 依然正常工作",
+    "每日集成检查: 各任务保持向后兼容，合并前跑完整测试套件"
+  ],
+  "risk_notes": [
+    "T1风险: 1851行/172类，19个域混杂，拆分时易遗漏交叉引用。需严格保持 __init__.py 重新导出",
+    "T2-T3风险: 测试需真实数据库状态(SeedData), 部分路径涉及审批流转，mock策略需一致",
+    "T4-T5风险: 14.5%→60%跨度大，API文件中有14个文件内嵌BaseModel类，需决定是否外移到schemas/",
+    "总风险: 3个子任务并行时，同一文件被多人修改可能产生合并冲突"
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "大文件拆分 — schemas/__init__.py 按域拆分",
+      "domain_tags": ["refactoring", "schemas", "pydantic"],
+      "risk_level": "high",
+      "estimated_complexity": 5,
+      "executor_bias": "全栈",
+      "description": "将1851行/172个Pydantic模型的 schemas/__init__.py 按业务域拆分为7个独立文件，保留 __init__.py 做统一重新导出以保证向后兼容。拆分的域文件: planning_schemas.py, certification_schemas.py, cost_schemas.py, project_schemas.py, change_schemas.py, safety_schemas.py, outsource_schemas.py。已在独立文件中的 outsource.py(198行) 和 safety.py(234行) 需整合到新体系或保持引用一致。48个API文件和26个Service文件通过 `from app.schemas import` 引用，需逐个验证导入不中断。已在独文件中的 manufacturability.py 保持不变。",
+      "dependencies": [],
+      "estimated_days": 2.5
+    },
+    {
+      "id": "T2",
+      "title": "核心路径集成测试 — 产品策划 / 成本核算 / 认证",
+      "domain_tags": ["testing", "integration", "product-plan", "cost", "certification"],
+      "risk_level": "high",
+      "estimated_complexity": 4,
+      "executor_bias": "测试",
+      "description": "覆盖3条核心业务路径，每条路径至少1个完整集成测试(CRUD+审批推进)。路径: (1) 产品策划: ProductPlan创建→5子表读写→审批推进;(2) 成本核算: Period创建→Sheet填写→审批;(3) 认证: 证书申请→GateRule校验→发证。使用 FastAPI TestClient(pytest 8.3.0) 和已有测试模式(test_api.py中已建立的 fixture setup)。测试文件位于 backend/tests/test_integration_p1.py。需建立共享测试基础设施(seed data factory / auth fixture)供T3复用。",
+      "dependencies": [],
+      "estimated_days": 2.0
+    },
+    {
+      "id": "T3",
+      "title": "核心路径集成测试 — 变更 / 安全 / 外协",
+      "domain_tags": ["testing", "integration", "change", "safety", "outsource"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "executor_bias": "测试",
+      "description": "覆盖剩余3条核心业务路径，复用T2搭建的测试基础设施。路径: (4) 变更: ECR创建→ECO执行→关闭;(5) 安全: 标准创建→检查项→整改闭环;(6) 外协: 厂商管理→订单创建→质检记录。测试文件位于 backend/tests/test_integration_p2.py。需验证外协模块 schemas 已独立于 outsource.py、安全模块 schemas 已独立于 safety.py 的导入路径。",
+      "dependencies": ["T2"],
+      "estimated_days": 2.0
+    },
+    {
+      "id": "T4",
+      "title": "API路由函数返回类型注解",
+      "domain_tags": ["typing", "fastapi", "pydantic"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "executor_bias": "后端",
+      "description": "为48个API路由文件(~536个路由函数)补充返回类型注解: 将 Response → 具体Pydantic模型(如 def create_plan() -> PlanOut)。当前已有14个API文件内嵌了BaseModel定义(如 cost_accounting.py, product_plan.py 等)，需要决定: (a) 将内嵌Schema外移到新拆分的schemas域文件, 或 (b) 对内嵌Schema保留并直接标注。优先覆盖: api/*.py 中 def → 当前无返回类型标注的函数。保持与T1拆分的schemas结构一致。目标: 14.5% → 60% 覆盖率。",
+      "dependencies": [],
+      "estimated_days": 2.0
+    },
+    {
+      "id": "T5",
+      "title": "Service层参数和返回类型注解补充",
+      "domain_tags": ["typing", "services", "sqlalchemy"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "executor_bias": "后端",
+      "description": "为26个Service文件(~86个方法)补充完整的参数类型和返回类型注解。重点覆盖: services/notification/ (consumer.py, events.py), services/product_plan_workflow.py, services/stage_gate_service.py, services/cert_gate_eval.py, services/cost_alert_service.py 等核心业务服务。SQLAlchemy ORM方法需标注 `Session` 参数类型和具体的模型返回类型。与T4的类型注解风格保持一致，使用 T4 确立的类型模式。",
+      "dependencies": ["T4"],
+      "estimated_days": 1.5
+    }
+  ]
+}

@@ -1,15 +1,37 @@
 """认证与用户管理 — Pydantic Schema"""
 
-from pydantic import BaseModel, Field
-from typing import Optional
+import re
+from typing import Annotated, Optional
 from datetime import datetime
+
+from pydantic import BaseModel, Field, AfterValidator
+
+
+def validate_password_strength(password: str) -> str:
+    """密码强度校验: ≥8位, 含大小写字母+数字+特殊字符"""
+    if len(password) < 8:
+        raise ValueError("密码至少需要8位")
+    if not re.search(r"[A-Z]", password):
+        raise ValueError("密码需要至少一个大写字母")
+    if not re.search(r"[a-z]", password):
+        raise ValueError("密码需要至少一个小写字母")
+    if not re.search(r"\d", password):
+        raise ValueError("密码需要至少一个数字")
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        raise ValueError("密码需要至少一个特殊字符")
+    return password
+
+
+# ═══════════════ 通用类型 ═══════════════
+
+PasswordStr = Annotated[str, AfterValidator(validate_password_strength)]
 
 
 # ═══════════════ 用户认证 ═══════════════
 
 class UserCreate(BaseModel):
     username: str = Field(min_length=2, max_length=50)
-    password: str = Field(min_length=6)
+    password: PasswordStr
     email: Optional[str] = None
     full_name: Optional[str] = None
     role: str = "engineer"
@@ -76,7 +98,7 @@ class AccountApplicationReview(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     old_password: str
-    new_password: str = Field(min_length=6)
+    new_password: PasswordStr
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -87,10 +109,10 @@ class ForgotPasswordRequest(BaseModel):
 class VerifyResetTokenRequest(BaseModel):
     """验证重置令牌并设置新密码"""
     token: str
-    new_password: str = Field(min_length=6)
+    new_password: PasswordStr
 
 
 class AdminResetPasswordRequest(BaseModel):
     """管理员直接重置用户密码"""
     user_id: int
-    new_password: str = Field(min_length=6)
+    new_password: PasswordStr

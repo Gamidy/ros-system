@@ -26,7 +26,7 @@ def list_cert_samples(
     cert_project_id: int = Query(0, description="按认证项目筛选"),
     prototype_id: int = Query(0, description="按原型筛选"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-samples")),
 ) -> list[CertificationSampleOut]:
     """认证样机列表"""
     q = db.query(CertificationSample)
@@ -42,7 +42,7 @@ def create_cert_sample(
     data: CertificationSampleCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-samples")),
 ) -> CertificationSampleOut:
     """创建认证样机（校验 prototype_id 必须存在）"""
     prototype = db.query(Prototype).filter(Prototype.id == data.prototype_id).first()
@@ -66,7 +66,7 @@ def update_cert_sample(
     cs_id: int,
     data: CertificationSampleUpdate,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-samples")),
 ) -> CertificationSampleOut:
     """更新认证样机"""
     sample = db.query(CertificationSample).filter(CertificationSample.id == cs_id).first()

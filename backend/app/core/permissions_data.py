@@ -65,6 +65,7 @@ ALL_MENUS = [
     "cert-samples",            # 认证样机
     "cert-executions",         # 认证执行
     "cert-results",            # 认证结果
+    "cert-change-impact",      # 变更影响分析
     "certificates",            # 证书管理
     "cert-gate-rules",         # 认证门禁规则
     # Phase 6 S3 — ECR/ECO 工程变更控制
@@ -104,7 +105,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'target-markets', 'test-executions',
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -122,7 +123,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'verification-requirements', 'test-executions',
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S4 成本核算
         'cost-accounting',
         # D1 BI分析看板
@@ -135,7 +136,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -150,7 +151,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
 
@@ -166,7 +167,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -181,7 +182,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -194,7 +195,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "products", "certifications",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # P0-7 外协管理
         'outsource-partners', 'outsource-orders', 'outsource-quality',
     ],
@@ -206,7 +207,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -223,7 +224,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
     ],
     "project_admin": [
         "dashboard", "projects", "alerts", "changes",
@@ -245,7 +246,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "verification-requirements", "test-executions",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -260,7 +261,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "verification-requirements", "test-executions",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
     ],
@@ -271,7 +272,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "verification-requirements", "test-executions",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -303,7 +304,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "certifications", "prototypes", "quality", "changes",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理

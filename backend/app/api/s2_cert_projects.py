@@ -25,7 +25,7 @@ def list_cert_projects(
     project_id: int = Query(0, description="按项目筛选"),
     status: str = Query("", description="按状态筛选"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-projects")),
 ) -> list[CertificationProjectOut]:
     """认证项目列表"""
     q = db.query(CertificationProject)
@@ -41,7 +41,7 @@ def create_cert_project(
     data: CertificationProjectCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-projects")),
 ) -> CertificationProjectOut:
     """创建认证项目"""
     if not data.code:
@@ -60,7 +60,7 @@ def create_cert_project(
 def get_cert_project(
     cp_id: int,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-projects")),
 ) -> CertificationProjectOut:
     """认证项目详情"""
     project = db.query(CertificationProject).filter(CertificationProject.id == cp_id).first()
@@ -74,7 +74,7 @@ def update_cert_project(
     cp_id: int,
     data: CertificationProjectUpdate,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-projects")),
 ) -> CertificationProjectOut:
     """更新认证项目"""
     project = db.query(CertificationProject).filter(CertificationProject.id == cp_id).first()
@@ -96,7 +96,7 @@ def update_cert_project_status(
     cp_id: int,
     data: dict,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-projects")),
 ) -> dict:
     """认证项目状态流转"""
     project = db.query(CertificationProject).filter(CertificationProject.id == cp_id).first()

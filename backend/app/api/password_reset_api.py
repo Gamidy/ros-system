@@ -72,7 +72,7 @@ def verify_reset_token(req: VerifyResetTokenRequest, db: Session = Depends(get_d
     # 查找对应用户
     user = db.query(User).filter(User.id == reset_token.user_id).first()
     if not user:
-        raise HTTPException(status_code=400, detail="用户不存在")
+        raise HTTPException(status_code=400, detail="无效的凭据")
 
     # 更新密码
     user.hashed_password = get_password_hash(req.new_password)

@@ -24,7 +24,7 @@ def list_gate_rules(
     gate_code: str = Query("", description="Gate编号"),
     status: str = Query("", description="状态"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("gate-rules")),
 ) -> list[GateRuleOut]:
     q = db.query(GateRule)
     if gate_code:
@@ -39,7 +39,7 @@ def create_gate_rule(
     data: GateRuleCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("gate-rules")),
 ) -> GateRuleOut:
     items_data = data.items
     rule_data = data.model_dump(exclude={"items"})
@@ -65,7 +65,7 @@ def create_gate_rule(
 def get_gate_rule(
     rid: int,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("gate-rules")),
 ) -> GateRuleOut:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
@@ -78,7 +78,7 @@ def update_gate_rule(
     rid: int,
     data: GateRuleCreate,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("gate-rules")),
 ) -> GateRuleOut:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
@@ -107,7 +107,7 @@ def update_gate_rule(
 def delete_gate_rule(
     rid: int,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("gate-rules")),
 ) -> dict:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
@@ -122,7 +122,7 @@ def patch_gate_rule_status(
     rid: int,
     status: str = Query(..., description="目标状态 active/inactive"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("gate-rules")),
 ) -> dict:
     rule = db.query(GateRule).filter(GateRule.id == rid).first()
     if not rule:
@@ -137,7 +137,7 @@ def patch_gate_rule_status(
 def evaluate_gate_rule(
     data: GateRuleEvalRequest,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("gate-rules")),
 ) -> dict:
     """评估Gate规则 — 使用 GateRuleEngine"""
     engine = GateRuleEngine(db)

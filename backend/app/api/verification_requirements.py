@@ -29,7 +29,7 @@ def list_verification_requirements(
     status: str = Query("", description="状态"),
     project_id: int = Query(None, description="项目ID"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("verification-requirements")),
 ) -> list:
     q = db.query(VerificationRequirement)
     if category:
@@ -48,7 +48,7 @@ def create_verification_requirement(
     data: VerificationRequirementCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("verification-requirements")),
 ) -> dict:
     vr = VerificationRequirement(
         **data.model_dump(),
@@ -66,7 +66,7 @@ def create_verification_requirement(
 def get_verification_requirement(
     rid: int,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("verification-requirements")),
 ) -> dict:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
@@ -79,7 +79,7 @@ def update_verification_requirement(
     rid: int,
     data: VerificationRequirementCreate,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("verification-requirements")),
 ) -> dict:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
@@ -97,7 +97,7 @@ def patch_vr_status(
     rid: int,
     status: str = Query(..., description="目标状态"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("verification-requirements")),
 ) -> dict:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
@@ -113,7 +113,7 @@ def generate_vr_from_plan(
     data: VerificationRequirementGenerateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(require_menu("tests")),
+    _=Depends(require_menu("verification-requirements")),
 ) -> dict:
     """从 ProductPlan 自动生成 VR（骨架实现）"""
     from app.models.product_plan import ProductPlan

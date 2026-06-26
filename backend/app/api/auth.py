@@ -133,7 +133,7 @@ def review_application(
     """管理员审核账号申请"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        raise HTTPException(status_code=404, detail="用户不存在或已禁用")
     if user.application_status != "pending":
         raise HTTPException(status_code=400, detail="该申请已被审核")
 

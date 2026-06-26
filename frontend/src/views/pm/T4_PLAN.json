@@ -1,0 +1,221 @@
+{
+  "meta": {
+    "task": "T4 — PMWorkspace.vue 组件与逻辑拆分",
+    "architect": "AI-A (高级编程架构师)",
+    "principles": ["KISS", "SRP", "YAGNI", "Boy Scout", "外科手术式修改"],
+    "current_file": "PMWorkspace.vue (672行, 21KB)",
+    "target": "主文件 ≤ 250行，新增5组件 + 1 composable + 1 utils",
+    "existing_imports": {
+      "sub_components": ["ProductInitiation (./proposal/ProductInitiation.vue)", "RoadmapPanel (./RoadmapPanel.vue)"],
+      "composables": ["useSubTableProgress", "useResponsive (in src/composables/)"],
+      "utils_dir": "src/utils/ (现有 websocket.ts, chart.ts)"
+    }
+  },
+
+  "phases": [
+    {
+      "phase": 1,
+      "name": "基础层 — 无依赖提取",
+      "description": "纯展示组件和工具函数，无外部依赖，风险最低",
+      "tasks": [
+        {
+          "id": "T4.1",
+          "title": "创建工具函数模块 pm-helpers.ts",
+          "files_affected": [
+            "NEW: src/utils/pm-helpers.ts"
+          ],
+          "risk_level": "低",
+          "estimated_complexity": "★☆☆☆☆ (1/5)",
+          "approach": "从 PMWorkspace.vue script (L284-325) 抽取6个纯函数到新文件 src/utils/pm-helpers.ts。\n\n导出的函数：\n- formatMoney(val: number | null | undefined): string\n- statusTagType(status: string): string — 含状态→tag类型映射表\n- statusLabel(status: string): string — 含状态→中文标签映射表\n- approvalTagType(status: string): string — 审批状态→tag类型\n- approvalLabel(status: string): string — 审批状态→中文标签\n- progressColor(progress: number): string — 进度百分比→颜色\n- projectStats(items: ProjectItem[]): { running, completed, overdue } — 原 computed `stats` 重构为纯函数\n\n迁移方式：直接复制代码，保持函数签名不变。添加 JSDoc 类型注释。\n\n理由：SRP — 把展示型逻辑从视图组件中分离。这些函数将被 StatsCards、MyProjectKanban、AnnualPlanList 等多个组件共享。\n\n验证：import 后在当前 PMWorkspace.vue 中替换内联函数引用，确保结果一致。"
+        },
+        {
+          "id": "T4.2",
+          "title": "提取 WorkspaceHeader 组件",
+          "files_affected": [
+            "NEW: src/views/pm/WorkspaceHeader.vue",
+            "MODIFY: PMWorkspace.vue（替换模板区域，移除对应样式）"
+          ],
+          "risk_level": "低",
+          "estimated_complexity": "★☆☆☆☆ (1/5)",
+          "approach": "抽取模板 L3-13 为独立组件 WorkspaceHeader.vue。\n\nProps：\n- `modelValue: 'workspace' | 'roadmap'`（当前视图模式）\n\nEmits：\n- `update:modelValue`（视图模式切换）\n\n组件内部保持：\n- `currentDate` computed (L233-237)\n- 当前日期显示\n- 标题「📋 产品经理工作台」\n\n迁移样式：workspace-header (L397-419)、header-right、header-date\n\n验证方式：组件独立渲染测试，切换 radio-group 时父组件接收到正确的 emit。\n\n注意：双向绑定 v-model 在父组件中改为 `<WorkspaceHeader v-model=\"viewMode\" />`"
+        },
+        {
+          "id": "T4.3",
+          "title": "提取 QuickLinks 快捷入口组件",
+          "files_affected": [
+            "NEW: src/views/pm/QuickLinks.vue",
+            "MODIFY: PMWorkspace.vue（替换模板区域，移除对应样式）"
+          ],
+          "risk_level": "低",
+          "estimated_complexity": "★☆☆☆☆ (1/5)",
+          "approach": "抽取模板 L56-82 为独立组件 QuickLinks.vue。\n\nProps：无（纯导航卡片，无需外部数据）\n\n组件内容：\n- 三个 el-card，分别导航到 /competitor-bench、/market-mgmt、/proposals\n- 每个卡片含图标、标题、描述、箭头\n\n迁移样式：quick-links 全部样式 (L625-671)\n\n验证方式：点击卡片路由跳转正常。\n\n理由：三张卡片是固定的路由入口，不具备任何状态或可变数据，是最纯粹的展示提取。"
+        }
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "数据层 — Composable 构建",
+      "description": "将 API 调用、状态管理和生命周期逻辑封装为可复用的 composable",
+      "tasks": [
+        {
+          "id": "T4.4",
+          "title": "创建 usePMWorkspace composable",
+          "files_affected": [
+            "NEW: src/composables/usePMWorkspace.ts",
+            "MODIFY: PMWorkspace.vue（替换 script 中的数据定义和 API 调用）",
+            "NEW: src/views/pm/types.ts（可选，提取接口定义）"
+          ],
+          "risk_level": "中",
+          "estimated_complexity": "★★★☆☆ (3/5)",
+          "approach": "从 PMWorkspace.vue script 抽取以下逻辑到 composable：\n\n**提取的状态 (L243-278)：**\n- `planningItems` ref<PlanningItem[]>\n- `myProjects` ref<ProjectItem[]>\n- `expandedProjectId` ref<number | null>\n- `draftId` ref<number | null>\n- `statsData` ref<StatsData | null>\n- `viewMode` ref<'workspace' | 'roadmap'>\n- `roadmapData` ref\n\n**提取的计算属性：**\n- 移除 `stats` computed — 改为从 pm-helpers 调用 `projectStats(myProjects.value)`\n\n**提取的 API 方法 (L339-375)：**\n- `fetchStatistics()` — GET /pm/statistics\n- `fetchRoadmap()` — GET /pm/roadmap\n- `onViewModeChange(mode)` — 懒加载路线图\n- `fetchWorkspaceData()` — GET /pm/workspace\n\n**提取的生命周期 (L381-388)：**\n- `onMounted` 入口封装为 composable 的 `init()` 方法\n\n**接口定义 (L192-227)：**\n- 建议提取到 `src/views/pm/types.ts` 供组件和 composable 共享引用\n\n**返回接口：**\n```ts\nreturn {\n  // 状态\n  planningItems, myProjects, statsData, roadmapData,\n  viewMode, expandedProjectId, draftId,\n  // 方法\n  fetchWorkspaceData, fetchStatistics, toggleExpand,\n  onViewModeChange, init\n}\n```\n\n验证方式：在父组件中调用 `const { ... } = usePMWorkspace()` 后，模板绑定的数据行为和之前完全一致。\n\n风险点：需确保所有 ref 引用的初始化顺序与当前一致；`toggleExpand` 不再使用内联函数调用链。"
+        }
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "展示组件层 — 有依赖提取",
+      "description": "依赖 pm-helpers 和 usePMWorkspace composable 的组件",
+      "tasks": [
+        {
+          "id": "T4.5",
+          "title": "提取 StatsCards 统计卡片组件",
+          "files_affected": [
+            "NEW: src/views/pm/StatsCards.vue",
+            "MODIFY: PMWorkspace.vue（替换模板区域，移除对应样式）"
+          ],
+          "risk_level": "中低",
+          "estimated_complexity": "★★☆☆☆ (2/5)",
+          "approach": "抽取模板 L22-54 及对应样式 L422-446 到 StatsCards.vue。\n\nProps：\n```ts\ninterface StatsData {\n  annual_plan_count: number\n  total_projects: number\n  total_budget: number\n  completion_rate: number\n  overdue_rate: number\n}\n```\n\nProps: `statsData: StatsData | null`\n\n依赖：从 pm-helpers 导入 `formatMoney`\n\n保留条件渲染 `v-if=\"statsData\"`\n\n内部逻辑：\n- completion_rate 颜色判定（>=60 绿/黄）\n- overdue_rate 颜色判定（>0 红/绿）\n\n迁移样式：\n- stats-cards (L422-432)\n- stat-card (L425-446)\n- stat-card-num, stat-card-label\n\n注意：el-col 的 span 属性保持原样（4,5,5,5,5），但需在父组件中保留 el-row 包裹或由组件自行包裹。建议组件内包裹 `<el-row :gutter=\"12\" class=\"stats-cards\">`。\n\n验证方式：传入模拟 statsData 渲染5张卡片，数值格式化正确，颜色按规则显示。"
+        },
+        {
+          "id": "T4.6",
+          "title": "提取 AnnualPlanList 年度规划列表组件",
+          "files_affected": [
+            "NEW: src/views/pm/AnnualPlanList.vue",
+            "MODIFY: PMWorkspace.vue（替换模板区域，移除对应样式）"
+          ],
+          "risk_level": "中低",
+          "estimated_complexity": "★★☆☆☆ (2/5)",
+          "approach": "抽取模板 L86-113（col-left 及其内容）及对应样式 L494-534 到 AnnualPlanList.vue。\n\nProps：\n```ts\ninterface PlanningItem {\n  id: number\n  name: string\n  year: string\n  description?: string\n  project_count?: number\n}\n```\n\nProps: `items: PlanningItem[]`\n\n事件：无（导航由组件内 $router.push 处理）\n\n组件内部：\n- el-card 包裹，含 header「📋 年度产品规划」+「查看全部」按钮\n- 空状态 el-empty（items.length === 0）\n- 每个 item 可点击跳转 `/product-plans/{id}`\n- 显示 year tag、description、关联项目数\n\n迁移样式：\n- .col-card 通用样式共享 — 建议在 AnnualPlanList 中自带 .annual-plan-card 样式\n- .plan-item、.plan-item-name、.plan-item-meta、.plan-item-desc、.plan-item-count\n- .card-header、.empty-state（如果其他组件也用则保留在全局或各自带一份）\n\n验证方式：传入 items=[] 显示空状态；传入模拟数据渲染列表。"
+        },
+        {
+          "id": "T4.7",
+          "title": "提取 MyProjectKanban 我的项目看板组件",
+          "files_affected": [
+            "NEW: src/views/pm/MyProjectKanban.vue",
+            "MODIFY: PMWorkspace.vue（替换模板区域，移除对应样式）"
+          ],
+          "risk_level": "中高",
+          "estimated_complexity": "★★★★☆ (4/5)",
+          "approach": "抽取模板 L120-177（col-right 及其内容）、逻辑 toggleExpand (L331-333)、状态 expandedProjectId (L258-259) 以及对应样式 L536-623 到 MyProjectKanban.vue。\n\n**这是最复杂的组件提取**，原因：\n- 包含展开/折叠交互状态 (expandedProjectId)\n- 包含内联 stats 计算（running/completed/overdue 计数）\n- 项目卡片有多层条件渲染（approval_status、budget、market_policy 等）\n- 项目卡片展开区域含8个 detail-row\n\nProps：\n```ts\ninterface ProjectItem {\n  id: number; name: string; status: string; approval_status?: string\n  progress: number; budget?: number; market_policy?: string\n  project_class?: string; scene?: string; linked_product?: string\n  target_end_date?: string; background_basis?: string\n}\n```\n\nProps: `items: ProjectItem[]`\n\n组件内部状态：`expandedProjectId` ref（局部管理，无需提升到父组件）\n\n依赖：从 pm-helpers 导入 formatMoney、statusTagType、statusLabel、approvalTagType、approvalLabel、progressColor\n\n内部计算：`stats` 使用 pm-helpers 的 `projectStats(items)` 或直接在组件内 computed\n\n迁移样式：\n- .stats-row、.stat-item、.stat-num、.stat-label (L536-560)\n- .project-card、.project-card-header、.project-card-tags、.project-name (L562-598)\n- .project-card-meta (L600-605)\n- .project-detail、.detail-row (L607-623)\n\n**设计决策：**\n- 展开状态用组件局部 ref 而非 emit 到父组件 — 因为该状态仅用于当前组件的 UI 交互，符合 SRP\n- 所有 utility 函数从 pm-helpers 导入 — 不重复定义\n- el-card 自包含 header「📊 我的项目」\n\n验证方式：\n1. items=[] → 显示空状态\n2. 传入3个不同状态项目 → stats 行显示正确计数\n3. 点击项目卡片 → 展开/折叠详情区域\n4. 进度条颜色根据百分比正确变化"
+        }
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "集成层 — 重构 PMWorkspace.vue 主文件",
+      "description": "用所有新组件和 composable 替换原始代码，最终清理",
+      "tasks": [
+        {
+          "id": "T4.8",
+          "title": "重构 PMWorkspace.vue 为编排式主组件",
+          "files_affected": [
+            "MODIFY: PMWorkspace.vue（大幅缩减，保留容器/编排逻辑）",
+            "MODIFY: 确保无 dead code / 无用 import"
+          ],
+          "risk_level": "高",
+          "estimated_complexity": "★★★★☆ (4/5)",
+          "approach": "将 PMWorkspace.vue 从672行缩减为 ~220-250行的容器组件。\n\n**模板结构（重构后 ~60行）：**\n```html\n<template>\n  <div class=\"pm-workspace\">\n    <WorkspaceHeader v-model=\"viewMode\" />\n\n    <template v-if=\"viewMode === 'roadmap'\">\n      <RoadmapPanel :items=\"roadmapData?.roadmap_items || []\" />\n    </template>\n\n    <template v-if=\"viewMode === 'workspace'\">\n      <StatsCards v-if=\"statsData\" :stats-data=\"statsData\" />\n      <QuickLinks />\n      <div class=\"workspace-body\">\n        <div class=\"col-left\">\n          <AnnualPlanList :items=\"planningItems\" />\n        </div>\n        <div class=\"col-middle\">\n          <ProductInitiation :draft-id=\"draftId\" @open=\"$router.push('/proposals')\" />\n        </div>\n        <div class=\"col-right\">\n          <MyProjectKanban :items=\"myProjects\" />\n        </div>\n      </div>\n    </template>\n  </div>\n</template>\n```\n\n**Script（重构后 ~40行）：**\n```ts\n<script setup lang=\"ts\">\nimport { ArrowRight } from '@element-plus/icons-vue'  // 仅在 QuickLinks 使用？\\n// 实际上 ArrowRight 在 QuickLinks 内部导入，这里可移除\nimport WorkspaceHeader from './WorkspaceHeader.vue'\nimport StatsCards from './StatsCards.vue'\nimport QuickLinks from './QuickLinks.vue'\nimport AnnualPlanList from './AnnualPlanList.vue'\nimport MyProjectKanban from './MyProjectKanban.vue'\nimport ProductInitiation from './proposal/ProductInitiation.vue'\nimport RoadmapPanel from './RoadmapPanel.vue'\nimport { usePMWorkspace } from '../../composables/usePMWorkspace'\n\nconst {\n  planningItems, myProjects, statsData, roadmapData,\n  viewMode, draftId, onViewModeChange\n} = usePMWorkspace()\n</script>\n```\n\n**样式（重构后 ~120行，仅保留容器布局）：**\n- 只保留：\n  - .pm-workspace (L392-395)\n  - .workspace-body + 三栏 flex (L449-463)\n  - .col-card 基础样式 (L465-474)\n  - 移动端响应式 (L477-482)\n  - .card-header (L484-488)\n  - .empty-state (L490-492)\n- 所有子组件专属样式迁移到对应组件内\n\n**验证方式：**\n1. `npm run dev` 无编译错误\n2. 工作台视图 5个区域全部正常渲染\n3. 路线图视图正常渲染\n4. 数据加载正常（onMounted 触发 fetch）\n5. 交互正常（viewMode 切换、项目卡片展开/折叠、路由跳转）\n6. 移动端响应式布局不变\n\n**风险与缓解：**\n- 风险：`ArrowRight` 图标原在顶层 import，QuickLinks 提取后需在 QuickLinks.vue 内重新 import\n  缓解：编辑器自动检测未使用 import，或 review 时检查\n- 风险：样式 scope 丢失\n  缓解：所有子组件使用 `<style scoped>` 或保持原 class 命名不冲突\n- 风险：接口定义重复\n  缓解：提取到 types.ts 后统一导入"
+        },
+        {
+          "id": "T4.9",
+          "title": "创建共享类型文件 types.ts",
+          "files_affected": [
+            "NEW: src/views/pm/types.ts",
+            "MODIFY: usePMWorkspace composable（引用 types.ts）",
+            "MODIFY: AnnualPlanList.vue（引用 types.ts）",
+            "MODIFY: MyProjectKanban.vue（引用 types.ts）"
+          ],
+          "risk_level": "中",
+          "estimated_complexity": "★★☆☆☆ (2/5)",
+          "approach": "从 PMWorkspace.vue script (L192-227) 提取接口定义到独立文件 src/views/pm/types.ts。\n\n导出内容：\n```ts\nexport interface PlanningItem {\n  id: number; name: string; year: string; description: string\n  doc_ref: string; project_count: number; projects?: ProjectSummary[]\n}\nexport interface ProjectSummary {\n  id: number; name: string; status: string; approval_status?: string\n}\nexport interface ProjectItem {\n  id: number; name: string; status: string; project_class: string\n  progress: number; budget?: number; market_policy?: string\n  scene?: string; linked_product?: string; target_end_date?: string\n  background_basis?: string; [key: string]: any  // 保留扩展性\n}\nexport interface StatsData {\n  annual_plan_count: number\n  total_projects: number\n  total_budget: number\n  completion_rate: number\n  overdue_rate: number\n  running_count: number\n  overdue_count: number\n  completed_count: number\n}\n```\n\n验证方式：所有 import 该文件的地方编译通过，类型推断正确。"
+        }
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "验证与清理",
+      "description": "最终检查、清理 dead code、运行测试",
+      "tasks": [
+        {
+          "id": "T4.10",
+          "title": "最终检查与清理",
+          "files_affected": [
+            "REVIEW: PMWorkspace.vue\nREVIEW: 所有新增的5个组件 + composable + utils + types"
+          ],
+          "risk_level": "低",
+          "estimated_complexity": "★☆☆☆☆ (1/5)",
+          "approach": "1. **删除未使用代码**：\n   - PMWorkspace.vue 中不再需要的 import（ArrowRight, api, ref/computed/onMounted — composable 内已处理）\n   - 已迁移走的样式\n   - 已迁移走的接口定义\n\n2. **Boy Scout 检查清单**：\n   - 每个新组件有明确的 defineProps/defineEmits 类型\n   - 无 any 类型（ProjectItem 的扩展字段除外）\n   - 无未使用的 import\n   - 无重复样式（迁移后源文件已删除）\n   - 所有 template 中的 class 在新组件中存在对应 style\n\n3. **运行验证**：\n   ```bash\n   cd /Users/gamidy/ros-source/ros-system/frontend\n   npx vue-tsc --noEmit 2>&1  # 类型检查\n   npm run build 2>&1          # 构建验证\n   ```\n\n4. **最终行数统计**：\n   - PMWorkspace.vue: ~220-250行 ✓（目标 ≤ 400）\n   - 每个组件: 30-110行\n   - composable: ~80行\n   - utils: ~60行\n   - types: ~50行\n   - 总计新增 ~500行，但职责分散到8个文件，各文件 SRP 清晰"
+        }
+      ]
+    }
+  ],
+
+  "summary": {
+    "total_new_files": 7,
+    "files_created": [
+      "src/views/pm/WorkspaceHeader.vue",
+      "src/views/pm/QuickLinks.vue",
+      "src/views/pm/StatsCards.vue",
+      "src/views/pm/AnnualPlanList.vue",
+      "src/views/pm/MyProjectKanban.vue",
+      "src/composables/usePMWorkspace.ts",
+      "src/utils/pm-helpers.ts",
+      "src/views/pm/types.ts"
+    ],
+    "files_modified": ["PMWorkspace.vue"],
+    "file_sizes_after": {
+      "PMWorkspace.vue": "~250行 (↓63%)",
+      "WorkspaceHeader.vue": "~40行",
+      "StatsCards.vue": "~55行",
+      "QuickLinks.vue": "~50行",
+      "AnnualPlanList.vue": "~65行",
+      "MyProjectKanban.vue": "~110行",
+      "usePMWorkspace.ts": "~100行",
+      "pm-helpers.ts": "~60行",
+      "types.ts": "~50行"
+    },
+    "key_benefits": [
+      "SRP: 每个组件只有一个职责",
+      "可复用性: pm-helpers 函数可被全项目共享",
+      "可测试性: 纯函数和 composable 可单独单元测试",
+      "可维护性: 单个文件最大110行，阅读和理解成本降低",
+      "YAGNI: 不创造多余的抽象层，每个提取都有明确的使用场景",
+      "Boy Scout: 代码比之前更干净、更有组织"
+    ],
+    "execution_order": [
+      "1. Phase 1 — 基础层（T4.1→T4.2→T4.3）：pm-helpers.ts + WorkspaceHeader + QuickLinks",
+      "2. Phase 2 — 数据层（T4.4）：usePMWorkspace composable",
+      "3. Phase 3 — 展示组件层（T4.5→T4.6→T4.7）：StatsCards → AnnualPlanList → MyProjectKanban",
+      "4. Phase 4 — 集成层（T4.8→T4.9）：重构主文件 + types.ts",
+      "5. Phase 5 — 验证与清理（T4.10）"
+    ],
+    "dependency_graph": {
+      "T4.1_pm_helpers": [],
+      "T4.2_WorkspaceHeader": [],
+      "T4.3_QuickLinks": [],
+      "T4.4_usePMWorkspace": ["T4.9_types"],
+      "T4.5_StatsCards": ["T4.1_pm_helpers", "T4.9_types"],
+      "T4.6_AnnualPlanList": ["T4.9_types"],
+      "T4.7_MyProjectKanban": ["T4.1_pm_helpers", "T4.9_types"],
+      "T4.8_RefactorMain": ["T4.2", "T4.3", "T4.4", "T4.5", "T4.6", "T4.7"],
+      "T4.9_types": [],
+      "T4.10_Cleanup": ["T4.8"]
+    },
+    "risk_assessment": {
+      "highest_risk": "T4.8（主文件重构）— 集成所有组件，需确保 all imports 正确、props 传递无误",
+      "most_complex": "T4.7（MyProjectKanban）— 交互状态 + 多层条件渲染 + 5个 utility 依赖",
+      "safest_first": "T4.1, T4.2, T4.3 — 纯提取，无副作用，可随时合并"
+    }
+  }
+}

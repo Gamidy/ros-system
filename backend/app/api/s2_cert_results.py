@@ -19,7 +19,7 @@ def list_cert_results(
     cert_execution_id: int = Query(0, description="按认证执行筛选"),
     status: str = Query("", description="按状态筛选"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-results")),
 ) -> list[CertificationResultOut]:
     """认证结果列表"""
     q = db.query(CertificationResult)
@@ -35,7 +35,7 @@ def create_cert_result(
     data: CertificationResultCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-results")),
 ) -> CertificationResultOut:
     """创建认证结果"""
     result = CertificationResult(
@@ -53,7 +53,7 @@ def update_cert_result(
     cr_id: int,
     data: CertificationResultUpdate,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-results")),
 ) -> CertificationResultOut:
     """更新认证结果"""
     result = db.query(CertificationResult).filter(CertificationResult.id == cr_id).first()
@@ -71,7 +71,7 @@ def update_cert_result_status(
     cr_id: int,
     data: dict,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-results")),
 ) -> dict:
     """认证结果状态流转"""
     result = db.query(CertificationResult).filter(CertificationResult.id == cr_id).first()

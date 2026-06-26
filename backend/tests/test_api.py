@@ -32,19 +32,19 @@ class TestAuth:
     """第2轮: 认证测试"""
     def test_register_and_login(self):
         r = client.post("/api/auth/register", json={
-            "username": "testuser", "password": "test123", "role": "engineer"
+            "username": "testuser", "password": "Test1234!", "role": "engineer"
         })
         assert r.status_code == 200
         assert r.json()["username"] == "testuser"
         r = client.post("/api/auth/login", json={
-            "username": "testuser", "password": "test123"
+            "username": "testuser", "password": "Test1234!"
         })
         assert r.status_code == 200
         assert "access_token" in r.json()
 
     def test_login_wrong_password(self):
         client.post("/api/auth/register", json={
-            "username": "testuser", "password": "test123"
+            "username": "testuser", "password": "Test1234!"
         })
         r = client.post("/api/auth/login", json={
             "username": "testuser", "password": "wrong"
@@ -53,10 +53,10 @@ class TestAuth:
 
     def test_get_me(self):
         client.post("/api/auth/register", json={
-            "username": "testuser", "password": "test123"
+            "username": "testuser", "password": "Test1234!"
         })
         r = client.post("/api/auth/login", json={
-            "username": "testuser", "password": "test123"
+            "username": "testuser", "password": "Test1234!"
         })
         token = r.json()["access_token"]
         r = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
@@ -65,10 +65,10 @@ class TestAuth:
 
     def test_duplicate_username(self):
         client.post("/api/auth/register", json={
-            "username": "dupuser", "password": "test123"
+            "username": "dupuser", "password": "Test1234!"
         })
         r = client.post("/api/auth/register", json={
-            "username": "dupuser", "password": "test123"
+            "username": "dupuser", "password": "Test1234!"
         })
         assert r.status_code == 400
 
@@ -78,10 +78,10 @@ class TestProducts:
 
     def setup_method(self):
         client.post("/api/auth/register", json={
-            "username": "produser", "password": "test123", "role": "admin"
+            "username": "produser", "password": "Test1234!", "role": "admin"
         })
         r = client.post("/api/auth/login", json={
-            "username": "produser", "password": "test123"
+            "username": "produser", "password": "Test1234!"
         })
         self.token = r.json()["access_token"]
 
@@ -155,10 +155,10 @@ class TestBOM:
 
     def setup_method(self):
         client.post("/api/auth/register", json={
-            "username": "bomuser", "password": "test123", "role": "admin"
+            "username": "bomuser", "password": "Test1234!", "role": "admin"
         })
         r = client.post("/api/auth/login", json={
-            "username": "bomuser", "password": "test123"
+            "username": "bomuser", "password": "Test1234!"
         })
         self.token = r.json()["access_token"]
 
@@ -194,10 +194,10 @@ class TestProjects:
 
     def setup_method(self):
         client.post("/api/auth/register", json={
-            "username": "projuser", "password": "test123", "role": "manager"
+            "username": "projuser", "password": "Test1234!", "role": "manager"
         })
         r = client.post("/api/auth/login", json={
-            "username": "projuser", "password": "test123"
+            "username": "projuser", "password": "Test1234!"
         })
         self.token = r.json()["access_token"]
 
@@ -242,10 +242,10 @@ class TestTests:
 
     def setup_method(self):
         client.post("/api/auth/register", json={
-            "username": "testeng", "password": "test123", "role": "engineer"
+            "username": "testeng", "password": "Test1234!", "role": "engineer"
         })
         r = client.post("/api/auth/login", json={
-            "username": "testeng", "password": "test123"
+            "username": "testeng", "password": "Test1234!"
         })
         self.token = r.json()["access_token"]
 

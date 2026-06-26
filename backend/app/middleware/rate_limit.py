@@ -12,8 +12,8 @@ from app.core.config import settings
 EXEMPT_PATHS = {"/health", "/api/auth/login"}
 
 # 限流配置
-IP_LIMIT = 999999    # 取消限制
-USER_LIMIT = 999999  # 取消限制
+IP_LIMIT = 100       # 100 req/min per IP
+USER_LIMIT = 200     # 200 req/min per user
 WINDOW_SECONDS = 60  # 滑动窗口 60 秒
 
 
@@ -75,7 +75,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not self._check_and_record(ip, self._ip_requests, IP_LIMIT, "IP"):
             return JSONResponse(
                 status_code=429,
-                content={"detail": "请求过于频繁，请稍后再试 (IP 限制 200次/分钟)"},
+                content={"detail": f"请求过于频繁，请稍后再试 (IP 限制 {IP_LIMIT}次/分钟)"},
             )
 
         # 用户维度限流（仅限已认证用户）

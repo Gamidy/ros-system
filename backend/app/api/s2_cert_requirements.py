@@ -20,7 +20,7 @@ def list_cert_requirements(
     project_id: int = Query(0, description="按项目筛选"),
     cert_type: str = Query("", description="按认证类型筛选"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-requirements")),
 ) -> list[CertificationRequirementOut]:
     """认证需求列表（只读）"""
     q = db.query(CertificationRequirement)
@@ -35,7 +35,7 @@ def list_cert_requirements(
 def get_cert_requirement(
     req_id: int,
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-requirements")),
 ) -> CertificationRequirementOut:
     """认证需求详情"""
     req = db.query(CertificationRequirement).filter(CertificationRequirement.id == req_id).first()
@@ -48,7 +48,7 @@ def get_cert_requirement(
 def generate_cert_requirements(
     project_id: int = Query(..., description="项目ID"),
     db: Session = Depends(get_db),
-    _=Depends(require_menu("certifications")),
+    _=Depends(require_menu("cert-requirements")),
 ) -> dict:
     """触发自动生成认证需求（调用 CertAutoGenService）"""
     service = CertAutoGenService(db)

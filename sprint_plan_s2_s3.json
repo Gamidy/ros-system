@@ -1,0 +1,148 @@
+{
+  "sprint2": {
+    "codebase_audit": {
+      "version_id_exists": false,
+      "version_query_param_exists": false,
+      "parent_updated_at_trigger": false,
+      "tab_version_badge": false,
+      "optimistic_locking": false
+    },
+    "tasks": [
+      {
+        "id": "s2t1",
+        "title": "为 4 个子表模型添加 version_id 字段",
+        "files_affected": [
+          "backend/app/models/product_plan_subs.py"
+        ],
+        "risk": "low",
+        "estimated_lines": 8,
+        "details": "在每个子表类中新增 version_id = Column(Integer, default=1, nullable=False, comment='乐观锁版本号')。同时修复子表端缺失的 back_populates（ProductPlan 侧已声明 back_populates='product_plan'，但子表未配对）。"
+      },
+      {
+        "id": "s2t2",
+        "title": "Pydantic Schema 增加 version_id 输出字段",
+        "files_affected": [
+          "backend/app/api/product_plan_subs.py"
+        ],
+        "risk": "low",
+        "estimated_lines": 6,
+        "details": "在 InitiationOut, MarketOut, TechSpecOut, TeamOut 四个 Schema 中各添加 version_id: int = 1。输入 Schema 不需要 version_id，由服务端自动管理。"
+      },
+      {
+        "id": "s2t3",
+        "title": "Alembic 迁移脚本 - 4 表加 version_id 列",
+        "files_affected": [
+          "backend/alembic/versions/20260627_add_version_id_to_plan_subs.py"
+        ],
+        "risk": "low",
+        "estimated_lines": 24,
+        "details": "用 batch_alter_table（SQLite兼容）为 product_plan_initiations, product_plan_markets, product_plan_tech_specs, product_plan_teams 四表添加 version_id 列，Integer, server_default=1, nullable=False。"
+      },
+      {
+        "id": "s2t4",
+        "title": "子表更新时 version_id +1 + 乐观锁校验 + 触发 parent.updated_at",
+        "files_affected": [
+          "backend/app/api/product_plan_subs.py"
+        ],
+        "risk": "medium",
+        "estimated_lines": 55,
+        "details": "改造 7 个写端点：(1) PUT initiation/market/tech-spec 和 POST/PUT/DELETE team — 用 WHERE version_id=:expected 条件 UPDATE，rowcount=0 则抛 409；(2) 所有写操作后调用 touch_parent_updated_at(db, plan_id) 设置 plan.updated_at = func.now()。避免 SELECT FOR UPDATE（SQLite 支持不好，多实例死锁风险）。"
+      },
+      {
+        "id": "s2t5",
+        "title": "GET 端点支持 ?version=N 查询参数",
+        "files_affected": [
+          "backend/app/api/product_plan_subs.py"
+        ],
+        "risk": "low",
+        "estimated_lines": 18,
+        "details": "在 GET initiation/market/tech-spec/team 端点添加可选参数 version: Optional[int] = Query(None)。指定时追加 version_id == version 过滤条件。不指定时返回当前最新版本，保持向后兼容。"
+      },
+      {
+        "id": "s2t6",
+        "title": "前端 Tab 标题旁显示版本标签 + API 支持 version 参数",
+        "files_affected": [
+          "frontend/src/api/productPlan.ts",
+          "frontend/src/composables/useSubTableProgress.ts",
+          "frontend/src/views/pm/ProductPlanDetail.vue"
+        ],
+        "risk": "medium",
+        "estimated_lines": 45,
+        "details": "(1) productPlan.ts: 子表 GET 函数增加可选 params 参数透传 version；(2) useSubTableProgress.ts: fetch 时获取 version_id 并暴露 subTableVersions；(3) ProductPlanDetail.vue: el-tab-pane label 插槽追加 el-tag 显示 v{version}。"
+      }
+    ],
+    "total_estimated": "40-75 min",
+    "dependencies": "s2t1-s2t2-s2t3 顺序，s2t4 需 s2t1，s2t5 与 s2t4 可并行，s2t6 在 s2t1/s2t2 之后",
+    "db_migration_required": true,
+    "frontend_changes_required": true
+  },
+  "sprint3": {
+    "codebase_audit": {
+      "workflow_transition_specs_table_exists": false,
+      "PLAN_STAGE_TRANSITIONS_hardcoded": true,
+      "STAGE_REQUIREMENTS_hardcoded": true,
+      "_check_stage_requirements_hardcoded": true,
+      "STAGE_LABELS_hardcoded": true,
+      "STAGE_TO_EVENT_hardcoded": true,
+      "advance_stage_db_driven": false
+    },
+    "tasks": [
+      {
+        "id": "s3t1",
+        "title": "创建 workflow_transition_specs 模型",
+        "files_affected": [
+          "backend/app/models/product_plan_workflow_spec.py (new)",
+          "backend/app/models/__init__.py"
+        ],
+        "risk": "low",
+        "estimated_lines": 40,
+        "details": "新建模型文件，定义表 workflow_transition_specs：id PK, from_stage String(30), to_stage String(30), seq Integer, required_condition Text (JSON), required_fields Text (JSON), auto_advance Boolean, roles_allowed Text (JSON), is_active Boolean, created_at DateTime。from_stage+to_stage+is_active 联合唯一索引。"
+      },
+      {
+        "id": "s3t2",
+        "title": "Alembic 迁移 - 建表 + 种子数据",
+        "files_affected": [
+          "backend/alembic/versions/20260627_add_workflow_transition_specs.py"
+        ],
+        "risk": "medium",
+        "estimated_lines": 70,
+        "details": "建表后用 op.bulk_insert 注入 7 条种子转换记录，完整复刻当前硬编码行为：DRAFT->COMPETITOR (req:name), COMPETITOR->DEFINITION (req:competitor_id,series,market + initiation_exists), DEFINITION->COSTING (req:cost_target + initiation_complete), COSTING->TECH_INPUT (req:performance_target + costs_not_empty), TECH_INPUT->PROJECT_INIT (req:tech_spec_exists), PROJECT_INIT->APPROVED (req:name + market_and_team_complete), APPROVED->RELEASED (无条件)。"
+      },
+      {
+        "id": "s3t3",
+        "title": "重构 workflow_advance() - 从 DB 读取转换规则",
+        "files_affected": [
+          "backend/app/services/product_plan_workflow.py"
+        ],
+        "risk": "high",
+        "estimated_lines": 140,
+        "details": "STEP1: 新增 _load_transition_specs(db, from_stage) 查询 DB，空结果时回退 PLAN_STAGE_TRANSITIONS 常量。STEP2: advance_stage 改为 DB query + JSON解析 required_fields/required_condition。STEP3: get_next_action 同样改为 DB 驱动。保留 STAGE_LABELS, STAGE_TO_EVENT, _generate_project_from_plan 不变。回退常量保证零停机迁移。"
+      },
+      {
+        "id": "s3t4",
+        "title": "清理遗留常量 + 单元测试",
+        "files_affected": [
+          "backend/app/services/product_plan_workflow.py"
+        ],
+        "risk": "low",
+        "estimated_lines": 30,
+        "details": "DB 规则稳定后移除 PLAN_STAGE_TRANSITIONS 和 STAGE_REQUIREMENTS 回退常量。添加 3 个 pytest 用例验证 DB 规则与硬编码行为一致性、空表回退、subtable condition 解析。STAGE_LABELS 和 STAGE_TO_EVENT 保留不变。"
+      }
+    ],
+    "total_estimated": "100-165 min",
+    "dependencies": "s3t1-s3t2-s3t3 严格顺序，s3t4 可在 s3t3 稳定后择机执行",
+    "db_migration_required": true,
+    "frontend_changes_required": false,
+    "api_contract_preserved": true
+  },
+  "execution_order": "sequential_with_parallelism",
+  "execution_strategy": "Sprint2 和 Sprint3 后端可并行开发，但各自内部有严格依赖。Sprint2 前端 (s2t6) 可与后端并行。两个 Sprint 的迁移脚本互不冲突可同时创建。建议先完成 Sprint2 s2t1-s2t3 再进入 Sprint3，或分两人并行推进。",
+  "risk_assessment": "overall medium. Sprint2 主要风险在乐观锁并发细节和前端版本闪烁，均为低严重度。Sprint3 核心重构风险较高（DB 规则与硬编码行为一致性），通过种子数据逐项映射+回退常量兜底+全流程回归测试三重保障。Team 1:N 表版本语义通过独立行 version_id 处理。API 接口不变保证前端零改动。",
+  "codebase_findings": {
+    "current_head": "20260626_add_product_plan_project_links",
+    "frontend_source": "Vue3+TS 源码在 frontend/src/，已编译 dist 在 frontend/dist/",
+    "sub_table_models": "4 个模型均无 version_id，子表端缺 back_populates（ProductPlan 侧已有）",
+    "workflow": "完全硬编码于 product_plan_workflow.py，7 步转换、字段校验、子表校验均在 dict 中",
+    "cost_table": "Cost 模型（1:N 独立表）建议不纳入版本化（属于不同子域）"
+  }
+}
