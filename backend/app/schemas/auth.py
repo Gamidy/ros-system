@@ -102,8 +102,8 @@ class ChangePasswordRequest(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    """忘记密码 — 通过用户名发起重置"""
-    username: str
+    """忘记密码 — 通过邮箱发起重置"""
+    email: str
 
 
 class VerifyResetTokenRequest(BaseModel):

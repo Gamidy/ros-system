@@ -7,21 +7,21 @@
           <div class="brand-logo">
             <span class="brand-mark">R</span>
           </div>
-          <h1 class="brand-title">找回密码</h1>
-          <p class="brand-subtitle">通过注册邮箱重置您的密码</p>
+          <h1 class="brand-title">重置密码</h1>
+          <p class="brand-subtitle">设置您的新密码</p>
         </div>
         <div class="login-features">
           <div class="feature-item">
             <div class="feature-dot" />
-            <span>输入您注册时使用的邮箱</span>
+            <span>密码长度至少 6 位</span>
           </div>
           <div class="feature-item">
             <div class="feature-dot" />
-            <span>查收重置邮件</span>
+            <span>建议包含字母和数字</span>
           </div>
           <div class="feature-item">
             <div class="feature-dot" />
-            <span>点击链接设置新密码</span>
+            <span>重置后使用新密码登录</span>
           </div>
         </div>
       </div>
@@ -29,64 +29,90 @@
       <!-- Right Side - Form -->
       <div class="login-right">
         <div class="login-card">
-          <h2 class="login-title">忘记密码</h2>
-          <p class="login-desc" v-if="!sent">请输入您注册时绑定的邮箱地址</p>
-          <p class="login-desc" v-else style="color: #67c23a">✅ 重置链接已发送，请检查邮箱</p>
+          <template v-if="!success && !error">
+            <h2 class="login-title">设置新密码</h2>
+            <p class="login-desc">请输入您的新密码</p>
 
-          <el-form
-            v-if="!sent"
-            ref="formRef"
-            :model="form"
-            :rules="rules"
-            label-width="0"
-            @keyup.enter="handleSubmit"
-            class="login-form"
-          >
-            <el-form-item prop="email">
-              <div class="input-label">邮箱地址</div>
-              <el-input
-                v-model="form.email"
-                placeholder="请输入注册邮箱"
-                size="large"
-                class="claude-input"
-              />
-            </el-form-item>
-
-            <el-form-item>
-              <button
-                class="login-btn"
-                :class="{ loading }"
-                :disabled="loading"
-                @click="handleSubmit"
-              >
-                <span v-if="!loading">发送重置链接</span>
-                <span v-else class="btn-loading">
-                  <span class="loading-dot" />
-                  <span class="loading-dot" />
-                  <span class="loading-dot" />
-                </span>
-              </button>
-            </el-form-item>
-          </el-form>
-
-          <!-- 已发送状态 -->
-          <div v-else class="sent-state">
-            <p style="color: #5e5d59; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-              如果该邮箱在系统中已注册，您将在几分钟内收到一封包含重置密码链接的邮件。<br>
-              链接有效期为一小时。
-            </p>
-            <el-button
-              class="login-btn"
-              @click="handleResend"
-              :loading="resending"
+            <el-form
+              ref="formRef"
+              :model="form"
+              :rules="rules"
+              label-width="0"
+              @keyup.enter="handleSubmit"
+              class="login-form"
             >
-              重新发送
-            </el-button>
-          </div>
+              <el-form-item prop="password">
+                <div class="input-label">新密码</div>
+                <el-input
+                  v-model="form.password"
+                  type="password"
+                  placeholder="请输入新密码"
+                  show-password
+                  size="large"
+                  class="claude-input"
+                />
+              </el-form-item>
+
+              <el-form-item prop="confirm">
+                <div class="input-label">确认密码</div>
+                <el-input
+                  v-model="form.confirm"
+                  type="password"
+                  placeholder="请再次输入新密码"
+                  show-password
+                  size="large"
+                  class="claude-input"
+                />
+              </el-form-item>
+
+              <el-form-item>
+                <button
+                  class="login-btn"
+                  :class="{ loading }"
+                  :disabled="loading"
+                  @click="handleSubmit"
+                >
+                  <span v-if="!loading">重置密码</span>
+                  <span v-else class="btn-loading">
+                    <span class="loading-dot" />
+                    <span class="loading-dot" />
+                    <span class="loading-dot" />
+                  </span>
+                </button>
+              </el-form-item>
+            </el-form>
+          </template>
+
+          <!-- 成功状态 -->
+          <template v-else-if="success">
+            <div class="result-state">
+              <div class="result-icon success-icon">✅</div>
+              <h2 class="login-title" style="text-align:center">密码重置成功</h2>
+              <p style="color: #5e5d59; font-size: 14px; text-align:center; margin-bottom: 24px;">
+                请使用新密码登录系统
+              </p>
+              <button class="login-btn" @click="goLogin">
+                去登录
+              </button>
+            </div>
+          </template>
+
+          <!-- 失败状态 -->
+          <template v-else>
+            <div class="result-state">
+              <div class="result-icon error-icon">❌</div>
+              <h2 class="login-title" style="text-align:center">链接已失效</h2>
+              <p style="color: #5e5d59; font-size: 14px; text-align:center; margin-bottom: 24px;">
+                {{ errorMsg || '该重置链接已过期或已被使用，请重新申请' }}
+              </p>
+              <button class="login-btn" @click="goForgot">
+                重新申请
+              </button>
+            </div>
+          </template>
 
           <!-- Back to login -->
-          <div class="register-section">
-            <span class="register-text">想起密码了？</span>
+          <div class="register-section" v-if="!success">
             <a class="register-link" @click="goLogin">返回登录</a>
           </div>
 
@@ -97,7 +123,6 @@
       </div>
     </div>
 
-    <!-- Background decoration -->
     <div class="bg-decoration">
       <div class="bg-orb bg-orb-1" />
       <div class="bg-orb bg-orb-2" />
@@ -107,27 +132,52 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import api from '../../api'
 
 const router = useRouter()
+const route = useRoute()
 const formRef = ref<FormInstance>()
 const currentYear = computed(() => new Date().getFullYear())
 
 const form = reactive({
-  email: '',
+  password: '',
+  confirm: '',
 })
 const loading = ref(false)
-const sent = ref(false)
-const resending = ref(false)
+const success = ref(false)
+const error = ref(false)
+const errorMsg = ref('')
+
+// 从 URL 查询参数获取 token
+const token = computed(() => (route.query.token as string) || '')
+
+onMounted(() => {
+  if (!token.value) {
+    error.value = true
+    errorMsg.value = '缺少重置令牌，请从邮件中的链接访问'
+  }
+})
+
+const validateConfirm = (_rule: unknown, value: string, callback: (e?: Error) => void) => {
+  if (value !== form.password) {
+    callback(new Error('两次输入的密码不一致'))
+  } else {
+    callback()
+  }
+}
 
 const rules: FormRules = {
-  email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
+  password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度至少 6 位', trigger: 'blur' },
+  ],
+  confirm: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirm, trigger: 'blur' },
   ],
 }
 
@@ -136,38 +186,32 @@ async function handleSubmit() {
   if (!valid) return
   loading.value = true
   try {
-    await api.post('/auth/forgot-password', { email: form.email })
-    sent.value = true
+    await api.post('/auth/reset-password', {
+      token: token.value,
+      new_password: form.password,
+    })
+    success.value = true
+    ElMessage.success('密码重置成功')
   } catch (e: unknown) {
-    // 即使邮箱不存在也返回成功（安全考虑），所以这里仅处理网络错误
     const err = e as { response?: { data?: { detail?: string } } }
     const msg = err.response?.data?.detail
     if (msg) {
-      ElMessage.error(msg)
+      error.value = true
+      errorMsg.value = msg
     } else {
-      // 网络错误时提示
-      ElMessage.error('发送失败，请检查网络连接')
+      ElMessage.error('重置失败，请稍后重试')
     }
   } finally {
     loading.value = false
   }
 }
 
-async function handleResend() {
-  if (!form.email) return
-  resending.value = true
-  try {
-    await api.post('/auth/forgot-password', { email: form.email })
-    ElMessage.success('已重新发送')
-  } catch {
-    ElMessage.error('发送失败，请稍后重试')
-  } finally {
-    resending.value = false
-  }
-}
-
 function goLogin() {
   router.push('/login')
+}
+
+function goForgot() {
+  router.push('/forgot-password')
 }
 </script>
 
@@ -414,17 +458,21 @@ function goLogin() {
   40% { transform: scale(1); opacity: 1; }
 }
 
-.sent-state {
-  text-align: center;
+.result-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.result-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
 }
 
 .register-section {
   margin-top: 24px;
   text-align: center;
   font-size: 14px;
-}
-.register-text {
-  color: #5e5d59;
 }
 .register-link {
   color: #d97757;

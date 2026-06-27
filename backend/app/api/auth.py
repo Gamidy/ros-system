@@ -1,4 +1,6 @@
 """认证API"""
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
@@ -7,12 +9,14 @@ from app.core.config import settings
 from app.core.security import get_password_hash, verify_password, create_access_token, get_current_user, require_role, invalidate_token, oauth2_scheme
 from app.core.permissions import get_allowed_menus, get_allowed_paths, is_valid_role
 from app.models.user import User
+from app.models.password_reset import PasswordResetToken
 from app.models.approval import ApprovalChain, ApprovalRequest
 from app.schemas import (
     LoginRequest, Token, UserCreate, UserOut,
     AccountApplicationCreate, AccountApplicationOut, AccountApplicationReview,
-    ChangePasswordRequest,
+    ChangePasswordRequest, ForgotPasswordRequest, VerifyResetTokenRequest, AdminResetPasswordRequest,
 )
+from app.services.email_notifier import send_reset_email
 
 router = APIRouter(prefix="/auth", tags=["认证"])
 
@@ -188,6 +192,74 @@ def list_users(
     current_user: User = Depends(require_role("admin", "general_manager")),
 ) -> list[UserOut]:
     return [_enrich_user_out(u) for u in db.query(User).all()]
+
+
+# ═══════════════ 密码重置 ═══════════════
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    req: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """忘记密码 — 通过邮箱发送重置令牌（公开接口，不暴露用户是否存在）"""
+    # 始终返回成功消息，不透露邮箱是否存在
+    user = db.query(User).filter(User.email == req.email).first()
+    if user:
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        reset_entry = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=expires_at,
+        )
+        db.add(reset_entry)
+        db.commit()
+        send_reset_email(email=req.email, token=token, username=user.username or user.full_name or "用户")
+    return {"message": "如果该邮箱已注册，您将收到一封密码重置邮件"}
+
+
+@router.post("/reset-password")
+def reset_password(
+    req: VerifyResetTokenRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """使用重置令牌设置新密码（公开接口）"""
+    reset_entry = (
+        db.query(PasswordResetToken)
+        .filter(
+            PasswordResetToken.token == req.token,
+            PasswordResetToken.used == False,
+            PasswordResetToken.expires_at > datetime.now(timezone.utc),
+        )
+        .first()
+    )
+    if not reset_entry:
+        raise HTTPException(status_code=400, detail="重置令牌无效或已过期")
+
+    user = db.query(User).filter(User.id == reset_entry.user_id).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="用户不存在")
+
+    user.hashed_password = get_password_hash(req.new_password)
+    reset_entry.used = True
+    db.commit()
+    return {"message": "密码重置成功"}
+
+
+@router.post("/admin/reset-password")
+def admin_reset_password(
+    req: AdminResetPasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+) -> dict:
+    """管理员直接重置任意用户的密码"""
+    user = db.query(User).filter(User.id == req.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    user.hashed_password = get_password_hash(req.new_password)
+    db.commit()
+    return {"message": f"用户 {user.username} 的密码已由管理员重置"}
 
 
 def _enrich_user_out(user: User) -> UserOut:

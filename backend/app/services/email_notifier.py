@@ -173,4 +173,82 @@ def send_approval_email(
         )
 
 
-__all__ = ["send_approval_email"]
+def send_reset_email(email: str, token: str, username: str) -> None:
+    """发送密码重置邮件（中文HTML格式）
+
+    Args:
+        email:    收件人邮箱
+        token:    重置令牌
+        username: 用户名（用于邮件正文称呼）
+    """
+    # ── 前置检查：SMTP 是否已配置 ──
+    if not SMTP_USER or not SMTP_PASSWORD or not NOTIFY_EMAIL_FROM:
+        logger.info("邮件通知未配置 (SMTP_USER/PASSWORD/FROM)，跳过密码重置邮件: to=%s", email)
+        return
+
+    reset_link = f"http://139.196.15.52/reset-password?token={token}"
+
+    html = f"""\
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:'PingFang SC','Microsoft YaHei',Arial,sans-serif; background:#f5f5f5; padding:24px;">
+<div style="max-width:560px; margin:0 auto; background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); overflow:hidden;">
+  <div style="background:#1890ff; padding:20px 24px; text-align:center;">
+    <h2 style="color:#fff; margin:0; font-size:18px;">🔐 密码重置</h2>
+  </div>
+  <div style="padding:24px;">
+    <p style="margin:0 0 16px; font-size:15px; color:#333;">尊敬的 <strong>{username}</strong>，您好：</p>
+    <p style="margin:0 0 16px; font-size:14px; color:#666;">
+      您最近发起了密码重置请求。请点击下方按钮（或复制链接到浏览器）设置新密码：
+    </p>
+    <div style="text-align:center; margin:24px 0;">
+      <a href="{reset_link}" target="_blank"
+         style="display:inline-block; background:#1890ff; color:#fff; text-decoration:none;
+                padding:12px 32px; border-radius:4px; font-size:16px; font-weight:bold;">
+        重置密码
+      </a>
+    </div>
+    <p style="margin:16px 0 8px; font-size:13px; color:#999;">
+      或复制以下链接到浏览器地址栏：
+    </p>
+    <p style="margin:0 0 16px; font-size:12px; color:#999; word-break:break-all; background:#fafafa; padding:8px; border-radius:4px;">
+      {reset_link}
+    </p>
+    <p style="margin:0 0 8px; font-size:13px; color:#999;">
+      ⚠️ 此链接有效期为一小时，逾期失效。如非您本人操作，请忽略此邮件。
+    </p>
+  </div>
+  <div style="background:#fafafa; padding:12px 24px; text-align:center; border-top:1px solid #eee;">
+    <p style="margin:0; font-size:12px; color:#999;">此为系统自动发送的密码重置邮件，请勿回复。</p>
+  </div>
+</div>
+</body>
+</html>"""
+
+    msg = MIMEMultipart("alternative")
+    msg["From"] = NOTIFY_EMAIL_FROM
+    msg["To"] = email
+    msg["Subject"] = "ROS系统 - 密码重置通知"
+    msg.attach(MIMEText(html, "html", "utf-8"))
+
+    try:
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.sendmail(NOTIFY_EMAIL_FROM, [email], msg.as_string())
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.sendmail(NOTIFY_EMAIL_FROM, [email], msg.as_string())
+
+        logger.info("密码重置邮件发送成功: to=%s, username=%s", email, username)
+    except smtplib.SMTPException as e:
+        logger.error("密码重置邮件发送失败(SMTP): to=%s, error=%s", email, e)
+    except Exception as e:
+        logger.error("密码重置邮件发送失败: to=%s, error=%s", email, e)
+
+
+__all__ = ["send_approval_email", "send_reset_email"]
