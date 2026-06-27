@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/schemas/compatibility-rules.schema.json",
+  "title": "ROS Event Compatibility Rules — Machine-Readable",
+  "description": "D2-3 兼容性规则的 JSON Schema 表示，供工具链自动消费。",
+
+  "definitions": {
+    "change_operation": {
+      "type": "string",
+      "enum": [
+        "add_optional_field",
+        "add_mandatory_field",
+        "modify_description",
+        "add_enum_value",
+        "delete_enum_value",
+        "delete_optional_field",
+        "delete_mandatory_field",
+        "rename_field",
+        "narrow_type",
+        "widen_type",
+        "add_metadata_field",
+        "delete_metadata_m_field",
+        "promote_m_to_m_star"
+      ]
+    },
+    "version_impact": {
+      "type": "string",
+      "enum": ["none", "minor", "major"]
+    },
+    "compatibility": {
+      "type": "string",
+      "enum": ["full", "forward_only", "backward_only", "breaking"]
+    },
+    "change_rule": {
+      "type": "object",
+      "required": ["operation", "version_impact", "compatibility", "requires"],
+      "properties": {
+        "operation": { "$ref": "#/definitions/change_operation" },
+        "version_impact": { "$ref": "#/definitions/version_impact" },
+        "compatibility": { "$ref": "#/definitions/compatibility" },
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "release_notes",
+              "migration_guide",
+              "consumer_notification",
+              "board_approval",
+              "dual_write_period",
+              "emergency_approval"
+            ]
+          }
+        },
+        "min_deprecation_days": { "type": "integer" }
+      }
+    }
+  },
+
+  "change_rules": [
+    {
+      "operation": "add_optional_field",
+      "version_impact": "none",
+      "compatibility": "full",
+      "requires": ["release_notes"]
+    },
+    {
+      "operation": "modify_description",
+      "version_impact": "none",
+      "compatibility": "full",
+      "requires": ["release_notes"]
+    },
+    {
+      "operation": "add_enum_value",
+      "version_impact": "none",
+      "compatibility": "full",
+      "requires": ["release_notes"]
+    },
+    {
+      "operation": "widen_type",
+      "version_impact": "none",
+      "compatibility": "full",
+      "requires": ["release_notes"]
+    },
+    {
+      "operation": "add_metadata_field",
+      "version_impact": "none",
+      "compatibility": "forward_only",
+      "requires": ["release_notes"]
+    },
+    {
+      "operation": "add_mandatory_field",
+      "version_impact": "minor",
+      "compatibility": "forward_only",
+      "requires": ["migration_guide", "consumer_notification"]
+    },
+    {
+      "operation": "delete_enum_value",
+      "version_impact": "major",
+      "compatibility": "breaking",
+      "requires": ["board_approval", "migration_guide", "consumer_notification"],
+      "min_deprecation_days": 90
+    },
+    {
+      "operation": "delete_optional_field",
+      "version_impact": "major",
+      "compatibility": "breaking",
+      "requires": ["board_approval", "migration_guide", "consumer_notification"],
+      "min_deprecation_days": 90
+    },
+    {
+      "operation": "delete_mandatory_field",
+      "version_impact": "major",
+      "compatibility": "breaking",
+      "requires": ["board_approval", "migration_guide", "consumer_notification"],
+      "min_deprecation_days": 90
+    },
+    {
+      "operation": "rename_field",
+      "version_impact": "major",
+      "compatibility": "breaking",
+      "requires": ["board_approval", "dual_write_period", "consumer_notification"],
+      "min_deprecation_days": 90
+    },
+    {
+      "operation": "narrow_type",
+      "version_impact": "major",
+      "compatibility": "breaking",
+      "requires": ["board_approval", "migration_guide", "consumer_notification"],
+      "min_deprecation_days": 90
+    },
+    {
+      "operation": "promote_m_to_m_star",
+      "version_impact": "none",
+      "compatibility": "full",
+      "requires": ["release_notes"]
+    },
+    {
+      "operation": "delete_metadata_m_field",
+      "version_impact": "major",
+      "compatibility": "breaking",
+      "requires": ["board_approval"],
+      "min_deprecation_days": 180
+    }
+  ],
+
+  "field_classification_rules": {
+    "transitions": {
+      "M_to_O": { "allowed": false },
+      "M_to_M*": { "allowed": false },
+      "M_to_R": { "allowed": false },
+      "M*_to_M": { "allowed": false },
+      "M*_to_O": { "allowed": false },
+      "M*_to_R": { "allowed": false },
+      "O_to_M": { "allowed": true, "version_impact": "minor", "requires": ["consumer_notification"] },
+      "O_to_M*": { "allowed": true, "version_impact": "minor", "requires": ["consumer_notification"] },
+      "O_to_R": { "allowed": true, "version_impact": "major", "requires": ["board_approval"] },
+      "R_to_O": { "allowed": true, "version_impact": "major", "requires": ["board_approval"] },
+      "R_to_M": { "allowed": true, "version_impact": "major", "requires": ["board_approval"] }
+    },
+    "default_strategy": {
+      "M": "no_default",
+      "M*": "no_default",
+      "O": "must_have_default",
+      "R": "not_applicable"
+    }
+  },
+
+  "deprecation_timeline_days": {
+    "announced_to_deprecated": 30,
+    "deprecated_to_retired": 60,
+    "retired_to_removed": 90,
+    "total_minimum": 90,
+    "emergency_minimum": 7
+  }
+}
