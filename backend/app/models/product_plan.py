@@ -57,6 +57,9 @@ class ProductPlan(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(200), nullable=False, comment="策划名称")
     series = Column(String(100), nullable=True, comment="产品系列")
+    portfolio = Column(String(50), nullable=True, comment="产品组合: Residential AC / Commercial AC / Heat Pump / Portable AC")
+    business_capability = Column(Text, nullable=True, comment="业务能力列表 (JSON array)")
+    platform = Column(String(100), nullable=True, comment="所属平台")
     market = Column(String(100), nullable=True, comment="目标市场")
     # ---- 已迁移到 ProductPlanInitiation 子表（通过 plan.initiation 访问）----
     # product_type, climate_zone, refrigerant, capacity_range, voltage_freq,

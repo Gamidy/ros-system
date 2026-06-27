@@ -141,6 +141,9 @@ def create_product_plan(db: Session, data: dict, username: str) -> ProductPlan:
     plan = ProductPlan(
         name=data.get("name", ""),
         series=data.get("series"),
+        portfolio=data.get("portfolio"),
+        business_capability=json.dumps(data.get("business_capability", []), ensure_ascii=False) if data.get("business_capability") else None,
+        platform=data.get("platform"),
         market=data.get("market"),
         competitor_id=data.get("competitor_id"),
         cost_target=data.get("cost_target"),
@@ -151,6 +154,19 @@ def create_product_plan(db: Session, data: dict, username: str) -> ProductPlan:
     db.add(plan)
     db.commit()
     db.refresh(plan)
+
+    # D2-2 事件: plan.created
+    try:
+        from app.services.event_bus import emit as d2_emit
+        d2_emit(
+            "plan.created",
+            {"plan_id": plan.id, "name": plan.name, "series": plan.series, "market": plan.market, "created_by": username},
+            producer="planning.product_plan_workflow",
+            user_id=username,
+        )
+    except Exception as e:
+        logger.error("plan.created 事件发射失败: %s", e, exc_info=True)
+
     return plan
 
 
@@ -241,6 +257,24 @@ def advance_stage(db: Session, plan_id: str, username: str, comment: Optional[st
                 bus.emit_async(EventTypes.PLAN_NOTIFY_PM, **event_kwargs)
     except Exception as e:
         logger.error("advance_stage 事件发射失败: %s", e, exc_info=True)
+
+    # D2-2 事件: plan.stage_advanced / plan.approved / plan.released / plan.cost_updated
+    try:
+        from app.services.event_bus import emit as d2_emit
+        d2_event_map = {
+            ProductPlanStage.APPROVED: "plan.approved",
+            ProductPlanStage.RELEASED: "plan.released",
+        }
+        d2_event = d2_event_map.get(target, "plan.stage_advanced")
+        d2_emit(
+            d2_event,
+            {"plan_id": plan.id, "name": plan.name, "from_stage": current.value, "to_stage": target.value, "triggered_by": username},
+            producer="planning.product_plan_workflow",
+            user_id=username,
+            causation_id=getattr(plan, "_last_event_id", None),
+        )
+    except Exception as e:
+        logger.error("D2-2 阶段事件发射失败: %s", e, exc_info=True)
 
     return plan
 
