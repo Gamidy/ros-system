@@ -54,6 +54,28 @@ def require_menu(menu_name: str):
     return _check
 
 
+def require_role(*roles: str):
+    """FastAPI 依赖：检查当前用户角色是否在指定角色列表中
+
+    admin / general_manager 为超级角色，自动放行。
+    用法: @router.get(\"/path\", dependencies=[Depends(require_role(\"admin\", \"manager\"))])
+    """
+    from fastapi import Depends, HTTPException, status
+    from app.core.security import get_current_user
+    from app.models.user import User
+
+    def checker(current_user: User = Depends(get_current_user)):
+        if current_user.role in SUPER_ROLES:
+            return current_user
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="权限不足",
+            )
+        return current_user
+    return checker
+
+
 def require_org_access(required_org_id: int):
     """FastAPI 依赖：检查当前用户是否属于指定组织
 
