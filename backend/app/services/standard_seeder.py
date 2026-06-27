@@ -15,21 +15,28 @@ logger = logging.getLogger(__name__)
 
 def seed_standard_data(db: Session) -> None:
     """写入预置地区/分类（幂等：已存在则跳过）"""
-    # ── 地区 ──
-    existing_regions = {r.code for r in db.query(StandardRegion).all()}
-    for preset in REGION_PRESETS:
-        if preset["code"] not in existing_regions:
+    # ── 地区（幂等：已存在则更新 is_active/scan_method/base_url） ──
+    existing_regions = {r.code: r for r in db.query(StandardRegion).all()}
+    for idx, preset in enumerate(REGION_PRESETS):
+        code = preset["code"]
+        if code not in existing_regions:
             region = StandardRegion(
-                code=preset["code"],
+                code=code,
                 name=preset["name"],
                 name_en=preset.get("name_en"),
                 base_url=preset.get("base_url"),
                 scan_method=preset["scan_method"],
-                is_active=True,
-                sort_order=len(existing_regions),
+                is_active=preset.get("is_active", True),
+                sort_order=idx,
             )
             db.add(region)
-            logger.info("Seed StandardRegion: %s", preset["code"])
+            logger.info("Seed StandardRegion: %s", code)
+        else:
+            # 同步配置变更（如 is_active）
+            r = existing_regions[code]
+            if r.is_active != preset.get("is_active", True):
+                r.is_active = preset.get("is_active", True)
+                logger.info("Update StandardRegion is_active: %s → %s", code, r.is_active)
 
     # ── 分类 ──
     existing_cats = {c.code for c in db.query(StandardCategory).all()}

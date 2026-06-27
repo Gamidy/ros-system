@@ -27,18 +27,79 @@ from app.core.database import Base
 # 预置常量
 # ════════════════════════════════════════════════════════════════════════════
 
-REGION_CODES: list[str] = ["EU", "US", "SA", "IEC"]
+REGION_CODES: list[str] = [
+    "EU", "US", "SA", "IEC",
+    "VN", "ID", "MY", "PK",
+    "AE", "KW", "IR", "IL",
+    "RU", "UA",
+    "ZA", "EG", "NG", "GH",
+    "TW",
+    "BR", "AR", "CL", "CO", "MX",
+]
 """监控的地区/机构代码"""
 
 REGION_PRESETS: list[dict] = [
+    # ── 已有（带爬虫） ──
     {"code": "EU",  "name": "欧盟",   "name_en": "European Union",
-     "base_url": "https://eur-lex.europa.eu", "scan_method": "rss"},
+     "base_url": "https://eur-lex.europa.eu", "scan_method": "rss", "is_active": True},
     {"code": "US",  "name": "美国",   "name_en": "United States",
-     "base_url": "https://www.federalregister.gov", "scan_method": "html"},
+     "base_url": "https://www.federalregister.gov", "scan_method": "html", "is_active": False},
     {"code": "SA",  "name": "沙特阿拉伯", "name_en": "Saudi Arabia",
-     "base_url": "https://saso.gov.sa", "scan_method": "html"},
+     "base_url": "https://saso.gov.sa", "scan_method": "html", "is_active": False},
     {"code": "IEC", "name": "国际电工委员会", "name_en": "IEC",
-     "base_url": "https://webstore.iec.ch", "scan_method": "api"},
+     "base_url": "https://webstore.iec.ch", "scan_method": "api", "is_active": False},
+
+    # ── 东南亚 ──
+    {"code": "VN", "name": "越南", "name_en": "Vietnam",
+     "base_url": "https://tcvn.gov.vn", "scan_method": "manual", "is_active": False},
+    {"code": "ID", "name": "印度尼西亚", "name_en": "Indonesia",
+     "base_url": "https://bsn.go.id", "scan_method": "manual", "is_active": False},
+    {"code": "MY", "name": "马来西亚", "name_en": "Malaysia",
+     "base_url": "https://www.jsm.gov.my", "scan_method": "manual", "is_active": False},
+    {"code": "PK", "name": "巴基斯坦", "name_en": "Pakistan",
+     "base_url": "https://psqca.gov.pk", "scan_method": "manual", "is_active": False},
+
+    # ── 中东 ──
+    {"code": "AE", "name": "阿联酋", "name_en": "UAE",
+     "base_url": "https://www.esma.gov.ae", "scan_method": "manual", "is_active": False},
+    {"code": "KW", "name": "科威特", "name_en": "Kuwait",
+     "base_url": "https://www.kowsmd.gov.kw", "scan_method": "manual", "is_active": False},
+    {"code": "IR", "name": "伊朗", "name_en": "Iran",
+     "base_url": "https://www.isiri.gov.ir", "scan_method": "manual", "is_active": False},
+    {"code": "IL", "name": "以色列", "name_en": "Israel",
+     "base_url": "https://www.sii.org.il", "scan_method": "manual", "is_active": False},
+
+    # ── 独联体 ──
+    {"code": "RU", "name": "俄罗斯", "name_en": "Russia",
+     "base_url": "https://www.gost.ru", "scan_method": "manual", "is_active": False},
+    {"code": "UA", "name": "乌克兰", "name_en": "Ukraine",
+     "base_url": "https://www.dstu.gov.ua", "scan_method": "manual", "is_active": False},
+
+    # ── 非洲 ──
+    {"code": "ZA", "name": "南非", "name_en": "South Africa",
+     "base_url": "https://www.sabs.co.za", "scan_method": "manual", "is_active": False},
+    {"code": "EG", "name": "埃及", "name_en": "Egypt",
+     "base_url": "https://www.eos.org.eg", "scan_method": "manual", "is_active": False},
+    {"code": "NG", "name": "尼日利亚", "name_en": "Nigeria",
+     "base_url": "https://www.son.gov.ng", "scan_method": "manual", "is_active": False},
+    {"code": "GH", "name": "加纳", "name_en": "Ghana",
+     "base_url": "https://www.gsa.gov.gh", "scan_method": "manual", "is_active": False},
+
+    # ── 东亚 ──
+    {"code": "TW", "name": "台湾", "name_en": "Taiwan",
+     "base_url": "https://www.bsmi.gov.tw", "scan_method": "manual", "is_active": False},
+
+    # ── 南美 ──
+    {"code": "BR", "name": "巴西", "name_en": "Brazil",
+     "base_url": "https://www.abnt.org.br", "scan_method": "manual", "is_active": False},
+    {"code": "AR", "name": "阿根廷", "name_en": "Argentina",
+     "base_url": "https://www.iram.org.ar", "scan_method": "manual", "is_active": False},
+    {"code": "CL", "name": "智利", "name_en": "Chile",
+     "base_url": "https://www.inn.cl", "scan_method": "manual", "is_active": False},
+    {"code": "CO", "name": "哥伦比亚", "name_en": "Colombia",
+     "base_url": "https://www.icontec.org", "scan_method": "manual", "is_active": False},
+    {"code": "MX", "name": "墨西哥", "name_en": "Mexico",
+     "base_url": "https://www.dof.gob.mx", "scan_method": "manual", "is_active": False},
 ]
 
 CATEGORY_CODES: list[str] = [
