@@ -22,13 +22,14 @@ export interface SubTab {
 }
 
 export function useSubTableProgress(planId: string) {
-  // ── 5 个子表定义 ──
+  // ── 6 个子表定义 ──
   const subTabs: SubTab[] = [
     { key: 'initiation', label: '项目概述' },
     { key: 'market', label: '市场与客户' },
     { key: 'techSpec', label: '技术要求' },
     { key: 'costingNew', label: '成本核算' },
     { key: 'team', label: '团队' },
+    { key: 'review', label: '复盘' },
   ]
 
   const activeTab = ref('initiation')
@@ -40,6 +41,7 @@ export function useSubTableProgress(planId: string) {
     techSpec: false,
     costingNew: false,
     team: false,
+    review: false,
   })
 
   const isLoadingStatus = ref(false)
@@ -72,6 +74,7 @@ export function useSubTableProgress(planId: string) {
         planAPI.getPlanTechSpec(planId),
         planAPI.listPlanTeam(planId),
         api.get(`/product-plans/${planId}`), // costs 内嵌在主 plan 中
+        planAPI.getReview(planId), // 复盘
       ])
 
       // Initiation: 200 = 有数据
@@ -94,6 +97,8 @@ export function useSubTableProgress(planId: string) {
       } else {
         subTableDone.costingNew = false
       }
+      // Review: 200 = 有复盘数据
+      subTableDone.review = results[5].status === 'fulfilled'
     } finally {
       isLoadingStatus.value = false
     }

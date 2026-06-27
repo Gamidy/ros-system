@@ -138,3 +138,24 @@ class ProductRequirement(Base):
     submitter_phone = Column(String(20), nullable=True, comment="提交人电话")
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class ProductPlanReview(Base):
+    """P4复盘 — 产品策划完结后的复盘记录（1对1关系）"""
+    __tablename__ = "product_plan_reviews"
+
+    id = Column(String(36), primary_key=True, default=uuid4_str)
+    product_plan_id = Column(String(36), ForeignKey("product_plans.id", ondelete="CASCADE"), nullable=False, unique=True, comment="关联策划ID")
+    review_date = Column(DateTime, default=func.now(), comment="复盘日期")
+    actual_cost_total = Column(Numeric(12, 2), nullable=True, comment="实际总成本")
+    cost_variance_pct = Column(Float, nullable=True, comment="成本偏差百分比")
+    actual_launch_date = Column(DateTime, nullable=True, comment="实际上市日期")
+    schedule_variance_days = Column(Integer, nullable=True, comment="进度偏差天数")
+    market_feedback = Column(Text, nullable=True, comment="市场反馈")
+    lessons_learned = Column(Text, nullable=True, comment="经验教训")
+    rating = Column(Integer, nullable=True, comment="评分1-5")
+    reviewer_id = Column(String(50), nullable=True, comment="复盘人ID")
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    product_plan = relationship("ProductPlan", backref="review", uselist=False)

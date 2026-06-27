@@ -24,6 +24,7 @@ from app.api import user_notification_api
 from app.api import ai_plan_api
 from app.api import password_reset_api
 from app.api import event_logs
+from app.api import product_plan_review
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -148,6 +149,8 @@ app.include_router(user_notification_api.router)
 app.include_router(ai_plan_api.router, prefix="/api")
 # ── 密码重置 ──
 app.include_router(password_reset_api.router, prefix="/api")
+# ── P4 复盘 ──
+app.include_router(product_plan_review.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")
 app.include_router(purchases.router, prefix="/api")

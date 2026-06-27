@@ -35,6 +35,10 @@ from app.services.product_plan_workflow import (
 
 router = APIRouter(prefix="/product-plans", tags=["产品策划"])
 
+# P4复盘路由
+from app.api.product_plan_review import router as review_router
+__all__ = ["router", "review_router"]
+
 
 # ── Schemas ──
 

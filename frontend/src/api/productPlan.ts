@@ -166,3 +166,36 @@ export interface MarketOption {
 }
 export function fetchMarkets() { return api.get('/pm/markets') }
 export function fetchAllMarkets() { return api.get('/pm/markets/all') }
+
+// ── 复盘 (Review) ──
+export interface ReviewData {
+  id?: number
+  plan_id?: string
+  review_date?: string
+  actual_cost_total?: number
+  actual_launch_date?: string
+  market_feedback?: string
+  lessons_learned?: string
+  overall_rating?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export function getReview(planId: string) { return api.get(`/product-plans/${planId}/review`) }
+export function submitReview(planId: string, data: ReviewData) { return api.post(`/product-plans/${planId}/review`, data) }
+export function updateReview(planId: string, data: ReviewData) { return api.put(`/product-plans/${planId}/review`, data) }
+
+// ── 知识沉淀 (Knowledge) ──
+export interface KnowledgeItem {
+  id: number
+  title: string
+  category: string
+  content: string
+  source_type?: string
+  source_id?: string
+  created_at?: string
+  created_by?: string
+}
+
+export function listPlanKnowledge(planId: string) { return api.get(`/product-plans/${planId}/knowledge`) }
+export function createKnowledge(data: Record<string, unknown>) { return api.post('/knowledge', data) }
