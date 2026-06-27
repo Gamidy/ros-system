@@ -5,7 +5,7 @@
 
 registry_version: "1.0.0"
 managed_by: "Architecture Board"
-last_updated: "2026-06-30"
+last_updated: "2026-07-01"
 
 capabilities:
 
@@ -20,7 +20,7 @@ capabilities:
       - "docs/events/plan.approved.v1.schema.json"
       - "docs/events/plan.released.v1.schema.json"
       - "docs/events/plan.cost_updated.v1.schema.json"
-    status: "released"          # draft | frozen | implemented | released | deprecated
+    status: "released"
     frozen_at: "2026-06-30"
     released_at: "2026-06-30"
     rfc: "RFC-2026-001"
@@ -50,7 +50,150 @@ capabilities:
       - "Requirement Stability"
       - "Plan Created P95"
 
-  # 后续 Capability 在此追加...
-  # verification:
-  #   id: "verification"
-  #   ...
+  project_management:
+    id: "project_management"
+    name: "Project Management"
+    display_name: "项目管理中心"
+    contract_file: "docs/capabilities/project-management.capability.yaml"
+    event_schemas:
+      - "docs/events/project.created.v1.schema.json"
+      - "docs/events/project.gate_passed.v1.schema.json"
+      - "docs/events/project.status_changed.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-002"
+    approval_score: 95.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "R&D Director"
+      technical_owner: "Project Admin Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "dashboard"
+      - "bi_analytics"
+    kpis:
+      - "Gate Pass Rate"
+      - "Project On-Time Rate"
+      - "Delayed Project Alert"
+      - "Risk Close Rate"
+      - "Project API P95"
+
+  review_closed_loop:
+    id: "review_closed_loop"
+    name: "Review Closed Loop"
+    display_name: "复盘闭环"
+    contract_file: "docs/capabilities/review-closed-loop.capability.yaml"
+    event_schemas:
+      - "docs/events/review.created.v1.schema.json"
+      - "docs/events/review.updated.v1.schema.json"
+      - "docs/events/improvement.created.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-002"
+    approval_score: 95.2
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "Quality Director"
+      technical_owner: "Review Process Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "knowledge_base"
+    kpis:
+      - "Review Completion Rate"
+      - "Review Cycle Time"
+      - "Improvement Closure Rate"
+      - "Improvement Cycle Time"
+      - "Deviation Detection Accuracy"
+
+  knowledge_base:
+    id: "knowledge_base"
+    name: "Knowledge Base"
+    display_name: "知识库"
+    contract_file: "docs/capabilities/knowledge-base.capability.yaml"
+    event_schemas:
+      - "docs/events/knowledge.created.v1.schema.json"
+      - "docs/events/knowledge.linked.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-004"
+    approval_score: 92.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "PM Director"
+      technical_owner: "Knowledge Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities: []
+    kpis:
+      - "Knowledge Coverage Rate"
+      - "Auto-Sedimentation Rate"
+      - "Search P95"
+      - "Data Freshness"
+      - "Duplicate Rate"
+
+  dashboard:
+    id: "dashboard"
+    name: "Dashboard & Cockpit"
+    display_name: "驾驶舱仪表盘"
+    contract_file: "docs/capabilities/dashboard.capability.yaml"
+    event_schemas:
+      - "docs/events/alert.triggered.v1.schema.json"
+      - "docs/events/threshold.breached.v1.schema.json"
+      - "docs/events/snapshot.generated.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-003"
+    approval_score: 93.5
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "PM Director"
+      technical_owner: "Dashboard Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "bi_analytics"
+    kpis:
+      - "API P95 Latency"
+      - "DAU"
+      - "Alert Accuracy"
+      - "Alert MTTR"
+      - "BI Query Latency"
+      - "Data Freshness"
+      - "Event Processing Latency"
+
+  bi_analytics:
+    id: "bi_analytics"
+    name: "BI Analytics"
+    display_name: "BI分析"
+    contract_file: "docs/capabilities/bi-analytics.capability.yaml"
+    event_schemas:
+      - "docs/events/bi.report_generated.v1.schema.json"
+      - "docs/events/bi.anomaly_detected.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-002"
+    approval_score: 91.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "PM Director"
+      technical_owner: "BI Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities: []
+    kpis:
+      - "Report Query P95"
+      - "Cache Hit Rate"
+      - "Data Freshness"
+      - "Report Coverage"
