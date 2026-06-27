@@ -14,6 +14,7 @@ from app.models.certification import Certificate, CertificateVersion
 from pydantic import BaseModel
 
 from app.schemas import CertificateCreate, CertificateUpdate, CertificateOut, CertificateVersionCreate, CertificateVersionOut
+from app.services.event_bus import emit as d2_emit
 
 
 class ActionResponse(BaseModel):
@@ -77,6 +78,17 @@ def create_certificate(
     db.add(cert)
     db.commit()
     db.refresh(cert)
+    try:
+        d2_emit('cert.certificate.issued', {
+            'cert_id': cert.id,
+            'cert_no': cert.cert_no,
+            'cert_type': cert.cert_type,
+            'issue_date': str(cert.issue_date) if cert.issue_date else None,
+            'expiry_date': str(cert.expiry_date) if cert.expiry_date else None,
+            'certified_body': getattr(cert, 'issuing_body', None),
+        })
+    except Exception:
+        pass
     return cert
 
 

@@ -1,0 +1,226 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cert.requirement.created.v1.schema.json",
+  "title": "Cert Requirement Created",
+  "description": "Emitted when a certification requirement is created for a product project.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "metadata": {
+    "type": "object",
+    "required": ["identity", "context"],
+    "additionalProperties": false,
+    "properties": {
+      "identity": {
+        "type": "object",
+        "required": ["event_id", "event_type", "version"],
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for this event instance."
+          },
+          "event_type": {
+            "type": "string",
+            "const": "cert.requirement.created",
+            "description": "Event type identifier."
+          },
+          "version": {
+            "type": "integer",
+            "const": 1,
+            "description": "Schema version."
+          }
+        }
+      },
+      "context": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "source",
+          "producer",
+          "correlation_id",
+          "causation_id",
+          "trace_id",
+          "tenant_id",
+          "user_id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the event was produced."
+          },
+          "source": {
+            "type": "string",
+            "const": "verification",
+            "description": "System domain that emitted the event."
+          },
+          "producer": {
+            "type": "string",
+            "description": "Service or component that produced the event."
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Correlation identifier linking related events."
+          },
+          "causation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identifier of the event that caused this event."
+          },
+          "trace_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Distributed trace identifier."
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant / organisation identifier."
+          },
+          "user_id": {
+            "type": "string",
+            "description": "User who triggered the event."
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "metadata": {
+      "$ref": "#/definitions/metadata"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "requirement_id",
+        "project_id",
+        "target_market_id",
+        "cert_type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "requirement_id": {
+          "type": "string",
+          "description": "Unique identifier for the certification requirement."
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Identifier of the related product/project."
+        },
+        "target_market_id": {
+          "type": "string",
+          "description": "Identifier of the target market where certification applies."
+        },
+        "cert_type": {
+          "type": "string",
+          "description": "Type of certification (e.g. CCC, CE, UL, etc.)."
+        },
+        "is_mandatory": {
+          "type": "boolean",
+          "description": "Whether this certification is mandatory.",
+          "default": false
+        },
+        "created_by": {
+          "type": "string",
+          "description": "User or system that created the requirement."
+        },
+        "source_plan_id": {
+          "type": "string",
+          "description": "Identifier of the originating plan that produced this requirement."
+        },
+        "expected_completion_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Expected completion date for this certification requirement."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "metadata": {
+      "type": "object",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Unique identifier for this event instance."
+            },
+            "event_type": {
+              "type": "string",
+              "const": "cert.requirement.created",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "integer",
+              "const": 1,
+              "description": "Schema version."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "required": [
+            "timestamp",
+            "source",
+            "producer",
+            "correlation_id",
+            "causation_id",
+            "trace_id",
+            "tenant_id",
+            "user_id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp when the event was produced."
+            },
+            "source": {
+              "type": "string",
+              "const": "verification",
+              "description": "System domain that emitted the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Service or component that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Correlation identifier linking related events."
+            },
+            "causation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifier of the event that caused this event."
+            },
+            "trace_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Distributed trace identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant / organisation identifier."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "User who triggered the event."
+            }
+          }
+        }
+      }
+    }
+  }
+}

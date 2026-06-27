@@ -197,3 +197,38 @@ capabilities:
       - "Cache Hit Rate"
       - "Data Freshness"
       - "Report Coverage"
+
+  verification:
+    id: "verification"
+    name: "Product Verification (Certification)"
+    display_name: "认证管理"
+    contract_file: "docs/capabilities/verification.capability.yaml"
+    event_schemas:
+      - "docs/events/cert.requirement.created.v1.schema.json"
+      - "docs/events/cert.project.created.v1.schema.json"
+      - "docs/events/cert.sample.submitted.v1.schema.json"
+      - "docs/events/cert.execution.completed.v1.schema.json"
+      - "docs/events/cert.result.passed.v1.schema.json"
+      - "docs/events/cert.certificate.issued.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-005"
+    approval_score: 92.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-2 完成, Phase 4 代码已更新"
+    baselines: []
+    owner:
+      business_owner: "Quality Director"
+      technical_owner: "Certification Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "dashboard"
+      - "bi_analytics"
+      - "knowledge_base"
+    kpis:
+      - "Certification Pass Rate"
+      - "Certification Cycle Time"
+      - "Certificate Renewal Rate"
+      - "Gate Pass Rate"
+      - "Change Impact Assessment Rate"

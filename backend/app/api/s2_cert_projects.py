@@ -10,6 +10,7 @@ from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.certification import CertificationProject
 from app.schemas import CertificationProjectCreate, CertificationProjectUpdate, CertificationProjectOut
+from app.services.event_bus import emit as d2_emit
 from datetime import date, datetime
 from uuid import uuid4
 
@@ -53,6 +54,16 @@ def create_cert_project(
     db.add(project)
     db.commit()
     db.refresh(project)
+    try:
+        d2_emit('cert.project.created', {
+            'project_id': project.id,
+            'code': project.code,
+            'name': getattr(project, 'name', None),
+            'cert_types': getattr(project, 'cert_types', None),
+            'created_by': getattr(current_user, 'id', None),
+        })
+    except Exception:
+        pass
     return project
 
 

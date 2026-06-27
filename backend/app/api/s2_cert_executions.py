@@ -10,6 +10,7 @@ from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.certification import CertificationExecution
 from app.schemas import CertificationExecutionCreate, CertificationExecutionUpdate, CertificationExecutionOut
+from app.services.event_bus import emit as d2_emit
 
 router = APIRouter(prefix="/api/s2/certification-executions", tags=["S2-认证执行"])
 
@@ -63,4 +64,14 @@ def update_cert_execution(
         setattr(execution, key, val)
     db.commit()
     db.refresh(execution)
+    try:
+        if execution.status in ('passed', 'failed'):
+            d2_emit('cert.execution.completed', {
+                'execution_id': execution.id,
+                'cert_project_id': execution.cert_project_id,
+                'status': execution.status,
+                'completed_at': str(getattr(execution, 'updated_at', None) or execution.created_at),
+            })
+    except Exception:
+        pass
     return execution

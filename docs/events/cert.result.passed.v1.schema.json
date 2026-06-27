@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:verification:event:cert.result.passed:v1",
+  "title": "Cert Result Passed Event",
+  "description": "Emitted when a certification test result is confirmed as passed in the verification system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "cert.result.passed",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "verification",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Certification result passed data payload.",
+      "required": ["result_id", "cert_project_id", "cert_type", "passed_date"],
+      "additionalProperties": false,
+      "properties": {
+        "result_id": {
+          "type": "string",
+          "description": "Unique identifier of the certification result record."
+        },
+        "cert_project_id": {
+          "type": "string",
+          "description": "Identifier of the associated certification project."
+        },
+        "cert_type": {
+          "type": "string",
+          "description": "Type of certification (e.g., CB, CCC, UL, CE, etc.)."
+        },
+        "passed_date": {
+          "type": "string",
+          "format": "date",
+          "description": "ISO 8601 date when the test result was confirmed as passed."
+        },
+        "lab": {
+          "type": "string",
+          "description": "Name or identifier of the testing laboratory that issued the result."
+        },
+        "report_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to the detailed test report."
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date",
+          "description": "ISO 8601 date until which the result is valid."
+        },
+        "certificate_type": {
+          "type": "string",
+          "description": "Specific certificate type classification (e.g., full, interim, partial)."
+        },
+        "test_summary": {
+          "type": "string",
+          "description": "Summary of the test findings."
+        },
+        "approved_by": {
+          "type": "string",
+          "description": "Identifier of the approver who confirmed the passed result."
+        }
+      }
+    }
+  }
+}

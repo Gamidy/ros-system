@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.certification import CertificationSample
 from app.models.test import Prototype
 from app.schemas import CertificationSampleCreate, CertificationSampleUpdate, CertificationSampleOut
+from app.services.event_bus import emit as d2_emit
 from datetime import date
 from uuid import uuid4
 
@@ -76,4 +77,14 @@ def update_cert_sample(
         setattr(sample, key, val)
     db.commit()
     db.refresh(sample)
+    try:
+        if getattr(data, 'status', None) == 'submitted':
+            d2_emit('cert.sample.submitted', {
+                'sample_id': sample.id,
+                'cert_project_id': sample.cert_project_id,
+                'sample_type': sample.sample_type,
+                'submitted_by': getattr(sample, 'updated_by', None),
+            })
+    except Exception:
+        pass
     return sample

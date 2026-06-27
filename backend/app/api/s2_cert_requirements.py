@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.certification import CertificationRequirement
 from app.schemas import CertificationRequirementOut
 from app.services.cert_auto_gen import CertAutoGenService
+from app.services.event_bus import emit as d2_emit
 
 router = APIRouter(prefix="/api/s2/certification-requirements", tags=["S2-认证需求"])
 
@@ -55,4 +56,14 @@ def generate_cert_requirements(
     result = service.generate_from_project(project_id)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("message", "生成失败"))
+    try:
+        d2_emit('cert.requirement.created', {
+            'requirement_id': result.get('requirement_id'),
+            'project_id': project_id,
+            'target_market_id': result.get('target_market_id'),
+            'cert_type': result.get('cert_type'),
+            'created_by': getattr(_, 'id', None),
+        })
+    except Exception:
+        pass
     return result

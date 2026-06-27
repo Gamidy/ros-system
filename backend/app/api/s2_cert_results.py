@@ -10,6 +10,8 @@ from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.certification import CertificationResult
 from app.schemas import CertificationResultCreate, CertificationResultUpdate, CertificationResultOut
+from app.services.event_bus import emit as d2_emit
+from datetime import date
 
 router = APIRouter(prefix="/api/s2/certification-results", tags=["S2-认证结果"])
 
@@ -63,6 +65,16 @@ def update_cert_result(
         setattr(result, key, val)
     db.commit()
     db.refresh(result)
+    try:
+        if result.status == 'passed':
+            d2_emit('cert.result.passed', {
+                'result_id': result.id,
+                'cert_project_id': result.cert_project_id,
+                'cert_type': result.cert_type,
+                'passed_date': str(getattr(result, 'passed_date', None) or date.today()),
+            })
+    except Exception:
+        pass
     return result
 
 
