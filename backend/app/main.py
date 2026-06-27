@@ -25,6 +25,7 @@ from app.api import ai_plan_api
 from app.api import password_reset_api
 from app.api import event_logs
 from app.api import product_plan_review
+from app.api import improvement_task_api
 from app.api import review_templates
 from app.api import plan_templates
 from app.api import notification_test_api
@@ -158,6 +159,7 @@ app.include_router(ai_plan_api.router, prefix="/api")
 app.include_router(password_reset_api.router, prefix="/api")
 # ── P4 复盘 ──
 app.include_router(product_plan_review.router, prefix="/api")
+app.include_router(improvement_task_api.router)
 app.include_router(review_templates.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")

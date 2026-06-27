@@ -134,6 +134,9 @@
       </main>
     </div>
 
+    <!-- ═══ Mobile Bottom Notification Bar (＜768px) ═══ -->
+    <MobileNotificationBar :is-mobile="isMobile" />
+
     <!-- ═══ Mobile Bottom Tab Bar (＜768px) ═══ -->
     <MobileTabBar v-if="isMobile" />
   </div>
@@ -149,6 +152,7 @@ import { wsManager } from '../utils/websocket'
 import { useResponsive } from '../composables/useResponsive'
 import NotificationBell from '../components/NotificationBell.vue'
 import MobileTabBar from '../components/mobile/MobileTabBar.vue'
+import MobileNotificationBar from '../components/mobile/MobileNotificationBar.vue'
 import api from '../api'
 
 const route = useRoute()
@@ -173,6 +177,8 @@ let unsubApproval: (() => void) | null = null
 let unsubAlert: (() => void) | null = null
 let unsubNotification: (() => void) | null = null
 let unsubSystem: (() => void) | null = null
+let unsubReview: (() => void) | null = null
+let unsubRead: (() => void) | null = null
 
 onMounted(async () => {
   if (!authStore.user) {
@@ -194,6 +200,8 @@ onMounted(async () => {
     unsubAlert = wsManager.on('alert', (msg) => notifStore.handleWSMessage(msg))
     unsubNotification = wsManager.on('notification', (msg) => notifStore.handleWSMessage(msg))
     unsubSystem = wsManager.on('system', (msg) => notifStore.handleWSMessage(msg))
+    unsubReview = wsManager.on('review', (msg) => notifStore.handleWSMessage(msg))
+    unsubRead = wsManager.on('notification_read', (msg) => notifStore.handleReadStatus(msg))
   }
 
   try {
@@ -210,6 +218,8 @@ onUnmounted(() => {
   unsubAlert?.()
   unsubNotification?.()
   unsubSystem?.()
+  unsubReview?.()
+  unsubRead?.()
 })
 
 const userInitial = computed(() => {
@@ -557,7 +567,7 @@ function handleLogout() {
 
   .claude-content {
     padding: 12px;
-    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
 
   .user-name {

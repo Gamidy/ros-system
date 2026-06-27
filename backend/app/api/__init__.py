@@ -47,6 +47,7 @@ from app.api import (
     product_requirements,
     # P4 复盘
     product_plan_review,
+    improvement_task_api,
 )
 
 __all__ = [
@@ -83,4 +84,5 @@ __all__ = [
     "event_logs",
     "product_requirements",
     "product_plan_review",
+    "improvement_task_api",
 ]

@@ -226,13 +226,95 @@
       <el-button type="primary" @click="submitKnowledge" :loading="savingKnowledge">提交</el-button>
     </template>
   </el-dialog>
+
+  <!-- ========== D4-4 改进任务 ========== -->
+  <el-divider content-position="left">🎯 改进任务</el-divider>
+  <div style="margin-bottom:12px">
+    <el-button size="small" type="primary" @click="showTaskDialog = true" :disabled="!reviewData?.id">+ 添加任务</el-button>
+    <span v-if="!reviewData?.id" style="margin-left:8px;font-size:12px;color:#909399">请先提交复盘后再添加改进任务</span>
+  </div>
+  <el-table v-if="taskList.length > 0" :data="taskList" stripe border size="small" empty-text="暂无改进任务">
+    <el-table-column label="描述" min-width="200">
+      <template #default="{ row }">
+        <span :class="{ 'task-completed': row.status === 'resolved' || row.status === 'closed' }">{{ row.description }}</span>
+      </template>
+    </el-table-column>
+    <el-table-column label="负责人" width="100">
+      <template #default="{ row }">
+        <span :class="{ 'task-completed': row.status === 'resolved' || row.status === 'closed' }">{{ row.assigned_to || '—' }}</span>
+      </template>
+    </el-table-column>
+    <el-table-column label="优先级" width="100">
+      <template #default="{ row }">
+        <el-tag
+          :type="priorityTagType(row.priority)"
+          size="small"
+          :class="{ 'task-completed': row.status === 'resolved' || row.status === 'closed' }"
+        >
+          {{ priorityLabel(row.priority) }}
+        </el-tag>
+      </template>
+    </el-table-column>
+    <el-table-column label="截止日期" width="120">
+      <template #default="{ row }">
+        <span :class="{ 'task-completed': row.status === 'resolved' || row.status === 'closed' }">{{ row.due_date || '—' }}</span>
+      </template>
+    </el-table-column>
+    <el-table-column label="状态" width="140">
+      <template #default="{ row }">
+        <el-select
+          v-model="row.status"
+          size="small"
+          :class="{ 'task-status-select': true, 'task-completed': row.status === 'resolved' || row.status === 'closed' }"
+          @change="(val: string) => onChangeTaskStatus(row, val)"
+        >
+          <el-option label="待处理" value="open" />
+          <el-option label="进行中" value="in_progress" />
+          <el-option label="已解决" value="resolved" />
+          <el-option label="已关闭" value="closed" />
+        </el-select>
+      </template>
+    </el-table-column>
+  </el-table>
+  <div v-else style="text-align:center;padding:24px 0;color:#909399;font-size:13px">
+    暂无改进任务。复盘问题点可在此转为改进任务跟踪闭环。
+  </div>
+
+  <!-- 添加任务弹窗 -->
+  <el-dialog v-model="showTaskDialog" title="添加改进任务" width="500px" :close-on-click-modal="false">
+    <el-form :model="taskForm" label-width="80" size="small">
+      <el-form-item label="问题描述" required>
+        <el-input v-model="taskForm.description" type="textarea" :rows="3" placeholder="描述复盘发现的问题点..." />
+      </el-form-item>
+      <el-form-item label="负责人">
+        <el-input v-model="taskForm.assigned_to" placeholder="用户名" />
+      </el-form-item>
+      <el-form-item label="优先级">
+        <el-select v-model="taskForm.priority" style="width:100%">
+          <el-option label="高" value="high" />
+          <el-option label="中" value="medium" />
+          <el-option label="低" value="low" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="截止日期">
+        <el-date-picker v-model="taskForm.due_date" type="date" placeholder="选择截止日期" value-format="YYYY-MM-DD" style="width:100%" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="showTaskDialog = false">取消</el-button>
+      <el-button type="primary" @click="submitTask" :loading="savingTask">提交</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as planAPI from '../../api/productPlan'
-import type { ReviewData, KnowledgeItem, ReviewTemplateItem, TemplateField, AutoVarianceData } from '../../api/productPlan'
+import type {
+  ReviewData, KnowledgeItem, ReviewTemplateItem, TemplateField,
+  AutoVarianceData, ImprovementTaskItem, CreateImprovementTaskPayload,
+} from '../../api/productPlan'
 
 const props = defineProps<{
   planId: string
@@ -397,6 +479,8 @@ async function fetchReview() {
 
       emit('review-changed', true)
     }
+    // 加载改进任务（依赖 reviewData）
+    await fetchTasks()
   } catch {
     // 404 = 无复盘数据，不报错
     reviewData.value = null
@@ -508,6 +592,94 @@ async function submitKnowledge() {
   }
 }
 
+// ── 改进任务（D4-4） ──
+const taskList = ref<ImprovementTaskItem[]>([])
+const showTaskDialog = ref(false)
+const savingTask = ref(false)
+const taskForm = reactive<CreateImprovementTaskPayload>({
+  description: '',
+  assigned_to: '',
+  priority: 'medium',
+  due_date: '',
+})
+
+function priorityTagType(p: string): string {
+  if (p === 'high') return 'danger'
+  if (p === 'low') return 'info'
+  return 'warning'
+}
+
+function priorityLabel(p: string): string {
+  if (p === 'high') return '高'
+  if (p === 'medium') return '中'
+  if (p === 'low') return '低'
+  return p
+}
+
+/** 获取改进任务列表（需要 reviewId） */
+async function fetchTasks() {
+  const reviewId = reviewData.value?.id
+  if (!reviewId) {
+    taskList.value = []
+    return
+  }
+  try {
+    const res = await planAPI.listImprovementTasks(reviewId)
+    const result = res.data as { items: ImprovementTaskItem[]; total: number } | undefined
+    taskList.value = result?.items ?? []
+  } catch {
+    taskList.value = []
+  }
+}
+
+/** 提交新改进任务 */
+async function submitTask() {
+  if (!taskForm.description.trim()) {
+    ElMessage.warning('请填写问题描述')
+    return
+  }
+  const reviewId = reviewData.value?.id
+  if (!reviewId) {
+    ElMessage.warning('请先提交复盘')
+    return
+  }
+  savingTask.value = true
+  try {
+    const payload: CreateImprovementTaskPayload = {
+      description: taskForm.description.trim(),
+      assigned_to: taskForm.assigned_to?.trim() || undefined,
+      priority: taskForm.priority || 'medium',
+      due_date: taskForm.due_date || undefined,
+    }
+    await planAPI.createImprovementTask(reviewId, payload)
+    ElMessage.success('改进任务创建成功')
+    showTaskDialog.value = false
+    taskForm.description = ''
+    taskForm.assigned_to = ''
+    taskForm.priority = 'medium'
+    taskForm.due_date = ''
+    await fetchTasks()
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '创建任务失败')
+  } finally {
+    savingTask.value = false
+  }
+}
+
+/** 改进任务状态变更 */
+async function onChangeTaskStatus(row: ImprovementTaskItem, newStatus: string) {
+  const prevStatus = row.status
+  try {
+    await planAPI.updateImprovementTask(row.id, { status: newStatus })
+    ElMessage.success(`状态已更新为: ${['待处理', '进行中', '已解决', '已关闭'][['open', 'in_progress', 'resolved', 'closed'].indexOf(newStatus)] || newStatus}`)
+    await fetchTasks()
+  } catch {
+    row.status = prevStatus
+    ElMessage.error('状态更新失败')
+  }
+}
+
 function goToKnowledge(row: KnowledgeItem) {
   ElMessage.info(`知识: ${row.title}`)
 }
@@ -613,5 +785,14 @@ onMounted(async () => {
   border-radius: 3px;
   line-height: 1.6;
   white-space: nowrap;
+}
+
+/* D4-4: 改进任务完成态 */
+.task-completed {
+  text-decoration: line-through;
+  color: #c0c4cc !important;
+}
+.task-status-select :deep(.el-input__wrapper) {
+  background: transparent;
 }
 </style>

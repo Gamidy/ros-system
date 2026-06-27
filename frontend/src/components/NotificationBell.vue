@@ -206,6 +206,7 @@ function formatTime(ts: string): string {
 .item-dot.approval { background: var(--c-accent); }
 .item-dot.alert { background: var(--c-danger); }
 .item-dot.notification { background: var(--c-success); }
+.item-dot.review { background: var(--c-warning, #e6a23c); }
 .item-dot.system { background: var(--c-info); }
 .item-content {
   flex: 1;

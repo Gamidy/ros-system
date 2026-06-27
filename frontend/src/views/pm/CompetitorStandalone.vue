@@ -134,22 +134,14 @@
         </div>
       </div>
 
-      <!-- ========== 对标对比表（有数据时） ========== -->
+      <!-- ══════════════ 热力图对标+采纳（有数据时） ═══════════════ -->
       <div v-if="benchmarkData.length > 0" class="benchmark-section">
-        <el-divider content-position="left">📊 参数对比</el-divider>
-        <div class="table-card">
-          <el-table :data="benchmarkData" border size="small" class="bench-table">
-            <el-table-column prop="param_name" label="参数" width="140" fixed="left" />
-            <el-table-column prop="our_target" label="我方目标" width="110">
-              <template #default="{ row }"><strong>{{ row.our_target }}</strong></template>
-            </el-table-column>
-            <el-table-column v-for="brand in brands" :key="brand" :label="brand" min-width="130">
-              <template #default="{ row }">
-                <span class="cell-value">{{ getCompetitorValue(row, brand) }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
+        <el-divider content-position="left">🔥 参数对比热力图</el-divider>
+        <HeatmapCompare
+          :benchmark-data="benchmarkData"
+          :brands="brands"
+          v-model="ourTargets"
+        />
       </div>
 
       <!-- ========== 可视化对标图表 ========== -->
@@ -498,6 +490,7 @@ import api from '../../api'
 import type { FormInstance, FormRules } from 'element-plus'
 import RadarChart from '../../components/competitor/RadarChart.vue'
 import BarCompare from '../../components/competitor/BarCompare.vue'
+import HeatmapCompare from '../../components/competitor/HeatmapCompare.vue'
 
 interface MarketOption {
   code: string
@@ -622,6 +615,44 @@ const loading = ref(false)
 const allItems = ref<CompetitorItem[]>([])
 const allComplete = ref(false)
 
+// ── 我方目标参数（热力图采纳用） ─────────────────────────────────
+const LS_PREFIX = 'competitor_our_targets_'
+
+function loadOurTargets(market: string): Record<string, string | number> {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + market)
+    return raw ? (JSON.parse(raw) as Record<string, string | number>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveOurTargets(market: string, targets: Record<string, string | number>): void {
+  try {
+    localStorage.setItem(LS_PREFIX + market, JSON.stringify(targets))
+  } catch {
+    // localStorage 满或不可用时静默失败
+  }
+}
+
+const ourTargets = ref<Record<string, string | number>>({})
+
+// 市场变化时加载对应目标值
+watch(() => selectedMarket.value, (market) => {
+  if (market) {
+    ourTargets.value = loadOurTargets(market)
+  } else {
+    ourTargets.value = {}
+  }
+})
+
+// 目标值变化时持久化
+watch(ourTargets, (targets) => {
+  if (selectedMarket.value) {
+    saveOurTargets(selectedMarket.value, targets)
+  }
+}, { deep: true })
+
 // ── 统计 ──────────────────────────────────────────────────────────
 const brandCount = computed(() => {
   const brands = new Set(allItems.value.map((it: CompetitorItem) => it.brand))
@@ -661,11 +692,13 @@ function transformToBenchmark(items: CompetitorItem[]): BenchmarkRow[] {
       competitors: {},
     }
     for (const item of items) {
-      const val = (item as CompetitorItem)[p.key]
-      if (val !== undefined && val !== null && val !== '') {
+      const rawVal: unknown = (item as Record<string, unknown>)[p.key]
+      if (rawVal !== undefined && rawVal !== null && rawVal !== '') {
         if (!row.competitors[item.brand]) {
+          const numVal = Number(rawVal)
+          const safeValue: string | number = Number.isNaN(numVal) ? String(rawVal) : numVal
           row.competitors[item.brand] = {
-            value: Number(val) || val,
+            value: safeValue,
             model: item.model || '',
           }
         }
@@ -676,12 +709,6 @@ function transformToBenchmark(items: CompetitorItem[]): BenchmarkRow[] {
 }
 
 const benchmarkData = computed(() => transformToBenchmark(allItems.value))
-
-function getCompetitorValue(row: BenchmarkRow, brand: string): string {
-  const entry = row.competitors?.[brand]
-  if (!entry || entry.value === undefined || entry.value === null) return '-'
-  return String(entry.value)
-}
 
 function getParamValue(item: Record<string, unknown>, key: string): string {
   if (key === energyKey.value) {

@@ -5,7 +5,12 @@
 认证:  JWT token 作为查询参数
 
 服务端 -> 客户端消息格式:
-  {"type": "approval"|"alert"|"notification"|"system", "payload": {...}, "timestamp": "..."}
+  {
+    "type": "approval"|"alert"|"notification"|"system",
+    "action": "/approvals"|"/product-plans/{id}"|"",
+    "payload": {...},
+    "timestamp": "..."
+  }
 
 客户端 -> 服务端:
   {"type": "ping"} — 心跳保活
@@ -21,6 +26,25 @@ from app.services.ws_manager import ws_manager
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# ── action 路由映射 ─────────────────────────────────
+_NOTIFICATION_ACTIONS: dict[str, str] = {
+    "approval": "/approvals",
+    "notification": "/product-plans/{id}",
+    "review": "/product-plans/{plan_id}?tab=review",
+}
+
+
+def _resolve_action(msg_type: str, payload: dict) -> str:
+    """根据消息类型和 payload 解析前端路由 action"""
+    base = _NOTIFICATION_ACTIONS.get(msg_type, "")
+    if not base:
+        return "/notifications"
+
+    plan_id = payload.get("plan_id") or payload.get("request_id")
+    if plan_id is not None:
+        return base.replace("{id}", str(plan_id)).replace("{plan_id}", str(plan_id))
+    return base.rstrip("/")
 
 
 @router.websocket("/ws")
@@ -86,19 +110,26 @@ async def push_to_user(
     username: str,
     msg_type: str,
     payload: dict,
+    *,
+    action: str = "",
 ) -> int:
     """向指定用户推送 WebSocket 消息
 
     Args:
         username: 目标用户名
-        msg_type: 消息类型 (approval/alert/notification/system)
-        payload: 消息载荷
+        msg_type: 消息类型 (approval/alert/notification/system/review)
+        payload:  消息载荷
+        action:   前端路由路径（可选，自动推断）
 
     Returns:
         成功推送的连接数
     """
+    if not action:
+        action = _resolve_action(msg_type, payload)
+
     message = {
         "type": msg_type,
+        "action": action,
         "payload": payload,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -114,7 +145,7 @@ async def push_approval_notification(
     request_type: str = "",
     comment: str = "",
 ) -> int:
-    """推送审批通知给指定用户"""
+    """推送审批通知给指定用户（含 /approvals 路由）"""
     return await push_to_user(
         username=username,
         msg_type="approval",
@@ -126,4 +157,5 @@ async def push_approval_notification(
             "comment": comment,
             "content": f"审批「{title}」状态已更新为: {approval_status}",
         },
+        action="/approvals",
     )

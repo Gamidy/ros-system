@@ -252,6 +252,56 @@ export function listReviewTemplates(productType?: string) {
   return api.get('/review-templates', { params: { product_type: productType } })
 }
 
+// ── D4-4 改进任务 (Improvement Task) ──
+
+export interface ImprovementTaskItem {
+  id: string
+  review_id: string
+  description: string
+  assigned_to: string | null
+  priority: string
+  status: string
+  due_date: string | null
+  resolved_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface ImprovementTaskListResult {
+  items: ImprovementTaskItem[]
+  total: number
+}
+
+export interface CreateImprovementTaskPayload {
+  description: string
+  assigned_to?: string
+  priority?: string
+  due_date?: string
+}
+
+export interface UpdateImprovementTaskPayload {
+  description?: string
+  assigned_to?: string
+  priority?: string
+  status?: string
+  due_date?: string
+}
+
+/** 获取复盘关联的改进任务列表 */
+export function listImprovementTasks(reviewId: string) {
+  return api.get(`/reviews/${reviewId}/tasks`)
+}
+
+/** 创建改进任务 */
+export function createImprovementTask(reviewId: string, data: CreateImprovementTaskPayload) {
+  return api.post(`/reviews/${reviewId}/tasks`, data)
+}
+
+/** 更新改进任务 */
+export function updateImprovementTask(taskId: string, data: UpdateImprovementTaskPayload) {
+  return api.put(`/tasks/${taskId}`, data)
+}
+
 /** 创建复盘模板（管理端） */
 export function createReviewTemplate(data: {
   product_type: string

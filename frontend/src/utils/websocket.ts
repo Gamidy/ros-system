@@ -1,5 +1,6 @@
 export interface WSMessage {
-  type: 'approval' | 'alert' | 'notification' | 'system'
+  type: 'approval' | 'alert' | 'notification' | 'system' | 'review' | 'notification_read' | 'pong' | 'dashboard_refresh'
+  action?: string
   payload: unknown
   timestamp: string
 }

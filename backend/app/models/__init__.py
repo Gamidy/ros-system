@@ -75,6 +75,7 @@ from app.models.workflow_transition_spec import WorkflowTransitionSpec
 from app.models.plan_validation import ValidationRule
 from app.models.plan_template import PlanTemplate
 from app.models.review_template import ReviewTemplate
+from app.models.improvement_task import ImprovementTask, TaskPriority, TaskStatus
 
 __all__ = [
     "User",
@@ -166,4 +167,7 @@ __all__ = [
     "ReviewTemplate",
     "ProductPlanReview",
     "ProductPlanHistory",
+    "ImprovementTask",
+    "TaskPriority",
+    "TaskStatus",
 ]
