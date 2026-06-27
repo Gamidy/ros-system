@@ -72,7 +72,7 @@ def update_cert_result_status(
     data: dict,
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-results")),
-) -> dict:
+) -> CertificationResultOut:
     """认证结果状态流转"""
     result = db.query(CertificationResult).filter(CertificationResult.id == cr_id).first()
     if not result:

@@ -5,6 +5,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+
 from app.core.database import get_db
 from app.core.permissions import require_menu
 from app.core.security import require_role
@@ -15,6 +17,12 @@ from app.schemas import (
     ChangeImpactRuleUpdate,
     ChangeImpactRuleOut,
 )
+
+
+class ActionResponse(BaseModel):
+    """简单操作响应"""
+    success: bool
+    message: str = ""
 
 router = APIRouter(prefix="/api/s2/change-impact", tags=["S2-变更影响分析"])
 
@@ -65,7 +73,7 @@ def create_impact_rule(
     data: ChangeImpactRuleCreate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "quality_engineer")),
-) -> ChangeImpactRule:
+) -> ChangeImpactRuleOut:
     """创建变更影响规则"""
     rule = ChangeImpactRule(**data.model_dump())
     db.add(rule)
@@ -80,7 +88,7 @@ def update_impact_rule(
     data: ChangeImpactRuleUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "quality_engineer")),
-) -> ChangeImpactRule:
+) -> ChangeImpactRuleOut:
     """更新变更影响规则"""
     rule = db.query(ChangeImpactRule).filter(ChangeImpactRule.id == rule_id).first()
     if not rule:
@@ -97,14 +105,14 @@ def delete_impact_rule(
     rule_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "quality_engineer")),
-) -> dict:
+) -> ActionResponse:
     """删除变更影响规则"""
     rule = db.query(ChangeImpactRule).filter(ChangeImpactRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="规则不存在")
     db.delete(rule)
     db.commit()
-    return {"message": "删除成功", "id": rule_id}
+    return {"success": True, "message": "删除成功"}
 
 
 # ═══════════════ 记录查询（只读）═══════════════
@@ -155,7 +163,7 @@ def get_impact_record(
     record_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-change-impact")),
-) -> dict:
+) -> ChangeImpactRecordOut:
     """变更影响分析记录详情"""
     record = db.query(ChangeImpactRecord).filter(ChangeImpactRecord.id == record_id).first()
     if not record:

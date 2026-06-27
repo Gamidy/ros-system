@@ -9,7 +9,15 @@ from app.core.security import get_current_user
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.cert_gate_rule import CertificationGateRule
+from pydantic import BaseModel
+
 from app.schemas import CertificationGateRuleCreate, CertificationGateRuleUpdate, CertificationGateRuleOut
+
+
+class ActionResponse(BaseModel):
+    """简单操作响应"""
+    success: bool
+    message: str = ""
 
 router = APIRouter(prefix="/api/s2/gate-rules", tags=["S2-认证门禁规则"])
 
@@ -84,7 +92,7 @@ def delete_gate_rule(
     rule_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-gate-rules")),
-) -> dict:
+) -> ActionResponse:
     """删除认证门禁规则"""
     rule = db.query(CertificationGateRule).filter(CertificationGateRule.id == rule_id).first()
     if not rule:

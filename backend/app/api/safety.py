@@ -123,7 +123,7 @@ def delete_standard(sid: int, db: Session = Depends(get_db),
 @router.put("/standards/{sid}/archive", response_model=SafetyStandardOut,
             dependencies=[Depends(require_role("admin", "quality_engineer", "certification_engineer"))])
 def archive_standard(sid: int, db: Session = Depends(get_db),
-                      current_user: User = Depends(get_current_user)) -> dict:
+                      current_user: User = Depends(get_current_user)) -> SafetyStandardOut:
     """归档安全标准（软删除：状态设为obsolete）"""
     item = db.query(SafetyStandard).filter(SafetyStandard.id == sid).first()
     if not item:

@@ -11,7 +11,15 @@ from app.core.security import get_current_user
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.certification import Certificate, CertificateVersion
+from pydantic import BaseModel
+
 from app.schemas import CertificateCreate, CertificateUpdate, CertificateOut, CertificateVersionCreate, CertificateVersionOut
+
+
+class ActionResponse(BaseModel):
+    """简单操作响应"""
+    success: bool
+    message: str = ""
 
 router = APIRouter(prefix="/api/s2/certificates", tags=["S2-证书管理"])
 
@@ -96,7 +104,7 @@ def renew_certificate(
     data: dict,
     db: Session = Depends(get_db),
     _=Depends(require_menu("certificates")),
-) -> CertificateOut:
+) -> CertificateVersionOut:
     """续证 — 创建新版本
 
     原证书标记为过期，创建新版本记录
@@ -145,7 +153,7 @@ def suspend_certificate(
     data: dict = {},
     db: Session = Depends(get_db),
     _=Depends(require_menu("certificates")),
-) -> dict:
+) -> ActionResponse:
     """暂停证书"""
     cert = db.query(Certificate).filter(Certificate.id == cert_id).first()
     if not cert:
@@ -163,7 +171,7 @@ def revoke_certificate(
     data: dict = {},
     db: Session = Depends(get_db),
     _=Depends(require_menu("certificates")),
-) -> dict:
+) -> ActionResponse:
     """注销证书"""
     cert = db.query(Certificate).filter(Certificate.id == cert_id).first()
     if not cert:

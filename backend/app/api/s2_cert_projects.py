@@ -97,7 +97,7 @@ def update_cert_project_status(
     data: dict,
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-projects")),
-) -> dict:
+) -> CertificationProjectOut:
     """认证项目状态流转"""
     project = db.query(CertificationProject).filter(CertificationProject.id == cp_id).first()
     if not project:
