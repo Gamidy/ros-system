@@ -128,6 +128,9 @@
               <el-tag v-if="item.is_complete" size="small" type="success" effect="plain">完整</el-tag>
               <el-tag v-else size="small" type="warning" effect="plain">缺{{ item.missing_fields?.length }}项</el-tag>
             </div>
+            <div class="card-thumb" v-if="item.image_urls && item.image_urls.length > 0" @click="openDetailDrawer(item)">
+              <img :src="item.image_urls[0].url" class="thumb-img" alt="外观" />
+            </div>
             <div class="card-actions">
               <el-button size="small" type="primary" link @click="openDetailDrawer(item)">详情</el-button>
               <el-button size="small" type="primary" link @click="openEditDialog(item)">编辑</el-button>
@@ -331,6 +334,18 @@
           </el-col>
         </el-row>
 
+        <el-divider content-position="left">📷 外观外形</el-divider>
+        <div class="image-urls-editor">
+          <div v-for="(img, ii) in form.imageUrls" :key="ii" class="image-url-row">
+            <el-input v-model="img.label" placeholder="标签（如正面、室内机）" style="width:120px;margin-right:8px" size="small" />
+            <el-input v-model="img.url" placeholder="图片URL" style="flex:1;margin-right:8px" size="small" />
+            <el-button type="danger" size="small" @click="form.imageUrls.splice(ii, 1)">✕</el-button>
+          </div>
+          <el-button type="primary" size="small" @click="form.imageUrls.push({label: '', url: ''})" style="margin-top:8px">
+            + 添加图片
+          </el-button>
+        </div>
+
         <!-- ══════════ 市场专有参数（动态） ══════════ -->
         <template v-if="marketParamConfigs.length > 0">
           <el-divider content-position="left">市场专有参数</el-divider>
@@ -418,6 +433,16 @@
           <!-- ── 参数详情 Tab ── -->
           <el-tab-pane label="参数详情" name="params">
             <div class="detail-params">
+              <!-- 外观图片 -->
+              <div v-if="detailItem.image_urls && detailItem.image_urls.length > 0" class="detail-images-section">
+                <div class="detail-section-title">📷 外观外形</div>
+                <div class="detail-images-grid">
+                  <div v-for="(img, ii) in detailItem.image_urls" :key="ii" class="detail-image-item">
+                    <el-image :src="img.url" fit="contain" class="detail-image" :preview-src-list="detailItem.image_urls.map(i => i.url)" />
+                    <div class="detail-image-label">{{ img.label || '外观' }}</div>
+                  </div>
+                </div>
+              </div>
               <div
                 v-for="p in effectiveParams"
                 :key="p.key"
@@ -573,6 +598,7 @@ interface CompetitorFormData {
   launch_year: number | null
   notes: string
   extraFields: Record<string, number | string | null>
+  imageUrls: Array<{label: string; url: string}>
 }
 
 interface CompetitorItem extends CompetitorFormData {
@@ -992,6 +1018,7 @@ const defaultForm = () => ({
   launch_year: null as number | null,
   notes: '',
   extraFields: {} as Record<string, number | string | null>,
+  imageUrls: [],
 })
 
 const form = ref<CompetitorFormData>(defaultForm())
@@ -1102,6 +1129,7 @@ function openAddDialog() {
     extra[cfg.param_key] = null
   }
   form.value.extraFields = extra
+  form.value.imageUrls = []
   dialogVisible.value = true
 }
 
@@ -1140,6 +1168,7 @@ function openEditDialog(item: CompetitorItem) {
     launch_year: item.launch_year ?? null,
     notes: item.notes || '',
     extraFields,
+    imageUrls: (item as Record<string, unknown>)['image_urls'] as Array<{label: string; url: string}> || [],
   }
   dialogVisible.value = true
 }
@@ -1168,6 +1197,10 @@ async function handleSave() {
       if (form.value[f] !== null && form.value[f] !== '') {
         payload[f] = form.value[f]
       }
+    }
+    // 提交 image_urls
+    if (form.value.imageUrls && form.value.imageUrls.length > 0) {
+      payload['image_urls'] = form.value.imageUrls.filter(u => u.url.trim() !== '')
     }
     // 提交 extra_fields
     const extraFields = form.value.extraFields
@@ -1378,6 +1411,7 @@ async function handleExport() {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 12px; padding-bottom: 10px;
   border-bottom: 1px solid var(--c-border);
+  gap: 10px;
 }
 .card-brand-section { display: flex; align-items: center; gap: 10px; }
 .card-brand { font-size: 16px; font-weight: 700; color: var(--c-text); }
@@ -1537,6 +1571,65 @@ async function handleExport() {
   font-size: 14px;
   font-weight: 600;
   color: var(--c-text);
+}
+/* ── 外观图片 ────────────────────────────────────────────────────── */
+.card-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid var(--c-border);
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.detail-images-section {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+  margin-bottom: 8px;
+}
+.detail-images-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.detail-image-item {
+  width: 180px;
+  text-align: center;
+}
+.detail-image {
+  width: 180px;
+  height: 180px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: #f5f5f5;
+}
+.detail-image-label {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  margin-top: 4px;
+}
+.image-urls-editor {
+  padding: 0 8px;
+}
+.image-url-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 0;
 }
 .preview-empty {
   text-align: center;

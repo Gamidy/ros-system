@@ -40,6 +40,8 @@ class CompetitorCreate(BaseModel):
     launch_year: Optional[int] = None
     notes: Optional[str] = None
     extra_fields: Optional[dict] = None
+    image_urls: Optional[list] = None
+    image_urls: Optional[list] = None
 
 
 class CompetitorUpdate(BaseModel):
@@ -281,6 +283,7 @@ def _serialize(item: CompetitorModel) -> dict:
         "launch_year": item.launch_year,
         "notes": item.notes,
         "extra_fields": extra,
+        "image_urls": item.image_urls or [],
         "created_at": item.created_at.isoformat() if item.created_at else None,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         # 市场适配的能效值
@@ -302,7 +305,7 @@ TRACKED_FIELDS = [
     "cooling_w", "heating_w", "eer", "cspf",
     "noise_indoor_db", "noise_outdoor_db", "airflow_m3h",
     "indoor_size_mm", "outdoor_size_mm", "factory_price",
-    "launch_year", "notes", "extra_fields",
+    "launch_year", "notes", "extra_fields", "image_urls",
 ]
 
 

@@ -40,5 +40,6 @@ class CompetitorModel(Base):
                     comment="数据来源: manual=人工录入, auto=自动采集")
     source_url = Column(String(1024), nullable=True, comment="来源 URL（自动采集时的产品页面链接）")
     extra_fields = Column(JSON, nullable=True, comment="扩展参数(JSON)，如欧盟SCOP/PDC/PDH/声功率等")
+    image_urls = Column(JSON, nullable=True, comment="外观图片URL数组: [{\"label\":\"正面\",\"url\":\"...\"}]")
     created_at = Column(DateTime, server_default=func.now(), comment="创建时间")
     updated_at = Column(DateTime, onupdate=func.now(), comment="更新时间")
