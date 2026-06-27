@@ -96,6 +96,18 @@ def delete_target_market(
 
 # ── RequiredTest ──
 
+@router.get("/{tid}/tests", response_model=list[RequiredTestOut])
+def list_required_tests(
+    tid: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("market_mgmt")),
+) -> list[RequiredTestOut]:
+    tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
+    if not tm:
+        raise HTTPException(status_code=404, detail="目标市场不存在")
+    return db.query(RequiredTest).filter(RequiredTest.target_market_id == tid).order_by(RequiredTest.sort_order).all()
+
+
 @router.post("/{tid}/tests", response_model=RequiredTestOut)
 def add_required_test(
     tid: int,
@@ -129,6 +141,27 @@ def delete_required_test(
     db.delete(rt)
     db.commit()
     return {"ok": True, "message": "RequiredTest已删除"}
+
+
+@router.put("/{tid}/tests/{rtid}", response_model=RequiredTestOut)
+def update_required_test(
+    tid: int,
+    rtid: int,
+    data: RequiredTestCreate,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("market_mgmt")),
+) -> RequiredTestOut:
+    rt = db.query(RequiredTest).filter(
+        RequiredTest.id == rtid,
+        RequiredTest.target_market_id == tid,
+    ).first()
+    if not rt:
+        raise HTTPException(status_code=404, detail="RequiredTest不存在")
+    for key, val in data.model_dump().items():
+        setattr(rt, key, val)
+    db.commit()
+    db.refresh(rt)
+    return rt
 
 
 # ── RequiredCertification ──
@@ -170,6 +203,18 @@ def delete_required_certification(
 
 # ── RequiredStandard ──
 
+@router.get("/{tid}/standards", response_model=list[RequiredStandardOut])
+def list_required_standards(
+    tid: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("market_mgmt")),
+) -> list[RequiredStandardOut]:
+    tm = db.query(TargetMarket).filter(TargetMarket.id == tid).first()
+    if not tm:
+        raise HTTPException(status_code=404, detail="目标市场不存在")
+    return db.query(RequiredStandard).filter(RequiredStandard.target_market_id == tid).order_by(RequiredStandard.sort_order).all()
+
+
 @router.post("/{tid}/standards", response_model=RequiredStandardOut)
 def add_required_standard(
     tid: int,
@@ -203,6 +248,27 @@ def delete_required_standard(
     db.delete(rs)
     db.commit()
     return {"ok": True, "message": "RequiredStandard已删除"}
+
+
+@router.put("/{tid}/standards/{rsid}", response_model=RequiredStandardOut)
+def update_required_standard(
+    tid: int,
+    rsid: int,
+    data: RequiredStandardCreate,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("market_mgmt")),
+) -> RequiredStandardOut:
+    rs = db.query(RequiredStandard).filter(
+        RequiredStandard.id == rsid,
+        RequiredStandard.target_market_id == tid,
+    ).first()
+    if not rs:
+        raise HTTPException(status_code=404, detail="RequiredStandard不存在")
+    for key, val in data.model_dump().items():
+        setattr(rs, key, val)
+    db.commit()
+    db.refresh(rs)
+    return rs
 
 
 # ── 按市场代码查询 ──

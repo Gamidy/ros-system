@@ -106,6 +106,8 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/changes', title: '变更管理', icon: Refresh },
       { path: '/ecr', title: 'ECR变更申请', icon: Edit },
       { path: '/eco', title: 'ECO变更指令', icon: Edit },
+      { path: '/dfm/checklist', title: 'DFM检查项', icon: Document },
+      { path: '/dfm/reports', title: 'DFM分析报告', icon: DataAnalysis },
     ]
   },
   {
@@ -115,7 +117,6 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/tests', title: '实验与测试', icon: Document },
       { path: '/tests/verification-requirements', title: '验证需求', icon: Document },
       { path: '/tests/gate-rules', title: 'Gate规则引擎', icon: WarningFilled },
-      { path: '/tests/target-markets', title: '目标市场配置', icon: Stamp },
       { path: '/tests/test-executions', title: '实验执行', icon: Select },
       { path: '/s2/dashboard', title: '认证中心', icon: Stamp },
       { path: '/s2/requirements', title: '认证需求', icon: Document },
@@ -131,8 +132,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/safety/inspection-items', title: '安规检测项', icon: Document },
       { path: '/safety/supplier-qualifications', title: '供应商安规', icon: ShoppingCart },
       { path: '/safety/alerts', title: '安规预警', icon: WarningFilled },
-      { path: '/dfm/checklist', title: 'DFM检查项', icon: Document },
-      { path: '/dfm/reports', title: 'DFM分析报告', icon: DataAnalysis },
+      { path: '/certifications', title: '认证管理', icon: Stamp },
     ]
   },
   {
@@ -172,7 +172,6 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/approvals', title: '审批管理', icon: Select },
       { path: '/alerts', title: '预警体系', icon: WarningFilled },
       { path: '/quality', title: '质量问题', icon: WarnTriangleFilled },
-      { path: '/certifications', title: '认证管理', icon: Stamp },
       { path: '/monitor/events', title: '事件监控', icon: DataAnalysis },
     ]
   },

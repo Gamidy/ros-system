@@ -77,12 +77,6 @@ const router = createRouter({
           meta: { title: 'Gate规则引擎', menu: 'tests' },
         },
         {
-          path: 'tests/target-markets',
-          name: 'TargetMarkets',
-          component: () => import('../views/tests/TargetMarketView.vue'),
-          meta: { title: '目标市场配置', menu: 'tests' },
-        },
-        {
           path: 'alerts',
           name: 'Alerts',
           component: () => import('../views/alerts/AlertsView.vue'),
