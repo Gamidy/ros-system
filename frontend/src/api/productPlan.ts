@@ -6,8 +6,8 @@ export interface PlanListParams {
   page?: number
   page_size?: number
   status?: string
+  series?: string
   search?: string
-  [key: string]: any
 }
 
 // ── Payload 接口定义 ──
@@ -59,6 +59,38 @@ export interface TechSpecPayload {
   version_id?: number
 }
 
+/** 更新策划基本信息 */
+export interface UpdatePlanPayload {
+  name?: string
+  series?: string
+  market?: string
+  competitor_id?: number
+  cost_target?: string
+  performance_target?: string
+}
+
+/** 创建项目关联 */
+export interface CreateProjectLinkPayload {
+  project_id: number
+  link_type?: string
+  snapshot_data?: string
+  scenario_group_id?: string
+}
+
+/** 更新项目关联 */
+export interface UpdateProjectLinkPayload {
+  link_type?: string
+  snapshot_data?: string
+  version_major?: number
+  version_minor?: number
+  scenario_group_id?: string
+}
+
+/** 项目关联列表查询参数 */
+export interface ProjectLinkListParams {
+  link_type?: string
+}
+
 /** 团队成员 (Team) */
 export interface TeamMemberPayload {
   member_name: string
@@ -75,7 +107,7 @@ export interface TeamMemberPayload {
 export function listPlans(params?: PlanListParams) { return api.get('/product-plans', { params }) }
 export function createPlan(data: CreatePlanPayload) { return api.post('/product-plans', data) }
 export function getPlanDetail(id: string) { return api.get(`/product-plans/${id}`) }
-export function updatePlan(id: string, data: Record<string, any>) { return api.patch(`/product-plans/${id}`, data) }
+export function updatePlan(id: string, data: UpdatePlanPayload) { return api.patch(`/product-plans/${id}`, data) }
 // ── 审批操作 ──
 export function approvePlan(planId: string, comment?: string) { return api.post(`/product-plans/${planId}/approve`, { comment }) }
 export function rejectPlan(planId: string, comment?: string) { return api.post(`/product-plans/${planId}/reject`, { comment }) }
@@ -101,7 +133,7 @@ export function updatePlanTeamMember(planId: string, id: number, data: TeamMembe
 export function deletePlanTeamMember(planId: string, id: number) { return api.delete(`/product-plans/${planId}/team/${id}`) }
 
 // ── 项目关联 (Project Links) ──
-export function listPlanProjectLinks(planId: string, params?: Record<string, any>) { return api.get(`/product-plans/${planId}/project-links`, { params }) }
-export function createPlanProjectLink(planId: string, data: Record<string, any>) { return api.post(`/product-plans/${planId}/project-links`, data) }
-export function updatePlanProjectLink(planId: string, linkId: number, data: Record<string, any>) { return api.put(`/product-plans/${planId}/project-links/${linkId}`, data) }
+export function listPlanProjectLinks(planId: string, params?: ProjectLinkListParams) { return api.get(`/product-plans/${planId}/project-links`, { params }) }
+export function createPlanProjectLink(planId: string, data: CreateProjectLinkPayload) { return api.post(`/product-plans/${planId}/project-links`, data) }
+export function updatePlanProjectLink(planId: string, linkId: number, data: UpdateProjectLinkPayload) { return api.put(`/product-plans/${planId}/project-links/${linkId}`, data) }
 export function deletePlanProjectLink(planId: string, linkId: number) { return api.delete(`/product-plans/${planId}/project-links/${linkId}`) }

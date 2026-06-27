@@ -102,6 +102,20 @@ export interface WorkspaceStats {
   completed_count: number
 }
 
+export interface RoadmapItem {
+  id: number
+  name: string
+  status: string
+  date: string
+  description: string
+  priority?: string
+  progress?: number
+  assignee?: string
+  milestone?: string
+  parent_id?: number | null
+  children?: RoadmapItem[]
+}
+
 export interface RoadmapData {
-  roadmap_items: any[]
+  roadmap_items: RoadmapItem[]
 }
