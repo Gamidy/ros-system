@@ -1,0 +1,549 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Product Verification (Certification) Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-002
+# Approval Score: 96.5/100
+
+capability:
+  id: "verification"
+  name: "Product Verification (Certification)"
+  display_name: "认证管理中心"
+  description: >
+    管理空调产品从认证需求产生到证书颁发的全生命周期流程。
+    包含认证需求定义、认证项目创建、样机送样、认证执行、
+    结果判定、证书管理、门禁规则及变更影响分析等核心业务能力。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 96.5
+  rfc_number: "RFC-2026-002"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "Quality Director"
+  technical_owner: "Verification Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "quality_engineer"
+  backup_role: "certification_specialist"
+  stewardship_level: "exclusive"  # exclusive | shared | read-only
+
+lifecycle:
+  states:
+    - draft
+    - requirement       # 认证需求定义
+    - project_created   # 认证项目已创建
+    - sample_submitted  # 样机已送样
+    - in_execution       # 认证执行中
+    - result_review      # 结果评审
+    - passed             # 认证通过
+    - certificate_issued # 证书已颁发
+    - closed             # 已关闭
+  initial_state: "draft"
+  terminal_states: ["closed"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── 认证需求 ──
+    - method: GET
+      path: /api/s2/certification-requirements
+      description: 认证需求列表（只读，可按项目/类型筛选）
+      response: "list[CertificationRequirementOut]"
+      auth: "require_menu('cert-requirements')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/s2/certification-requirements/{req_id}
+      description: 认证需求详情
+      response: "CertificationRequirementOut"
+      auth: "require_menu('cert-requirements')"
+      sla_ms: 200
+
+    - method: POST
+      path: /api/s2/certification-requirements/generate
+      description: 触发自动生成认证需求
+      request: "{ project_id: int }"
+      response: "dict"
+      auth: "require_menu('cert-requirements')"
+      sla_ms: 500
+      idempotency: true
+
+    # ── 认证项目 ──
+    - method: GET
+      path: /api/s2/certification-projects
+      description: 认证项目列表（可按项目/状态筛选）
+      response: "list[CertificationProjectOut]"
+      auth: "require_menu('cert-projects')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/certification-projects
+      description: 创建认证项目
+      request: "CertificationProjectCreate"
+      response: "CertificationProjectOut"
+      auth: "require_menu('cert-projects')"
+      sla_ms: 500
+
+    - method: PATCH
+      path: /api/s2/certification-projects/{cp_id}
+      description: 更新认证项目
+      request: "CertificationProjectUpdate"
+      response: "CertificationProjectOut"
+      auth: "require_menu('cert-projects')"
+      sla_ms: 300
+
+    - method: PATCH
+      path: /api/s2/certification-projects/{cp_id}/advance
+      description: 推进认证项目状态
+      request: "{ status: string }"
+      response: "CertificationProjectOut"
+      auth: "quality_engineer | certification_specialist"
+      sla_ms: 400
+      idempotency: true
+
+    # ── 认证样机 ──
+    - method: GET
+      path: /api/s2/certification-samples
+      description: 认证样机列表（可按认证项目/原型筛选）
+      response: "list[CertificationSampleOut]"
+      auth: "require_menu('cert-samples')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/certification-samples
+      description: 提交认证样机
+      request: "CertificationSampleCreate"
+      response: "CertificationSampleOut"
+      auth: "require_menu('cert-samples')"
+      sla_ms: 500
+
+    - method: PATCH
+      path: /api/s2/certification-samples/{cs_id}
+      description: 更新认证样机信息
+      request: "CertificationSampleUpdate"
+      response: "CertificationSampleOut"
+      auth: "require_menu('cert-samples')"
+      sla_ms: 300
+
+    # ── 认证执行 ──
+    - method: GET
+      path: /api/s2/certification-executions
+      description: 认证执行列表（可按样机/状态筛选）
+      response: "list[CertificationExecutionOut]"
+      auth: "require_menu('cert-executions')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/certification-executions
+      description: 创建认证执行记录
+      request: "CertificationExecutionCreate"
+      response: "CertificationExecutionOut"
+      auth: "require_menu('cert-executions')"
+      sla_ms: 500
+
+    - method: PATCH
+      path: /api/s2/certification-executions/{ce_id}
+      description: 更新认证执行
+      request: "CertificationExecutionUpdate"
+      response: "CertificationExecutionOut"
+      auth: "require_menu('cert-executions')"
+      sla_ms: 300
+
+    - method: PATCH
+      path: /api/s2/certification-executions/{ce_id}/status
+      description: 认证执行状态流转
+      request: "{ status: string }"
+      response: "CertificationExecutionOut"
+      auth: "quality_engineer"
+      sla_ms: 400
+      idempotency: true
+
+    # ── 认证结果 ──
+    - method: GET
+      path: /api/s2/certification-results
+      description: 认证结果列表（可按执行/状态筛选）
+      response: "list[CertificationResultOut]"
+      auth: "require_menu('cert-results')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/certification-results
+      description: 创建认证结果
+      request: "CertificationResultCreate"
+      response: "CertificationResultOut"
+      auth: "require_menu('cert-results')"
+      sla_ms: 500
+
+    - method: PATCH
+      path: /api/s2/certification-results/{cr_id}
+      description: 更新认证结果
+      request: "CertificationResultUpdate"
+      response: "CertificationResultOut"
+      auth: "require_menu('cert-results')"
+      sla_ms: 300
+
+    - method: PATCH
+      path: /api/s2/certification-results/{cr_id}/status
+      description: 认证结果状态流转
+      request: "{ status: string }"
+      response: "CertificationResultOut"
+      auth: "quality_engineer"
+      sla_ms: 400
+      idempotency: true
+
+    # ── 证书管理 ──
+    - method: GET
+      path: /api/s2/certificates
+      description: 证书列表（可按类型/状态/编号筛选）
+      response: "list[CertificateOut]"
+      auth: "require_menu('certificates')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/s2/certificates/{cert_id}
+      description: 证书详情
+      response: "CertificateOut"
+      auth: "require_menu('certificates')"
+      sla_ms: 200
+
+    - method: POST
+      path: /api/s2/certificates
+      description: 创建证书
+      request: "CertificateCreate"
+      response: "CertificateOut"
+      auth: "require_menu('certificates')"
+      sla_ms: 500
+
+    - method: PATCH
+      path: /api/s2/certificates/{cert_id}
+      description: 更新证书信息
+      request: "CertificateUpdate"
+      response: "CertificateOut"
+      auth: "require_menu('certificates')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/certificates/{cert_id}/renew
+      description: 证书续证
+      request: "{ new_expiry_date: date }"
+      response: "ActionResponse"
+      auth: "quality_engineer"
+      sla_ms: 500
+      idempotency: true
+
+    - method: POST
+      path: /api/s2/certificates/{cert_id}/suspend
+      description: 证书暂停
+      request: "{ reason: string }"
+      response: "ActionResponse"
+      auth: "quality_engineer"
+      sla_ms: 400
+      idempotency: true
+
+    - method: POST
+      path: /api/s2/certificates/{cert_id}/revoke
+      description: 证书注销
+      request: "{ reason: string }"
+      response: "ActionResponse"
+      auth: "quality_engineer"
+      sla_ms: 400
+      idempotency: true
+
+    - method: GET
+      path: /api/s2/certificates/expiring
+      description: 快到期证书列表
+      response: "list[CertificateOut]"
+      auth: "require_menu('certificates')"
+      sla_ms: 300
+
+    # ── 认证门禁规则 ──
+    - method: GET
+      path: /api/s2/gate-rules
+      description: 认证门禁规则列表（可按门禁编号/类型筛选）
+      response: "list[CertificationGateRuleOut]"
+      auth: "require_menu('cert-gate-rules')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/gate-rules
+      description: 创建门禁规则
+      request: "CertificationGateRuleCreate"
+      response: "CertificationGateRuleOut"
+      auth: "quality_engineer"
+      sla_ms: 500
+
+    - method: PUT
+      path: /api/s2/gate-rules/{rule_id}
+      description: 更新门禁规则
+      request: "CertificationGateRuleUpdate"
+      response: "CertificationGateRuleOut"
+      auth: "quality_engineer"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /api/s2/gate-rules/{rule_id}
+      description: 删除门禁规则
+      response: "ActionResponse"
+      auth: "quality_engineer"
+      sla_ms: 300
+
+    # ── 变更影响分析 ──
+    - method: GET
+      path: /api/s2/change-impact/rules
+      description: 影响规则列表（可分页/搜索/筛选）
+      response: "PaginatedImpactRules"
+      auth: "require_menu('change-impact')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/change-impact/rules
+      description: 创建影响规则
+      request: "ChangeImpactRuleCreate"
+      response: "ChangeImpactRuleOut"
+      auth: "quality_engineer"
+      sla_ms: 500
+
+    - method: PUT
+      path: /api/s2/change-impact/rules/{rule_id}
+      description: 更新影响规则
+      request: "ChangeImpactRuleUpdate"
+      response: "ChangeImpactRuleOut"
+      auth: "quality_engineer"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /api/s2/change-impact/rules/{rule_id}
+      description: 删除影响规则
+      response: "ActionResponse"
+      auth: "quality_engineer"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/s2/change-impact/analyze
+      description: 执行变更影响分析
+      request: "{ entity_type: string, entity_id: int }"
+      response: "AnalysisResult"
+      auth: "quality_engineer"
+      sla_ms: 2000
+      idempotency: true
+
+  events_published:
+    - "cert.requirement.created"       # 认证需求自动生成时
+    - "cert.project.created"           # 认证项目创建时
+    - "cert.sample.submitted"          # 样机送样提交时
+    - "cert.execution.completed"       # 认证执行完成时
+    - "cert.result.passed"             # 认证结果判定通过时
+    - "cert.certificate.issued"        # 证书颁发时
+
+  events_subscribed:
+    - "plan.released"                  # 策划发布 → 触发认证需求生成
+    - "project.status_changed"         # 项目状态变更 → 影响认证计划
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "CertificationRequirement"       # 认证需求
+    - "CertificationProject"           # 认证项目
+    - "CertificationSample"            # 认证样机
+    - "CertificationExecution"         # 认证执行
+    - "CertificationResult"            # 认证结果
+    - "Certificate"                    # 证书
+    - "CertificateVersion"             # 证书版本（续证记录）
+    - "CertificationGateRule"          # 认证门禁规则
+    - "ChangeImpactRule"               # 变更影响规则
+    - "ChangeImpactRecord"             # 变更影响记录
+
+  workflows:
+    - "verification_flow"              # 需求→项目→样机→执行→结果→证书
+    - "certificate_lifecycle"          # 颁发→续证→暂停→注销
+    - "gate_rule_management"           # 门禁规则配置
+    - "change_impact_analysis"         # 变更影响分析
+
+  views:
+    - "CertHub"                        # 认证管理中心（一体化入口）
+    - "CertOverview"                   # 认证总览仪表盘
+    - "CertRequirementView"            # 认证需求视图
+    - "CertProjectView"                # 认证项目视图
+    - "CertSampleView"                 # 认证样机视图
+    - "CertExecutionView"              # 认证执行视图
+    - "CertResultView"                 # 认证结果视图
+    - "CertificateView"                # 证书管理视图
+    - "GateRulesView"                  # 门禁规则视图
+    - "CertImpactView"                 # 认证影响分析视图
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "planning"
+      entities: ["ProductPlan", "ProductPlanProjectLink"]
+      contract: "docs/capabilities/planning.capability.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+    - capability: "project_management"
+      entities: ["Project", "ProjectStatus"]
+      contract: "docs/capabilities/project-management.capability.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+    - capability: "testing_lab"
+      entities: ["TestExecution", "TestResult"]
+      contract: "docs/capabilities/testing-lab.capability.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"                   # JWT认证
+    - "event_bus"                      # 事件总线
+    - "notification_center"            # 通知中心
+    - "document_service"               # 证书文档生成
+    - "ai_router"                      # AI辅助认证需求生成
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "Certificate"            # 认证通过 → 颁发正式证书
+      trigger: "cert.result.passed"
+      consumer: "customer_management"
+
+    - entity: "CertificationGateResult" # 门禁检查结果 → 影响项目进度
+      trigger: "cert.execution.completed"
+      consumer: "project_management"
+
+    - entity: "ChangeImpactAlert"      # 变更影响 → 通知受影响项目
+      trigger: "change_impact.analyzed"
+      consumer: "notification_center"
+
+  knowledge:
+    - "certification_template"         # 认证检查模板沉淀
+    - "gate_rule_library"              # 门禁规则库
+    - "cert_lessons_learned"           # 认证经验教训 → 知识库
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+    - "notification_center"
+
+  soft_dependencies:
+    - "testing"                        # 原型数据可选依赖
+    - "ai_router"                      # AI辅助可选
+    - "document_service"               # 证书文档生成可选
+
+  downstream_consumers:
+    - capability: "customer_management"
+      consumes: ["Certificate"]
+    - capability: "project_management"
+      consumes: ["CertificationGateResult"]
+    - capability: "knowledge_base"
+      consumes: ["cert_lessons_learned"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "CertificationRequirement.*"
+    - "CertificationProject.*"
+    - "CertificationSample.*"
+    - "CertificationExecution.*"
+    - "CertificationResult.*"
+    - "Certificate.*"
+    - "CertificateVersion.*"
+    - "CertificationGateRule.*"
+    - "ChangeImpactRule.*"
+    - "ChangeImpactRecord.*"
+
+  shared_read:
+    - "CertificationRequirement": ["dashboard", "bi_analytics"]
+    - "CertificationProject": ["dashboard", "bi_analytics", "project_management"]
+    - "CertificationSample": ["dashboard", "bi_analytics"]
+    - "CertificationExecution": ["dashboard", "bi_analytics"]
+    - "CertificationResult": ["dashboard", "bi_analytics"]
+    - "Certificate": ["dashboard", "bi_analytics", "customer_management"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  requirement_generation:
+    strategy: "project_id"             # 按项目ID去重生成
+  project_advancement:
+    strategy: "state_check"            # 当前状态校验
+  execution_status:
+    strategy: "state_check"            # 当前执行状态校验
+  result_judgment:
+    strategy: "state_check"            # 当前结果状态校验
+  certificate_issuance:
+    strategy: "business_key"           # 认证项目+类型去重
+  certificate_action:
+    strategy: "request_id"             # 续证/暂停/注销操作ID去重
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有数据无需迁移。新增字段均有默认值。
+    废弃字段通过 AliasChoices 兼容旧数据。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Certification Cycle Time"
+    description: "认证需求→证书颁发完成天数"
+    target: "≤ 45 天"
+    data_source: "Event Log"
+
+  - name: "First Pass Yield"
+    description: "一次性通过率（无需重测）"
+    target: "≥ 85%"
+    data_source: "CertificationResult"
+
+  - name: "Certificate On-time Rate"
+    description: "证书在规定期限内颁发率"
+    target: "≥ 95%"
+    data_source: "Certificate"
+
+  - name: "Certificate Expiry Alert Coverage"
+    description: "到期前30天通知覆盖率"
+    target: "100%"
+    data_source: "Notification Log"
+
+  - name: "Gate Rule Violation Rate"
+    description: "认证门禁违规次数占比"
+    target: "≤ 5%"
+    data_source: "Gate Rule Audit"
+
+  - name: "Cert Requirement API P95"
+    description: "认证需求列表 API P95 延迟"
+    target: "< 300ms"
+    data_source: "APM Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation Compliance + Event Bus 接入 + CertHub 一体化"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "AI 辅助认证需求生成 + 自动门禁规则推荐"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "证书自动续期提醒 + 跨实验室数据互联"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主认证（AI 主导认证方案，人工抽查）"
+    target: "2028+"
+    status: "vision"
