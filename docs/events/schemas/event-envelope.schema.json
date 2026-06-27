@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/schemas/event-envelope.schema.json",
+  "title": "ROS Event Envelope",
+  "description": "完整 ROS 事件封装: metadata(Header) + payload(业务数据)",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "properties": {
+    "metadata": {
+      "$ref": "./event-header.schema.json#",
+      "description": "D2-2 标准事件元数据"
+    },
+    "payload": {
+      "type": "object",
+      "description": "各 Capability 的业务数据 (结构由对应的 Event Schema 定义)"
+    }
+  }
+}

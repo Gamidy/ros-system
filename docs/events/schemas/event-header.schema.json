@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/schemas/event-header.schema.json",
+  "title": "ROS Event Header",
+  "description": "ROS D2-2 标准事件元数据 Header。所有 Capability 的事件必须包含此结构。",
+  "type": "object",
+  "required": ["identity", "context"],
+  "properties": {
+    "identity": {
+      "type": "object",
+      "required": ["event_id", "event_type", "version"],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "全局唯一事件 ID (UUID v4)"
+        },
+        "event_type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+          "description": "事件类型: {capability}.{action}，例: plan.created"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "事件 Schema 版本号"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": ["timestamp", "source", "producer", "trace_id", "tenant_id"],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 格式，必须包含时区"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Capability ID (与 Registry 一致)"
+        },
+        "producer": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_.]*$",
+          "description": "生产者模块名: {capability}.{module}"
+        },
+        "correlation_id": {
+          "oneOf": [
+            {"type": "string", "format": "uuid"},
+            {"type": "null"}
+          ],
+          "description": "分布式追踪关联 ID"
+        },
+        "causation_id": {
+          "oneOf": [
+            {"type": "string", "format": "uuid"},
+            {"type": "null"}
+          ],
+          "description": "起因事件 ID (事件溯源)"
+        },
+        "trace_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "OpenTelemetry trace ID (32 hex)"
+        },
+        "tenant_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "多租户隔离 ID，单租户填 'default'"
+        }
+      }
+    }
+  }
+}
