@@ -77,6 +77,8 @@ from app.models.plan_template import PlanTemplate
 from app.models.review_template import ReviewTemplate
 from app.models.improvement_task import ImprovementTask, TaskPriority, TaskStatus
 from app.models.standard import StandardRegion, StandardCategory, Standard, StandardCrawl
+from app.models.competitor_crawl import CompetitorCrawl
+from app.models.competitor_search_term import CompetitorSearchTerm
 
 __all__ = [
     "User",
@@ -176,4 +178,7 @@ __all__ = [
     "StandardCategory",
     "Standard",
     "StandardCrawl",
+    # competitor crawler
+    "CompetitorCrawl",
+    "CompetitorSearchTerm",
 ]
