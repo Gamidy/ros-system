@@ -1,5 +1,6 @@
 """审批流API: 审批链管理 + 审批请求提交流程"""
 import copy
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -13,6 +14,8 @@ from app.schemas import (
     ApprovalRequestCreate, ApprovalRequestOut,
     ApprovalRecordOut, ApprovalDecision,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/approval", tags=["审批流"])
 
@@ -342,6 +345,7 @@ def _make_decision(
 ) -> dict:
     """执行审批决策（通过/驳回）—— 支持 sequential 和 parallel 步骤类型"""
     from app.core.permissions import is_super_role
+    from app.services.events import bus, EventTypes
     req = db.query(ApprovalRequest).filter(ApprovalRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="审批请求不存在")
@@ -423,6 +427,22 @@ def _make_decision(
 
     db.commit()
     db.refresh(req)
+
+    # ── 发射审批事件（触发通知推送）──
+    try:
+        event_type = EventTypes.APPROVAL_COMPLETED if action == "approved" else EventTypes.APPROVAL_REJECTED
+        bus.emit_async(
+            event_type,
+            request_id=req.id,
+            request_type=req.request_type,
+            title=req.title,
+            requester=req.requester,
+            username=current_user.username,
+            comment=decision.comment or "",
+        )
+    except Exception as e:
+        logger.exception("审批事件发射失败: %s", e)
+
     return _request_to_out(req, db)
 
 

@@ -104,6 +104,8 @@
           </div>
         </div>
         <div class="header-right">
+          <!-- 通知铃铛 -->
+          <NotificationBell />
           <el-dropdown trigger="click" placement="bottom-end">
             <button class="user-btn">
               <div class="user-avatar">{{ userInitial }}</div>
@@ -135,16 +137,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import { useNotificationStore } from '../stores/notification'
+import { wsManager } from '../utils/websocket'
 import { useResponsive } from '../composables/useResponsive'
+import NotificationBell from '../components/NotificationBell.vue'
 import api from '../api'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const notifStore = useNotificationStore()
 
 // ── Responsive state from composable ──
 // Registers resize/matchMedia listeners; returns isMobile/isTablet/breakpoint
@@ -159,6 +165,12 @@ const drawerVisible = ref(false)
 // ── Pending approvals badge ──
 const pendingApprovalCount = ref(0)
 
+// ── WebSocket 订阅取消函数 ──
+let unsubApproval: (() => void) | null = null
+let unsubAlert: (() => void) | null = null
+let unsubNotification: (() => void) | null = null
+let unsubSystem: (() => void) | null = null
+
 onMounted(async () => {
   if (!authStore.user) {
     try {
@@ -168,6 +180,19 @@ onMounted(async () => {
       return
     }
   }
+
+  // ── 连接 WebSocket ──
+  const token = authStore.token
+  if (token) {
+    wsManager.connect(token)
+
+    // 订阅各类消息 → 通知 store
+    unsubApproval = wsManager.on('approval', (msg) => notifStore.handleWSMessage(msg))
+    unsubAlert = wsManager.on('alert', (msg) => notifStore.handleWSMessage(msg))
+    unsubNotification = wsManager.on('notification', (msg) => notifStore.handleWSMessage(msg))
+    unsubSystem = wsManager.on('system', (msg) => notifStore.handleWSMessage(msg))
+  }
+
   try {
     const res = await api.get('/dashboard/summary')
     pendingApprovalCount.value = res.data?.layer2_project_ops?.pending_approvals_count || 0
@@ -176,12 +201,21 @@ onMounted(async () => {
   }
 })
 
+onUnmounted(() => {
+  // 取消订阅
+  unsubApproval?.()
+  unsubAlert?.()
+  unsubNotification?.()
+  unsubSystem?.()
+})
+
 const userInitial = computed(() => {
   const name = authStore.user?.username || 'U'
   return name.charAt(0).toUpperCase()
 })
 
 function handleLogout() {
+  wsManager.close()
   authStore.logout()
   ElMessage.info('已退出')
   router.push('/login')

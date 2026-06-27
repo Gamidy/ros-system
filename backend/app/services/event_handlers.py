@@ -15,6 +15,7 @@ from app.models.alert import Alert, Notification
 from app.models.test import QualityIssue
 from .events import bus, EventTypes, store_event
 from app.services.notification.consumer import register_handlers as register_notification_handlers
+from app.services.ws_bridge import register_handlers as register_ws_handlers
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,9 @@ def _register_all_events():
     """注册所有事件处理器 + Event Store"""
     # ── 注册通知事件处理器（事件驱动推送引擎）──
     register_notification_handlers()
+
+    # ── 注册 WebSocket 事件桥接 ──
+    register_ws_handlers()
 
     # ── 已有事件 ──
     for evt in [

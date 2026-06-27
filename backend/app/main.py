@@ -25,6 +25,7 @@ from app.api import ai_plan_api
 from app.api import password_reset_api
 from app.api import event_logs
 from app.api import product_plan_review
+from app.api import ws
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -190,6 +191,9 @@ app.include_router(event_logs.router, prefix="/api")
 
 # ── Webhook 路由 ──
 app.include_router(webhooks.router)
+
+# ── WebSocket 端点（实时推送通知）──
+app.include_router(ws.router)
 
 _celery_thread = None
 
