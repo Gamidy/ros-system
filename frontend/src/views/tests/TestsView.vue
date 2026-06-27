@@ -210,7 +210,7 @@ async function fetchProtoList() {
 }
 
 function editTest(row: Record<string, unknown>) {
-  editingTestId.value = row.id
+  editingTestId.value = (row.id as number | null) ?? null
   testForm.value = {
     title: row.title || '',
     test_type: row.test_type || '性能',

@@ -161,113 +161,16 @@
 <!-- 复盘 -->
 <el-tab-pane name="review">
   <template #label>
-    <span>复盘 <el-tag size="small" type="primary" v-if="reviewData?.id">v1</el-tag></span>
+    <span>复盘 <el-tag size="small" type="primary" v-if="hasReview">v1</el-tag></span>
   </template>
-
-  <!-- 已上市但无复盘的醒目提示 -->
-  <el-alert
-    v-if="plan?.status === 'released' && !reviewData?.id"
-    title="⚠️ 该策划已「发布」，但尚未完成复盘"
-    type="warning"
-    :closable="false"
-    show-icon
-    style="margin-bottom:16px"
-    description="请尽快补充复盘数据，完成产品全生命周期闭环。"
+  <ReviewPanel
+    :plan-id="planId"
+    :plan-status="plan?.status || ''"
+    :planned-launch-date="plan?.planned_launch_date"
+    :total-target-cost="totalTargetCost"
+    @refresh="fetchPlan"
+    @review-changed="hasReview = $event; setSubTableDone('review', $event)"
   />
-
-  <el-form :model="reviewForm" label-width="160" size="small">
-    <el-row :gutter="16">
-      <el-col :span="8">
-        <el-form-item label="复盘日期">
-          <el-date-picker v-model="reviewForm.review_date" type="date" placeholder="选择复盘日期" value-format="YYYY-MM-DD" style="width:100%" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="8">
-        <el-form-item label="实际成本总计">
-          <el-input-number v-model="reviewForm.actual_cost_total" :min="0" :precision="2" style="width:100%" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="8">
-        <el-form-item label="实际上市日期">
-          <el-date-picker v-model="reviewForm.actual_launch_date" type="date" placeholder="选择实际上市日期" value-format="YYYY-MM-DD" style="width:100%" />
-        </el-form-item>
-      </el-col>
-    </el-row>
-
-    <el-form-item label="市场反馈">
-      <el-input v-model="reviewForm.market_feedback" type="textarea" :rows="3" placeholder="市场反馈信息" />
-    </el-form-item>
-    <el-form-item label="经验教训">
-      <el-input v-model="reviewForm.lessons_learned" type="textarea" :rows="3" placeholder="总结的经验教训" />
-    </el-form-item>
-    <el-form-item label="综合评分">
-      <el-rate v-model="reviewForm.overall_rating" :max="5" show-text :texts="['很差', '较差', '一般', '较好', '很好']" />
-    </el-form-item>
-    <el-form-item>
-      <el-button type="primary" size="small" @click="saveReview" :loading="savingReview">
-        {{ reviewData?.id ? '更新复盘' : '提交复盘' }}
-      </el-button>
-      <el-button v-if="reviewData?.id" size="small" @click="resetReviewForm">重置</el-button>
-    </el-form-item>
-  </el-form>
-
-  <!-- 成本对比 -->
-  <el-divider content-position="left">成本对比</el-divider>
-  <el-descriptions :column="3" border size="small" style="margin-bottom:16px">
-    <el-descriptions-item label="目标成本总计">
-      <span style="font-weight:600">{{ formatCost(totalCostTarget) }}</span>
-    </el-descriptions-item>
-    <el-descriptions-item label="实际成本总计">
-      <span style="font-weight:600">{{ reviewForm.actual_cost_total != null ? formatCost(reviewForm.actual_cost_total) : '待填写' }}</span>
-    </el-descriptions-item>
-    <el-descriptions-item label="偏差">
-      <el-tag :type="costDeviationType" size="small">
-        {{ costDeviationLabel }}
-      </el-tag>
-    </el-descriptions-item>
-  </el-descriptions>
-
-  <!-- 上市日期对比 -->
-  <el-divider content-position="left">上市日期对比</el-divider>
-  <el-descriptions :column="3" border size="small" style="margin-bottom:16px">
-    <el-descriptions-item label="计划上市日期">
-      <span>{{ plan?.planned_launch_date || '未设定' }}</span>
-    </el-descriptions-item>
-    <el-descriptions-item label="实际上市日期">
-      <span>{{ reviewForm.actual_launch_date || '待填写' }}</span>
-    </el-descriptions-item>
-    <el-descriptions-item label="偏差天数">
-      <el-tag :type="launchDeviationType" size="small">
-        {{ launchDeviationLabel }}
-      </el-tag>
-    </el-descriptions-item>
-  </el-descriptions>
-
-  <!-- ========== P5 知识沉淀 ========== -->
-  <el-divider content-position="left">📚 知识沉淀</el-divider>
-  <div style="margin-bottom:12px">
-    <el-button size="small" type="primary" @click="showKnowledgeDialog = true">+ 沉淀经验到知识库</el-button>
-  </div>
-  <div v-if="knowledgeList.length === 0" style="text-align:center;padding:24px 0;color:#909399;font-size:13px">
-    暂无关联知识。点击上方按钮将复盘经验沉淀到知识库。
-  </div>
-  <el-table v-else :data="knowledgeList" stripe border size="small" empty-text="暂无关联知识">
-    <el-table-column prop="title" label="知识标题" min-width="160">
-      <template #default="{ row }">
-        <el-link type="primary" @click="goToKnowledge(row)">{{ row.title }}</el-link>
-      </template>
-    </el-table-column>
-    <el-table-column prop="category" label="分类" width="120">
-      <template #default="{ row }"><el-tag size="small">{{ row.category }}</el-tag></template>
-    </el-table-column>
-    <el-table-column prop="content" label="内容摘要" min-width="240">
-      <template #default="{ row }">
-        <span class="knowledge-summary">{{ row.content?.substring(0, 80) }}{{ row.content?.length > 80 ? '...' : '' }}</span>
-      </template>
-    </el-table-column>
-    <el-table-column prop="created_by" label="创建人" width="100" />
-    <el-table-column prop="created_at" label="创建时间" width="160" />
-  </el-table>
 </el-tab-pane>
 
 <!-- 关联项目 -->
@@ -449,29 +352,6 @@
 <template #footer><el-button @click="showTeamDialog = false">取消</el-button><el-button type="primary" @click="saveTeamMember" :loading="savingTeam">{{ teamDialogMode === 'add' ? '添加' : '保存' }}</el-button></template>
 </el-dialog>
 
-<!-- 知识沉淀弹窗 -->
-<el-dialog v-model="showKnowledgeDialog" title="沉淀经验到知识库" width="550px" :close-on-click-modal="false">
-<el-form :model="knowledgeForm" label-width="80" size="small">
-<el-form-item label="标题"><el-input v-model="knowledgeForm.title" placeholder="知识标题" /></el-form-item>
-<el-form-item label="分类">
-<el-select v-model="knowledgeForm.category" placeholder="选择分类" style="width:100%">
-<el-option label="项目经验" value="项目经验" />
-<el-option label="技术方案" value="技术方案" />
-<el-option label="市场洞察" value="市场洞察" />
-<el-option label="成本控制" value="成本控制" />
-<el-option label="质量改进" value="质量改进" />
-<el-option label="流程优化" value="流程优化" />
-<el-option label="其他" value="其他" />
-</el-select>
-</el-form-item>
-<el-form-item label="内容"><el-input v-model="knowledgeForm.content" type="textarea" :rows="5" placeholder="详细描述经验内容..." /></el-form-item>
-</el-form>
-<template #footer>
-<el-button @click="showKnowledgeDialog = false">取消</el-button>
-<el-button type="primary" @click="submitKnowledge" :loading="savingKnowledge">提交</el-button>
-</template>
-</el-dialog>
-
 <!-- 移动端审批 Drawer -->
 <el-drawer v-if="isMobile" v-model="showApprovalDrawer" direction="btt" size="100%" :close-on-click-modal="false" :with-header="false" class="approval-drawer-mobile">
 <div class="drawer-body">
@@ -497,7 +377,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import * as planAPI from '../../api/productPlan'
-import type { TeamMemberPayload, MarketOption, ReviewData, KnowledgeItem } from '../../api/productPlan'
+import type { TeamMemberPayload, MarketOption } from '../../api/productPlan'
+import ReviewPanel from './ReviewPanel.vue'
 import { useSubTableProgress } from '../../composables/useSubTableProgress'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
 
@@ -580,6 +461,45 @@ interface TeamMember {
   version_id?: number
 }
 
+/** Payload for upsertPlanInitiation API */
+interface InitiationPayload {
+  background_basis?: string
+  product_type?: string
+  target_market?: string
+  refrigerant?: string
+  capacity_range?: string
+  voltage_freq?: string
+  series_name?: string
+  energy_rating?: string
+  dev_category?: string
+  project_origin?: string
+  project_duration?: number
+  ip_ownership?: string
+  overall_goal?: string
+  deliverables?: string
+  sample_qty?: number
+}
+
+/** Payload for upsertPlanMarket API */
+interface MarketPayload {
+  main_capacity?: string
+  energy_efficiency_req?: string
+  cert_requirements?: string
+  target_price?: number
+  customer_requirements?: string
+}
+
+/** @deprecated — 历史明细中的旧成本JSON字段 */
+interface InitiationCostFields {
+  dev_cost_items?: unknown
+  mold_costs?: unknown
+  prototype_costs_detail?: unknown
+  test_costs?: unknown
+  cert_costs?: unknown
+  labor_costs?: unknown
+  economic_indicators?: unknown
+}
+
 const route = useRoute()
 const router = useRouter()
 const planId = route.params.id as string
@@ -616,7 +536,7 @@ async function saveCurrentStep(stepIdx: number) {
     switch (key) {
       case 'initiation': {
         const p = initiationForm
-        const payload: Record<string, any> = {}
+        const payload: InitiationPayload = {}
         if (p.background) payload.background_basis = p.background
         if (p.type) payload.product_type = p.type
         if (p.market) payload.target_market = p.market
@@ -638,7 +558,7 @@ async function saveCurrentStep(stepIdx: number) {
       }
       case 'market': {
         const p = marketForm
-        const payload: Record<string, any> = {}
+        const payload: MarketPayload = {}
         if (p.main_capacity) payload.main_capacity = p.main_capacity
         if (p.energy_efficiency) payload.energy_efficiency_req = p.energy_efficiency
         if (p.cert_requirements) payload.cert_requirements = p.cert_requirements
@@ -710,6 +630,9 @@ const withdrawing = ref(false)
 const showApprovalDrawer = ref(false)
 const submittingQuick = ref(false)
 
+// ── 复盘子状态（子组件 ReviewPanel 管理详情，父组件追踪是否存在） ──
+const hasReview = ref(false)
+
 // ── 关联项目 ──
 const projectLinks = ref<ProjectLinkInfo[]>([])
 const projectDetails = ref<ProjectDetailInfo[]>([])
@@ -719,35 +642,13 @@ const loadingProjects = ref(false)
 const initiationForm = reactive({ background: '', type: '', market: '', refrigerant: '', capacity: '', voltage: '', series: '', energy: '', dev_category: '', origin: '', duration: 0, ip: '', goals: '', deliverables: '', sample_qty: 0 })
 const savingInitiation = ref(false)
 /** @deprecated — 7个废弃JSON成本字段，仅供历史明细展示 */
-const initiationCosts = ref<Record<string, any> | null>(null)
+const initiationCosts = ref<InitiationCostFields | null>(null)
 
 // ── 子表版本号 ──
 const initiationVersion = ref(0)
 const marketVersion = ref(0)
 const techSpecVersion = ref(0)
 const teamVersion = ref(0)
-
-// ── 复盘 ──
-const reviewData = ref<ReviewData | null>(null)
-const reviewForm = reactive({
-  review_date: '',
-  actual_cost_total: null as number | null,
-  actual_launch_date: '',
-  market_feedback: '',
-  lessons_learned: '',
-  overall_rating: 0,
-})
-const savingReview = ref(false)
-
-// ── 知识沉淀 ──
-const knowledgeList = ref<KnowledgeItem[]>([])
-const showKnowledgeDialog = ref(false)
-const savingKnowledge = ref(false)
-const knowledgeForm = reactive({
-  title: '',
-  category: '',
-  content: '',
-})
 
 async function fetchInitiation() {
 try { const res = await planAPI.getPlanInitiation(planId); if (res.data) {
@@ -792,7 +693,7 @@ savingInitiation.value = true
 try {
   // 前端字段 → 后端字段映射（只发送有值的字段，避免覆盖已有数据）
   const p = initiationForm
-  const payload: Record<string, any> = {}
+  const payload: InitiationPayload = {}
   if (p.background) payload.background_basis = p.background
   if (p.type) payload.product_type = p.type
   if (p.market) payload.target_market = p.market
@@ -863,7 +764,7 @@ async function saveMarket() {
 savingMarket.value = true
 try {
   const p = marketForm
-  const payload: Record<string, any> = {}
+  const payload: MarketPayload = {}
   if (p.main_capacity) payload.main_capacity = p.main_capacity
   if (p.energy_efficiency) payload.energy_efficiency_req = p.energy_efficiency
   if (p.cert_requirements) payload.cert_requirements = p.cert_requirements
@@ -977,7 +878,7 @@ try {
     projectLinks.value.map(link => api.get(`/projects/${link.project_id}`))
   )
   projectDetails.value = results
-    .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+    .filter((r): r is PromiseFulfilledResult<ProjectDetailInfo> => r.status === 'fulfilled')
     .map(r => r.value.data as ProjectDetailInfo)
 } catch {
   // 静默处理 — 项目详情加载失败不影响主页面
@@ -1071,7 +972,7 @@ function formatCost(val: number): string {
   return `¥${val.toLocaleString('zh-CN')}`
 }
 /** 格式化 JSON 对象为可读字符串（用于历史明细展示） */
-function formatCostJson(val: any): string {
+function formatCostJson(val: unknown): string {
   if (typeof val === 'string') {
     try { val = JSON.parse(val) } catch { return val }
   }
@@ -1081,8 +982,8 @@ function formatCostJson(val: any): string {
   return String(val)
 }
 /** 过滤出有值的废弃成本字段（用于移动端展示） */
-function filteredCostFields(obj: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {}
+function filteredCostFields(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(obj)) {
     if (v != null) result[k] = v
   }
@@ -1113,51 +1014,6 @@ function costCompareLabel(target: number, actual: number): string {
   if (actual < target * 0.95) return '节省'
   return '持平'
 }
-
-// ── 复盘对比计算 ──
-const totalCostTarget = computed(() => {
-  return costs.value.reduce((sum, c) => sum + (Number(c.target_value) || 0), 0)
-})
-const costDeviationType = computed(() => {
-  const target = totalCostTarget.value
-  const actual = reviewForm.actual_cost_total
-  if (target === 0 || actual == null) return 'info'
-  if (actual > target * 1.05) return 'danger'
-  if (actual < target * 0.95) return 'success'
-  return 'warning'
-})
-const costDeviationLabel = computed(() => {
-  const target = totalCostTarget.value
-  const actual = reviewForm.actual_cost_total
-  if (target === 0 && (actual == null || actual === 0)) return '无数据'
-  if (target === 0) return '目标未设定'
-  if (actual == null) return '待填写实际成本'
-  const pct = ((actual - target) / target * 100).toFixed(1)
-  if (actual > target) return `超支 ${pct}%`
-  if (actual < target) return `节省 ${Math.abs(Number(pct))}%`
-  return '持平'
-})
-const launchDeviationType = computed(() => {
-  const planned = plan.value?.planned_launch_date
-  const actual = reviewForm.actual_launch_date
-  if (!planned || !actual) return 'info'
-  const days = Math.round((new Date(actual).getTime() - new Date(planned).getTime()) / (1000 * 60 * 60 * 24))
-  if (days > 7) return 'danger'
-  if (days < -7) return 'success'
-  if (days === 0) return 'success'
-  return 'warning'
-})
-const launchDeviationLabel = computed(() => {
-  const planned = plan.value?.planned_launch_date
-  const actual = reviewForm.actual_launch_date
-  if (!planned && !actual) return '无数据'
-  if (!planned) return '计划日未设定'
-  if (!actual) return '待填写实际日期'
-  const days = Math.round((new Date(actual).getTime() - new Date(planned).getTime()) / (1000 * 60 * 60 * 24))
-  if (days > 0) return `延迟 ${days} 天`
-  if (days < 0) return `提前 ${Math.abs(days)} 天`
-  return '准时上市'
-})
 
 // ── 底部审批操作栏 ──
 const canAdvance = computed(() => plan.value && ['draft', 'competitor', 'definition', 'costing', 'tech_input'].includes(plan.value.status))
@@ -1219,116 +1075,6 @@ ElMessage.error(_err || '操作失败，请重试')
 finally { withdrawing.value = false }
 }
 
-// ── 复盘 ──
-async function fetchReview() {
-  try {
-    const res = await planAPI.getReview(planId)
-    if (res.data) {
-      reviewData.value = res.data
-      reviewForm.review_date = res.data.review_date || ''
-      reviewForm.actual_cost_total = res.data.actual_cost_total ?? null
-      reviewForm.actual_launch_date = res.data.actual_launch_date || ''
-      reviewForm.market_feedback = res.data.market_feedback || ''
-      reviewForm.lessons_learned = res.data.lessons_learned || ''
-      reviewForm.overall_rating = res.data.overall_rating || 0
-      setSubTableDone('review', true)
-    }
-  } catch {
-    // 404 = 无复盘数据，不报错
-    reviewData.value = null
-    setSubTableDone('review', false)
-  }
-}
-
-function resetReviewForm() {
-  if (reviewData.value) {
-    reviewForm.review_date = reviewData.value.review_date || ''
-    reviewForm.actual_cost_total = reviewData.value.actual_cost_total ?? null
-    reviewForm.actual_launch_date = reviewData.value.actual_launch_date || ''
-    reviewForm.market_feedback = reviewData.value.market_feedback || ''
-    reviewForm.lessons_learned = reviewData.value.lessons_learned || ''
-    reviewForm.overall_rating = reviewData.value.overall_rating || 0
-  } else {
-    reviewForm.review_date = ''
-    reviewForm.actual_cost_total = null
-    reviewForm.actual_launch_date = ''
-    reviewForm.market_feedback = ''
-    reviewForm.lessons_learned = ''
-    reviewForm.overall_rating = 0
-  }
-}
-
-async function saveReview() {
-  savingReview.value = true
-  try {
-    const payload: ReviewData = {
-      review_date: reviewForm.review_date || undefined,
-      actual_cost_total: reviewForm.actual_cost_total ?? undefined,
-      actual_launch_date: reviewForm.actual_launch_date || undefined,
-      market_feedback: reviewForm.market_feedback || undefined,
-      lessons_learned: reviewForm.lessons_learned || undefined,
-      overall_rating: reviewForm.overall_rating || undefined,
-    }
-    if (reviewData.value?.id) {
-      await planAPI.updateReview(planId, payload)
-      ElMessage.success('复盘更新成功')
-    } else {
-      await planAPI.submitReview(planId, payload)
-      ElMessage.success('复盘提交成功')
-    }
-    await fetchReview()
-  } catch (e: unknown) {
-    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
-    ElMessage.error(_err || '操作失败，请重试')
-  } finally {
-    savingReview.value = false
-  }
-}
-
-// ── 知识沉淀 ──
-async function fetchKnowledge() {
-  try {
-    const res = await planAPI.listPlanKnowledge(planId)
-    knowledgeList.value = res.data || []
-  } catch {
-    knowledgeList.value = []
-  }
-}
-
-async function submitKnowledge() {
-  if (!knowledgeForm.title || !knowledgeForm.content) {
-    ElMessage.warning('请填写标题和内容')
-    return
-  }
-  savingKnowledge.value = true
-  try {
-    const payload: Record<string, unknown> = {
-      title: knowledgeForm.title,
-      category: knowledgeForm.category || '其他',
-      content: knowledgeForm.content,
-      source_type: 'product_plan',
-      source_id: planId,
-    }
-    await planAPI.createKnowledge(payload)
-    ElMessage.success('知识沉淀成功')
-    showKnowledgeDialog.value = false
-    knowledgeForm.title = ''
-    knowledgeForm.category = ''
-    knowledgeForm.content = ''
-    await fetchKnowledge()
-  } catch (e: unknown) {
-    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
-    ElMessage.error(_err || '操作失败，请重试')
-  } finally {
-    savingKnowledge.value = false
-  }
-}
-
-function goToKnowledge(row: KnowledgeItem) {
-  // 如果有知识详情页则跳转，否则提示
-  ElMessage.info(`知识: ${row.title}`)
-}
-
 // ── 移动端保存全部 ──
 async function saveAll() {
 savingAll.value = true
@@ -1336,7 +1082,7 @@ try {
 await api.patch(`/product-plans/${planId}`, editForm.value)
 // Initiation 字段映射
 const ip = initiationForm
-const initPayload: Record<string, any> = {}
+const initPayload: InitiationPayload = {}
 if (ip.background) initPayload.background_basis = ip.background
 if (ip.type) initPayload.product_type = ip.type
 if (ip.market) initPayload.target_market = ip.market
@@ -1355,7 +1101,7 @@ if (ip.sample_qty) initPayload.sample_qty = ip.sample_qty
 await planAPI.upsertPlanInitiation(planId, initPayload)
 // Market 字段映射
 const mp = marketForm
-const marketPayload: Record<string, any> = {}
+const marketPayload: MarketPayload = {}
 if (mp.main_capacity) marketPayload.main_capacity = mp.main_capacity
 if (mp.energy_efficiency) marketPayload.energy_efficiency_req = mp.energy_efficiency
 if (mp.cert_requirements) marketPayload.cert_requirements = mp.cert_requirements
@@ -1473,7 +1219,7 @@ async function quickSubmit() {
   try {
     // 3a. 先保存所有子表表单数据（确保最新编辑内容已落库）
     const p = initiationForm
-    const initPayload: Record<string, any> = {}
+    const initPayload: InitiationPayload = {}
     if (p.background) initPayload.background_basis = p.background
     if (p.type) initPayload.product_type = p.type
     if (p.refrigerant) initPayload.refrigerant = p.refrigerant
@@ -1491,7 +1237,7 @@ async function quickSubmit() {
     await planAPI.upsertPlanInitiation(planId, initPayload)
 
     const mp = marketForm
-    const marketPayload: Record<string, any> = {}
+    const marketPayload: MarketPayload = {}
     if (mp.main_capacity) marketPayload.main_capacity = mp.main_capacity
     if (mp.energy_efficiency) marketPayload.energy_efficiency_req = mp.energy_efficiency
     if (mp.cert_requirements) marketPayload.cert_requirements = mp.cert_requirements
@@ -1527,8 +1273,6 @@ onMounted(async () => {
     fetchTechSpec(),
     fetchTeam(),
     fetchMarketOptions(),
-    fetchReview(),
-    fetchKnowledge(),
   ])
   refreshStatus()
 })

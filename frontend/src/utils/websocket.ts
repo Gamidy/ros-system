@@ -7,9 +7,9 @@ export interface WSMessage {
 class WebSocketManager {
   private ws: WebSocket | null = null
   private url: string = ''
-  private reconnectInterval: number = 3000
+  private readonly BASE_RECONNECT_INTERVAL: number = 3000
+  private readonly MAX_RECONNECT_ATTEMPTS: number = 5
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
-  private maxReconnectAttempts: number = 10
   private reconnectAttempts: number = 0
   private listeners: Map<string, ((data: WSMessage) => void)[]> = new Map()
   private isManualClose: boolean = false
@@ -17,16 +17,21 @@ class WebSocketManager {
   private heartbeatIntervalMs: number = 30000
 
   connect(token?: string) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = window.location.host
-    this.url = `${protocol}//${host}/ws`
-    if (token) {
-      this.url += `?token=${encodeURIComponent(token)}`
-    }
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const host = window.location.host
+      this.url = `${protocol}//${host}/ws`
+      if (token) {
+        this.url += `?token=${encodeURIComponent(token)}`
+      }
 
-    this.isManualClose = false
-    this.reconnectAttempts = 0
-    this._connect()
+      this.isManualClose = false
+      this.reconnectAttempts = 0
+      this._connect()
+    } catch (e) {
+      console.error('[wsManager] connect() 失败:', e)
+      this._scheduleReconnect()
+    }
   }
 
   private _connect() {
@@ -84,13 +89,16 @@ class WebSocketManager {
 
   private _scheduleReconnect() {
     if (this.reconnectTimer) return
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) return
+    if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) return
 
     this.reconnectAttempts++
+    // 指数退避: 3s, 6s, 12s, 24s, 24s（封顶）
+    const delay = Math.min(this.BASE_RECONNECT_INTERVAL * Math.pow(2, this.reconnectAttempts - 1), 24000)
+    console.log(`[wsManager] ${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS} 次重连，${delay}ms 后...`)
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
       this._connect()
-    }, this.reconnectInterval)
+    }, delay)
   }
 
   private _dispatch(message: WSMessage) {

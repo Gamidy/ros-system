@@ -39,7 +39,9 @@ def _on_approval_event(event_type: str, **kwargs):
     """审批事件处理器 — 推送审批通知给申请人 (requester)
 
     从 event_handlers.py 的 bus.on() 同步调用。
-    由于 ws_manager.send_to_user 是 async 的，这里用 asyncio.run 执行。
+    兼容两种场景：
+    - 有运行事件循环（FastAPI请求上下文）→ loop.create_task()
+    - 无事件循环（后台线程/Celery）→ asyncio.run()
     """
     import asyncio
 
@@ -61,18 +63,17 @@ def _on_approval_event(event_type: str, **kwargs):
         "content": f"审批「{title}」状态已更新为: {approval_status}",
     }
 
+    # 检测是否已有运行中的事件循环
     try:
-        asyncio.run(_push_ws(event_type, "approval", payload, requester))
+        loop = asyncio.get_running_loop()
+        # 已在事件循环中 → create_task 安全
+        loop.create_task(_push_ws(event_type, "approval", payload, requester))
     except RuntimeError:
-        # 如果已在事件循环中，用 run_coroutine_threadsafe
+        # 无运行事件循环 → asyncio.run()
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(_push_ws(event_type, "approval", payload, requester))
-                return
-        except RuntimeError:
-            pass
-        logger.warning("WS 推送失败（无事件循环）: event=%s, user=%s", event_type, requester)
+            asyncio.run(_push_ws(event_type, "approval", payload, requester))
+        except RuntimeError as exc:
+            logger.warning("WS 推送失败（无可用事件循环）: %s", exc)
 
 
 # ── 注册入口 ──────────────────────────────────────────
