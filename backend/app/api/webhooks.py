@@ -96,7 +96,7 @@ def list_subscriptions(
     enabled: Optional[bool] = Query(None, description="按启用状态过滤"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "quality_engineer", "rd_director")),
-) -> list:
+) -> list[WebhookSubscriptionOut]:
     """获取所有 Webhook 订阅列表"""
     query = db.query(WebhookSubscription)
     if enabled is not None:
@@ -112,7 +112,7 @@ def create_subscription(
         "admin", "general_manager", "rd_director",
         "project_admin", "product_manager",
     )),
-) -> WebhookSubscription:
+) -> WebhookSubscriptionOut:
     """创建 Webhook 订阅"""
     sub = WebhookSubscription(
         name=req.name,
@@ -133,7 +133,7 @@ def get_subscription(
     sub_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "quality_engineer", "rd_director")),
-) -> WebhookSubscription:
+) -> WebhookSubscriptionOut:
     """查询单个 Webhook 订阅"""
     sub = db.query(WebhookSubscription).filter(WebhookSubscription.id == sub_id).first()
     if not sub:
@@ -150,7 +150,7 @@ def update_subscription(
         "admin", "general_manager", "rd_director",
         "project_admin", "product_manager",
     )),
-) -> WebhookSubscription:
+) -> WebhookSubscriptionOut:
     """更新 Webhook 订阅（全量覆盖，仅更新传入字段）"""
     sub = db.query(WebhookSubscription).filter(WebhookSubscription.id == sub_id).first()
     if not sub:
@@ -213,7 +213,7 @@ def get_subscription_logs(
     limit: int = Query(50, ge=1, le=200, description="返回条数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "quality_engineer", "rd_director")),
-) -> list:
+) -> list[WebhookLogOut]:
     """查看指定订阅的发送日志"""
     # 验证订阅存在
     sub = db.query(WebhookSubscription).filter(WebhookSubscription.id == sub_id).first()

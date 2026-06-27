@@ -162,7 +162,7 @@ def delete_knowledge(
     item_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> None:
     """删除知识库条目（需登录）"""
     item = db.query(KnowledgeItem).filter(KnowledgeItem.id == item_id).first()
     if not item:
@@ -172,7 +172,7 @@ def delete_knowledge(
 
 
 @router.get("/categories")
-def get_categories(db: Session = Depends(get_db)) -> list:
+def get_categories(db: Session = Depends(get_db)) -> list[str]:
     """获取所有分类"""
     rows = db.query(KnowledgeItem.category).distinct().all()
     return sorted(set(r[0] for r in rows if r[0]))
@@ -182,7 +182,7 @@ def get_categories(db: Session = Depends(get_db)) -> list:
 def get_team_members(
     role: Optional[str] = Query(None, description="按系统角色筛选"),
     db: Session = Depends(get_db),
-) -> list:
+) -> list[dict]:
     """获取活跃用户列表（供团队选择）"""
     q = db.query(User).filter(User.is_active == True)
     if role:
