@@ -554,12 +554,32 @@ def list_competitors(
     total = q.count()
     items = q.order_by(CompetitorModel.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
+    # 附加市场参数配置（用于前端动态渲染 extra_fields）
+    param_configs = []
+    if market:
+        from app.models.market_param_config import MarketParamConfig
+        configs = db.query(MarketParamConfig).filter(
+            MarketParamConfig.market_code == _get_market_code(market, db),
+            MarketParamConfig.is_active == "true",
+        ).order_by(MarketParamConfig.sort_order).all()
+        param_configs = [
+            {
+                "param_key": c.param_key,
+                "param_label": c.param_label,
+                "param_unit": c.param_unit or "",
+                "data_type": c.data_type,
+                "is_required": c.is_required == "true",
+            }
+            for c in configs
+        ]
+
     return {
         "total": total,
         "page": page,
         "page_size": page_size,
         "items": [_serialize(it) for it in items],
         "param_names": get_param_names(market) if market else BASE_PARAM_NAMES,
+        "param_configs": param_configs,
     }
 
 
@@ -1041,3 +1061,28 @@ def create_plan_from_benchmark(
         db.rollback()
         logger.exception("从竞品对标生成策划失败")
         raise HTTPException(status_code=500, detail=f"生成策划失败: {str(e)}")
+
+
+def _get_market_code(market_name: str, db: Session) -> str:
+    """市场名称 → 市场代码（用于 market_param_configs 查询）"""
+    # 优先从 markets 表查询
+    from app.models.product import Market
+    try:
+        m = db.query(Market).filter(Market.name == market_name).first()
+        if m:
+            return m.code
+    except Exception:
+        pass
+    # fallback 映射
+    NAME_TO_CODE = {
+        "欧盟": "EU", "越南": "VN", "印度尼西亚": "ID", "马来西亚": "MY",
+        "巴基斯坦": "PK", "乌兹别克斯坦": "UZ", "吉尔吉斯斯坦": "KG",
+        "塔吉克斯坦": "TJ", "沙特": "SA", "阿联酋": "AE", "科威特": "KW",
+        "巴林": "BH", "以色列": "IL", "伊朗": "IR", "伊拉克": "IQ",
+        "美国": "US", "加拿大": "CA", "墨西哥": "MX", "哥伦比亚": "CO",
+        "巴西": "BR", "阿根廷": "AR", "俄罗斯": "RU", "白俄罗斯": "BY",
+        "乌克兰": "UA", "英国": "GB", "意大利": "IT", "阿塞拜疆": "AZ",
+        "南非": "ZA", "阿尔及利亚": "DZ", "尼日利亚": "NG",
+        "加纳": "GH", "澳大利亚": "AU",
+    }
+    return NAME_TO_CODE.get(market_name, "")

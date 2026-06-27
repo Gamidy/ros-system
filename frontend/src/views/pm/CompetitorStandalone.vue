@@ -330,6 +330,36 @@
             </el-form-item>
           </el-col>
         </el-row>
+
+        <!-- ══════════ 市场专有参数（动态） ══════════ -->
+        <template v-if="marketParamConfigs.length > 0">
+          <el-divider content-position="left">市场专有参数</el-divider>
+          <el-row :gutter="16">
+            <el-col
+              v-for="cfg in marketParamConfigs"
+              :key="cfg.param_key"
+              :span="8"
+            >
+              <el-form-item
+                :label="cfg.param_label + (cfg.param_unit ? '(' + cfg.param_unit + ')' : '')"
+              >
+                <el-input-number
+                  v-if="cfg.data_type === 'float' || cfg.data_type === 'int'"
+                  v-model="form.extraFields[cfg.param_key]"
+                  :min="0"
+                  :step="cfg.data_type === 'int' ? 1 : 0.1"
+                  :precision="cfg.data_type === 'int' ? 0 : 2"
+                  style="width:100%"
+                />
+                <el-input
+                  v-else
+                  v-model="form.extraFields[cfg.param_key]"
+                  style="width:100%"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -542,6 +572,7 @@ interface CompetitorFormData {
   factory_price: string
   launch_year: number | null
   notes: string
+  extraFields: Record<string, number | string | null>
 }
 
 interface CompetitorItem extends CompetitorFormData {
@@ -615,25 +646,31 @@ const BASE_PARAMS = [
   { key: 'heating_capacity_w', label: '制热量', unit: 'W' },
   { key: 'cooling_w', label: '制冷功率', unit: 'W' },
   { key: 'heating_w', label: '制热功率', unit: 'W' },
-  { key: 'pdc', label: 'Pdesignc', unit: 'kW' },
-  { key: 'pdh', label: 'Pdesignh', unit: 'kW' },
   { key: 'noise_indoor_db', label: '室内噪音(声压)', unit: 'dB' },
   { key: 'noise_outdoor_db', label: '室外噪音(声压)', unit: 'dB' },
-  { key: 'noise_indoor_power_db', label: '室内噪音(声功率)', unit: 'dB' },
-  { key: 'noise_outdoor_power_db', label: '室外噪音(声功率)', unit: 'dB' },
   { key: 'airflow_m3h', label: '循环风量', unit: 'm³/h' },
   { key: 'indoor_size_mm', label: '内机尺寸', unit: 'mm' },
   { key: 'outdoor_size_mm', label: '外机尺寸', unit: 'mm' },
   { key: 'factory_price', label: '出厂价', unit: '' },
   { key: 'launch_year', label: '上市年份', unit: '' },
-  { key: 'energy_rating', label: '制冷能效等级', unit: '' },
-  { key: 'heating_energy_rating', label: '制热能效等级', unit: '' },
+  { key: 'energy_rating', label: '能效等级', unit: '' },
 ]
+
+// 来自 API 的市场参数配置（extra_fields 字段定义）
+const marketParamConfigs = ref<Array<{param_key: string; param_label: string; param_unit: string; data_type: string}>>([])
 
 const effectiveParams = computed(() => {
   const params = [...BASE_PARAMS]
+  // 插入市场适配的能效参数（在能效等级前面）
   const ec = energyConfig.value
-  params.splice(15, 0, { key: ec.key, label: ec.label, unit: 'W/W' })
+  params.splice(11, 0, { key: ec.key, label: ec.label, unit: 'W/W' })
+  // 追加市场专有参数（从 extra_fields 读取）
+  for (const cfg of marketParamConfigs.value) {
+    // 不重复已存在的key
+    if (!params.some(p => p.key === cfg.param_key)) {
+      params.push({ key: cfg.param_key, label: cfg.param_label, unit: cfg.param_unit })
+    }
+  }
   return params
 })
 
@@ -680,9 +717,15 @@ async function handleGeneratePlan() {
     // 收集每个参数的来源信息
     const sources: Record<string, { brand: string; model: string; value: number | string }> = {}
     for (const [key, targetVal] of Object.entries(ourTargets.value)) {
-      // 找哪个品牌哪个型号提供了这个值
+      const isConfig = marketParamConfigs.value.some(c => c.param_key === key)
       for (const item of allItems.value) {
-        const itemVal = (item as Record<string, unknown>)[key]
+        let itemVal: unknown
+        if (isConfig) {
+          const ef = (item as Record<string, unknown>)['extra_fields'] as Record<string, unknown> | undefined
+          itemVal = ef ? ef[key] : undefined
+        } else {
+          itemVal = (item as Record<string, unknown>)[key]
+        }
         if (itemVal !== undefined && itemVal !== null && String(itemVal) === String(targetVal)) {
           sources[key] = { brand: item.brand, model: item.model, value: typeof targetVal === 'number' ? targetVal : String(targetVal) }
           break
@@ -771,8 +814,15 @@ function transformToBenchmark(items: CompetitorItem[]): BenchmarkRow[] {
       our_target: '—',
       competitors: {},
     }
+    const isConfigParam = marketParamConfigs.value.some(c => c.param_key === p.key)
     for (const item of items) {
-      const rawVal: unknown = (item as Record<string, unknown>)[p.key]
+      let rawVal: unknown
+      if (isConfigParam) {
+        const ef = (item as Record<string, unknown>)['extra_fields'] as Record<string, unknown> | undefined
+        rawVal = ef ? ef[p.key] : undefined
+      } else {
+        rawVal = (item as Record<string, unknown>)[p.key]
+      }
       if (rawVal !== undefined && rawVal !== null && rawVal !== '') {
         if (!row.competitors[item.brand]) {
           const numVal = Number(rawVal)
@@ -791,8 +841,15 @@ function transformToBenchmark(items: CompetitorItem[]): BenchmarkRow[] {
 const benchmarkData = computed(() => transformToBenchmark(allItems.value))
 
 function getParamValue(item: Record<string, unknown>, key: string): string {
+  // 市场专有参数从 extra_fields 读取
+  const isConfigParam = marketParamConfigs.value.some(c => c.param_key === key)
+  if (isConfigParam) {
+    const ef = item['extra_fields'] as Record<string, unknown> | undefined
+    const val = ef ? ef[key] : undefined
+    return val !== undefined && val !== null && val !== '' ? String(val) : '-'
+  }
+  // 能效参数用市场适配的key
   if (key === energyKey.value) {
-    // 用市场适配的能效字段
     const val = item[energyKey.value]
     return val !== undefined && val !== null && val !== '' ? String(val) : '-'
   }
@@ -820,6 +877,8 @@ async function fetchData() {
 
     const res = await api.get('/pm/competitors', { params })
     allItems.value = res.data.items || []
+    // 读取市场参数配置（extra_fields 字段定义）
+    marketParamConfigs.value = res.data.param_configs || []
     // 检查完整性
     allComplete.value = allItems.value.every((it) => it.is_complete)
   } catch {
@@ -932,6 +991,7 @@ const defaultForm = () => ({
   factory_price: '',
   launch_year: null as number | null,
   notes: '',
+  extraFields: {} as Record<string, number | string | null>,
 })
 
 const form = ref<CompetitorFormData>(defaultForm())
@@ -1036,11 +1096,26 @@ function previewVersion(item: VersionHistoryItem) {
 function openAddDialog() {
   editingId.value = null
   form.value = { ...defaultForm(), market: selectedMarket.value }
+  // 用当前市场的参数配置初始化 extraFields 的 keys
+  const extra: Record<string, number | string | null> = {}
+  for (const cfg of marketParamConfigs.value) {
+    extra[cfg.param_key] = null
+  }
+  form.value.extraFields = extra
   dialogVisible.value = true
 }
 
 function openEditDialog(item: CompetitorItem) {
   editingId.value = item.id
+  const extraFields: Record<string, number | string | null> = {}
+  const ef = (item as Record<string, unknown>)['extra_fields'] as Record<string, unknown> | undefined
+  if (ef) {
+    for (const [k, v] of Object.entries(ef)) {
+      if (v !== undefined && v !== null) {
+        extraFields[k] = v as number | string
+      }
+    }
+  }
   form.value = {
     brand: item.brand || '',
     model: item.model || '',
@@ -1064,6 +1139,7 @@ function openEditDialog(item: CompetitorItem) {
     factory_price: item.factory_price || '',
     launch_year: item.launch_year ?? null,
     notes: item.notes || '',
+    extraFields,
   }
   dialogVisible.value = true
 }
@@ -1078,7 +1154,7 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    // 只提交有值的字段（后端会自动忽略 extra fields）
+    // 只提交有值的字段
     const payload: Record<string, unknown> = {}
     const fields: (keyof CompetitorFormData)[] = [
       'brand', 'model', 'market', 'product_type', 'cooling_capacity',
@@ -1092,6 +1168,16 @@ async function handleSave() {
       if (form.value[f] !== null && form.value[f] !== '') {
         payload[f] = form.value[f]
       }
+    }
+    // 提交 extra_fields
+    const extraFields = form.value.extraFields
+    const hasExtra = Object.keys(extraFields).length > 0 && Object.values(extraFields).some(v => v !== null && v !== '')
+    if (hasExtra) {
+      const cleaned: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(extraFields)) {
+        if (v !== null && v !== '') cleaned[k] = v
+      }
+      payload['extra_fields'] = cleaned
     }
 
     if (editingId.value) {
