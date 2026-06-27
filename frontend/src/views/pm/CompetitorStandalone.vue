@@ -344,6 +344,7 @@ interface CompetitorItem extends CompetitorFormData {
   id: number
   is_complete: boolean
   missing_fields?: string[]
+  [key: string]: unknown
 }
 
 // ── 市场 & 冷量段选项 ──────────────────────────────────────────────
@@ -454,7 +455,7 @@ function transformToBenchmark(items: CompetitorItem[]): BenchmarkRow[] {
       competitors: {},
     }
     for (const item of items) {
-      const val = (item as unknown as Record<string, unknown>)[p.key]
+      const val = (item as CompetitorItem)[p.key]
       if (val !== undefined && val !== null && val !== '') {
         if (!row.competitors[item.brand]) {
           row.competitors[item.brand] = {
