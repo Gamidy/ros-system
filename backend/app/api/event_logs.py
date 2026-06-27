@@ -12,6 +12,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.event_store import EventStore
 from app.core.security import get_current_user, require_role
 from app.models.event_log import EventLog
 from app.models.user import User
@@ -171,3 +172,140 @@ def get_event(
     except Exception as e:
         logger.exception("获取事件详情失败: event_id=%s", event_id)
         raise HTTPException(status_code=500, detail=f"获取事件详情失败: {str(e)}")
+
+
+# ════════════════════════════════════════════════════════
+# POST /api/events/plan/{plan_id}/replay — 完整回放事件
+# ════════════════════════════════════════════════════════
+
+
+@router.post("/plan/{plan_id}/replay")
+def replay_plan_events(
+    plan_id: str,
+    until_event_id: Optional[int] = Query(None, description="回放到指定事件ID为止（可选，不传则全量回放）"),
+    current_user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> dict:
+    """重放指定 ProductPlan 的完整事件链，重建最终状态
+
+    权限: 仅 admin 角色
+    流程:
+    1. 使用 EventStore.replay() 依次重放所有事件
+    2. 记录一条回放操作的新事件日志
+    3. 返回重建后的状态
+
+    Returns:
+        dict: {success, plan_id, state, replay_log_id}
+    """
+    try:
+        success, state = EventStore.replay(plan_id, until_event_id=until_event_id, db=db)
+        if not success:
+            raise HTTPException(status_code=404, detail=state.get("error", "重放失败"))
+
+        # 记录回放操作到事件日志
+        replay_payload = {
+            "action": "replay",
+            "until_event_id": until_event_id,
+            "replay_count": state.get("replay_count", 0),
+            "result_status": state.get("status", "unknown"),
+        }
+        replay_log_id = EventStore.store(
+            db=db,
+            event_type="event.replay.executed",
+            event_version="v1",
+            payload=replay_payload,
+            plan_id=plan_id,
+            status="processed",
+        )
+        db.commit()
+
+        logger.info("产品计划 %s 重放完成: %s 个事件 → status=%s",
+                     plan_id, state.get("events_count"), state.get("status"))
+
+        return {
+            "success": True,
+            "plan_id": plan_id,
+            "state": state,
+            "replay_log_id": replay_log_id,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("产品计划 %s 重放失败", plan_id)
+        raise HTTPException(status_code=500, detail=f"重放失败: {str(e)}")
+
+
+# ════════════════════════════════════════════════════════
+# POST /api/events/plan/{plan_id}/copy_event/{event_id} — 重新发射特定事件
+# ════════════════════════════════════════════════════════
+
+
+@router.post("/plan/{plan_id}/copy_event/{event_id}")
+def copy_event(
+    plan_id: str,
+    event_id: int,
+    current_user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> dict:
+    """重新发射（复制）指定事件到事件日志
+
+    权限: 仅 admin 角色
+    流程:
+    1. 检查原事件是否存在且属于指定 plan
+    2. 以相同 event_type / event_version / payload 创建新事件
+    3. 返回新事件记录
+
+    Returns:
+        dict: {success, original_event_id, new_event_id, event}
+    """
+    try:
+        # 检查原事件是否存在
+        original = db.query(EventLog).filter(
+            EventLog.id == event_id,
+            EventLog.plan_id == plan_id,
+        ).first()
+        if not original:
+            raise HTTPException(
+                status_code=404,
+                detail=f"事件 #{event_id} 在计划 {plan_id} 中不存在",
+            )
+
+        # 解析原事件的 payload
+        original_payload = {}
+        if original.payload:
+            try:
+                original_payload = json.loads(original.payload)
+            except (json.JSONDecodeError, TypeError):
+                original_payload = {"_raw": original.payload}
+
+        # 创建新事件（重新发射）
+        new_event_id = EventStore.store(
+            db=db,
+            event_type=original.event_type,
+            event_version=original.event_version,
+            payload=original_payload,
+            plan_id=plan_id,
+            saga_id=original.saga_id,
+            status="emitted",
+        )
+        db.commit()
+
+        # 查询新事件用于返回
+        new_event = db.query(EventLog).filter(EventLog.id == new_event_id).first()
+        logger.info("事件 #%d 重新发射为 #%d (plan=%s)", event_id, new_event_id, plan_id)
+
+        return {
+            "success": True,
+            "original_event_id": event_id,
+            "new_event_id": new_event_id,
+            "event": _event_to_dict(new_event) if new_event else None,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("重新发射事件失败: event_id=%s, plan_id=%s", event_id, plan_id)
+        raise HTTPException(status_code=500, detail=f"重新发射事件失败: {str(e)}")

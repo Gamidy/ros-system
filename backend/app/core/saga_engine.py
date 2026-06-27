@@ -24,6 +24,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from app.core.database import SessionLocal
+from app.services.events import bus
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +60,13 @@ class SagaStep:
     action: 正向操作 (callable，接收 **kwargs)
     compensate: 补偿操作 (callable，接收 **kwargs + error_info)
     timeout_seconds: 超时（秒），默认 30
+    event_type: 可选事件类型（非 None 时用于事件驱动模式），默认 None=同步
     """
     name: str
     action: Callable[..., Tuple[bool, dict]]
     compensate: Callable[..., Tuple[bool, dict]]
     timeout_seconds: int = 30
+    event_type: Optional[str] = None
 
 
 @dataclass
@@ -108,9 +111,15 @@ class SagaResult:
 
 
 class SagaCoordinator:
-    """Saga 事务协调器 — 执行 + 补偿"""
+    """Saga 事务协调器 — 执行 + 补偿
 
-    def __init__(self) -> None:
+    支持双模式:
+    - sync (默认): 同步逐步骤执行，失败补偿
+    - event_driven: 通过 EventBus 发射事件驱动步骤执行
+    """
+
+    def __init__(self, mode: str = "sync") -> None:
+        self.mode = mode
         self._active_sagas: Dict[str, SagaResult] = {}
 
     def create_saga(
@@ -137,7 +146,24 @@ class SagaCoordinator:
         steps: List[SagaStep],
         context: Optional[dict] = None,
     ) -> SagaResult:
-        """按序执行 Saga 步骤
+        """执行 Saga 步骤（根据 mode 自动选择模式）
+
+        mode='sync' (默认): 同步逐步骤执行，失败补偿
+        mode='event_driven': 通过 EventBus 事件驱动执行
+
+        Returns: SagaResult
+        """
+        if self.mode == "event_driven":
+            return self.event_driven_execute(saga_id, steps, context)
+        return self.sync_execute(saga_id, steps, context)
+
+    def sync_execute(
+        self,
+        saga_id: str,
+        steps: List[SagaStep],
+        context: Optional[dict] = None,
+    ) -> SagaResult:
+        """按序同步执行 Saga 步骤（模式1：默认）
 
         流程:
         1. 依次执行每个 step
@@ -198,6 +224,131 @@ class SagaCoordinator:
             logger.exception("Saga unexpected error: %s", saga_id)
             self._compensate(result, executed, steps, ctx)
             return result
+
+    def event_driven_execute(
+        self,
+        saga_id: str,
+        steps: List[SagaStep],
+        context: Optional[dict] = None,
+    ) -> SagaResult:
+        """通过 EventBus 事件驱动执行 Saga 步骤（模式2）
+
+        流程:
+        1. 每个 step 通过 EventBus 发射 event_type 事件（含 step_id + ctx）
+        2. 事件处理器执行 action，完成→发射链上下一事件，失败→发射补偿事件
+        3. 无 event_type 的 step 回退到同步执行
+
+        Returns: SagaResult
+        """
+        from app.services.events import bus
+
+        result = self._active_sagas.get(saga_id)
+        if result is None:
+            result = SagaResult(saga_id=saga_id, status=SagaStatus.PENDING)
+            self._active_sagas[saga_id] = result
+
+        result.start_time = time.time()
+        result.status = SagaStatus.IN_PROGRESS
+        ctx = dict(context or {})
+        executed: List[str] = []
+
+        step_map = {s.name: s for s in steps}
+        registered_handlers: List[tuple] = []  # (event_type, handler)
+
+        def _handle_step(step_name: str) -> None:
+            """内部：执行单个 step 并链式触发下一步或补偿"""
+            step = step_map[step_name]
+            result.steps[step_name] = StepStatus.PENDING
+            logger.info("Saga event step: %s → %s", saga_id, step_name)
+
+            try:
+                success, step_result = step.action(**ctx)
+            except Exception as e:
+                success, step_result = False, {"error": str(e)}
+
+            if success:
+                result.steps[step_name] = StepStatus.SUCCESS
+                result.step_results[step_name] = step_result
+                executed.append(step_name)
+                if isinstance(step_result, dict):
+                    ctx.update(step_result)
+                logger.info("Saga event step OK: %s → %s", saga_id, step_name)
+
+                # 查找下一步骤并触发
+                next_idx = next(
+                    (i for i, s in enumerate(steps) if s.name == step_name), -1
+                ) + 1
+                if next_idx < len(steps):
+                    next_step = steps[next_idx]
+                    if next_step.event_type:
+                        bus.emit(
+                            next_step.event_type,
+                            step_id=next_step.name,
+                            saga_id=saga_id,
+                            **ctx,
+                        )
+                    else:
+                        # 无 event_type 的 step 同步执行
+                        _handle_step(next_step.name)
+                else:
+                    # 所有步骤完成
+                    result.status = SagaStatus.COMPLETED
+                    result.end_time = time.time()
+                    logger.info(
+                        "Saga event COMPLETED: %s (%d steps)", saga_id, len(steps)
+                    )
+            else:
+                result.steps[step_name] = StepStatus.FAILED
+                result.failed_step = step_name
+                result.error = step_result.get("error", "Unknown error")
+                logger.error(
+                    "Saga event step FAILED: %s → %s: %s",
+                    saga_id, step_name, result.error,
+                )
+                # 启动补偿
+                self._compensate(result, executed, steps, ctx)
+                result.end_time = time.time()
+
+        def _make_handler(step_name: str):
+            """工厂：为每个 step 创建闭包处理器"""
+            def _handler(step_id: str = None, _saga_id: str = None, **kw) -> None:
+                # 验证 saga_id 匹配（防止串扰）
+                if _saga_id is not None and _saga_id != saga_id:
+                    return
+                _handle_step(step_name)
+            return _handler
+
+        # 注册临时事件处理器
+        for step in steps:
+            if step.event_type:
+                handler = _make_handler(step.name)
+                registered_handlers.append((step.event_type, handler))
+                bus.on(step.event_type, handler)
+
+        try:
+            # 触发第一个步骤
+            first_step = steps[0]
+            if first_step.event_type:
+                bus.emit(
+                    first_step.event_type,
+                    step_id=first_step.name,
+                    saga_id=saga_id,
+                    **ctx,
+                )
+            else:
+                _handle_step(first_step.name)
+        except Exception as e:
+            result.status = SagaStatus.FAILED
+            result.error = str(e)
+            result.end_time = time.time()
+            logger.exception("Saga event unexpected error: %s", saga_id)
+            self._compensate(result, executed, steps, ctx)
+        finally:
+            # 清理临时事件处理器
+            for event_type, handler in registered_handlers:
+                bus.off(event_type, handler)
+
+        return result
 
     def _compensate(
         self,
@@ -400,9 +551,9 @@ def _compensate_notify_pm(**kwargs) -> Tuple[bool, dict]:
 def create_product_plan_saga() -> list:
     """创建 ProductPlan 审批 Saga 步骤定义"""
     return [
-        SagaStep(name="create_project", action=_action_create_project, compensate=_compensate_create_project),
-        SagaStep(name="create_gate", action=_action_create_gate, compensate=_compensate_create_gate),
-        SagaStep(name="notify_pm", action=_action_notify_pm, compensate=_compensate_notify_pm),
+        SagaStep(name="create_project", action=_action_create_project, compensate=_compensate_create_project, event_type="saga.create_project"),
+        SagaStep(name="create_gate", action=_action_create_gate, compensate=_compensate_create_gate, event_type="saga.create_gate"),
+        SagaStep(name="notify_pm", action=_action_notify_pm, compensate=_compensate_notify_pm, event_type="saga.notify_pm"),
     ]
 
 
