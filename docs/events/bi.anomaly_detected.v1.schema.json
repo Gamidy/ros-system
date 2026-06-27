@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:bi_analytics:event:bi.anomaly_detected:v1",
+  "title": "BI Anomaly Detected Event",
+  "description": "Emitted when an anomaly is detected in BI analytics metrics.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "bi.anomaly_detected",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "bi_analytics",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Anomaly detection data payload.",
+      "required": ["anomaly_id", "metric_name", "metric_value", "expected_value", "deviation_pct", "severity", "detected_at"],
+      "additionalProperties": false,
+      "properties": {
+        "anomaly_id": {
+          "type": "string",
+          "description": "Unique identifier of the detected anomaly."
+        },
+        "metric_name": {
+          "type": "string",
+          "description": "Name of the metric that exhibited anomalous behavior."
+        },
+        "metric_value": {
+          "type": "number",
+          "description": "Actual observed value of the metric."
+        },
+        "expected_value": {
+          "type": "number",
+          "description": "Expected or baseline value of the metric."
+        },
+        "deviation_pct": {
+          "type": "number",
+          "description": "Percentage deviation from the expected value."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Severity level of the anomaly."
+        },
+        "detected_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the anomaly was detected."
+        },
+        "entity_type": {
+          "type": "string",
+          "description": "Type of entity associated with the anomaly (e.g. product, region, channel)."
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "Identifier of the entity associated with the anomaly."
+        },
+        "trend_direction": {
+          "type": "string",
+          "enum": ["up", "down", "flat", "erratic"],
+          "description": "Trend direction of the anomaly."
+        },
+        "recommendation": {
+          "type": "string",
+          "description": "Suggested action or recommendation to address the anomaly."
+        },
+        "assigned_to": {
+          "type": "string",
+          "description": "User or team assigned to investigate the anomaly."
+        }
+      }
+    }
+  }
+}

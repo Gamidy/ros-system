@@ -1,0 +1,424 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Project Management Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-002
+# Approval Score: 97.2/100
+
+capability:
+  id: "project_management"
+  name: "Project Management"
+  display_name: "项目管理中心"
+  description: >
+    管理空调产品从策划发布到 Gate 评审到项目结项的全生命周期。
+    包含项目群(Program)管理、项目(T/A/B/C级)管理、M1~M9 Gate 评审、
+    里程碑追踪、任务管理、风险管理、延期传导链预警等核心业务能力。
+    响应 plan.released 事件自动创建项目，并通过 project.created、
+    project.gate_passed、project.status_changed 事件向下游广播。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 97.2
+  rfc_number: "RFC-2026-002"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "R&D Director"
+  technical_owner: "Project Admin Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "project_admin"
+  backup_role: "product_manager"
+  stewardship_level: "exclusive"  # exclusive | shared | read-only
+
+lifecycle:
+  states:
+    - planning          # 策划中（来自 plan.released 自动创建）
+    - running           # 执行中（项目启动）
+    - completed         # 已完成（M9通过/项目结项）
+    - paused            # 暂停
+    - cancelled         # 取消
+  initial_state: "planning"
+  terminal_states: ["completed", "cancelled"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── Program (项目群) ──
+    - method: GET
+      path: /programs
+      description: 项目群列表（按状态筛选）
+      response: "list[ProgramOut]"
+      auth: "require_menu('projects')"
+      sla_ms: 200
+
+    - method: POST
+      path: /programs
+      description: 创建项目群
+      request: "ProgramCreate"
+      response: "ProgramOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    - method: GET
+      path: /programs/{pid}
+      description: 获取项目群详情（含下属项目列表）
+      response: "ProgramDetailOut"
+      auth: "require_menu('projects')"
+      sla_ms: 200
+
+    # ── Project (项目) ──
+    - method: GET
+      path: /projects
+      description: 项目列表（分页+多条件筛选）
+      response: "PaginatedProjects"
+      auth: "require_menu('projects')"
+      sla_ms: 300
+
+    - method: POST
+      path: /projects
+      description: 创建项目（自动生成 Gate 模板、可选触发认证需求）
+      request: "ProjectCreate"
+      response: "ProjectOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 500
+
+    - method: GET
+      path: /projects/{pid}
+      description: 获取项目详情（含 Gates + Milestones + Risks）
+      response: "ProjectDetailOut"
+      auth: "require_menu('projects')"
+      sla_ms: 200
+
+    - method: PATCH
+      path: /projects/{pid}
+      description: 更新项目（含状态机校验）
+      request: "ProjectUpdate"
+      response: "{ message, id, status, owner }"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      idempotency: true
+      sla_ms: 300
+
+    - method: DELETE
+      path: /projects/{pid}
+      description: 软删除项目
+      auth: "require_role('admin','general_manager','rd_director','project_admin')"
+      sla_ms: 300
+
+    # ── Gate (M1~M9 评审节点) ──
+    - method: GET
+      path: /projects/{pid}/gates
+      description: 获取项目 Gate 列表（按 seq 排序）
+      response: "list[GateOut]"
+      auth: "require_menu('projects')"
+      sla_ms: 200
+
+    - method: POST
+      path: /projects/{pid}/gates
+      description: 自定义创建 Gate 节点
+      request: "{ gate_code, gate_name, seq, decision_level, pass_conditions, planned_date }"
+      response: "GateOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    - method: POST
+      path: /projects/{pid}/gates/bulk
+      description: 根据项目等级自动批量生成全部 Gate 模板
+      response: "{ created, skipped, total }"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 500
+
+    - method: PATCH
+      path: /projects/{pid}/gates/{gate_code}
+      description: 更新 Gate 状态（passed 时自动校验前置 Gate）
+      request: "{ status, actual_date?, decision?, reviewer? }"
+      response: "GateOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      idempotency: true
+      sla_ms: 300
+
+    # ── Task (任务) ──
+    - method: GET
+      path: /projects/{pid}/tasks
+      description: 获取项目任务列表
+      response: "list[TaskOut]"
+      auth: "require_menu('projects')"
+      sla_ms: 200
+
+    - method: POST
+      path: /projects/{pid}/tasks
+      description: 创建项目任务
+      request: "TaskCreate"
+      response: "TaskOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    - method: PATCH
+      path: /projects/{pid}/tasks/{tid}
+      description: 更新任务状态/负责人/优先级
+      request: "{ status?, assignee?, priority?, due_date?, description? }"
+      response: "TaskOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    # ── Milestone (里程碑) ──
+    - method: GET
+      path: /projects/{pid}/milestones
+      description: 获取项目里程碑列表
+      response: "list[MilestoneOut]"
+      auth: "require_menu('projects')"
+      sla_ms: 200
+
+    - method: POST
+      path: /projects/{pid}/milestones
+      description: 创建里程碑
+      request: "MilestoneCreate"
+      response: "MilestoneOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    - method: PATCH
+      path: /projects/{pid}/milestones/{mid}
+      description: 达成里程碑（自动完成关联任务）
+      request: "{ status?, actual_date? }"
+      response: "{ milestone, auto_completed_tasks }"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    # ── Risk (风险) ──
+    - method: GET
+      path: /projects/{pid}/risks
+      description: 获取项目风险列表
+      response: "list[RiskOut]"
+      auth: "require_menu('projects')"
+      sla_ms: 200
+
+    - method: POST
+      path: /projects/{pid}/risks
+      description: 创建风险记录
+      request: "RiskCreate"
+      response: "RiskOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    - method: PATCH
+      path: /projects/{pid}/risks/{rid}
+      description: 更新风险状态/缓解措施
+      request: "{ status?, mitigation?, risk_level? }"
+      response: "RiskOut"
+      auth: "require_role('admin','general_manager','rd_director','product_manager','project_admin')"
+      sla_ms: 300
+
+    # ── Delay Chain (延期传导链预警) ──
+    - method: GET
+      path: /projects/{pid}/delay-chain
+      description: 延期传导链预警分析
+      response: "DelayChainOut"
+      auth: "require_menu('projects')"
+      sla_ms: 500
+
+    # ── Event Timeline (事件时间线，复用 planning 事件系统) ──
+    - method: GET
+      path: /api/v2/events/timeline/{plan_id}
+      description: 获取事件时间线（面向 Plan/Project 通用事件查询）
+      response: "EventTimelineOut"
+      auth: "require_menu('projects')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/v2/events/timeline/{plan_id}/detail
+      description: 事件时间线含快照差异对比
+      response: "EventTimelineDetailOut"
+      auth: "require_menu('projects')"
+      sla_ms: 500
+
+  events_published:
+    - "project.created"          # 项目创建时（含 auto-generated Plan→Project）
+    - "project.gate_passed"      # M1~M9 Gate 通过时
+    - "project.status_changed"   # 状态变更时（planning→running→completed/paused/cancelled）
+
+  events_subscribed:
+    - "plan.released"            # 策划发布 → 自动创建 Project（必须消费）
+    - "plan.stage_advanced"      # 策划阶段推进 → 更新关联项目信息
+    - "standard.updated"         # 标准变更 → 触发项目重新评审
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "Program"                   # 项目群 / 上层容器
+    - "Project"                   # 核心项目对象 (T/A/B/C 四级)
+    - "ProjectGate"               # M1~M9 Gate 节点（按等级自动生成）
+    - "Milestone"                 # 里程碑（可关联 Gate、支持依赖链）
+    - "Task"                      # 项目任务（可关联里程碑）
+    - "Risk"                      # 风险追踪（A/B/C 三级）
+    - "ProjectLink"               # 项目关联（策划→项目桥接）
+    - "ProjectMember"             # 项目成员
+
+  workflows:
+    - "project_creation"          # plan.released → 自动创建 Project + Gate 模板 → 通知项目经理
+    - "gate_review"               # M1→M2→...→M9 顺次 Gate 评审，前置 Gate 必须 passed
+    - "milestone_tracking"        # 里程碑达成 → 自动完成关联任务 → 延期传导链预警
+    - "risk_management"           # 风险登记 → 分级监控 → 缓解措施 → 关闭闭环
+    - "delay_propagation"         # 延期传导链递归分析 + 放大效应计算
+
+  views:
+    - "ProjectDashboard"          # 项目管理仪表盘
+    - "ProjectDetail"             # 项目详情（Gates + Milestones + Risks + Tasks）
+    - "GateWorkspace"             # Gate 评审工作台
+    - "DelayChainView"            # 延期传导链预警图
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "planning"
+      entities: ["ProductPlan", "ProductPlanProjectLink"]
+      contract: "docs/capabilities/planning.capability.yaml"
+      dependency_level: "hard"
+      status: "active"
+
+    - capability: "market_knowledge"
+      entities: ["Market"]
+      contract: "docs/capabilities/market-knowledge.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"              # JWT 认证 + RBAC
+    - "event_bus"                 # 事件总线（plan.released → project.created）
+    - "state_machine"             # 状态机引擎（Project.status 流转校验）
+    - "notification_center"       # 通知中心（Gate 评审提醒、延期预警）
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "ApprovalRequest"   # 项目状态变更 → 审批请求
+      trigger: "project.status_changed"
+      consumer: "approval_engine"
+
+    - entity: "CertRequirement"   # 项目创建 + target_market → 自动生成认证需求
+      trigger: "project.created"
+      consumer: "cert_management"
+
+  knowledge:
+    - "project_template"          # 项目模板（按等级 T/A/B/C 沉淀）
+    - "gate_pass_rate_stats"      # Gate 通过率统计 → 改进知识
+    - "delay_chain_patterns"      # 延期传导链模式库
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "event_bus"                 # 必须接收 plan.released
+    - "auth_service"              # 接口鉴权
+    - "state_machine"             # 状态流转校验
+
+  soft_dependencies:
+    - "market_knowledge"          # 市场信息可选
+    - "approval_engine"           # 审批链引擎可选
+    - "notification_center"       # 通知中心可选
+
+  downstream_consumers:
+    - capability: "dashboard"
+      consumes: ["Project"]
+    - capability: "cert_management"
+      consumes: ["Project", "target_market"]
+    - capability: "bi_analytics"
+      consumes: ["Project", "ProjectGate", "Milestone", "Risk"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "Program.*"
+    - "Project.*"
+    - "ProjectGate.*"
+    - "Milestone.*"
+    - "Task.*"
+    - "Risk.*"
+    - "ProjectLink.*"
+    - "ProjectMember.*"
+
+  shared_read:
+    - "Project": ["planning", "dashboard", "cert_management", "bi_analytics"]
+    - "ProjectGate": ["dashboard", "bi_analytics"]
+    - "Milestone": ["dashboard", "bi_analytics"]
+    - "Risk": ["dashboard", "bi_analytics"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  project_creation:
+    strategy: "business_key"      # code 唯一约束
+  gate_update:
+    strategy: "state_check"       # 前置 Gate 状态校验
+  status_transition:
+    strategy: "state_machine"     # 状态机校验 + 快照
+  milestone_achievement:
+    strategy: "idempotent_flag"   # achieved 状态幂等
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有数据无需迁移。新增字段均有默认值。
+    软删除通过 is_deleted 列实现，不物理删除数据。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Project Creation to M1 Pass"
+    description: "项目创建到第一个 Gate(M1)通过的天数"
+    target: "≤ 7 天"
+    data_source: "ProjectGate.actual_date"
+
+  - name: "Gate Pass Rate"
+    description: "Gate 评审一次通过率"
+    target: "≥ 80%"
+    data_source: "ProjectGate.status"
+
+  - name: "On-Time Delivery Rate"
+    description: "按目标完成日期结项的项目比例"
+    target: "≥ 85%"
+    data_source: "Project.actual_end_date vs target_end_date"
+
+  - name: "Delay Chain Warning Count"
+    description: "月均延期传导链预警数量"
+    target: "≤ 3 次"
+    data_source: "Delay Chain Analysis"
+
+  - name: "Risk Closure Rate"
+    description: "已关闭风险 / 总风险数"
+    target: "≥ 90%"
+    data_source: "Risk.status"
+
+  - name: "Project List P95"
+    description: "项目列表 API P95 延迟"
+    target: "< 300ms"
+    data_source: "APM Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation Compliance + plan.released 事件接入"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "AI 辅助 Gate 评估 + 延期传导链自动预警 + KPI 看板"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "自动优化 Gate 阈值 + Digital Twin 项目模拟"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主 Gate（AI 主导，人工抽查）+ 全链路智能调度"
+    target: "2028+"
+    status: "vision"

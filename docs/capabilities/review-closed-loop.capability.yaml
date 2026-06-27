@@ -1,0 +1,313 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Review Closed-Loop Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-002
+# Approval Score: 95.2/100
+
+capability:
+  id: "review_closed_loop"
+  name: "Review Closed-Loop"
+  display_name: "复盘闭环管理"
+  description: >
+    管理产品策划发布后的复盘全生命周期流程。
+    包含自动创建复盘、改进项追踪、知识沉淀三大核心链路。
+    监听 plan.released 事件自动创建 ProductPlanReview，
+    复盘填写后生成 ImprovementTask 并推送到知识库。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 95.2
+  rfc_number: "RFC-2026-002"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "PM Director"
+  technical_owner: "Planning Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "product_manager"
+  backup_role: "admin"
+  stewardship_level: "exclusive"
+
+lifecycle:
+  states:
+    - pending          # 待复盘（自动创建，未填写）
+    - in_review        # 复盘进行中
+    - completed        # 复盘已完成（提交）
+    - closed           # 复盘关闭（所有改进项已闭环）
+  initial_state: "pending"
+  terminal_states: ["closed"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── 复盘 CRUD ──
+    - method: POST
+      path: /product-plans/{plan_id}/review
+      description: 提交复盘（每个策划一条记录）
+      request: "ReviewCreate"
+      response: "ReviewOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 300
+
+    - method: GET
+      path: /product-plans/{plan_id}/review
+      description: 查看策划复盘记录
+      response: "ReviewOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    - method: PUT
+      path: /product-plans/{plan_id}/review
+      description: 更新复盘记录（支持手动覆盖偏差值）
+      request: "ReviewUpdate"
+      response: "ReviewOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 300
+
+    # ── 自动计算偏差 ──
+    - method: GET
+      path: /product-plans/{plan_id}/auto-variance
+      description: 获取从项目数据自动计算的偏差值
+      response: "AutoVarianceOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    # ── 复盘仪表盘 ──
+    - method: GET
+      path: /api/bi/review-summary
+      description: 复盘汇总数据（评分分布、月度趋势、常见问题、完成率）
+      response: "ReviewSummary"
+      auth: "require_menu('product-plans')"
+      sla_ms: 500
+
+    # ── 复盘模板 ──
+    - method: GET
+      path: /review-templates
+      description: 按产品类型获取可用复盘模板列表
+      response: "List[TemplateOut]"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    - method: POST
+      path: /review-templates
+      description: 创建复盘模板（管理端）
+      request: "TemplateCreate"
+      response: "TemplateOut"
+      auth: "admin | planning_team_lead"
+      sla_ms: 300
+
+  # ── 改进项追踪（ImprovementTask）──
+    - method: GET
+      path: /improvement-tasks
+      description: 改进任务列表（支持按复盘/负责人/状态筛选）
+      response: "PaginatedTasks"
+      auth: "require_menu('product-plans')"
+      sla_ms: 300
+
+    - method: POST
+      path: /improvement-tasks
+      description: 创建改进任务（从复盘问题点转为可追踪任务）
+      request: "TaskCreate"
+      response: "TaskOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 300
+
+    - method: PUT
+      path: /improvement-tasks/{id}
+      description: 更新改进任务状态/负责人/优先级
+      request: "TaskUpdate"
+      response: "TaskOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /improvement-tasks/{id}
+      description: 删除改进任务
+      auth: "admin | product_manager"
+      sla_ms: 200
+
+  events_published:
+    - "review.created"              # 复盘创建时（自动或手动）
+    - "review.updated"              # 复盘更新/提交时
+    - "review.completed"            # 复盘完成时
+    - "improvement.created"         # 改进项创建时
+    - "improvement.status_changed"  # 改进项状态变更
+    - "improvement.closed"          # 改进项闭环 → 触发知识沉淀
+
+  events_subscribed:
+    - "plan.released"               # 策划发布 → 自动创建复盘
+    - "knowledge.lesson_template"   # 知识库经验教训模板变更通知
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "ProductPlanReview"           # 核心复盘对象
+    - "ImprovementTask"             # 改进任务追踪
+    - "ReviewTemplate"              # 复盘模板配置
+
+  workflows:
+    - "review_creation"             # 自动/手动创建复盘（监听 plan.released）
+    - "review_filling"              # 复盘填写（成本偏差/进度偏差/市场反馈/经验教训）
+    - "review_completion"           # 复盘完成（提交+事件发布）
+    - "improvement_tracking"        # 改进项从创建到闭环的全生命周期
+    - "knowledge_sedimentation"     # 经验教训 → 知识库沉淀
+
+  views:
+    - "ReviewDashboard"             # 复盘汇总看板（评分分布、趋势、完成率）
+    - "ReviewDetail"                # 策划复盘详情（含自动偏差对比）
+    - "ReviewPanel"                 # PM 工作台中的复盘面板
+    - "ImprovementTaskList"         # 改进任务列表视图
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "planning"
+      entities: ["ProductPlan", "ProductPlanProjectLink"]
+      contract: "docs/capabilities/planning.capability.yaml"
+      dependency_level: "hard"
+      status: "validated"
+
+    - capability: "project_management"
+      entities: ["Project"]
+      contract: "docs/capabilities/project-management.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"                # JWT认证
+    - "event_bus"                   # 事件总线（监听 plan.released）
+    - "notification_center"         # 通知中心（改进任务分配提醒）
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "KnowledgeEntry"      # COMPLETED → 经验教训推送知识库
+      trigger: "review.completed"
+      consumer: "knowledge_base"
+
+    - entity: "ImprovementTask"     # 复盘问题点 → 创建改进任务
+      trigger: "improvement.created"
+      consumer: "review_closed_loop"
+
+  knowledge:
+    - "lessons_learned"             # 复盘经验教训 → 知识库
+    - "review_template"             # 复盘模板沉淀
+    - "improvement_best_practice"   # 改进最佳实践
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "event_bus"
+    - "auth_service"
+    - "planning"                    # 复盘依赖策划实体
+
+  soft_dependencies:
+    - "project_management"          # 项目数据用于自动计算偏差
+    - "knowledge_base"              # 知识库用于沉淀经验教训
+
+  downstream_consumers:
+    - capability: "knowledge_base"
+      consumes: ["lessons_learned"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "ProductPlanReview.*"
+    - "ImprovementTask.*"
+    - "ReviewTemplate.*"
+
+  shared_read:
+    - "ProductPlanReview": ["planning", "dashboard", "bi_analytics"]
+    - "ImprovementTask": ["planning", "product_manager"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  review_creation:
+    strategy: "unique_constraint"   # product_plan_id UNIQUE → 每个策划一条复盘
+  review_update:
+    strategy: "version_check"       # 乐观锁 via updated_at
+  improvement_creation:
+    strategy: "business_key"        # review_id + description 去重
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有数据无需迁移。新增字段均有默认值。
+    ProductPlanReview 与 ProductPlan 已通过 product_plan_id 关联。
+    ImprovementTask 通过 review_id 关联 ProductPlanReview。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Review Completion Rate"
+    description: "已发布策划中已完成复盘的占比"
+    target: "≥ 95%"
+    data_source: "ProductPlanReview + ProductPlan.status"
+
+  - name: "Review Cycle Time"
+    description: "RELEASED 到复盘完成的平均天数"
+    target: "≤ 14 天"
+    data_source: "Event Log"
+
+  - name: "Review Avg Rating"
+    description: "复盘平均评分（1-5分）"
+    target: "≥ 3.5"
+    data_source: "ProductPlanReview.rating"
+
+  - name: "Improvement Closure Rate"
+    description: "改进任务在规定截止日期前闭环的占比"
+    target: "≥ 85%"
+    data_source: "ImprovementTask"
+
+  - name: "Improvement Cycle Time"
+    description: "改进任务从 OPEN → CLOSED 平均天数"
+    target: "≤ 30 天"
+    data_source: "ImprovementTask"
+
+  - name: "Auto Variance Accuracy"
+    description: "自动计算偏差与手动覆盖值的偏差比例"
+    target: "± 5%"
+    data_source: "ProductPlanReview"
+
+  - name: "Knowledge Push Rate"
+    description: "复盘经验教训成功推送到知识库的比例"
+    target: "≥ 90%"
+    data_source: "Event Log + KnowledgeBase"
+
+  - name: "Template Usage Rate"
+    description: "使用模板创建的复盘占比"
+    target: "≥ 70%"
+    data_source: "ReviewTemplate + ProductPlanReview"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation — 复盘 CRUD + 自动创建 + 改进项追踪"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "AI 辅助复盘（自动提炼改进项 + 知识匹配建议）"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "智能预警（基于复盘历史预测项目风险）"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自动复盘（AI 主导分析 + 自动生成改进计划）"
+    target: "2028+"
+    status: "vision"

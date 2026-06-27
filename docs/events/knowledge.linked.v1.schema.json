@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:knowledge_base:event:knowledge.linked:v1",
+  "title": "Knowledge Linked Event",
+  "description": "Emitted when a knowledge record is linked to an entity (product plan, review, project, or improvement) in the knowledge_base system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "event_version", "source", "source_version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "knowledge.linked",
+              "description": "Event type identifier."
+            },
+            "event_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            },
+            "source": {
+              "const": "knowledge_base",
+              "description": "Origin system or service that produced the event."
+            },
+            "source_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Version of the source service that emitted the event."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "tenant_id", "trace_id", "environment", "region"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "environment": {
+              "type": "string",
+              "description": "Deployment environment (e.g. dev, staging, prod)."
+            },
+            "region": {
+              "type": "string",
+              "description": "Geographic or data-center region of origin."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data payload.",
+      "required": ["knowledge_id", "linked_entity_type", "linked_entity_id", "linked_by"],
+      "additionalProperties": false,
+      "properties": {
+        "knowledge_id": {
+          "type": "string",
+          "description": "Unique identifier of the knowledge record being linked."
+        },
+        "linked_entity_type": {
+          "type": "string",
+          "enum": [
+            "product_plan",
+            "review",
+            "project",
+            "improvement"
+          ],
+          "description": "Type of the entity being linked to the knowledge entry."
+        },
+        "linked_entity_id": {
+          "type": "string",
+          "description": "Unique identifier of the entity being linked."
+        },
+        "linked_by": {
+          "type": "string",
+          "description": "Identifier of the user who created the link."
+        },
+        "link_description": {
+          "type": "string",
+          "description": "Description or reason for the link between the knowledge entry and the entity."
+        },
+        "capability_name": {
+          "type": "string",
+          "description": "Name of the capability that initiated the linking operation."
+        },
+        "linked_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 UTC timestamp when the link was established."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2-2.io/dashboard/events/alert.triggered.v1.json",
+  "title": "Alert Triggered Event",
+  "description": "Emitted when a dashboard alert is triggered based on metric thresholds or custom conditions.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Standard D2-2 Event Metadata — 10 fixed fields.",
+      "required": [
+        "identity",
+        "context"
+      ],
+      "properties": {
+        "identity": {
+          "type": "object",
+          "required": ["event_type", "source", "source_version", "id"],
+          "properties": {
+            "event_type": {
+              "const": "alert.triggered",
+              "description": "Unique event type identifier."
+            },
+            "source": {
+              "const": "dashboard",
+              "description": "System component that produced the event."
+            },
+            "source_version": {
+              "type": "string",
+              "description": "Version of the source system emitting this event."
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique event identifier (UUID v4)."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "required": ["timestamp", "workspace_id", "environment", "region", "correlation_id", "user_id"],
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp of when the event occurred."
+            },
+            "workspace_id": {
+              "type": "string",
+              "description": "Workspace or tenant identifier."
+            },
+            "environment": {
+              "type": "string",
+              "description": "Deployment environment (e.g. production, staging, development)."
+            },
+            "region": {
+              "type": "string",
+              "description": "Geographic region where the event originated."
+            },
+            "correlation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Correlation ID linking related events in a causal chain."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "User or service principal that triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific payload.",
+      "required": ["alert_id", "alert_type", "severity", "message", "triggered_at"],
+      "properties": {
+        "alert_id": {
+          "type": "string",
+          "description": "Unique identifier of the alert rule that fired."
+        },
+        "alert_type": {
+          "type": "string",
+          "description": "Type of alert (e.g. metric_threshold, anomaly, availability)."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "critical"],
+          "description": "Severity level of the alert."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable alert message."
+        },
+        "triggered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the condition was detected."
+        },
+        "entity_type": {
+          "type": "string",
+          "description": "Type of entity the alert is associated with (e.g. host, service, container)."
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "Identifier of the associated entity."
+        },
+        "metric_name": {
+          "type": "string",
+          "description": "Name of the metric that triggered the alert."
+        },
+        "metric_value": {
+          "type": "number",
+          "description": "Current value of the metric when the alert fired."
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Threshold value that was crossed."
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owner or team responsible for responding."
+        },
+        "action_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Link to the alert detail page or runbook."
+        }
+      }
+    }
+  }
+}

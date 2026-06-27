@@ -1,0 +1,403 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Dashboard Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-003
+# Approval Score: TBD
+
+capability:
+  id: "dashboard"
+  name: "Dashboard"
+  display_name: "驾驶舱仪表盘"
+  description: >
+    ROS 的数字洞察层，聚合各 Capability 实时数据，
+    提供驾驶舱式整体视图。包含多层聚合（L1 系统健康、
+    L2 项目运营、L4 AC 指标）、智能决策仪表盘（MQ物料风险、
+    MRC制造就绪度、CDF认证需求）、BI分析看板
+    （趋势分析、漏斗分析、分布分析）及角色化视图
+    （管理层/PM/研发/质量）四大核心能力。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 0
+  rfc_number: "RFC-2026-003"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "VP of Engineering"
+  technical_owner: "Dashboard Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "admin"
+  backup_role: "general_manager"
+  stewardship_level: "shared"  # 仪表盘是共享只读层，不独占总数据
+
+lifecycle:
+  states:
+    - active        # 仪表盘持续运行
+  initial_state: "active"
+  terminal_states: []
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── 驾驶舱主 API ──
+    - method: GET
+      path: /dashboard/summary
+      description: 驾驶舱汇总（L1+L2+L4，自动按角色过滤）
+      response: "DashboardSummary"
+      auth: "require_menu('dashboard')"
+      sla_ms: 500
+
+    - method: GET
+      path: /dashboard/alerts
+      description: 预警列表（分页+筛选+聚合）
+      response: "AlertsSummaryResponse"
+      auth: "require_menu('dashboard')"
+      sla_ms: 300
+
+    - method: PUT
+      path: /dashboard/alerts/rules/{rule_id}
+      description: 更新预警规则配置
+      request: "AlertRuleCreate"
+      response: "AlertRuleOut"
+      auth: "admin | general_manager"
+      sla_ms: 200
+
+    - method: GET
+      path: /dashboard/kpi-detail
+      description: KPI 详情列表
+      response: "list[KpiDetailItem]"
+      auth: "require_menu('dashboard')"
+      sla_ms: 300
+
+    - method: GET
+      path: /dashboard/kpis
+      description: 指标分解数据（各模块 KPI 聚合）
+      response: "list[dict]"
+      auth: "require_menu('dashboard')"
+      sla_ms: 400
+
+    # ── 智能决策仪表盘（MQ/MRC/CDF） ──
+    - method: GET
+      path: /api/v2/dashboard/mq-summary
+      description: 物料风险总览（高/中/低分布）
+      response: "dict"
+      auth: "require_role('pm', 'admin', 'general_manager')"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/v2/dashboard/mq-detail/{plan_id}
+      description: 物料风险详情 — 单计划物料级风险明细
+      response: "dict"
+      auth: "require_role('pm', 'admin', 'general_manager')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/v2/dashboard/mrc-summary
+      description: 制造就绪度总览
+      response: "dict"
+      auth: "require_role('pm', 'admin', 'general_manager')"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/v2/dashboard/mrc-detail/{plan_id}
+      description: 制造就绪度详情
+      response: "dict"
+      auth: "require_role('pm', 'admin', 'general_manager')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/v2/dashboard/cert-summary
+      description: 认证需求总览
+      response: "dict"
+      auth: "require_role('pm', 'admin', 'general_manager')"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/v2/dashboard/cert-detail/{plan_id}
+      description: 认证需求详情
+      response: "dict"
+      auth: "require_role('pm', 'admin', 'general_manager')"
+      sla_ms: 300
+
+    # ── 研发面板 ──
+    - method: GET
+      path: /api/rd-panel/dashboard
+      description: 研发面板汇总（BOM状态/版本/技术方案）
+      response: "dict"
+      auth: "require_role('rd_engineer', 'rd_director', 'admin')"
+      sla_ms: 500
+
+    # ── BI分析看板 ──
+    - method: GET
+      path: /api/bi/trends
+      description: BI 趋势分析（按时间窗口聚合）
+      response: "TrendResponse"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/bi/funnel
+      description: BI 漏斗分析（阶段间转化率）
+      response: "FunnelResponse"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/bi/distribution
+      description: BI 分布分析（按维度聚合分布）
+      response: "DistributionResponse"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/bi/active-plans
+      description: 活跃策划列表（BI 首页用）
+      response: "list[dict]"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/bi/cost-trend
+      description: 成本趋势数据
+      response: "list[dict]"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 400
+
+    - method: GET
+      path: /api/bi/gate-funnel
+      description: Gate 漏斗数据（按 Gate 评估记录汇总）
+      response: "list[dict]"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 400
+
+  events_published:
+    - "dashboard.alert_triggered"      # 预警触发时
+    - "dashboard.threshold_breached"   # KPI 阈值超限时
+    - "dashboard.snapshot_generated"   # 每日快照生成时
+
+  events_subscribed:
+    # 来自 Planning
+    - "plan.created"              # → 刷新策划总数
+    - "plan.stage_advanced"       # → 更新阶段分布
+    - "plan.approved"             # → 刷新审批统计
+    - "plan.released"             # → 更新完成率
+    - "plan.cost_updated"         # → 刷新成本趋势
+    # 来自 Project
+    - "project.status_changed"    # → 更新项目进度
+    - "project.gate_passed"       # → 更新 Gate 漏斗
+    # 来自其他 Capability
+    - "quality.issue_reported"    # → 刷新质量指标
+    - "cert.status_changed"       # → 更新认证动态
+    - "mrc.readiness_changed"     # → 更新制造就绪度
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "Alert"                     # 预警记录
+    - "AlertRule"                 # 预警规则配置
+    - "DashboardSnapshot"         # 每日/实时快照
+    - "KpiSnapshot"               # KPI 快照
+
+  dashboards:
+    - "L1_SystemHealth"           # 系统健康概览：平台/产品/版本/项目统计
+    - "L2_ProjectOps"             # 项目运营概览：项目数/按时率/逾期/状态分布
+    - "L4_ACMetrics"              # AC 业务指标：市场规模/目标/成本/能耗
+    - "MQ_RiskDashboard"          # 物料风险仪表盘（MQ）
+    - "MRC_ReadinessDashboard"    # 制造就绪度仪表盘（MRC）
+    - "CDF_CertDashboard"         # 认证需求仪表盘（CDF）
+    - "RD_Panel"                  # 研发面板
+    - "BI_Analytics"              # BI 分析看板（趋势/漏斗/分布）
+
+  views:
+    - "ManagementView"            # 管理层视图：L1+L2+L4 全局
+    - "PMView"                    # PM 视图：策划进度 + 成本 + 物料风险
+    - "RDView"                    # 研发视图：BOM + 版本 + 技术方案
+    - "QualityView"               # 质量视图：质量指标 + 认证需求
+    - "BIWorkspace"               # BI 分析工作台
+
+  workflows:
+    - "alert_lifecycle"           # 预警创建→确认→处理→关闭
+    - "dashboard_snapshot"        # 定时/事件驱动快照生成
+    - "kpi_calculation"           # KPI 定时聚合计算
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "planning"
+      entities: ["ProductPlan", "ProductPlanInitiation", "ProductPlanCosting"]
+      contract: "docs/capabilities/planning.capability.yaml"
+      dependency_level: "hard"
+      status: "draft"
+
+    - capability: "project_management"
+      entities: ["Project", "ProjectGate"]
+      contract: "docs/capabilities/project-management.capability.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+    - capability: "competitor_analysis"
+      entities: ["CompetitorModel"]
+      contract: "docs/capabilities/competitor-analysis.capability.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+    - capability: "market_knowledge"
+      entities: ["Market"]
+      contract: "docs/capabilities/market-knowledge.capability.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"              # JWT 认证 + 角色/菜单鉴权
+    - "event_bus"                 # 事件总线（消费 + 发布）
+    - "cache_service"             # Redis 缓存层（BI 查询降级）
+    - "notification_center"       # 预警通知中心
+    - "ai_router"                 # AI 辅助洞察生成
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "Alert"            # 预警触发时产生预警记录
+      trigger: "threshold_breached"
+      consumer: "notification_center"
+
+    - entity: "DashboardSnapshot" # 定时/事件驱动生成快照
+      trigger: "daily_snapshot"
+      consumer: "bi_analytics"
+
+    - entity: "KpiSnapshot"       # KPI 定期聚合结果
+      trigger: "kpi_calculation"
+      consumer: "bi_analytics"
+
+  knowledge:
+    - "dashboard_insights"         # 仪表盘洞察摘要 → 知识库
+    - "trend_reports"             # 趋势分析报告
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+    - "cache_service"
+
+  soft_dependencies:
+    - "competitor_analysis"       # 竞品对标数据可选
+    - "market_knowledge"          # 市场知识可选
+    - "ai_router"                 # AI 洞察可选
+
+  downstream_consumers:
+    - capability: "notification_center"
+      consumes: ["Alert", "AlertRule"]
+    - capability: "bi_analytics"
+      consumes: ["DashboardSnapshot", "KpiSnapshot"]
+    - capability: "knowledge_base"
+      consumes: ["dashboard_insights", "trend_reports"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "Alert.*"
+    - "AlertRule.*"
+    - "DashboardSnapshot.*"
+    - "KpiSnapshot.*"
+
+  shared_read:
+    - "DashboardSummary": ["all_capabilities"]
+    - "Alert": ["notification_center"]
+    - "AlertRule": ["notification_center", "admin"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  alert_creation:
+    strategy: "dedup_window"      # 相同规则+对象 5分钟内去重
+  snapshot_generation:
+    strategy: "date_partition"    # 每天每类型仅生成一次快照
+  kpi_calculation:
+    strategy: "period_lock"       # 按时间窗口锁定，避免重复计算
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backend_compatible: true
+  migration_path: >
+    仪表盘数据均为聚合结果，无需数据迁移。
+    新增图表/指标只需添加新查询，不影响已有接口。
+    Dashboard 层不拥有原始数据，只读不写（预警规则除外）。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Dashboard API P95 Latency"
+    description: "仪表盘主接口 P95 延迟"
+    target: "< 500ms"
+    data_source: "APM Metrics"
+
+  - name: "Dashboard Daily Active Users"
+    description: "仪表盘日活跃用户数"
+    target: "≥ 50"
+    data_source: "User Activity Log"
+
+  - name: "Alert Accuracy Rate"
+    description: "有效预警占比（非误报）"
+    target: "≥ 85%"
+    data_source: "Alert Feedback"
+
+  - name: "Alert MTTR"
+    description: "预警平均响应+解决时间"
+    target: "< 2 小时"
+    data_source: "Alert Lifecycle Log"
+
+  - name: "BI Query P95 Latency"
+    description: "BI 分析查询 P95 延迟"
+    target: "< 500ms"
+    data_source: "APM Metrics"
+
+  - name: "Data Freshness"
+    description: "仪表盘数据与源数据的最大延迟"
+    target: "< 5 分钟"
+    data_source: "Event Bus Lag"
+
+  - name: "Event Processing Lag"
+    description: "订阅事件到仪表盘刷新的 P95 延迟"
+    target: "< 30 秒"
+    data_source: "Event Bus Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: >
+      Foundation Compliance + Event Bus 接入。
+      完成 L1/L2/L4 三层聚合、角色化视图、智能仪表盘、
+      BI 分析看板基础功能。
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: >
+      AI 辅助洞察：异常检测自动预警、趋势预测、智能归因。
+      实时大屏 + 移动端仪表盘。
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: >
+      Digital Twin 互联：数据模拟推演、假设分析、
+      多场景对比看板。
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: >
+      L3 自主洞察：AI 主动推送决策建议、自动识别瓶颈、
+      全自动运营报告。
+    target: "2028+"
+    status: "vision"

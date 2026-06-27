@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2-2.io/dashboard/events/snapshot.generated.v1.json",
+  "title": "Snapshot Generated Event",
+  "description": "Emitted when a dashboard snapshot is generated, either automatically on a schedule or on demand.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Standard D2-2 Event Metadata — 10 fixed fields.",
+      "required": [
+        "identity",
+        "context"
+      ],
+      "properties": {
+        "identity": {
+          "type": "object",
+          "required": ["event_type", "source", "source_version", "id"],
+          "properties": {
+            "event_type": {
+              "const": "snapshot.generated",
+              "description": "Unique event type identifier."
+            },
+            "source": {
+              "const": "dashboard",
+              "description": "System component that produced the event."
+            },
+            "source_version": {
+              "type": "string",
+              "description": "Version of the source system emitting this event."
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique event identifier (UUID v4)."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "required": ["timestamp", "workspace_id", "environment", "region", "correlation_id", "user_id"],
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp of when the event occurred."
+            },
+            "workspace_id": {
+              "type": "string",
+              "description": "Workspace or tenant identifier."
+            },
+            "environment": {
+              "type": "string",
+              "description": "Deployment environment (e.g. production, staging, development)."
+            },
+            "region": {
+              "type": "string",
+              "description": "Geographic region where the event originated."
+            },
+            "correlation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Correlation ID linking related events in a causal chain."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "User or service principal that triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific payload.",
+      "required": ["snapshot_id", "snapshot_type", "generated_at"],
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "description": "Unique identifier for the snapshot."
+        },
+        "snapshot_type": {
+          "type": "string",
+          "enum": ["daily", "weekly", "monthly", "on_demand"],
+          "description": "Schedule type of the snapshot."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the snapshot was generated."
+        },
+        "period_start": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Start of the time period covered by the snapshot."
+        },
+        "period_end": {
+          "type": "string",
+          "format": "date-time",
+          "description": "End of the time period covered by the snapshot."
+        },
+        "metric_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of metrics included in the snapshot."
+        },
+        "kpi_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of KPIs included in the snapshot."
+        },
+        "summary_json": {
+          "type": "object",
+          "description": "Arbitrary JSON summary data for the snapshot."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:review_closed_loop:event:review.updated:v1",
+  "title": "Review Updated Event",
+  "description": "Emitted when an existing review record is updated in the review_closed_loop system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "event_version", "source", "source_version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "review.updated",
+              "description": "Event type identifier."
+            },
+            "event_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            },
+            "source": {
+              "const": "review_closed_loop",
+              "description": "Origin system or service that produced the event."
+            },
+            "source_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Version of the source service that emitted the event."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "tenant_id", "trace_id", "environment", "region"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "environment": {
+              "type": "string",
+              "description": "Deployment environment (e.g. dev, staging, prod)."
+            },
+            "region": {
+              "type": "string",
+              "description": "Geographic or data-center region of origin."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data payload.",
+      "required": ["review_id", "status", "updated_by"],
+      "additionalProperties": false,
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "description": "Unique identifier of the review record being updated."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_review", "completed", "closed"],
+          "description": "New status of the review."
+        },
+        "updated_by": {
+          "type": "string",
+          "description": "Identifier of the user who performed the update."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Text summary or notes for the update."
+        },
+        "score": {
+          "type": "number",
+          "description": "Numeric score assigned during the review."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Free-text comment accompanying the update."
+        },
+        "attachment_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of attachments included with the review update."
+        }
+      }
+    }
+  }
+}

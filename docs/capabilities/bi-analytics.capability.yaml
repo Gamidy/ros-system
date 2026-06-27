@@ -1,0 +1,268 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 BI Analytics Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-002
+# Approval Score: 96.2/100
+
+capability:
+  id: "bi_analytics"
+  name: "BI Analytics"
+  display_name: "BI 分析中心"
+  description: >
+    提供跨 Capability 的聚合分析、趋势追踪、转化漏斗和成本分析能力。
+    消费各 Capability 发布的事件以构建实时业务看板，支撑数据驱动决策。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 96.2
+  rfc_number: "RFC-2026-002"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "PM Director"
+  technical_owner: "BI Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "product_manager"
+  backup_role: "admin"
+  stewardship_level: "shared"  # 跨能力读取数据，不独占写入
+
+lifecycle:
+  states:
+    - active          # 正常服务中
+    - degraded        # 缓存降级（Redis 不可用）
+    - maintenance     # 维护中
+  initial_state: "active"
+  terminal_states: []
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    - method: GET
+      path: /api/bi/trend
+      description: 立项趋势 — 按月份统计产品策划立项数
+      response: "TrendResponse"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 500
+      caching: "Redis 10min"
+
+    - method: GET
+      path: /api/bi/funnel
+      description: 转化漏斗 — 各阶段策划数量统计
+      response: "FunnelResponse"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 500
+      caching: "Redis 10min"
+
+    - method: GET
+      path: /api/bi/distribution
+      description: 市场分布 — 按市场统计策划数量
+      response: "DistributionResponse"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 500
+      caching: "Redis 10min"
+
+    - method: GET
+      path: /api/bi/planning
+      description: 策划维度聚合统计（完成率/阶段分布/审批时效/月度趋势）
+      response: "dict"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 800
+
+    - method: GET
+      path: /api/bi/projects
+      description: 项目维度聚合统计（Gate通过率/阶段停留时长/项目概况）
+      response: "dict"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 800
+
+    - method: GET
+      path: /api/bi/cost
+      description: 成本维度聚合统计（预算执行率/超标项目TopN）
+      response: "dict"
+      auth: "require_menu('bi-analytics')"
+      sla_ms: 800
+
+  events_published:
+    - "bi.report_generated"     # 报表生成完成时
+    - "bi.anomaly_detected"     # 异常检测触发（成本超标/趋势突变）
+
+  events_subscribed:
+    - "plan.created"            # BI 更新策划创建趋势
+    - "plan.approved"           # BI 更新审批时效（P50/P90）
+    - "plan.released"           # BI 更新发布统计
+    - "plan.cost_updated"       # BI 更新成本趋势+超标预警
+    - "project.gate_passed"     # BI 更新 Gate 通过率
+    - "project.status_changed"  # BI 更新项目状态分布
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "TrendItem"               # 趋势数据点（月份+数量）
+    - "FunnelItem"              # 漏斗阶段数据点（阶段名+数量）
+    - "DistributionItem"        # 分布数据点（市场名+数量）
+    - "KpiCard"                 # KPI 指标卡片（完成率/通过率等）
+    - "GatePassRate"            # Gate 通过率统计
+    - "StageStayDuration"       # 阶段停留时长统计
+    - "BudgetExecution"         # 预算执行率
+    - "OverBudgetTopN"          # 超标项目 TopN
+
+  workflows:
+    - "bi_planning_report"      # 策划维度聚合报表
+    - "bi_project_report"       # 项目维度聚合报表
+    - "bi_cost_report"          # 成本维度聚合报表
+    - "bi_anomaly_detection"    # 异常检测流程
+
+  views:
+    - "PlanningAnalytics"       # 策划分析看板（前端: views/bi/PlanningAnalytics.vue）
+    - "CostAnalytics"           # 成本分析看板（前端: views/bi/CostAnalytics.vue）
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "planning"
+      entities: ["ProductPlan", "ApprovalRequest", "ApprovalRecord"]
+      contract: "docs/capabilities/planning.capability.yaml"
+      dependency_level: "hard"
+      status: "reviewed"
+
+    - capability: "project_management"
+      entities: ["Project", "ProjectGate"]
+      contract: "docs/capabilities/project-management.capability.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+    - capability: "cost_accounting"
+      entities: ["CostAccountingSheet", "SheetStatus"]
+      contract: "docs/capabilities/cost-accounting.capability.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"              # JWT 认证
+    - "event_bus"                 # 事件总线
+    - "redis_cache"               # 查询结果缓存（降级安全）
+    - "sqlalchemy_orm"            # SQL 聚合查询
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "ReportData"        # 聚合报表数据（趋势/漏斗/分布）
+      trigger: "bi.report_generated"
+      consumer: "dashboard"
+
+    - entity: "AnomalyAlert"      # 异常预警（成本超标/趋势突变）
+      trigger: "bi.anomaly_detected"
+      consumer: "notification_center"
+
+  knowledge:
+    - "trend_pattern"             # 产品策划趋势模式沉淀
+    - "cost_overrun_pattern"      # 成本超标模式分析
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+    - "planning"                  # ProductPlan 数据
+    - "project_management"        # Project/ProjectGate 数据
+
+  soft_dependencies:
+    - "cost_accounting"           # 成本分析可选（无成本数据时降级展示）
+    - "redis_cache"               # 缓存降级后走实时查询
+
+  downstream_consumers:
+    - capability: "dashboard"
+      consumes: ["ReportData"]
+    - capability: "notification_center"
+      consumes: ["AnomalyAlert"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write: []
+
+  shared_read:
+    - "ProductPlan.*": ["bi_analytics"]
+    - "ApprovalRequest.*": ["bi_analytics"]
+    - "ApprovalRecord.*": ["bi_analytics"]
+    - "Project.*": ["bi_analytics"]
+    - "ProjectGate.*": ["bi_analytics"]
+    - "CostAccountingSheet.*": ["bi_analytics"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  event_processing:
+    strategy: "event_id_dedup"    # 事件 ID 去重，防止重复消费
+  report_generation:
+    strategy: "natural_recalc"    # 每次查询实时计算，天然幂等
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    全部查询均为实时 SQL 聚合，不存储中间状态，无数据迁移。
+    Schema 变更仅影响响应体字段，新增字段不破坏现有消费者。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Trend API P95 Latency"
+    description: "趋势查询 API P95 响应时间"
+    target: "< 500ms"
+    data_source: "APM Metrics"
+
+  - name: "Funnel API P95 Latency"
+    description: "漏斗查询 API P95 响应时间"
+    target: "< 500ms"
+    data_source: "APM Metrics"
+
+  - name: "Planning Report P95 Latency"
+    description: "策划聚合报表 API P95 响应时间"
+    target: "< 800ms"
+    data_source: "APM Metrics"
+
+  - name: "Cache Hit Rate"
+    description: "BI 查询 Redis 缓存命中率"
+    target: "≥ 70%"
+    data_source: "Redis Stats"
+
+  - name: "Data Freshness"
+    description: "BI 数据与源数据最大延迟"
+    target: "≤ 10 min（缓存 TTL）"
+    data_source: "Event Log"
+
+  - name: "Event Processing Latency"
+    description: "事件订阅到数据更新完成延迟"
+    target: "< 1 min"
+    data_source: "Event Bus Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation — 策划趋势/漏斗/分布/成本基础查询 + Redis 缓存"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "事件驱动实时更新 + 异常自动检测 + Gate 漏斗分析"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "AI 预测趋势（Prophet/LSTM）+ 自动报表订阅推送"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "Digital Twin 仿真分析 + 全链路归因分析"
+    target: "2028+"
+    status: "vision"

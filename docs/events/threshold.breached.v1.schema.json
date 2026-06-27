@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2-2.io/dashboard/events/threshold.breached.v1.json",
+  "title": "Threshold Breached Event",
+  "description": "Emitted when a dashboard metric crosses a defined threshold boundary.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Standard D2-2 Event Metadata — 10 fixed fields.",
+      "required": [
+        "identity",
+        "context"
+      ],
+      "properties": {
+        "identity": {
+          "type": "object",
+          "required": ["event_type", "source", "source_version", "id"],
+          "properties": {
+            "event_type": {
+              "const": "threshold.breached",
+              "description": "Unique event type identifier."
+            },
+            "source": {
+              "const": "dashboard",
+              "description": "System component that produced the event."
+            },
+            "source_version": {
+              "type": "string",
+              "description": "Version of the source system emitting this event."
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique event identifier (UUID v4)."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "required": ["timestamp", "workspace_id", "environment", "region", "correlation_id", "user_id"],
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp of when the event occurred."
+            },
+            "workspace_id": {
+              "type": "string",
+              "description": "Workspace or tenant identifier."
+            },
+            "environment": {
+              "type": "string",
+              "description": "Deployment environment (e.g. production, staging, development)."
+            },
+            "region": {
+              "type": "string",
+              "description": "Geographic region where the event originated."
+            },
+            "correlation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Correlation ID linking related events in a causal chain."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "User or service principal that triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific payload.",
+      "required": ["threshold_id", "metric_name", "metric_value", "threshold_value", "direction", "breached_at"],
+      "properties": {
+        "threshold_id": {
+          "type": "string",
+          "description": "Unique identifier of the threshold rule that was breached."
+        },
+        "metric_name": {
+          "type": "string",
+          "description": "Name of the metric that breached the threshold."
+        },
+        "metric_value": {
+          "type": "number",
+          "description": "Current value of the metric at the time of breach."
+        },
+        "threshold_value": {
+          "type": "number",
+          "description": "Configured threshold value that was crossed."
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["above", "below"],
+          "description": "Direction of the breach relative to the threshold."
+        },
+        "breached_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the breach was detected."
+        },
+        "entity_type": {
+          "type": "string",
+          "description": "Type of entity the metric belongs to (e.g. host, service, container)."
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "Identifier of the associated entity."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measurement (e.g. percent, bytes, ms, count)."
+        },
+        "previous_value": {
+          "type": "number",
+          "description": "Value of the metric prior to the breach."
+        },
+        "percentage_change": {
+          "type": "number",
+          "description": "Percentage change from the previous value."
+        }
+      }
+    }
+  }
+}

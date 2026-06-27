@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:project_management:event:project.gate_passed:v1",
+  "title": "Project Gate Passed Event",
+  "description": "Emitted when a project passes a milestone gate in the project_management system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "project.gate_passed",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "project_management",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Project gate passing data payload.",
+      "required": ["project_id", "gate_name", "gate_number", "passed_at", "passed_by"],
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "description": "Unique identifier of the project."
+        },
+        "gate_name": {
+          "type": "string",
+          "description": "Human-readable name of the milestone gate."
+        },
+        "gate_number": {
+          "type": "string",
+          "enum": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9"],
+          "description": "Numeric milestone gate identifier."
+        },
+        "passed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the gate was passed."
+        },
+        "passed_by": {
+          "type": "string",
+          "description": "Identifier of the user who approved the gate."
+        },
+        "score": {
+          "type": "number",
+          "description": "Optional score or rating for the gate review."
+        },
+        "comments": {
+          "type": "string",
+          "description": "Comments or notes from the gate review."
+        },
+        "next_gate_name": {
+          "type": "string",
+          "description": "Human-readable name of the next milestone gate."
+        },
+        "next_gate_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 scheduled date for the next milestone gate."
+        }
+      }
+    }
+  }
+}

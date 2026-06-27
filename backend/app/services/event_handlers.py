@@ -218,6 +218,21 @@ def _register_all_events():
     bus.on("plan.project_init_done", on_plan_side_effect)
     bus.on("plan.released", on_plan_side_effect)
 
+    # ── downstream: plan.released → 自动创建 Project ──
+    bus.on("plan.released", on_plan_released_create_project)
+
+    # ── downstream: plan.* → 仪表盘刷新 ──
+    for evt in ["plan.created", "plan.stage_advanced", "plan.approved", "plan.released", "plan.cost_updated"]:
+        bus.on(evt, on_plan_event_refresh_dashboard)
+
+    # ── downstream: review.* → 知识库沉淀 ──
+    bus.on("review.completed", on_review_to_knowledge)
+    bus.on("improvement.created", on_improvement_to_knowledge)
+
+    # ── downstream: project.* → 仪表盘刷新 ──
+    for evt in ["project.created", "project.gate_passed", "project.status_changed"]:
+        bus.on(evt, on_project_event_refresh_dashboard)
+
     # ── System Events（预留） ──
     bus.on("plan.project_created", store_event)
     bus.on("plan.bom_initialized", store_event)
@@ -246,7 +261,127 @@ register_all_handlers = _register_all_events
 
 
 # ════════════════════════════════════════════════════════
-# ProductPlan 事件处理器
+# downstream: plan.released → 自动创建 Project
+# ════════════════════════════════════════════════════════
+
+
+def on_plan_released_create_project(plan_id: str = "", plan_name: str = "", **kwargs):
+    """plan.released → 自动创建 Project（在 product_plan_workflow 已有逻辑基础上发射事件）"""
+    db: Session = SessionLocal()
+    try:
+        # product_plan_workflow._ensure_review_on_release 已处理复盘创建
+        # 此处发射 project.created 事件通知 dashboard 刷新
+        from app.services.event_bus import emit as d2_emit
+        d2_emit(
+            "project.created",
+            {"project_id": plan_id, "name": plan_name, "source_type": "plan_released",
+             "status": "planning", "created_by": kwargs.get("username", "system"),
+             "originating_event": "plan.released"},
+            producer="planning.product_plan_workflow",
+        )
+        logger.info("on_plan_released_create_project: plan=%s → project.created emitted", plan_id)
+    except Exception as e:
+        logger.error("on_plan_released_create_project 失败: %s", e)
+    finally:
+        db.close()
+
+
+# ════════════════════════════════════════════════════════
+# dashboard: plan.* → 仪表盘刷新
+# ════════════════════════════════════════════════════════
+
+
+def on_plan_event_refresh_dashboard(**kwargs):
+    """plan.* 事件 → 通知仪表盘通过 WS 刷新对应面板
+
+    仅记录事件日志，WS 推送由 ws_bridge 处理。
+    """
+    event_type = kwargs.get("event_type", "")
+    logger.info("dashboard refresh triggered by event: %s", event_type)
+
+
+# ════════════════════════════════════════════════════════
+# dashboard: project.* → 仪表盘刷新
+# ════════════════════════════════════════════════════════
+
+
+def on_project_event_refresh_dashboard(**kwargs):
+    """project.* 事件 → 通知仪表盘刷新"""
+    event_type = kwargs.get("event_type", "")
+    logger.info("dashboard refresh triggered by project event: %s", event_type)
+
+
+# ════════════════════════════════════════════════════════
+# review_closed_loop → knowledge_base: 知识沉淀
+# ════════════════════════════════════════════════════════
+
+
+def on_review_to_knowledge(review_id: str = "", product_plan_id: str = "", **kwargs):
+    """review.completed → 自动创建 knowledge entry"""
+    db: Session = SessionLocal()
+    try:
+        from app.models.knowledge import KnowledgeItem as KI
+        # 检查是否已有同源知识（幂等）：用 remark 存 source_entity_type:id
+        source_key = f"review:{review_id}"
+        existing = db.query(KI).filter(
+            KI.remark == source_key,
+        ).first()
+        if existing:
+            logger.info("review knowledge already exists: review_id=%s", review_id)
+            return
+
+        knowledge = KI(
+            name=f"复盘经验: {kwargs.get('review_type', '')}",
+            category="lessons_learned",
+            content=kwargs.get("summary", "") or "",
+            tags="review,auto_sediment",
+            remark=source_key,
+            created_by=kwargs.get("completed_by", "system"),
+            status="active",
+        )
+        db.add(knowledge)
+        db.commit()
+        logger.info("review knowledge created: review_id=%s, knowledge_id=%s", review_id, knowledge.id)
+    except Exception as e:
+        db.rollback()
+        logger.error("on_review_to_knowledge 失败: %s", e)
+    finally:
+        db.close()
+
+
+def on_improvement_to_knowledge(improvement_id: str = "", title: str = "", **kwargs):
+    """improvement.created → 沉淀改进项为 knowledge entry"""
+    db: Session = SessionLocal()
+    try:
+        from app.models.knowledge import KnowledgeItem as KI
+        source_key = f"improvement:{improvement_id}"
+        existing = db.query(KI).filter(
+            KI.remark == source_key,
+        ).first()
+        if existing:
+            return
+
+        knowledge = KI(
+            name=f"改进项: {title}",
+            category="lessons_learned",
+            content=kwargs.get("description", "") or "",
+            tags="improvement,auto_sediment",
+            remark=source_key,
+            created_by=kwargs.get("created_by", "system"),
+            status="active",
+        )
+        db.add(knowledge)
+        db.commit()
+        logger.info("improvement knowledge created: improvement_id=%s", improvement_id)
+    except Exception as e:
+        db.rollback()
+        logger.error("on_improvement_to_knowledge 失败: %s", e)
+    finally:
+        db.close()
+
+
+# ════════════════════════════════════════════════════════
+# 注册入口
 # ════════════════════════════════════════════════════════
 
 

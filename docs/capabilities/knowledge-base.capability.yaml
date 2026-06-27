@@ -1,0 +1,283 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Knowledge Base Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-004
+# Approval Score: 94.8/100
+
+capability:
+  id: "knowledge_base"
+  name: "Knowledge Base"
+  display_name: "知识库中心"
+  description: >
+    管理产品研发全生命周期经验教训、复盘知识、最佳实践的沉淀、检索与关联。
+    提供分类化、可搜索的知识管理能力，支持从复盘闭环、改进任务等上游能力
+    自动接收知识沉淀，并将知识关联到策划、项目等核心实体。
+    知识内容支持富文本（HTML/Markdown），具备版本管理、全文搜索能力。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 94.8
+  rfc_number: "RFC-2026-004"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "PM Director"
+  technical_owner: "Platform Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "product_manager"
+  backup_role: "admin"
+  stewardship_level: "shared"  # 知识库被多个 Capability 消费
+
+lifecycle:
+  states:
+    - active          # 正常使用
+    - archived        # 已归档（只读）
+    - draft           # 草稿（未发布）
+  initial_state: "draft"
+  terminal_states: ["archived"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── 知识条目 CRUD ──
+    - method: POST
+      path: /api/kb/items
+      description: 创建知识条目（需登录，同分类+编码唯一）
+      request: "KnowledgeCreate"
+      response: "KnowledgeOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    - method: GET
+      path: /api/kb/items
+      description: 知识库列表 — 支持分类筛选、全文搜索、状态筛选
+      response: "List[KnowledgeOut]"
+      auth: "require_menu('product-plans')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/kb/items/{item_id}
+      description: 知识条目详情
+      response: "KnowledgeOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    - method: PUT
+      path: /api/kb/items/{item_id}
+      description: 更新知识条目（自动版本+1，记录更新人）
+      request: "KnowledgeUpdate"
+      response: "KnowledgeOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    - method: DELETE
+      path: /api/kb/items/{item_id}
+      description: 删除知识条目（软删除标记为 archived）
+      auth: "admin | product_manager"
+      sla_ms: 200
+
+    # ── 分类与辅助 ──
+    - method: GET
+      path: /api/kb/categories
+      description: 获取所有知识分类列表
+      response: "List[str]"
+      auth: "require_menu('product-plans')"
+      sla_ms: 100
+
+    - method: GET
+      path: /api/kb/team
+      description: 获取活跃用户列表（供团队选择/知识作者关联）
+      response: "List[TeamMemberOut]"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+  events_published:
+    - "knowledge.created"           # 新知识条目创建时
+    - "knowledge.updated"           # 知识条目更新时（含版本变更）
+    - "knowledge.archived"          # 知识条目归档时
+    - "knowledge.linked"            # 知识条目被关联到策划/项目时
+
+  events_subscribed:
+    - "review.completed"            # 复盘完成 → 自动沉淀经验教训为知识条目
+    - "improvement.lesson"          # 改进项经验教训 → 创建知识条目
+    - "improvement.closed"          # 改进项闭环 → 关联知识沉淀
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "KnowledgeItem"               # 核心知识条目对象
+
+  classifications:
+    - "lessons_learned"             # 经验教训类别
+    - "best_practice"               # 最佳实践类别
+    - "review_knowledge"            # 复盘知识类别
+    - "specification"               # 规格参数类别
+    - "market_intelligence"         # 市场情报类别
+
+  workflows:
+    - "knowledge_creation"          # 知识条目创建（直接创建 / 自动接收沉淀）
+    - "knowledge_search"            # 全文搜索（名称、内容、标签、编码）
+    - "knowledge_linking"           # 知识条目关联到策划/项目
+    - "knowledge_versioning"        # 版本管理（每次更新 version+1）
+
+  views:
+    - "KnowledgePanel"              # ProductPlanDetail 中的知识嵌入面板
+    - "KnowledgeSearch"             # 知识搜索/浏览界面
+    - "KnowledgePicker"             # 知识条目选择器（关联时使用）
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "review_closed_loop"
+      entities: ["ProductPlanReview", "ImprovementTask"]
+      contract: "docs/capabilities/review-closed-loop.capability.yaml"
+      dependency_level: "soft"         # 知识库可独立存在
+      status: "validated"
+
+    - capability: "planning"
+      entities: ["ProductPlan", "ProductPlanProjectLink"]
+      contract: "docs/capabilities/planning.capability.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"                # JWT认证
+    - "event_bus"                   # 事件总线（接收 review.completed 等）
+    - "search_engine"               # 全文搜索引擎（ilike / 扩展）
+    - "notification_center"         # 通知中心（知识更新提醒）
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "KnowledgeItem"       # review.completed → 自动创建经验教训知识条目
+      trigger: "review.completed"
+      consumer: "knowledge_base"
+
+    - entity: "KnowledgeItem"       # improvement.lesson → 改进项知识沉淀
+      trigger: "improvement.lesson"
+      consumer: "knowledge_base"
+
+    - entity: "KnowledgeLink"       # 知识关联记录（策划/项目关联知识条目）
+      trigger: "knowledge.linked"
+      consumer: "planning"
+
+  knowledge:
+    - "lessons_learned"             # 经验教训（来自复盘和改进项）
+    - "best_practice"               # 最佳实践沉淀
+    - "review_snapshot"             # 复盘知识快照
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+
+  soft_dependencies:
+    - "review_closed_loop"          # 复盘知识可选依赖
+    - "planning"                    # 策划关联可选
+    - "project_management"          # 项目关联可选
+
+  downstream_consumers:
+    - capability: "planning"
+      consumes: ["KnowledgeItem"]
+    - capability: "review_closed_loop"
+      consumes: ["KnowledgeItem"]
+    - capability: "dashboard"
+      consumes: ["KnowledgeItem"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "KnowledgeItem.*"
+    - "KnowledgeItem.category"
+    - "KnowledgeItem.code"
+    - "KnowledgeItem.content"
+    - "KnowledgeItem.tags"
+    - "KnowledgeItem.version"
+    - "KnowledgeItem.status"
+
+  shared_read:
+    - "KnowledgeItem": ["planning", "review_closed_loop", "project_management", "dashboard", "bi_analytics"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  knowledge_creation:
+    strategy: "business_key"        # category + code 唯一约束
+  knowledge_update:
+    strategy: "version_check"       # 乐观锁 via version
+  knowledge_deletion:
+    strategy: "soft_delete"         # status → archived 而非物理删除
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有知识条目无需迁移。新增字段均有默认值。
+    KnowledgeItem 通过 category + code 业务键唯一标识，
+    支持同编码多版本（新增时版本+1，历史版本保留为 archived）。
+    content 字段向后兼容 text/html/markdown 三种内容格式。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Knowledge Coverage Rate"
+    description: "已发布策划中有关联知识条目的占比"
+    target: "≥ 60%"
+    data_source: "KnowledgeItem + ProductPlanProjectLink"
+
+  - name: "Knowledge Auto-Sedimentation Rate"
+    description: "review.completed → 自动创建知识条目的成功率"
+    target: "≥ 95%"
+    data_source: "Event Log"
+
+  - name: "Knowledge Search P95"
+    description: "知识搜索 API P95 延迟"
+    target: "< 300ms"
+    data_source: "APM Metrics"
+
+  - name: "Knowledge Freshness"
+    description: "最近30天内更新/创建的知识条目占比"
+    target: "≥ 20%"
+    data_source: "KnowledgeItem.updated_at"
+
+  - name: "Knowledge Duplicate Rate"
+    description: "相同 category+code 的重复创建尝试次数 / 总创建次数"
+    target: "≤ 5%"
+    data_source: "API Log (409 Conflict)"
+
+  - name: "Knowledge Linking Rate"
+    description: "被关联到策划/项目的知识条目占比"
+    target: "≥ 40%"
+    data_source: "KnowledgeLink / KnowledgeItem"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation — 知识条目 CRUD + 全文搜索 + 分类管理 + 事件接收"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "知识关联链路（策划/项目关联知识）+ 版本管理 + 自动沉淀优化"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "AI 知识提取（自动从复盘文本提炼关键条目）+ 智能推荐关联 + 知识图谱"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主知识管理（AI 自动分类/去重/归纳）+ 跨项目知识复用分析"
+    target: "2028+"
+    status: "vision"

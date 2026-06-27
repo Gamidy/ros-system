@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:review_closed_loop:event:review.created:v1",
+  "title": "Review Created Event",
+  "description": "Emitted when a new review record is created in the review_closed_loop system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "event_version", "source", "source_version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "review.created",
+              "description": "Event type identifier."
+            },
+            "event_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            },
+            "source": {
+              "const": "review_closed_loop",
+              "description": "Origin system or service that produced the event."
+            },
+            "source_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Version of the source service that emitted the event."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "tenant_id", "trace_id", "environment", "region"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "environment": {
+              "type": "string",
+              "description": "Deployment environment (e.g. dev, staging, prod)."
+            },
+            "region": {
+              "type": "string",
+              "description": "Geographic or data-center region of origin."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data payload.",
+      "required": ["review_id", "product_plan_id", "review_type", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "description": "Unique identifier of the review record."
+        },
+        "product_plan_id": {
+          "type": "string",
+          "description": "Identifier of the associated product plan."
+        },
+        "review_type": {
+          "type": "string",
+          "description": "Type or category of the review."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the review."
+        },
+        "reviewer_id": {
+          "type": "string",
+          "description": "Identifier of the assigned reviewer."
+        },
+        "due_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 deadline for the review completion."
+        },
+        "created_by": {
+          "type": "string",
+          "description": "Identifier of the user who created the review."
+        }
+      }
+    }
+  }
+}

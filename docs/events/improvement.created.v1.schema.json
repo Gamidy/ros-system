@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:review_closed_loop:event:improvement.created:v1",
+  "title": "Improvement Created Event",
+  "description": "Emitted when a new improvement record is created from a review in the review_closed_loop system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "event_version", "source", "source_version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "improvement.created",
+              "description": "Event type identifier."
+            },
+            "event_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            },
+            "source": {
+              "const": "review_closed_loop",
+              "description": "Origin system or service that produced the event."
+            },
+            "source_version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Version of the source service that emitted the event."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "tenant_id", "trace_id", "environment", "region"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "environment": {
+              "type": "string",
+              "description": "Deployment environment (e.g. dev, staging, prod)."
+            },
+            "region": {
+              "type": "string",
+              "description": "Geographic or data-center region of origin."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data payload.",
+      "required": ["improvement_id", "review_id", "title", "severity", "created_by"],
+      "additionalProperties": false,
+      "properties": {
+        "improvement_id": {
+          "type": "string",
+          "description": "Unique identifier of the improvement record."
+        },
+        "review_id": {
+          "type": "string",
+          "description": "Identifier of the associated review record."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short title or summary of the improvement."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "major", "minor", "enhancement"],
+          "description": "Severity level of the improvement."
+        },
+        "created_by": {
+          "type": "string",
+          "description": "Identifier of the user who created the improvement."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the improvement."
+        },
+        "assignee": {
+          "type": "string",
+          "description": "Identifier of the user assigned to the improvement."
+        },
+        "deadline": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 deadline for completing the improvement."
+        },
+        "category": {
+          "type": "string",
+          "description": "Functional or domain category of the improvement."
+        },
+        "source_type": {
+          "type": "string",
+          "description": "Origin type that triggered the improvement (e.g. review, audit, feedback)."
+        }
+      }
+    }
+  }
+}
