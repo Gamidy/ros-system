@@ -70,6 +70,7 @@ from app.models.ai_call_log import AICallLog
 from app.models.password_reset import PasswordResetToken
 from app.models.workflow_transition_spec import WorkflowTransitionSpec
 from app.models.plan_validation import ValidationRule
+from app.models.review_template import ReviewTemplate
 
 __all__ = [
     "User",
@@ -154,6 +155,7 @@ __all__ = [
     "PasswordResetToken",
     "WorkflowTransitionSpec",
     "ValidationRule",
+    "ReviewTemplate",
     "ProductPlanReview",
     "ProductPlanHistory",
 ]

@@ -133,6 +133,9 @@
         </router-view>
       </main>
     </div>
+
+    <!-- ═══ Mobile Bottom Tab Bar (＜768px) ═══ -->
+    <MobileTabBar v-if="isMobile" />
   </div>
 </template>
 
@@ -145,6 +148,7 @@ import { useNotificationStore } from '../stores/notification'
 import { wsManager } from '../utils/websocket'
 import { useResponsive } from '../composables/useResponsive'
 import NotificationBell from '../components/NotificationBell.vue'
+import MobileTabBar from '../components/mobile/MobileTabBar.vue'
 import api from '../api'
 
 const route = useRoute()
@@ -153,8 +157,7 @@ const authStore = useAuthStore()
 const notifStore = useNotificationStore()
 
 // ── Responsive state from composable ──
-// Registers resize/matchMedia listeners; returns isMobile/isTablet/breakpoint
-void useResponsive()
+const { isMobile } = useResponsive()
 
 // ── Desktop sidebar collapse ──
 const isCollapse = ref(false)
@@ -554,7 +557,7 @@ function handleLogout() {
 
   .claude-content {
     padding: 12px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 
   .user-name {
@@ -596,6 +599,7 @@ function handleLogout() {
 @media (max-width: 400px) {
   .claude-content {
     padding: 8px;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
   .header-right {
     gap: 4px;

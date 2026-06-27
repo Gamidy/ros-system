@@ -1,6 +1,9 @@
 import * as echarts from 'echarts'
 import type { EChartsType, EChartsOption } from 'echarts'
 
+/** ECharts 实例扩展类型（带 ResizeObserver） */
+type EChartsWithObserver = EChartsType & { __resizeObserver?: ResizeObserver }
+
 const chartInstances = new Map<HTMLElement, EChartsType>()
 
 /**
@@ -23,7 +26,7 @@ export function initChart(el: HTMLElement, option: EChartsOption): EChartsType |
   resizeObserver.observe(el)
 
   // 存储 observer 以便销毁
-  ;(instance as any).__resizeObserver = resizeObserver
+  ;(instance as EChartsWithObserver).__resizeObserver = resizeObserver
 
   return instance
 }
@@ -34,7 +37,7 @@ export function initChart(el: HTMLElement, option: EChartsOption): EChartsType |
 export function disposeChart(el: HTMLElement) {
   const instance = chartInstances.get(el)
   if (instance) {
-    const observer = (instance as any).__resizeObserver
+    const observer = (instance as EChartsWithObserver).__resizeObserver
     if (observer) observer.disconnect()
     instance.dispose()
     chartInstances.delete(el)

@@ -192,14 +192,15 @@ export function fetchAllMarkets() { return api.get('/pm/markets/all') }
 
 // ── 复盘 (Review) ──
 export interface ReviewData {
-  id?: number
-  plan_id?: string
+  id?: string
+  product_plan_id?: string
   review_date?: string
   actual_cost_total?: number
   actual_launch_date?: string
   market_feedback?: string
   lessons_learned?: string
-  overall_rating?: number
+  rating?: number
+  review_template_id?: string
   created_at?: string
   updated_at?: string
 }
@@ -207,6 +208,39 @@ export interface ReviewData {
 export function getReview(planId: string) { return api.get(`/product-plans/${planId}/review`) }
 export function submitReview(planId: string, data: ReviewData) { return api.post(`/product-plans/${planId}/review`, data) }
 export function updateReview(planId: string, data: ReviewData) { return api.put(`/product-plans/${planId}/review`, data) }
+
+// ── 复盘模板 (Review Template) ──
+export interface TemplateField {
+  field: string
+  label: string
+  required: boolean
+  max_length?: number
+}
+
+export interface ReviewTemplateItem {
+  id: string
+  product_type: string
+  name: string
+  template_fields: TemplateField[]
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** 按产品类型获取可用复盘模板 */
+export function listReviewTemplates(productType?: string) {
+  return api.get('/review-templates', { params: { product_type: productType } })
+}
+
+/** 创建复盘模板（管理端） */
+export function createReviewTemplate(data: {
+  product_type: string
+  name: string
+  template_fields: TemplateField[]
+  is_active?: boolean
+}) {
+  return api.post('/review-templates', data)
+}
 
 // ── 知识沉淀 (Knowledge) ──
 export interface KnowledgeItem {

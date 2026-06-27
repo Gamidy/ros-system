@@ -145,6 +145,26 @@
           </el-table>
         </div>
       </div>
+
+      <!-- ========== 可视化对标图表 ========== -->
+      <div v-if="chartCompetitors.length > 0" class="chart-section">
+        <el-divider content-position="left">📈 雷达图对比</el-divider>
+        <div class="chart-card">
+          <RadarChart
+            :competitors="chartCompetitors"
+            :loading="chartLoading"
+            :empty="chartCompetitors.length === 0"
+          />
+        </div>
+        <el-divider content-position="left">📊 分组柱状图对比</el-divider>
+        <div class="chart-card">
+          <BarCompare
+            :competitors="chartCompetitors"
+            :loading="chartLoading"
+            :empty="chartCompetitors.length === 0"
+          />
+        </div>
+      </div>
     </template>
 
     <!-- ========== 无数据 ========== -->
@@ -308,6 +328,8 @@ import { Loading, Plus } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import api from '../../api'
 import type { FormInstance, FormRules } from 'element-plus'
+import RadarChart from '../../components/competitor/RadarChart.vue'
+import BarCompare from '../../components/competitor/BarCompare.vue'
 
 interface MarketOption {
   code: string
@@ -515,6 +537,30 @@ async function fetchData() {
     allItems.value = []
   } finally {
     loading.value = false
+  }
+  // 联动刷新图表数据
+  await fetchBenchmarkData()
+}
+
+// ── 图表数据（benchmark 专用端点） ──────────────────────────────
+const chartLoading = ref(false)
+const chartCompetitors = ref<Record<string, unknown>[]>([])
+
+async function fetchBenchmarkData() {
+  if (!selectedMarket.value) {
+    chartCompetitors.value = []
+    return
+  }
+  chartLoading.value = true
+  try {
+    const res = await api.get('/pm/competitors/benchmark', {
+      params: { market: selectedMarket.value },
+    })
+    chartCompetitors.value = (res.data.competitors || []) as Record<string, unknown>[]
+  } catch {
+    chartCompetitors.value = []
+  } finally {
+    chartLoading.value = false
   }
 }
 
@@ -805,6 +851,16 @@ async function handleDelete(item: CompetitorItem) {
 .bench-table { font-size: 13px; }
 .bench-table :deep(.el-table__body tr:hover > td) { background: #fdfaf3 !important; }
 .cell-value { font-variant-numeric: tabular-nums; color: var(--c-text); }
+
+/* ── 图表区 ────────────────────────────────────────────────────── */
+.chart-section { margin-top: 24px; }
+.chart-card {
+  background: var(--c-bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
 
 /* ── 加载/空状态 ────────────────────────────────────────────────── */
 .loading-wrap { text-align: center; padding: 48px 0; color: var(--c-text-muted); }

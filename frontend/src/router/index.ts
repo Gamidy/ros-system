@@ -471,6 +471,19 @@ const router = createRouter({
           component: () => import('../views/pm/RequirementList.vue'),
           meta: { title: '需求管理', menu: 'pm-requirements' },
         },
+        // D5-5 移动端 Tab 导航目标路由（占位）
+        {
+          path: 'notifications',
+          name: 'Notifications',
+          component: () => import('../views/notifications/NotificationsView.vue'),
+          meta: { title: '通知中心' },
+        },
+        {
+          path: 'profile',
+          name: 'Profile',
+          component: () => import('../views/profile/ProfileView.vue'),
+          meta: { title: '个人中心' },
+        },
       ],
     },
   ],

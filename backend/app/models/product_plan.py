@@ -166,6 +166,7 @@ class ProductPlanReview(Base):
     lessons_learned = Column(Text, nullable=True, comment="经验教训")
     rating = Column(Integer, nullable=True, comment="评分1-5")
     reviewer_id = Column(String(50), nullable=True, comment="复盘人ID")
+    review_template_id = Column(String(36), nullable=True, comment="关联模板ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

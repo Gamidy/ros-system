@@ -93,6 +93,9 @@ ALL_MENUS = [
     "notification-settings",   # 用户通知偏好设置
     # P1-T5 — 事件监控面板
     "event-monitor",           # 事件监控面板
+    # D5-5 — 移动端底部导航
+    "notifications",           # 通知中心
+    "profile",                 # 个人中心
 ]
 
 # 角色 → 菜单 映射表
@@ -120,6 +123,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'bi-analytics',
         # P1-T5 事件监控面板
         'event-monitor',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "product_manager": [
         "dashboard", "products", "bom", "projects",
@@ -134,6 +139,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cost-accounting',
         # D1 BI分析看板
         'bi-analytics',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "systems_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -149,6 +156,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "structural_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -165,6 +174,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "electrical_control_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -195,6 +206,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items', 'safety-supplier-qual',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "procurement": [
         "dashboard", "bom", "purchases", "alerts", "projects",
@@ -204,6 +217,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # P0-7 外协管理
         'outsource-partners', 'outsource-orders', 'outsource-quality',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "quality_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -227,6 +242,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'outsource-partners', 'outsource-orders', 'outsource-quality',
         # P1-T5 事件监控面板
         'event-monitor',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "process_engineer": [
         "dashboard", "products", "bom", "projects",
@@ -236,6 +253,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
         'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "project_admin": [
         "dashboard", "projects", "alerts", "changes",
@@ -245,10 +264,14 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'ecr', 'eco',
         # D1 BI分析看板
         'bi-analytics',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "production": [
         "dashboard", "bom", "quality", "alerts", "projects",
         "products", "prototypes",
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "module_manager": [  # 模块经理（通用）— BOM + 样机 + 质量 + 预警 + 审批
         "dashboard", "products", "bom", "projects",
@@ -264,6 +287,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "module_manager_struct": [  # 结构模块经理 — 侧重结构
         "dashboard", "products", "bom", "projects",
@@ -275,6 +300,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "module_manager_sys": [  # 系统模块经理 — 侧重系统性能
         "dashboard", "products", "bom", "projects", "tests",
@@ -290,6 +317,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "finance_manager": [  # 财务经理 — 成本核算
         "dashboard", "products", "bom",
@@ -298,16 +327,22 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "cost-accounting",
         # D1 BI分析看板
         "bi-analytics",
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "process_manager": [  # 工艺经理 — 管理工艺+审批
         "dashboard", "products", "bom", "projects",
         "tests", "prototypes", "approvals",
         "verification-requirements", "test-executions",
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "procurement_director": [  # 采购总监 — 管理采购+审批
         "dashboard", "bom", "purchases", "alerts", "approvals", "projects",
         "products", "prototypes", "tests",
         "verification-requirements", "test-executions",
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
     "security_officer": [
         "dashboard", "alerts", "approvals",
@@ -322,6 +357,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items',
         # P0-8 DFM
         'dfm-checklist', 'dfm-reports',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],  # IT安全员 — 裁剪权限（去掉 purchases, rd_dashboard, mm）
     "engineer": [  # 向后兼容：原系统默认角色，基础工程权限
         "dashboard", "products", "bom", "projects",
@@ -336,6 +373,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'dfm-checklist', 'dfm-reports',
         # D3 用户通知偏好
         'notification-settings',
+        # D5-5 移动端导航
+        'notifications', 'profile',
     ],
 }
 
@@ -396,6 +435,9 @@ MENU_PATH_MAP: dict[str, str] = {
     "cost-accounting": "/cost-accounting",
     # P1-T5 事件监控面板
     "event-monitor": "/monitor/events",
+    # D5-5 移动端导航
+    "notifications": "/notifications",
+    "profile": "/profile",
 }
 
 # API路径 → 菜单名映射（用于 require_menu 权限校验）

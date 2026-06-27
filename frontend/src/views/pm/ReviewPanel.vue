@@ -10,33 +10,57 @@
     description="请尽快补充复盘数据，完成产品全生命周期闭环。"
   />
 
+  <!-- 模板选择器 -->
+  <el-form label-width="160" size="small" style="margin-bottom:12px">
+    <el-form-item label="复盘模板">
+      <el-select
+        v-model="selectedTemplateId"
+        placeholder="选择模板（可选）"
+        clearable
+        style="width:100%"
+        @change="onTemplateChange"
+      >
+        <el-option
+          v-for="tpl in templateOptions"
+          :key="tpl.id"
+          :label="tpl.name"
+          :value="tpl.id"
+        />
+      </el-select>
+      <div v-if="selectedTemplateId && currentTemplate" style="margin-top:4px;font-size:12px;color:#909399">
+        已选模板：{{ currentTemplate.name }}（{{ currentTemplate.product_type }}）
+        <el-tag size="small" type="info" style="margin-left:4px">{{ currentTemplate.template_fields.length }}个字段</el-tag>
+      </div>
+    </el-form-item>
+  </el-form>
+
   <el-form :model="reviewForm" label-width="160" size="small">
     <el-row :gutter="16">
       <el-col :span="8">
-        <el-form-item label="复盘日期">
+        <el-form-item :label="fieldLabel('review_date', '复盘日期')">
           <el-date-picker v-model="reviewForm.review_date" type="date" placeholder="选择复盘日期" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
       </el-col>
       <el-col :span="8">
-        <el-form-item label="实际成本总计">
+        <el-form-item :label="fieldLabel('actual_cost_total', '实际成本总计')">
           <el-input-number v-model="reviewForm.actual_cost_total" :min="0" :precision="2" style="width:100%" />
         </el-form-item>
       </el-col>
       <el-col :span="8">
-        <el-form-item label="实际上市日期">
+        <el-form-item :label="fieldLabel('actual_launch_date', '实际上市日期')">
           <el-date-picker v-model="reviewForm.actual_launch_date" type="date" placeholder="选择实际上市日期" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
       </el-col>
     </el-row>
 
-    <el-form-item label="市场反馈">
+    <el-form-item :label="fieldLabel('market_feedback', '市场反馈')">
       <el-input v-model="reviewForm.market_feedback" type="textarea" :rows="3" placeholder="市场反馈信息" />
     </el-form-item>
-    <el-form-item label="经验教训">
+    <el-form-item :label="fieldLabel('lessons_learned', '经验教训')">
       <el-input v-model="reviewForm.lessons_learned" type="textarea" :rows="3" placeholder="总结的经验教训" />
     </el-form-item>
-    <el-form-item label="综合评分">
-      <el-rate v-model="reviewForm.overall_rating" :max="5" show-text :texts="['很差', '较差', '一般', '较好', '很好']" />
+    <el-form-item :label="fieldLabel('rating', '综合评分')">
+      <el-rate v-model="reviewForm.rating" :max="5" show-text :texts="['很差', '较差', '一般', '较好', '很好']" />
     </el-form-item>
     <el-form-item>
       <el-button type="primary" size="small" @click="saveReview" :loading="savingReview">
@@ -132,13 +156,14 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as planAPI from '../../api/productPlan'
-import type { ReviewData, KnowledgeItem } from '../../api/productPlan'
+import type { ReviewData, KnowledgeItem, ReviewTemplateItem, TemplateField } from '../../api/productPlan'
 
 const props = defineProps<{
   planId: string
   planStatus: string
   plannedLaunchDate?: string
   totalTargetCost: number
+  productType?: string
 }>()
 
 const emit = defineEmits<{
@@ -154,9 +179,49 @@ const reviewForm = reactive({
   actual_launch_date: '',
   market_feedback: '',
   lessons_learned: '',
-  overall_rating: 0,
+  rating: 0,
 })
 const savingReview = ref(false)
+
+// ── 复盘模板 ──
+const templateOptions = ref<ReviewTemplateItem[]>([])
+const selectedTemplateId = ref<string>('')
+const currentTemplate = computed<ReviewTemplateItem | undefined>(() => {
+  if (!selectedTemplateId.value) return undefined
+  return templateOptions.value.find(t => t.id === selectedTemplateId.value)
+})
+
+/** 字段名映射：前端 form key → 后端 field name */
+const FIELD_MAP: Record<string, string> = {
+  review_date: 'review_date',
+  actual_cost_total: 'actual_cost_total',
+  actual_launch_date: 'actual_launch_date',
+  market_feedback: 'market_feedback',
+  lessons_learned: 'lessons_learned',
+  rating: 'rating',
+}
+
+/** 从模板中查找字段配置，若匹配则返回 label，否则返回默认 label */
+function fieldLabel(fieldKey: string, defaultLabel: string): string {
+  if (!currentTemplate.value) return defaultLabel
+  const config = currentTemplate.value.template_fields.find((tf: TemplateField) => tf.field === FIELD_MAP[fieldKey] || tf.field === fieldKey)
+  if (!config) return defaultLabel
+  return config.required ? `${config.label} *` : config.label
+}
+
+async function fetchTemplates() {
+  try {
+    const res = await planAPI.listReviewTemplates(props.productType)
+    templateOptions.value = (res.data || []) as ReviewTemplateItem[]
+  } catch {
+    templateOptions.value = []
+  }
+}
+
+function onTemplateChange(val: string) {
+  if (!val) return
+  // 模板选择后无需额外操作，fieldLabel 会基于 currentTemplate 自动更新
+}
 
 async function fetchReview() {
   try {
@@ -168,7 +233,8 @@ async function fetchReview() {
       reviewForm.actual_launch_date = res.data.actual_launch_date || ''
       reviewForm.market_feedback = res.data.market_feedback || ''
       reviewForm.lessons_learned = res.data.lessons_learned || ''
-      reviewForm.overall_rating = res.data.overall_rating || 0
+      reviewForm.rating = res.data.rating || 0
+      selectedTemplateId.value = res.data.review_template_id || ''
       emit('review-changed', true)
     }
   } catch {
@@ -185,14 +251,14 @@ function resetReviewForm() {
     reviewForm.actual_launch_date = reviewData.value.actual_launch_date || ''
     reviewForm.market_feedback = reviewData.value.market_feedback || ''
     reviewForm.lessons_learned = reviewData.value.lessons_learned || ''
-    reviewForm.overall_rating = reviewData.value.overall_rating || 0
+    reviewForm.rating = reviewData.value.rating || 0
   } else {
     reviewForm.review_date = ''
     reviewForm.actual_cost_total = null
     reviewForm.actual_launch_date = ''
     reviewForm.market_feedback = ''
     reviewForm.lessons_learned = ''
-    reviewForm.overall_rating = 0
+    reviewForm.rating = 0
   }
 }
 
@@ -205,7 +271,8 @@ async function saveReview() {
       actual_launch_date: reviewForm.actual_launch_date || undefined,
       market_feedback: reviewForm.market_feedback || undefined,
       lessons_learned: reviewForm.lessons_learned || undefined,
-      overall_rating: reviewForm.overall_rating || undefined,
+      rating: reviewForm.rating || undefined,
+      review_template_id: selectedTemplateId.value || undefined,
     }
     if (reviewData.value?.id) {
       await planAPI.updateReview(props.planId, payload)
@@ -329,6 +396,7 @@ onMounted(async () => {
   await Promise.all([
     fetchReview(),
     fetchKnowledge(),
+    fetchTemplates(),
   ])
 })
 </script>

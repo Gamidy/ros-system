@@ -34,6 +34,7 @@ class ReviewCreate(BaseModel):
     lessons_learned: Optional[str] = None
     rating: Optional[int] = Field(None, ge=1, le=5)
     reviewer_id: Optional[str] = None
+    review_template_id: Optional[str] = None
 
 
 class ReviewUpdate(BaseModel):
@@ -47,6 +48,7 @@ class ReviewUpdate(BaseModel):
     lessons_learned: Optional[str] = None
     rating: Optional[int] = Field(None, ge=1, le=5)
     reviewer_id: Optional[str] = None
+    review_template_id: Optional[str] = None
 
 
 class ReviewOut(BaseModel):
@@ -62,6 +64,7 @@ class ReviewOut(BaseModel):
     lessons_learned: Optional[str] = None
     rating: Optional[int] = None
     reviewer_id: Optional[str] = None
+    review_template_id: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -85,6 +88,7 @@ def _review_to_dict(review: ProductPlanReview) -> dict:
         "lessons_learned": review.lessons_learned,
         "rating": review.rating,
         "reviewer_id": review.reviewer_id,
+        "review_template_id": review.review_template_id,
         "created_at": str(review.created_at) if review.created_at else None,
         "updated_at": str(review.updated_at) if review.updated_at else None,
     }
@@ -143,6 +147,7 @@ def create_review(
             lessons_learned=data.lessons_learned,
             rating=data.rating,
             reviewer_id=data.reviewer_id or current_user.username,
+            review_template_id=data.review_template_id,
         )
         db.add(review)
         db.commit()

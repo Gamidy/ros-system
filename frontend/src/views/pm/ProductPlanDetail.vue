@@ -181,6 +181,7 @@
     :plan-status="plan?.status || ''"
     :planned-launch-date="plan?.planned_launch_date"
     :total-target-cost="totalTargetCost"
+    :product-type="initiationForm.type || undefined"
     @refresh="fetchPlan"
     @review-changed="hasReview = $event; setSubTableDone('review', $event)"
   />
