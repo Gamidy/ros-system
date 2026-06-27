@@ -329,7 +329,7 @@ idempotency:
 
 compatibility:
   schema_version: "1.0.0"
-  backend_compatible: true
+  backward_compatible: true
   migration_path: >
     仪表盘数据均为聚合结果，无需数据迁移。
     新增图表/指标只需添加新查询，不影响已有接口。

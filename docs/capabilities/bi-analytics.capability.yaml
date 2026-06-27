@@ -187,8 +187,8 @@ dependencies:
 # ── 数据所有权声明（Constitution 第一条）───────
 
 data_ownership:
-  exclusive_write: []
-
+  exclusive_write: []               # BI 是纯只读聚合层，不独占任何数据写权
+  # 注意：exclusive_write 为空是设计决定的——BI 的所有数据均来自其他 Capability 的事件聚合
   shared_read:
     - "ProductPlan.*": ["bi_analytics"]
     - "ApprovalRequest.*": ["bi_analytics"]
