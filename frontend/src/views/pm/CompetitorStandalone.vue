@@ -118,6 +118,7 @@
               <el-tag v-else size="small" type="warning" effect="plain">缺{{ item.missing_fields?.length }}项</el-tag>
             </div>
             <div class="card-actions">
+              <el-button size="small" type="primary" link @click="openDetailDrawer(item)">详情</el-button>
               <el-button size="small" type="primary" link @click="openEditDialog(item)">编辑</el-button>
               <el-button size="small" type="danger" link @click="handleDelete(item)">删除</el-button>
             </div>
@@ -362,13 +363,136 @@
         <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
       </template>
     </el-dialog>
+
+    <!-- ========== 详情抽屉（参数详情 + 历史版本） ========== -->
+    <el-drawer
+      v-model="detailDrawerVisible"
+      :title="detailTitle"
+      size="520px"
+      :close-on-click-modal="false"
+    >
+      <template v-if="detailItem">
+        <el-tabs v-model="detailTab">
+          <!-- ── 参数详情 Tab ── -->
+          <el-tab-pane label="参数详情" name="params">
+            <div class="detail-params">
+              <div
+                v-for="p in effectiveParams"
+                :key="p.key"
+                class="detail-param-row"
+              >
+                <span class="detail-param-label">
+                  {{ p.label }}{{ p.unit ? ` (${p.unit})` : '' }}
+                </span>
+                <span class="detail-param-value" :class="{ 'param-missing': getParamValue(detailItem, p.key) === '-' }">
+                  {{ getParamValue(detailItem, p.key) }}
+                </span>
+              </div>
+              <div class="detail-param-row">
+                <span class="detail-param-label">备注</span>
+                <span class="detail-param-value">{{ detailItem.notes || '-' }}</span>
+              </div>
+            </div>
+          </el-tab-pane>
+
+          <!-- ── 历史版本 Tab ── -->
+          <el-tab-pane label="历史版本" name="history">
+            <div v-if="historyLoading" class="loading-wrap">
+              <el-icon class="is-loading" :size="20"><Loading /></el-icon>
+              <p>加载中...</p>
+            </div>
+            <template v-else-if="historyItems.length === 0">
+              <el-empty description="暂无历史版本记录" :image-size="60" />
+            </template>
+            <template v-else>
+              <!-- 时间轴 -->
+              <div class="history-timeline">
+                <el-timeline>
+                  <el-timeline-item
+                    v-for="h in historyItems"
+                    :key="h.id"
+                    :timestamp="h.created_at"
+                    placement="top"
+                    :hollow="!h.changed_fields || Object.keys(h.changed_fields).length === 0"
+                  >
+                    <div class="timeline-header">
+                      <span class="timeline-user">{{ h.changed_by || '系统' }}</span>
+                      <el-tag
+                        size="small"
+                        :type="h.changed_fields && Object.keys(h.changed_fields).length > 0 ? 'warning' : 'info'"
+                        effect="plain"
+                      >
+                        {{ h.changed_fields ? Object.keys(h.changed_fields).length : 0 }} 个变更
+                      </el-tag>
+                    </div>
+                    <!-- 变更字段列表 -->
+                    <div
+                      v-if="h.changed_fields && Object.keys(h.changed_fields).length > 0"
+                      class="timeline-fields"
+                    >
+                      <div
+                        v-for="(change, field) in h.changed_fields"
+                        :key="field"
+                        class="changed-field-row"
+                      >
+                        <span class="field-name">{{ getFieldLabel(field) }}</span>
+                        <span class="field-old">{{ formatChangeValue(change.old) }}</span>
+                        <el-icon :size="12" style="color: var(--c-text-muted)"><ArrowRight /></el-icon>
+                        <span class="field-new">{{ formatChangeValue(change.new) }}</span>
+                      </div>
+                    </div>
+                    <div v-else class="timeline-no-change">初始创建 / 无参数变更</div>
+                    <!-- 查看此版本快照 -->
+                    <el-button
+                      v-if="h.snapshot_data"
+                      size="small"
+                      link
+                      type="primary"
+                      @click="previewVersion(h)"
+                    >
+                      查看此版本
+                    </el-button>
+                  </el-timeline-item>
+                </el-timeline>
+              </div>
+            </template>
+          </el-tab-pane>
+        </el-tabs>
+      </template>
+    </el-drawer>
+
+    <!-- ========== 版本快照预览弹窗 ========== -->
+    <el-dialog
+      v-model="versionPreviewVisible"
+      :title="'版本详情 - ' + (versionPreviewItem?.created_at || '')"
+      width="540px"
+      :close-on-click-modal="false"
+    >
+      <template v-if="versionPreviewItem?.snapshot_data">
+        <div class="version-preview-grid">
+          <div
+            v-for="p in effectiveParams"
+            :key="p.key"
+            class="preview-row"
+          >
+            <span class="preview-label">{{ p.label }}{{ p.unit ? ` (${p.unit})` : '' }}</span>
+            <span class="preview-value">{{ formatChangeValue(versionPreviewItem.snapshot_data[p.key]) }}</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">备注</span>
+            <span class="preview-value">{{ versionPreviewItem.snapshot_data.notes || '-' }}</span>
+          </div>
+        </div>
+      </template>
+      <div v-else class="preview-empty">版本数据不可用</div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading, Plus, UploadFilled } from '@element-plus/icons-vue'
+import { Loading, Plus, UploadFilled, ArrowRight } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import api from '../../api'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -412,6 +536,19 @@ interface CompetitorItem extends CompetitorFormData {
   is_complete: boolean
   missing_fields?: string[]
   [key: string]: unknown
+}
+
+interface VersionChangeField {
+  old: string | number | null
+  new: string | number | null
+}
+
+interface VersionHistoryItem {
+  id: number
+  changed_fields: Record<string, VersionChangeField> | null
+  snapshot_data: Record<string, string | number | null> | null
+  changed_by: string | null
+  created_at: string
 }
 
 // ── 市场 & 冷量段选项 ──────────────────────────────────────────────
@@ -709,6 +846,82 @@ const formRules: FormRules = {
   outdoor_size_mm: [{ required: true, message: '请输入外机尺寸', trigger: 'blur' }],
   factory_price: [{ required: true, message: '请输入出厂价', trigger: 'blur' }],
   launch_year: [{ required: true, message: '请输入上市年份', trigger: 'blur' }],
+}
+
+// ── 详情抽屉 ──────────────────────────────────────────────────────
+const detailDrawerVisible = ref(false)
+const detailTab = ref('params')
+const detailItem = ref<CompetitorItem | null>(null)
+
+const detailTitle = computed(() => {
+  if (!detailItem.value) return '竞品详情'
+  return `${detailItem.value.brand} ${detailItem.value.model}`
+})
+
+// ── 历史版本 ──────────────────────────────────────────────────────
+const historyItems = ref<VersionHistoryItem[]>([])
+const historyLoading = ref(false)
+
+const FIELD_LABEL_MAP: Record<string, string> = {
+  brand: '品牌',
+  model: '型号',
+  market: '目标市场',
+  product_type: '产品类型',
+  cooling_capacity: '冷量段',
+  cooling_capacity_w: '制冷量(W)',
+  heating_capacity_w: '制热量(W)',
+  energy_rating: '能效等级',
+  cooling_w: '制冷功率(W)',
+  heating_w: '制热功率(W)',
+  eer: 'EER',
+  cspf: 'CSPF',
+  noise_indoor_db: '室内噪音(dB)',
+  noise_outdoor_db: '室外噪音(dB)',
+  airflow_m3h: '循环风量(m³/h)',
+  indoor_size_mm: '内机尺寸(mm)',
+  outdoor_size_mm: '外机尺寸(mm)',
+  factory_price: '出厂价',
+  launch_year: '上市年份',
+  notes: '备注',
+}
+
+function getFieldLabel(field: string): string {
+  return FIELD_LABEL_MAP[field] || field
+}
+
+function formatChangeValue(val: string | number | null | undefined): string {
+  if (val === null || val === undefined) return '-'
+  return String(val)
+}
+
+function openDetailDrawer(item: CompetitorItem) {
+  detailItem.value = item
+  detailTab.value = 'params'
+  detailDrawerVisible.value = true
+  fetchHistory(item.id)
+}
+
+async function fetchHistory(competitorId: number) {
+  historyLoading.value = true
+  historyItems.value = []
+  try {
+    const res = await api.get(`/pm/competitors/${competitorId}/history`)
+    const data = res.data as { versions: VersionHistoryItem[] }
+    historyItems.value = data.versions || []
+  } catch {
+    historyItems.value = []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+// ── 版本快照预览 ──────────────────────────────────────────────────
+const versionPreviewVisible = ref(false)
+const versionPreviewItem = ref<VersionHistoryItem | null>(null)
+
+function previewVersion(item: VersionHistoryItem) {
+  versionPreviewItem.value = item
+  versionPreviewVisible.value = true
 }
 
 function openAddDialog() {
@@ -1014,4 +1227,108 @@ async function handleExport() {
 :deep(.el-select-dropdown__item.selected) { color: var(--c-accent); font-weight: 600; }
 :deep(.el-select-dropdown__item:hover) { background: #fdf6ee; }
 :deep(.el-empty__description p) { color: var(--c-text-muted); }
+
+/* ── 详情抽屉 ────────────────────────────────────────────────────── */
+.detail-params {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+}
+.detail-param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-param-label {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+.detail-param-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.detail-param-value.param-missing {
+  color: var(--c-danger);
+  font-style: italic;
+}
+
+/* ── 历史时间线 ──────────────────────────────────────────────────── */
+.history-timeline {
+  padding: 4px 0;
+}
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.timeline-user {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.timeline-fields {
+  margin: 6px 0;
+  padding: 8px 10px;
+  background: #faf8f3;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+}
+.changed-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 3px 0;
+}
+.changed-field-row + .changed-field-row {
+  border-top: 1px dashed var(--c-border);
+}
+.field-name {
+  font-weight: 600;
+  color: var(--c-text);
+  min-width: 80px;
+}
+.field-old {
+  color: var(--c-danger);
+  text-decoration: line-through;
+  font-size: 12px;
+}
+.field-new {
+  color: var(--c-success);
+  font-weight: 600;
+  font-size: 12px;
+}
+.timeline-no-change {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+
+/* ── 版本快照预览 ────────────────────────────────────────────────── */
+.version-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+}
+.preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.preview-label {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+.preview-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.preview-empty {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--c-text-muted);
+}
 </style>

@@ -2,8 +2,9 @@
 from datetime import datetime, timezone, date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_menu, require_role
@@ -12,7 +13,10 @@ from app.models.alert import Notification, Alert, AlertRule
 from app.models.project import Project
 from app.models.test import TestRequest, Certification
 from app.models.notification_read import NotificationReadStatus, CHANNEL_TYPES
-from app.schemas import NotificationOut, AlertOut, AlertRuleOut
+from app.schemas import (
+    NotificationOut, AlertOut, AlertRuleOut,
+    NotificationPageOut, BatchDeleteRequest,
+)
 from app.services.events import bus, EventTypes
 
 router = APIRouter(prefix="", tags=["预警/通知管理"])
@@ -66,19 +70,24 @@ def _enrich_notification_with_read_status(
     return notif_dict
 
 
-@router.get("/notifications", response_model=list[NotificationOut])
+@router.get("/notifications", response_model=NotificationPageOut)
 def list_notifications(
     target_user: str = Query("", description="目标用户"),
     is_read: Optional[bool] = Query(None, description="是否已读"),
     channel: str = Query("", description="通知渠道"),
+    keyword: str = Query("", description="搜索关键词（匹配标题和内容）"),
+    date_from: Optional[datetime] = Query(None, description="起始时间 (ISO格式)"),
+    date_to: Optional[datetime] = Query(None, description="结束时间 (ISO格式)"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=200, description="每页条数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("alerts")),
-) -> list[dict]:
-    """获取通知列表，含跨渠道已读状态
+) -> NotificationPageOut:
+    """获取通知列表（分页），含跨渠道已读状态
 
-    返回每个通知在各渠道（websocket/wecom/dingtalk/email）上的已读状态。
-    如果当前用户通过任一渠道已读该通知，cross_channel_read 会包含该渠道的读时间。
+    支持按 target_user / is_read / channel / keyword / date range 筛选。
+    返回 NotificationPageOut 分页结构。
     """
     q = db.query(Notification)
     if target_user:
@@ -87,13 +96,37 @@ def list_notifications(
         q = q.filter(Notification.is_read == is_read)
     if channel:
         q = q.filter(Notification.channel == channel)
-    notifications = q.order_by(Notification.created_at.desc()).limit(200).all()
+    if keyword:
+        kw = f"%{keyword}%"
+        q = q.filter(
+            or_(Notification.title.ilike(kw), Notification.content.ilike(kw))
+        )
+    if date_from:
+        q = q.filter(Notification.created_at >= date_from)
+    if date_to:
+        q = q.filter(Notification.created_at <= date_to)
+
+    total: int = q.count()
+    items = (
+        q.order_by(Notification.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
 
     current_username = str(current_user.username)
-    return [
+    enriched = [
         _enrich_notification_with_read_status(n, current_username, db)
-        for n in notifications
+        for n in items
     ]
+
+    return NotificationPageOut(
+        items=enriched,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=(total + page_size - 1) // page_size if total > 0 else 0,
+    )
 
 
 @router.patch("/notifications/{nid}/read")
@@ -109,6 +142,44 @@ def mark_notification_read(
     notif.read_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True}
+
+
+@router.delete("/notifications/batch")
+def delete_notifications_batch(
+    body: BatchDeleteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("alerts")),
+) -> dict:
+    """批量删除通知"""
+    deleted: int = 0
+    for nid in body.ids:
+        notif = db.query(Notification).filter(Notification.id == nid).first()
+        if notif:
+            db.delete(notif)
+            deleted += 1
+    db.commit()
+    return {"ok": True, "deleted_count": deleted}
+
+
+@router.post("/notifications/read-all")
+def mark_all_notifications_read(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("alerts")),
+) -> dict:
+    """全部标记已读"""
+    now = datetime.now(timezone.utc)
+    count: int = (
+        db.query(Notification)
+        .filter(
+            Notification.target_user == str(current_user.username),
+            Notification.is_read == False,
+        )
+        .update({"is_read": True, "read_at": now}, synchronize_session=False)
+    )
+    db.commit()
+    return {"ok": True, "updated_count": count}
 
 
 # ═══════════════ 预警记录 ═══════════════

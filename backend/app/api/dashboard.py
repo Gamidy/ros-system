@@ -1,4 +1,4 @@
-"""驾驶舱仪表盘 API — 多层聚合 + 预警管理"""
+"""驾驶舱仪表盘 API — 多层聚合 + 预警管理 + 角色化视图"""
 from datetime import date, datetime, timezone, timedelta
 from typing import Optional, Any
 import json
@@ -12,12 +12,15 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_menu, require_role
 from app.models.product import Product, Platform, Version
 from app.models.project import Project, ProjectGate
-from app.models.bom import Part
+from app.models.bom import Part, BOM
 from app.models.test import TestResult, QualityIssue
 from app.models.alert import Alert, AlertRule
 from app.models.approval import ApprovalRequest  # unified approval engine
 from app.models.product_plan import ProductPlan, ProductPlanStage
 from app.models.cost_accounting import CostAccountingSheet, SheetStatus
+from app.models.competitor import CompetitorModel
+from app.models.certification import CertificationProject, CertificationExecution
+from app.models.user import User
 from app.schemas import (
     DashboardSummary,
     DashboardResponse,
@@ -41,9 +44,33 @@ router = APIRouter(prefix="/dashboard", tags=["驾驶舱"])
 # ═══════════════ 驾驶舱汇总（新版多层聚合） ═══════════════
 
 @router.get("/summary", response_model=DashboardResponse)
-def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("dashboard"))) -> DashboardResponse:
+def dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_menu("dashboard")),
+    role: Optional[str] = Query(None, description="角色视图: pm/rd/quality/management, 默认使用当前用户角色"),
+) -> DashboardResponse:
     today = date.today()
     ninety_days = today + timedelta(days=90)
+
+    # ─── 确定角色视图 ───
+    raw_role = (role or current_user.role).lower()
+    # 管理层映射: admin / general_manager → management
+    MANAGEMENT_ROLES: set[str] = {"admin", "general_manager"}
+    PM_ROLES: set[str] = {"product_manager"}
+    RD_ROLES: set[str] = {"rd_director", "rd_engineer", "systems_engineer", "structural_engineer", "electrical_control_engineer", "electrical_engineer", "process_engineer", "project_admin"}
+    QUALITY_ROLES: set[str] = {"quality_engineer"}
+
+    if raw_role in PM_ROLES:
+        role_view = "pm"
+    elif raw_role in RD_ROLES:
+        role_view = "rd"
+    elif raw_role in QUALITY_ROLES:
+        role_view = "quality"
+    elif raw_role in MANAGEMENT_ROLES:
+        role_view = "management"
+    else:
+        # 其他角色 fallback 到 management 视图
+        role_view = "management"
 
     # ─────────────────── L1: 系统健康概览 ───────────────────
     total_platforms = db.query(func.count(Platform.id)).scalar() or 0
@@ -286,16 +313,68 @@ def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("das
         phase_progress=phase_progress,
         test_pass_rate=test_pass_rate,
         issue_close_rate=issue_close_rate,
-        cost_execution_rate=0.0,       # 暂无预算执行数据，占位
-        generalization_rate=0.0,        # 暂无通用化率数据，占位
+        cost_execution_rate=0.0,
+        generalization_rate=0.0,
         phase_progress_array=phase_progress_array,
+        total_issues=total_issues,
+        closed_issues=closed_issues,
     )
+
+    # ─────────────────── 角色化视图: 竞品摘要 (PM)、BOM摘要 (RD)、认证摘要 (Quality) ───────────────────
+    pm_competitor_summary: Optional[dict] = None
+    rd_bom_summary: Optional[dict] = None
+    quality_cert_summary: Optional[dict] = None
+
+    if role_view == "pm":
+        # 竞品动态摘要: 按市场统计竞品数量
+        comp_rows = (
+            db.query(CompetitorModel.market, func.count(CompetitorModel.id))
+            .group_by(CompetitorModel.market)
+            .all()
+        )
+        pm_competitor_summary = {
+            "total": sum(r[1] for r in comp_rows),
+            "by_market": {r[0] or "unknown": r[1] for r in comp_rows},
+        }
+
+    elif role_view == "rd":
+        # BOM状态摘要: 物料总数、BOM总数
+        total_parts = db.query(func.count(Part.id)).scalar() or 0
+        total_boms = db.query(func.count(BOM.id)).scalar() or 0
+        part_type_rows = (
+            db.query(Part.part_type, func.count(Part.id))
+            .filter(Part.part_type.isnot(None))
+            .group_by(Part.part_type)
+            .all()
+        )
+        rd_bom_summary = {
+            "total_parts": total_parts,
+            "total_boms": total_boms,
+            "part_type_distribution": {r[0]: r[1] for r in part_type_rows},
+        }
+
+    elif role_view == "quality":
+        # 认证进度摘要
+        total_cert_projects = db.query(func.count(CertificationProject.id)).scalar() or 0
+        cert_status_rows = (
+            db.query(CertificationProject.status, func.count(CertificationProject.id))
+            .group_by(CertificationProject.status)
+            .all()
+        )
+        quality_cert_summary = {
+            "total_projects": total_cert_projects,
+            "status_distribution": {r[0] or "unknown": r[1] for r in cert_status_rows},
+        }
 
     return DashboardResponse(
         layer1_system_health=layer1,
         layer2_project_ops=layer2,
         layer3_penetration=layer3,
         layer4_ac_metrics=layer4,
+        role_view=role_view,
+        pm_competitor_summary=pm_competitor_summary,
+        rd_bom_summary=rd_bom_summary,
+        quality_cert_summary=quality_cert_summary,
     )
 
 

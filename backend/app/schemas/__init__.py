@@ -177,6 +177,8 @@ from .alert import (
     AlertRuleOut,
     AlertOut,
     NotificationOut,
+    NotificationPageOut,
+    BatchDeleteRequest,
 )
 
 # ═══════════════ 通知已读/未读跨渠道同步 ═══════════════

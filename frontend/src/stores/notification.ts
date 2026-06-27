@@ -47,26 +47,31 @@ export const useNotificationStore = defineStore('notification', () => {
    * 从 WebSocket 消息创建通知
    */
   function handleWSMessage(msg: WSMessage) {
-    const payload = msg.payload as Record<string,unknown>
+    const payload = msg.payload as Record<string, unknown> | undefined
     let title = '新消息'
     let content = ''
 
+    function strVal(obj: Record<string, unknown> | undefined, key: string, fallback: string): string {
+      const val = obj?.[key]
+      return typeof val === 'string' ? val : fallback
+    }
+
     switch (msg.type) {
       case 'approval':
-        title = payload?.title || '待审批提醒'
-        content = payload?.content || '您有新的审批请求需要处理'
+        title = strVal(payload, 'title', '待审批提醒')
+        content = strVal(payload, 'content', '您有新的审批请求需要处理')
         break
       case 'alert':
-        title = payload?.title || '系统预警'
-        content = payload?.content || '检测到异常状态'
+        title = strVal(payload, 'title', '系统预警')
+        content = strVal(payload, 'content', '检测到异常状态')
         break
       case 'notification':
-        title = payload?.title || '通知'
-        content = payload?.content || ''
+        title = strVal(payload, 'title', '通知')
+        content = strVal(payload, 'content', '')
         break
       case 'system':
-        title = payload?.title || '系统消息'
-        content = payload?.content || ''
+        title = strVal(payload, 'title', '系统消息')
+        content = strVal(payload, 'content', '')
         break
     }
 

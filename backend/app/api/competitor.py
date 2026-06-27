@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.models.user import User
 from app.models.competitor import CompetitorModel
+from app.models.competitor_version import CompetitorVersion
 
 logger = logging.getLogger(__name__)
 
@@ -267,6 +268,77 @@ def _serialize(item: CompetitorModel) -> dict:
     }
 
 
+# ── 版本快照辅助 ──────────────────────────────────────────────────
+
+# 需要跟踪变更的字段（不包含 id/created_at/updated_at 等系统字段）
+TRACKED_FIELDS = [
+    "brand", "model", "market", "product_type", "cooling_capacity",
+    "cooling_capacity_w", "heating_capacity_w", "energy_rating",
+    "cooling_w", "heating_w", "eer", "cspf",
+    "noise_indoor_db", "noise_outdoor_db", "airflow_m3h",
+    "indoor_size_mm", "outdoor_size_mm", "factory_price",
+    "launch_year", "notes",
+]
+
+
+def _build_snapshot_data(item: CompetitorModel) -> dict:
+    """将竞品模型构建为纯字典快照"""
+    return {
+        "brand": item.brand,
+        "model": item.model,
+        "market": item.market,
+        "product_type": item.product_type,
+        "cooling_capacity": item.cooling_capacity,
+        "cooling_capacity_w": item.cooling_capacity_w,
+        "heating_capacity_w": item.heating_capacity_w,
+        "energy_rating": item.energy_rating,
+        "cooling_w": item.cooling_w,
+        "heating_w": item.heating_w,
+        "eer": item.eer,
+        "cspf": item.cspf,
+        "noise_indoor_db": item.noise_indoor_db,
+        "noise_outdoor_db": item.noise_outdoor_db,
+        "airflow_m3h": item.airflow_m3h,
+        "indoor_size_mm": item.indoor_size_mm,
+        "outdoor_size_mm": item.outdoor_size_mm,
+        "factory_price": item.factory_price,
+        "launch_year": item.launch_year,
+        "notes": item.notes,
+    }
+
+
+def _create_snapshot(
+    db: Session,
+    competitor: CompetitorModel,
+    old_snapshot: dict | None,
+    changed_by: str | None,
+) -> CompetitorVersion:
+    """创建竞品版本快照，计算新旧差异"""
+    new_snapshot = _build_snapshot_data(competitor)
+    changed_fields: dict[str, dict] = {}
+
+    if old_snapshot:
+        for field in TRACKED_FIELDS:
+            old_val = old_snapshot.get(field)
+            new_val = new_snapshot.get(field)
+            if old_val != new_val:
+                changed_fields[field] = {"old": old_val, "new": new_val}
+    else:
+        # 首次快照 — 所有字段视为新增
+        for field in TRACKED_FIELDS:
+            val = new_snapshot.get(field)
+            changed_fields[field] = {"old": None, "new": val}
+
+    version = CompetitorVersion(
+        competitor_id=competitor.id,
+        changed_fields=changed_fields or None,
+        snapshot_data=new_snapshot,
+        changed_by=changed_by,
+    )
+    db.add(version)
+    return version
+
+
 # ── 市场列表（含能效标准）────────────────────────────────────────
 
 @router.get("/markets")
@@ -498,14 +570,25 @@ def update_competitor(
     current_user: User = Depends(get_current_user),
     _=Depends(require_role("admin", "product_manager")),
 ) -> dict:
-    """更新竞品记录"""
+    """更新竞品记录（自动创建版本快照）"""
     item = db.query(CompetitorModel).filter(CompetitorModel.id == cid).first()
     if not item:
         raise HTTPException(status_code=404, detail="竞品记录不存在")
+
+    # 更新前快照
+    old_snapshot = _build_snapshot_data(item)
+    changed_by = current_user.username if hasattr(current_user, "username") else str(current_user.id)
+
+    # 应用更新
     for key, val in data.model_dump(exclude_unset=True).items():
         setattr(item, key, val)
     db.commit()
     db.refresh(item)
+
+    # 自动创建版本快照
+    _create_snapshot(db, item, old_snapshot, changed_by)
+    db.commit()
+
     return _serialize(item)
 
 
@@ -523,6 +606,79 @@ def delete_competitor(
     db.delete(item)
     db.commit()
     return {"detail": "已删除"}
+
+
+# ── 版本快照 / 历史变更 ────────────────────────────────────────────
+
+
+@router.post("/competitors/{cid}/snapshot")
+def take_snapshot(
+    cid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_role("admin", "product_manager")),
+) -> dict:
+    """手动记录当前竞品参数快照"""
+    item = db.query(CompetitorModel).filter(CompetitorModel.id == cid).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="竞品记录不存在")
+
+    # 获取上次快照用于计算差异
+    last_version = (
+        db.query(CompetitorVersion)
+        .filter(CompetitorVersion.competitor_id == cid)
+        .order_by(CompetitorVersion.created_at.desc())
+        .first()
+    )
+    old_snapshot = last_version.snapshot_data if last_version else None
+    changed_by = current_user.username if hasattr(current_user, "username") else str(current_user.id)
+
+    version = _create_snapshot(db, item, old_snapshot, changed_by)
+    db.commit()
+    db.refresh(version)
+
+    return {
+        "id": version.id,
+        "competitor_id": version.competitor_id,
+        "changed_fields": version.changed_fields,
+        "changed_by": version.changed_by,
+        "created_at": version.created_at.isoformat() if version.created_at else None,
+    }
+
+
+@router.get("/competitors/{cid}/history")
+def get_competitor_history(
+    cid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """查看竞品的历史变更记录"""
+    item = db.query(CompetitorModel).filter(CompetitorModel.id == cid).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="竞品记录不存在")
+
+    versions = (
+        db.query(CompetitorVersion)
+        .filter(CompetitorVersion.competitor_id == cid)
+        .order_by(CompetitorVersion.created_at.desc())
+        .all()
+    )
+
+    return {
+        "competitor_id": cid,
+        "competitor": f"{item.brand} {item.model}",
+        "total": len(versions),
+        "versions": [
+            {
+                "id": v.id,
+                "changed_fields": v.changed_fields,
+                "snapshot_data": v.snapshot_data,
+                "changed_by": v.changed_by,
+                "created_at": v.created_at.isoformat() if v.created_at else None,
+            }
+            for v in versions
+        ],
+    }
 
 
 # ── 完整性校验端点 ────────────────────────────────────────────────

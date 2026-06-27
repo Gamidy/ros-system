@@ -62,6 +62,8 @@ class Layer4ACMetrics(BaseModel):
     cost_execution_rate: float = 0.0
     generalization_rate: float = 0.0
     phase_progress_array: list[dict] = Field(default_factory=list)
+    total_issues: int = 0
+    closed_issues: int = 0
 
 
 class KpiDetailItem(BaseModel):
@@ -84,6 +86,11 @@ class DashboardResponse(BaseModel):
     layer2_project_ops: Layer2ProjectOps = Field(default_factory=Layer2ProjectOps)
     layer3_penetration: Optional[dict] = None
     layer4_ac_metrics: Layer4ACMetrics = Field(default_factory=Layer4ACMetrics)
+    # D3-4: 角色化视图
+    role_view: str = "management"  # management | pm | rd | quality
+    pm_competitor_summary: Optional[dict] = None  # PM: 竞品动态摘要
+    rd_bom_summary: Optional[dict] = None          # RD: BOM状态摘要
+    quality_cert_summary: Optional[dict] = None     # Quality: 认证进度摘要
 
 
 # ═══════════════ D3-3: 预警摘要 ═══════════════

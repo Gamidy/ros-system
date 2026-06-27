@@ -53,8 +53,8 @@
       </div>
     </div>
 
-    <!-- ═══════════ 策划KPI卡片行 ═══════════ -->
-    <section class="dashboard-section">
+    <!-- ═══════════ 策划KPI卡片行 (PM + 管理层) ═══════════ -->
+    <section v-if="roleView === 'pm' || roleView === 'management'" class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-primary-light, #ecf5ff); color: var(--c-primary, #409eff);">
           <el-icon :size="16"><DataAnalysis /></el-icon>
@@ -119,8 +119,8 @@
       </div>
     </section>
 
-    <!-- ═══════════ BI多维图表 ═══════════ -->
-    <section class="dashboard-section">
+    <!-- ═══════════ BI多维图表 (PM + 管理层) ═══════════ -->
+    <section v-if="roleView === 'pm' || roleView === 'management'" class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-primary-light, #ecf5ff); color: var(--c-primary, #409eff);">
           <el-icon :size="16"><TrendCharts /></el-icon>
@@ -197,8 +197,8 @@
       </div>
     </section>
 
-    <!-- ═══════════ 最近策划卡片列表 ═══════════ -->
-    <section class="dashboard-section">
+    <!-- ═══════════ 最近策划卡片列表 (PM + 管理层) ═══════════ -->
+    <section v-if="roleView === 'pm' || roleView === 'management'" class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-warning-light, #fdf6ec); color: var(--c-warning, #e6a23c);">
           <el-icon :size="16"><List /></el-icon>
@@ -239,8 +239,8 @@
       </div>
     </section>
 
-    <!-- ═══════════ L1: System Health ═══════════ -->
-    <section class="dashboard-section">
+    <!-- ═══════════ L1: System Health (研发 + 管理层) ═══════════ -->
+    <section v-if="roleView === 'rd' || roleView === 'management'" class="dashboard-section">
       <div class="section-header">
         <div class="section-badge">
           <el-icon :size="16"><DataAnalysis /></el-icon>
@@ -310,8 +310,8 @@
       </div>
     </section>
 
-    <!-- ═══════════ L2: Project Operations ═══════════ -->
-    <section class="dashboard-section">
+    <!-- ═══════════ L2: Project Operations (研发 + 管理层) ═══════════ -->
+    <section v-if="roleView === 'rd' || roleView === 'management'" class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-success-light); color: var(--c-success);">
           <el-icon :size="16"><TrendCharts /></el-icon>
@@ -389,8 +389,8 @@
       </div>
     </section>
 
-    <!-- ═══════════ AC R&D Metrics ═══════════ -->
-    <section class="dashboard-section">
+    <!-- ═══════════ AC R&D Metrics (研发 + 管理层) ═══════════ -->
+    <section v-if="roleView === 'rd' || roleView === 'management'" class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-warning-light); color: var(--c-warning);">
           <el-icon :size="16"><Cpu /></el-icon>
@@ -456,8 +456,8 @@
       </template>
     </section>
 
-    <!-- ═══════════ L3: Penetration Analysis ═══════════ -->
-    <section class="dashboard-section">
+    <!-- ═══════════ L3: Penetration Analysis (管理层专用) ═══════════ -->
+    <section v-if="roleView === 'management'" class="dashboard-section">
       <div class="section-header">
         <div class="section-badge" style="background: var(--c-info-light); color: var(--c-info);">
           <el-icon :size="16"><Search /></el-icon>
@@ -477,6 +477,191 @@
         </div>
         <div v-else>
           <TreeChart :data="penetrationTreeData" :height="400" orient="TB" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ D3-4: PM专用 — 竞品动态 ═══════════ -->
+    <section v-if="roleView === 'pm'" class="dashboard-section">
+      <div class="section-header">
+        <div class="section-badge" style="background: var(--c-primary-light, #ecf5ff); color: var(--c-primary, #409eff);">
+          <el-icon :size="16"><DataAnalysis /></el-icon>
+        </div>
+        <h2 class="section-title">竞品动态</h2>
+        <span class="section-count">{{ competitorSummary.total ?? 0 }} 条</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" @click="router.push('/competitor-bench')">
+          <div class="stat-icon" style="background: #409eff12; color: #409eff;">
+            <el-icon :size="22"><Folder /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #409eff;">{{ competitorSummary.total ?? '-' }}</div>
+            <div class="stat-label">竞品总数</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div
+          v-for="(count, market) in competitorSummary.byMarket"
+          :key="market"
+          class="stat-card"
+          @click="router.push('/competitor-bench')"
+        >
+          <div class="stat-icon" style="background: #67c23a12; color: #67c23a;">
+            <el-icon :size="22"><DataAnalysis /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #67c23a;">{{ count }}</div>
+            <div class="stat-label">{{ market }}市场</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ D3-4: 研发专用 — BOM状态 ═══════════ -->
+    <section v-if="roleView === 'rd'" class="dashboard-section">
+      <div class="section-header">
+        <div class="section-badge" style="background: var(--c-success-light); color: var(--c-success);">
+          <el-icon :size="16"><List /></el-icon>
+        </div>
+        <h2 class="section-title">BOM状态</h2>
+        <span class="section-count">{{ bomSummary.totalParts ?? 0 }} 物料</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" @click="router.push('/bom')">
+          <div class="stat-icon" style="background: #0284c712; color: #0284c7;">
+            <el-icon :size="22"><Folder /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #0284c7;">{{ bomSummary.totalParts ?? '-' }}</div>
+            <div class="stat-label">物料总数</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div class="stat-card" @click="router.push('/bom')">
+          <div class="stat-icon" style="background: #05966912; color: #059669;">
+            <el-icon :size="22"><List /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #059669;">{{ bomSummary.totalBoms ?? '-' }}</div>
+            <div class="stat-label">BOM总数</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div
+          v-for="(count, ptype) in bomSummary.partTypeDistribution"
+          :key="ptype"
+          class="stat-card"
+          @click="router.push('/bom')"
+        >
+          <div class="stat-icon" style="background: #d9770612; color: #d97706;">
+            <el-icon :size="22"><Coin /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #d97706;">{{ count }}</div>
+            <div class="stat-label">{{ ptype }}</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ D3-4: 质量专用 — 质量检测 + 认证进度 ═══════════ -->
+    <section v-if="roleView === 'quality'" class="dashboard-section">
+      <div class="section-header">
+        <div class="section-badge" style="background: var(--c-danger-light); color: var(--c-danger);">
+          <el-icon :size="16"><WarnTriangleFilled /></el-icon>
+        </div>
+        <h2 class="section-title">质量检测</h2>
+        <span class="section-count">测试通过率 {{ acMetrics.test_pass_rate ?? '-' }}</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" @click="drillDown('test_pass_rate')">
+          <div class="stat-icon" style="background: #05966912; color: #059669;">
+            <el-icon :size="22"><CircleCheck /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #059669;">{{ acMetrics.test_pass_rate ?? '-' }}</div>
+            <div class="stat-label">测试通过率</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div class="stat-card" @click="drillDown('issue_close_rate')">
+          <div class="stat-icon" style="background: #d9770612; color: #d97706;">
+            <el-icon :size="22"><CircleCheck /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #d97706;">{{ acMetrics.issue_close_rate ?? '-' }}</div>
+            <div class="stat-label">问题关闭率</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div class="stat-card" @click="router.push('/quality')">
+          <div class="stat-icon" style="background: #dc262612; color: #dc2626;">
+            <el-icon :size="22"><WarnTriangleFilled /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #dc2626;">{{ qualityIssues.openCount ?? '-' }}</div>
+            <div class="stat-label">未关闭问题</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section v-if="roleView === 'quality'" class="dashboard-section">
+      <div class="section-header">
+        <div class="section-badge" style="background: var(--c-info-light); color: var(--c-info);">
+          <el-icon :size="16"><Stamp /></el-icon>
+        </div>
+        <h2 class="section-title">认证进度</h2>
+        <span class="section-count">{{ certSummary.totalProjects ?? 0 }} 项目</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" @click="router.push('/s2/dashboard')">
+          <div class="stat-icon" style="background: #0284c712; color: #0284c7;">
+            <el-icon :size="22"><Folder /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #0284c7;">{{ certSummary.totalProjects ?? '-' }}</div>
+            <div class="stat-label">认证项目总数</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div
+          v-for="(count, status) in certSummary.statusDistribution"
+          :key="status"
+          class="stat-card"
+          @click="router.push('/s2/dashboard')"
+        >
+          <div class="stat-icon" style="background: #d9770612; color: #d97706;">
+            <el-icon :size="22"><Clock /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #d97706;">{{ count }}</div>
+            <div class="stat-label">{{ certStatusLabel(status) }}</div>
+          </div>
+          <div class="stat-arrow">
+            <el-icon :size="14"><ArrowRight /></el-icon>
+          </div>
         </div>
       </div>
     </section>
@@ -706,6 +891,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElNotification } from 'element-plus'
+import { useAuthStore } from '../../stores/auth'
 import {
   DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh,
   Cpu, InfoFilled, CircleCloseFilled, Plus, Folder, Coin, Clock,
@@ -782,6 +968,29 @@ interface AlertsSummaryData {
 }
 
 const router = useRouter()
+const authStore = useAuthStore()
+
+// ── D3-4: 角色视图 ──
+const ROLE_VIEW_MAP: Record<string, string> = {
+  admin: 'management',
+  general_manager: 'management',
+  product_manager: 'pm',
+  rd_director: 'rd',
+  rd_engineer: 'rd',
+  systems_engineer: 'rd',
+  structural_engineer: 'rd',
+  electrical_control_engineer: 'rd',
+  electrical_engineer: 'rd',
+  process_engineer: 'rd',
+  project_admin: 'rd',
+  quality_engineer: 'quality',
+}
+const roleView = computed<string>(() => {
+  const r = authStore.roleName
+  if (!r) return 'management'
+  return ROLE_VIEW_MAP[r] || 'management'
+})
+
 const loading = ref(false)
 const planLoading = ref(false)
 
@@ -983,6 +1192,65 @@ const acError = ref(false)
 const penetrationData = ref<PenetrationRoot | null>(null)
 const projectList = ref<TableRow[]>([])
 
+// ── D3-4: 角色化视图数据 ──
+interface CompetitorSummary {
+  total: number
+  byMarket: Record<string, number>
+}
+interface BomSummary {
+  totalParts: number
+  totalBoms: number
+  partTypeDistribution: Record<string, number>
+}
+interface CertSummary {
+  totalProjects: number
+  statusDistribution: Record<string, number>
+}
+interface QualityIssuesData {
+  openCount: number
+}
+const dashboardRaw = ref<Record<string, unknown>>({})
+const competitorSummary = computed<CompetitorSummary>(() => {
+  const raw = dashboardRaw.value.pm_competitor_summary as Record<string, unknown> | undefined
+  return {
+    total: (raw?.total as number) ?? 0,
+    byMarket: ((raw?.by_market ?? {}) as Record<string, number>),
+  }
+})
+const bomSummary = computed<BomSummary>(() => {
+  const raw = dashboardRaw.value.rd_bom_summary as Record<string, unknown> | undefined
+  return {
+    totalParts: (raw?.total_parts as number) ?? 0,
+    totalBoms: (raw?.total_boms as number) ?? 0,
+    partTypeDistribution: ((raw?.part_type_distribution ?? {}) as Record<string, number>),
+  }
+})
+const certSummary = computed<CertSummary>(() => {
+  const raw = dashboardRaw.value.quality_cert_summary as Record<string, unknown> | undefined
+  return {
+    totalProjects: (raw?.total_projects as number) ?? 0,
+    statusDistribution: ((raw?.status_distribution ?? {}) as Record<string, number>),
+  }
+})
+const qualityIssues = computed<QualityIssuesData>(() => {
+  const totalIssues = Number(acMetrics.value.total_issues) || 0
+  const closedIssues = Number(acMetrics.value.closed_issues) || 0
+  return {
+    openCount: totalIssues - closedIssues,
+  }
+})
+
+function certStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    pending: '待处理',
+    in_progress: '进行中',
+    completed: '已完成',
+    cancelled: '已取消',
+    on_hold: '已暂停',
+  }
+  return labels[status] || status
+}
+
 const isL1Empty = computed(() => {
   const keys = Object.keys(L1Cards)
   if (!healthData.value || Object.keys(healthData.value).length === 0) return true
@@ -1091,7 +1359,8 @@ async function fetchDashboard() {
     acMetrics.value = data.layer4_ac_metrics ?? {}
     penetrationData.value = data.layer3_penetration ?? null
     projectList.value = data.layer2_project_ops?.recent_projects ?? []
-    
+    dashboardRaw.value = data
+
     productStatusData.value = data.layer1_system_health?.product_status_distribution ?? []
     projectStatusData.value = data.layer2_project_ops?.project_status_distribution ?? []
     phaseProgressData.value = data.layer4_ac_metrics?.phase_progress ?? []
@@ -1107,6 +1376,7 @@ async function fetchDashboard() {
     opsData.value = {}
     penetrationData.value = null
     projectList.value = []
+    dashboardRaw.value = {}
   } finally {
     loading.value = false
   }

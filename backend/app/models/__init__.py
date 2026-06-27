@@ -14,6 +14,7 @@ from app.models.audit import AuditLog
 from app.models.pm_config import CertStandard, PerfDefault, MarketCertification, MarketCompressor
 from app.models.pm_accessory import AccessoryDefault, FeatureDefault
 from app.models.competitor import CompetitorModel
+from app.models.competitor_version import CompetitorVersion
 from app.models.alert import Alert, AlertRule
 from app.models.team_role_template import TeamRoleTemplate
 from app.models.role_position_mapping import RolePositionMapping
@@ -89,6 +90,7 @@ __all__ = [
     "AuditLog",
     "CertStandard", "PerfDefault", "MarketCertification", "MarketCompressor",
     "CompetitorModel",
+    "CompetitorVersion",
     "AccessoryDefault", "FeatureDefault",
     "TeamRoleTemplate",
     "RolePositionMapping",

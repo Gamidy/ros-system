@@ -51,10 +51,10 @@ class AlertOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
 # ═══════════════ 通知 ═══════════════
 
 class NotificationOut(BaseModel):
+    """通知记录"""
     id: int
     alert_id: Optional[int] = None
     target_user: str
@@ -73,3 +73,17 @@ class NotificationOut(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationPageOut(BaseModel):
+    """通知分页响应"""
+    items: list[NotificationOut] = Field(default_factory=list)
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class BatchDeleteRequest(BaseModel):
+    """批量删除通知请求"""
+    ids: list[int] = Field(..., min_length=1, description="要删除的通知 ID 列表")
