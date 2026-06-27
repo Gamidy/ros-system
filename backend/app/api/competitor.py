@@ -311,6 +311,13 @@ TRACKED_FIELDS = [
 
 def _build_snapshot_data(item: CompetitorModel) -> dict:
     """将竞品模型构建为纯字典快照"""
+    extra = item.extra_fields or {}
+    if isinstance(extra, str):
+        import json
+        try:
+            extra = json.loads(extra)
+        except (json.JSONDecodeError, TypeError):
+            extra = {}
     return {
         "brand": item.brand,
         "model": item.model,
@@ -324,20 +331,24 @@ def _build_snapshot_data(item: CompetitorModel) -> dict:
         "heating_w": item.heating_w,
         "eer": item.eer,
         "cspf": item.cspf,
-        "scop": item.scop,
-        "heating_energy_rating": item.heating_energy_rating,
-        "pdc": item.pdc,
-        "pdh": item.pdh,
         "noise_indoor_db": item.noise_indoor_db,
         "noise_outdoor_db": item.noise_outdoor_db,
-        "noise_indoor_power_db": item.noise_indoor_power_db,
-        "noise_outdoor_power_db": item.noise_outdoor_power_db,
         "airflow_m3h": item.airflow_m3h,
         "indoor_size_mm": item.indoor_size_mm,
         "outdoor_size_mm": item.outdoor_size_mm,
         "factory_price": item.factory_price,
         "launch_year": item.launch_year,
         "notes": item.notes,
+        "extra_fields": extra,
+        "image_urls": item.image_urls or [],
+        # EU专有参数（从 extra_fields 读取）
+        "scop": extra.get("scop"),
+        "heating_energy_rating": extra.get("heating_energy_rating"),
+        "pdc": extra.get("pdc"),
+        "pdh": extra.get("pdh"),
+        "noise_indoor_power_db": extra.get("noise_indoor_power_db"),
+        "noise_outdoor_power_db": extra.get("noise_outdoor_power_db"),
+        "seer": extra.get("seer"),
     }
 
 

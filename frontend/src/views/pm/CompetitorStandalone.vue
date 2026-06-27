@@ -315,11 +315,6 @@
               <el-input v-model="form.outdoor_size_mm" placeholder="如 800×600×300" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="出厂价" prop="factory_price">
-              <el-input v-model="form.factory_price" placeholder="如 $112" />
-            </el-form-item>
-          </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12">
@@ -594,7 +589,6 @@ interface CompetitorFormData {
   airflow_m3h: number | null
   indoor_size_mm: string
   outdoor_size_mm: string
-  factory_price: string
   launch_year: number | null
   notes: string
   extraFields: Record<string, number | string | null>
@@ -677,7 +671,6 @@ const BASE_PARAMS = [
   { key: 'airflow_m3h', label: '循环风量', unit: 'm³/h' },
   { key: 'indoor_size_mm', label: '内机尺寸', unit: 'mm' },
   { key: 'outdoor_size_mm', label: '外机尺寸', unit: 'mm' },
-  { key: 'factory_price', label: '出厂价', unit: '' },
   { key: 'launch_year', label: '上市年份', unit: '' },
   { key: 'energy_rating', label: '能效等级', unit: '' },
 ]
@@ -1014,7 +1007,7 @@ const defaultForm = () => ({
   airflow_m3h: null,
   indoor_size_mm: '',
   outdoor_size_mm: '',
-  factory_price: '',
+
   launch_year: null as number | null,
   notes: '',
   extraFields: {} as Record<string, number | string | null>,
@@ -1040,7 +1033,7 @@ const formRules: FormRules = {
   airflow_m3h: [{ required: true, message: '请输入循环风量', trigger: 'blur' }],
   indoor_size_mm: [{ required: true, message: '请输入内机尺寸', trigger: 'blur' }],
   outdoor_size_mm: [{ required: true, message: '请输入外机尺寸', trigger: 'blur' }],
-  factory_price: [{ required: true, message: '请输入出厂价', trigger: 'blur' }],
+
   launch_year: [{ required: true, message: '请输入上市年份', trigger: 'blur' }],
 }
 
@@ -1076,7 +1069,6 @@ const FIELD_LABEL_MAP: Record<string, string> = {
   airflow_m3h: '循环风量(m³/h)',
   indoor_size_mm: '内机尺寸(mm)',
   outdoor_size_mm: '外机尺寸(mm)',
-  factory_price: '出厂价',
   launch_year: '上市年份',
   notes: '备注',
 }
@@ -1164,7 +1156,7 @@ function openEditDialog(item: CompetitorItem) {
     airflow_m3h: item.airflow_m3h ?? null,
     indoor_size_mm: item.indoor_size_mm || '',
     outdoor_size_mm: item.outdoor_size_mm || '',
-    factory_price: item.factory_price || '',
+
     launch_year: item.launch_year ?? null,
     notes: item.notes || '',
     extraFields,
@@ -1190,7 +1182,7 @@ async function handleSave() {
       'cooling_capacity_w', 'heating_capacity_w', 'energy_rating',
       'cooling_w', 'heating_w', 'eer', 'cspf',
       'noise_indoor_db', 'noise_outdoor_db', 'airflow_m3h',
-      'indoor_size_mm', 'outdoor_size_mm', 'factory_price',
+      'indoor_size_mm', 'outdoor_size_mm',
       'launch_year', 'notes',
     ]
     for (const f of fields) {
