@@ -7,10 +7,16 @@ Project = 执行层（Execution Layer），
 BOMType 枚举定义在此，供下游 BOM 模型引用。
 """
 import uuid
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, func, Numeric
-from sqlalchemy.orm import relationship
+import json
+import logging
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, func, Numeric, event
+from sqlalchemy.orm import relationship, Session
+from sqlalchemy import inspect as sa_inspect
 from app.core.database import Base
 import enum
+
+logger = logging.getLogger(__name__)
 
 
 def uuid4_str() -> str:
@@ -63,12 +69,17 @@ class ProductPlan(Base):
     status = Column(SAEnum(ProductPlanStage), default=ProductPlanStage.DRAFT, nullable=False, comment="流程阶段")
     # ---- 多租户 ----
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    # ---- 版本历史 ----
+    version = Column(Integer, default=1, nullable=False, comment="版本号（每次更新递增）")
+
     # ---- 时间戳 ----
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     created_by = Column(String(50), nullable=True, comment="创建者用户名")
 
     # 关联
+    history_versions = relationship("ProductPlanHistory", back_populates="product_plan", cascade="all, delete-orphan",
+                                     order_by="ProductPlanHistory.version.desc()")
     competitor = relationship("CompetitorModel", foreign_keys=[competitor_id])
     costs = relationship("Cost", back_populates="product_plan", cascade="all, delete-orphan")
     # ---- 新增子表关联 ----
@@ -159,3 +170,72 @@ class ProductPlanReview(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     product_plan = relationship("ProductPlan", backref="review", uselist=False)
+
+
+class ProductPlanHistory(Base):
+    """产品策划版本历史 — 记录每次更新前的快照"""
+    __tablename__ = "product_plan_histories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_plan_id = Column(String(36), ForeignKey("product_plans.id", ondelete="CASCADE"), nullable=False, index=True, comment="关联策划ID")
+    version = Column(Integer, nullable=False, comment="版本号")
+    snapshot = Column(Text, nullable=False, comment="该版本的策划数据快照 JSON")
+    changed_by = Column(String(50), nullable=True, comment="修改者用户名")
+    changed_at = Column(DateTime, server_default=func.now(), comment="修改时间")
+
+    product_plan = relationship("ProductPlan", back_populates="history_versions")
+
+
+# ── SQLAlchemy 事件监听 ──
+
+
+@event.listens_for(ProductPlan, 'before_insert')
+def receive_before_insert(mapper, connection, target):
+    """新策划创建时默认 version=1"""
+    if target.version is None or target.version < 1:
+        target.version = 1
+
+
+@event.listens_for(ProductPlan, 'before_update')
+def receive_before_update(mapper, connection, target):
+    """每次更新前自动递增版本号并保存当前状态快照"""
+    if target.version is None:
+        target.version = 1
+
+    # 构建快照 — 从数据库中读取当前（旧）状态
+    from sqlalchemy import text as sql_text
+
+    cols = [
+        'id', 'name', 'series', 'market', 'target_market_detail',
+        'competitor_id', 'cost_target', 'performance_target', 'status',
+        'org_id', 'created_by', 'created_at', 'updated_at', 'version',
+    ]
+    row = connection.execute(
+        sql_text(f"SELECT {', '.join(cols)} FROM product_plans WHERE id = :id"),
+        {"id": target.id},
+    ).first()
+
+    if row:
+        snapshot = {}
+        for i, col in enumerate(cols):
+            val = row[i]
+            if isinstance(val, datetime):
+                val = val.isoformat()
+            elif hasattr(val, 'isoformat'):
+                val = val.isoformat()
+            elif isinstance(val, enum.Enum):
+                val = val.value
+            snapshot[col] = val
+
+        # 获取变更用户（从实例属性传递）
+        changed_by = getattr(target, '_change_user', None) or 'system'
+
+        history = ProductPlanHistory.__table__.insert().values(
+            product_plan_id=target.id,
+            version=target.version,
+            snapshot=json.dumps(snapshot, ensure_ascii=False, default=str),
+            changed_by=changed_by,
+        )
+        connection.execute(history)
+
+    target.version = (target.version or 0) + 1

@@ -171,8 +171,11 @@ export function updateRequirementStatus(id: number, status: string, reject_reaso
   return api.put(`/product-requirements/${id}/status`, { status, reject_reason })
 }
 
-/** 需求转策划 */
+/** 需求转策划（原端点） */
 export function convertToPlan(id: number) { return api.post(`/product-requirements/${id}/convert`) }
+
+/** 需求→策划一键转换（新端点，返回 { plan_id, plan_name }） */
+export function convertRequirementToPlan(id: string) { return api.post(`/product-requirements/${id}/convert-to-plan`) }
 
 // ── 市场选项 (Markets) ──
 export interface MarketOption {

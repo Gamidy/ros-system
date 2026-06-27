@@ -134,7 +134,7 @@
     </el-card>
 
     <!-- 申请详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="申请详情" width="520px">
+    <el-dialog v-model="detailVisible" title="申请详情" width="680px">
       <template v-if="detailItem">
         <h3 style="margin: 0 0 12px 0; color: #409eff;">申请信息</h3>
         <div class="detail-grid">
@@ -151,6 +151,19 @@
           </template>
           <span class="detail-label">提交时间:</span><span>{{ detailItem.created_at || '-' }}</span>
         </div>
+
+        <!-- 审批进度可视化 -->
+        <template v-if="detailItem.steps && Array.isArray(detailItem.steps) && detailItem.steps.length > 0">
+          <h3 style="margin: 20px 0 12px 0; color: #409eff;">审批进度</h3>
+          <ApprovalProgress
+            :approval-id="Number(detailItem.id)"
+            :steps="detailItem.steps as any[]"
+            :current-step="Number(detailItem.current_step || 0)"
+            :step-meta="(detailItem.step_meta || {}) as Record<string, any>"
+            :records="(detailItem.records || []) as any[]"
+            direction="vertical"
+          />
+        </template>
       </template>
       <template #footer>
         <el-button type="primary" size="small" @click="doApprove">✅ 通过</el-button>
@@ -229,6 +242,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+import ApprovalProgress from '../../components/ApprovalProgress.vue'
 import type { TableRow } from '@/types/common'
 
 const router = useRouter()

@@ -63,6 +63,19 @@ def _on_approval_event(event_type: str, **kwargs):
         "content": f"审批「{title}」状态已更新为: {approval_status}",
     }
 
+    # ── 同步发送邮件通知（离线提醒） ──
+    try:
+        from app.services.email_notifier import send_approval_email
+        send_approval_email(
+            requester=requester,
+            title=title,
+            status=approval_status,
+            request_id=kwargs.get("request_id", 0),
+            comment=comment,
+        )
+    except Exception as e:
+        logger.error("邮件通知发送异常: %s", e, exc_info=True)
+
     # 检测是否已有运行中的事件循环
     try:
         loop = asyncio.get_running_loop()

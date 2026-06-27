@@ -38,17 +38,25 @@
             <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <!-- 待处理：可采纳/拒绝 -->
+            <!-- 待处理：可采纳/拒绝，可一键生成策划 -->
             <template v-if="row.status === 'pending'">
               <el-button size="small" type="success" @click="handleAccept(row)">采纳</el-button>
               <el-button size="small" type="danger" @click="handleReject(row)">拒绝</el-button>
-              <el-button size="small" type="primary" @click="handleConvert(row)">转策划</el-button>
+              <el-button
+                size="small" type="primary"
+                :loading="convertingId === row.id"
+                @click="handleConvert(row)"
+              >📋 生成策划</el-button>
             </template>
-            <!-- 已采纳：可转策划 -->
+            <!-- 已采纳：可生成策划 -->
             <template v-else-if="row.status === 'accepted'">
-              <el-button size="small" type="primary" @click="handleConvert(row)">转策划</el-button>
+              <el-button
+                size="small" type="primary"
+                :loading="convertingId === row.id"
+                @click="handleConvert(row)"
+              >📋 生成策划</el-button>
               <span v-if="row.converted_plan_id" style="color:#909399;font-size:12px;margin-left:8px">已转化</span>
             </template>
             <!-- 已转化：显示跳转链接 -->
@@ -85,12 +93,14 @@ import {
   listRequirements,
   updateRequirementStatus,
   convertToPlan,
+  convertRequirementToPlan,
 } from '../../api/productPlan'
 import type { RequirementItem } from '../../api/productPlan'
 
 const router = useRouter()
 
 const loading = ref(false)
+const convertingId = ref<string | null>(null)
 const list = ref<RequirementItem[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -179,28 +189,24 @@ async function handleReject(row: RequirementItem) {
   }
 }
 
-/** 需求转策划 */
+/** 「📋 生成策划」一键转换 — 调用后端创建草稿并跳转到详情页 */
 async function handleConvert(row: RequirementItem) {
   try {
-    await ElMessageBox.confirm('确认将该需求转为产品策划？', '转策划确认', { type: 'info' })
-    const res = await convertToPlan(row.id)
-    const planId = res.data?.id || res.data?.plan_id
-    ElMessage.success('已转为策划')
+    await ElMessageBox.confirm('确认将该需求转为产品策划草稿？', '生成策划确认', { type: 'info' })
+    convertingId.value = row.id
+    const res = await convertRequirementToPlan(row.id)
+    const planId: string | undefined = res.data?.plan_id
     if (planId) {
-      ElMessageBox.alert('已成功转为产品策划', '成功', {
-        confirmButtonText: '查看策划',
-        showCancelButton: true,
-        cancelButtonText: '留在列表',
-      }).then(() => {
-        router.push(`/product-plans/${planId}`)
-      }).catch(() => {
-        fetchList()
-      })
+      ElMessage.success('策划草稿已生成，正在跳转...')
+      router.push(`/product-plans/${planId}`)
     } else {
+      ElMessage.success('策划草稿已生成')
       fetchList()
     }
   } catch {
     // 取消或错误
+  } finally {
+    convertingId.value = null
   }
 }
 

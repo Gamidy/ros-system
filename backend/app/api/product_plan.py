@@ -14,11 +14,12 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel, Field
 from typing import Optional, Generic, TypeVar
+import json
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
 from app.models.user import User
-from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType, BOMType, ProductPlanProjectLink
+from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType, BOMType, ProductPlanProjectLink, ProductPlanHistory
 from app.schemas.product_plan_link import ProductPlanLinkOut
 from app.models.product_plan_subs import (
     ProductPlanInitiation,
@@ -450,6 +451,7 @@ def reject_plan(
 
         plan.status = ProductPlanStage.DEFINITION
         plan.updated_at = func.now()
+        plan._change_user = current_user.username
         db.commit()
         db.refresh(plan)
         return _plan_to_dict(plan)
@@ -498,6 +500,7 @@ def withdraw_plan(
 
         plan.status = ProductPlanStage.DRAFT
         plan.updated_at = func.now()
+        plan._change_user = current_user.username
         db.commit()
         db.refresh(plan)
         return _plan_to_dict(plan)
@@ -550,6 +553,7 @@ def set_plan_stage(
 
         plan.status = new_stage
         plan.updated_at = func.now()
+        plan._change_user = current_user.username
         db.commit()
         db.refresh(plan)
 
@@ -597,6 +601,7 @@ def update_plan(
             if val is not None and hasattr(plan, key):
                 setattr(plan, key, val)
         plan.updated_at = func.now()
+        plan._change_user = current_user.username
         db.commit()
         db.refresh(plan)
         return _plan_to_dict(plan)
@@ -629,6 +634,7 @@ def delete_plan(
         db.query(ProductPlanMarket).filter(ProductPlanMarket.product_plan_id == plan_id).delete()
         db.query(ProductPlanTechSpec).filter(ProductPlanTechSpec.product_plan_id == plan_id).delete()
         db.query(ProductPlanProjectLink).filter(ProductPlanProjectLink.product_plan_id == plan_id).delete()
+        db.query(ProductPlanHistory).filter(ProductPlanHistory.product_plan_id == plan_id).delete()
 
         db.delete(plan)
         db.commit()
@@ -690,3 +696,87 @@ def delete_cost(
     db.delete(cost)
     db.commit()
     return {"ok": True}
+
+
+# ── 版本历史端点 ──
+
+
+@router.get("/{plan_id}/versions")
+def list_plan_versions(
+    plan_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("product-plans")),
+) -> dict:
+    """产品策划版本历史列表
+
+    返回该策划的所有历史版本记录（分页），按版本号降序排列。
+    当前最新版本可通过 GET /product-plans/{id} 获取。
+    """
+    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="策划不存在")
+
+    try:
+        q = db.query(ProductPlanHistory).filter(
+            ProductPlanHistory.product_plan_id == plan_id
+        ).order_by(ProductPlanHistory.version.desc())
+
+        total = q.count()
+        versions = q.offset((page - 1) * page_size).limit(page_size).all()
+
+        return {
+            "items": [
+                {
+                    "version": v.version,
+                    "changed_by": v.changed_by,
+                    "changed_at": str(v.changed_at) if v.changed_at else None,
+                }
+                for v in versions
+            ],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "current_version": plan.version,
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"查询版本历史失败: {str(e)}")
+
+
+@router.get("/{plan_id}/versions/{version}")
+def get_plan_version_snapshot(
+    plan_id: str,
+    version: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("product-plans")),
+) -> dict:
+    """获取策划指定版本的完整数据快照"""
+    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="策划不存在")
+
+    try:
+        history = db.query(ProductPlanHistory).filter(
+            ProductPlanHistory.product_plan_id == plan_id,
+            ProductPlanHistory.version == version,
+        ).first()
+
+        if not history:
+            raise HTTPException(status_code=404, detail=f"版本 {version} 不存在")
+
+        snapshot = json.loads(history.snapshot)
+        return {
+            "version": history.version,
+            "snapshot": snapshot,
+            "changed_by": history.changed_by,
+            "changed_at": str(history.changed_at) if history.changed_at else None,
+        }
+    except HTTPException:
+        raise
+    except (json.JSONDecodeError, TypeError) as e:
+        raise HTTPException(status_code=500, detail=f"快照数据解析失败: {str(e)}")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"查询版本快照失败: {str(e)}")

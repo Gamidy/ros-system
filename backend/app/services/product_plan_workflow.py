@@ -203,6 +203,7 @@ def advance_stage(db: Session, plan_id: str, username: str, comment: Optional[st
 
     # 更新状态
     plan.status = target
+    plan._change_user = username
 
     # RELEASED → 自动创建复盘记录（如不存在）
     if target == ProductPlanStage.RELEASED:

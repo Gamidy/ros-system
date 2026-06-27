@@ -74,10 +74,14 @@ class RequirementOut(BaseModel):
 
 class RequirementConvertResult(BaseModel):
     """转策划草稿响应"""
-    requirement: RequirementOut
-    product_plan_id: str
-    product_plan_name: str
-    message: str
+    plan_id: str
+    plan_name: str
+
+
+class ConvertToPlanResult(BaseModel):
+    """需求→策划转换响应（精简版）"""
+    plan_id: str
+    plan_name: str
 
 
 class PaginatedRequirements(BaseModel):
@@ -275,7 +279,7 @@ def convert_requirement_to_plan(
             created_by=current_user.username,
         )
         db.add(plan)
-        db.flush()  # 获取 plan.id
+        db.flush()
 
         # 2. 创建 ProductPlanInitiation 预填充字段
         initiation = ProductPlanInitiation(
@@ -283,10 +287,13 @@ def convert_requirement_to_plan(
             product_type=req.product_type,
             target_market=req.market,
             customer_name=req.customer,
-            # 从需求预填能效、目标价等
             energy_rating=req.energy_standard,
             fob_price=str(req.price_target) if req.price_target else None,
             annual_sales_forecast=str(req.sales_volume_forecast) if req.sales_volume_forecast else None,
+            # 需求说明存入背景依据
+            background_basis=req.notes,
+            overall_goal=req.notes,
+            other_requirements=req.notes,
         )
         db.add(initiation)
 
@@ -298,10 +305,81 @@ def convert_requirement_to_plan(
         db.refresh(req)
 
         return {
-            "requirement": _req_to_dict(req),
-            "product_plan_id": plan.id,
-            "product_plan_name": plan.name,
-            "message": f"需求已成功转为策划草稿「{plan.name}」",
+            "plan_id": plan.id,
+            "plan_name": plan.name,
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"转策划失败: {str(e)}")
+
+
+@router.post("/{req_id}/convert-to-plan", response_model=ConvertToPlanResult)
+def convert_requirement_to_plan_v2(
+    req_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("product-requirements")),
+) -> dict:
+    """需求→策划一键转换（新端点）
+
+    根据需求内容自动创建 ProductPlan 草稿：
+    - plan.name = 需求标题（产品类型-市场）
+    - 状态设为 DRAFT
+    - 创建 ProductPlanInitiation 记录，填入需求中的背景依据/总体目标等信息
+    """
+    req = _get_requirement_or_404(db, req_id)
+
+    if req.status not in ("accepted", "pending"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"仅待处理(pending)或已采纳(accepted)的需求可转策划，当前状态: {req.status}"
+        )
+
+    try:
+        # 1. 创建 ProductPlan（DRAFT）
+        plan_name = f"{req.product_type}-{req.market}"
+        if req.customer:
+            plan_name += f"({req.customer})"
+        if req.notes:
+            # 取 notes 前20字作为副标题
+            subtitle = req.notes.strip()[:20].replace("\n", " ")
+            plan_name = f"{subtitle} - {plan_name}"
+
+        plan = ProductPlan(
+            name=plan_name,
+            market=req.market,
+            status=ProductPlanStage.DRAFT,
+            created_by=current_user.username,
+        )
+        db.add(plan)
+        db.flush()
+
+        # 2. 创建 ProductPlanInitiation，填入需求信息
+        initiation = ProductPlanInitiation(
+            product_plan_id=plan.id,
+            product_type=req.product_type,
+            target_market=req.market,
+            customer_name=req.customer,
+            energy_rating=req.energy_standard,
+            fob_price=str(req.price_target) if req.price_target else None,
+            annual_sales_forecast=str(req.sales_volume_forecast) if req.sales_volume_forecast else None,
+            # 需求说明存入背景依据与总体目标
+            background_basis=req.notes,
+            overall_goal=req.notes,
+            other_requirements=req.notes,
+        )
+        db.add(initiation)
+
+        # 3. 更新需求状态为 converted
+        req.status = "converted"
+
+        db.commit()
+        db.refresh(plan)
+        db.refresh(req)
+
+        return {
+            "plan_id": plan.id,
+            "plan_name": plan.name,
         }
     except SQLAlchemyError as e:
         db.rollback()

@@ -22,7 +22,7 @@ from app.models.capacity_unit_cost import CapacityUnitCost
 from app.models.indirect_cost_config import IndirectCostConfig
 from app.models.trial_qty_config import TrialQtyConfig
 from app.models.annual_plan import AnnualPlan
-from app.models.product_plan import ProductPlan, Cost, ProductPlanProjectLink, ProductPlanStage, CostType, BOMType, ProductRequirement
+from app.models.product_plan import ProductPlan, Cost, ProductPlanProjectLink, ProductPlanStage, CostType, BOMType, ProductRequirement, ProductPlanReview, ProductPlanHistory
 from app.models.event_log import EventLog
 from app.models.verification_requirement import VerificationRequirement
 from app.models.test_execution import TestExecution
@@ -69,7 +69,6 @@ from app.models.ai_config import AIConfig
 from app.models.ai_call_log import AICallLog
 from app.models.password_reset import PasswordResetToken
 from app.models.workflow_transition_spec import WorkflowTransitionSpec
-from app.models.product_plan import ProductPlanReview
 
 __all__ = [
     "User",
@@ -154,4 +153,5 @@ __all__ = [
     "PasswordResetToken",
     "WorkflowTransitionSpec",
     "ProductPlanReview",
+    "ProductPlanHistory",
 ]
