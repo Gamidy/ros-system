@@ -12,9 +12,10 @@ Endpoints under prefix /api/product-plans (router prefix=/product-plans, include
 - PUT    /{plan_id}/team/{id}      更新团队成员
 - DELETE /{plan_id}/team/{id}      删除团队成员
 """
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import date, datetime
 from app.core.database import get_db
@@ -34,20 +35,20 @@ router = APIRouter(prefix="/product-plans", tags=["产品策划子表"])
 # ── Schemas ──
 
 class InitiationCreate(BaseModel):
-    product_type: Optional[str] = None
+    product_type: Optional[str] = Field(default=None, validation_alias=AliasChoices('product_type', 'type'))
     target_market: Optional[str] = None
     climate_zone: Optional[str] = None
     refrigerant: Optional[str] = None
-    capacity_range: Optional[str] = None
-    voltage_freq: Optional[str] = None
+    capacity_range: Optional[str] = Field(default=None, validation_alias=AliasChoices('capacity_range', 'capacity'))
+    voltage_freq: Optional[str] = Field(default=None, validation_alias=AliasChoices('voltage_freq', 'voltage'))
     series_name: Optional[str] = None
-    energy_rating: Optional[str] = None
-    ip_ownership: Optional[str] = None
-    project_duration: Optional[str] = None
+    energy_rating: Optional[str] = Field(default=None, validation_alias=AliasChoices('energy_rating', 'energy'))
+    ip_ownership: Optional[str] = Field(default=None, validation_alias=AliasChoices('ip_ownership', 'ip'))
+    project_duration: Optional[str] = Field(default=None, validation_alias=AliasChoices('project_duration', 'duration'))
     dev_category: Optional[str] = None
-    project_origin: Optional[str] = None
-    background_basis: Optional[str] = None
-    overall_goal: Optional[str] = None
+    project_origin: Optional[str] = Field(default=None, validation_alias=AliasChoices('project_origin', 'origin'))
+    background_basis: Optional[str] = Field(default=None, validation_alias=AliasChoices('background_basis', 'background'))
+    overall_goal: Optional[str] = Field(default=None, validation_alias=AliasChoices('overall_goal', 'goals'))
     tech_goal: Optional[str] = None
     cost_goal: Optional[str] = None
     sales_goal: Optional[str] = None
@@ -59,6 +60,24 @@ class InitiationCreate(BaseModel):
     sample_qty: Optional[int] = None
     required_date: Optional[date] = None
     version_id: Optional[int] = None
+    # @deprecated — 以下7个成本字段已在 Cost 表(costingNew Tab)管理，由前端统一写入 Cost 表
+    # Initiation 中存储的旧数据仅供「历史明细」只读展示
+    dev_cost_items: Optional[dict] = None
+    mold_costs: Optional[dict] = None
+    prototype_costs_detail: Optional[dict] = None
+    test_costs: Optional[dict] = None
+    cert_costs: Optional[dict] = None
+    labor_costs: Optional[dict] = None
+    economic_indicators: Optional[dict] = None
+
+    @field_validator("dev_cost_items", "mold_costs", "prototype_costs_detail",
+                     "test_costs", "cert_costs", "labor_costs", "economic_indicators", mode="before")
+    @classmethod
+    def _stringify_deprecated_costs(cls, v):
+        """将 dict/GIS JSON 转为 JSON 字符串，适配 DB Text 列存储"""
+        if v is not None and not isinstance(v, str):
+            return json.dumps(v, ensure_ascii=False)
+        return v
 
 
 class InitiationOut(BaseModel):
@@ -90,9 +109,29 @@ class InitiationOut(BaseModel):
     required_date: Optional[str] = None
     created_at: Optional[datetime] = None
     version_id: int = 1
+    # @deprecated — Initiation 中的旧成本 JSON，仅供历史明细展示
+    dev_cost_items: Optional[dict] = None
+    mold_costs: Optional[dict] = None
+    prototype_costs_detail: Optional[dict] = None
+    test_costs: Optional[dict] = None
+    cert_costs: Optional[dict] = None
+    labor_costs: Optional[dict] = None
+    economic_indicators: Optional[dict] = None
 
     class Config:
         from_attributes = True
+
+    @field_validator("dev_cost_items", "mold_costs", "prototype_costs_detail",
+                     "test_costs", "cert_costs", "labor_costs", "economic_indicators", mode="before")
+    @classmethod
+    def _parse_deprecated_costs(cls, v):
+        """将 DB Text 列中的 JSON 字符串解析为 dict"""
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return v
+        return v
 
 
 class MarketCreate(BaseModel):

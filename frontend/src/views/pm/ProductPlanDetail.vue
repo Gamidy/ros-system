@@ -109,6 +109,34 @@
 <el-table-column prop="remark" label="备注" />
 <el-table-column label="操作" width="60"><template #default="{ row }"><el-button link size="small" type="danger" @click="deleteCost(row)">删</el-button></template></el-table-column>
 </el-table>
+
+<!-- @deprecated 历史明细 — 展示 Initiation 中的旧成本JSON数据 -->
+<div v-if="initiationCosts" class="history-costs">
+  <el-divider content-position="left">📜 历史明细（立项旧数据）</el-divider>
+  <el-descriptions :column="2" border size="small">
+    <el-descriptions-item v-if="initiationCosts.dev_cost_items" label="研发费用">
+      <pre class="cost-json">{{ formatCostJson(initiationCosts.dev_cost_items) }}</pre>
+    </el-descriptions-item>
+    <el-descriptions-item v-if="initiationCosts.mold_costs" label="模具费用">
+      <pre class="cost-json">{{ formatCostJson(initiationCosts.mold_costs) }}</pre>
+    </el-descriptions-item>
+    <el-descriptions-item v-if="initiationCosts.prototype_costs_detail" label="样机费用">
+      <pre class="cost-json">{{ formatCostJson(initiationCosts.prototype_costs_detail) }}</pre>
+    </el-descriptions-item>
+    <el-descriptions-item v-if="initiationCosts.test_costs" label="测试费用">
+      <pre class="cost-json">{{ formatCostJson(initiationCosts.test_costs) }}</pre>
+    </el-descriptions-item>
+    <el-descriptions-item v-if="initiationCosts.cert_costs" label="认证费用">
+      <pre class="cost-json">{{ formatCostJson(initiationCosts.cert_costs) }}</pre>
+    </el-descriptions-item>
+    <el-descriptions-item v-if="initiationCosts.labor_costs" label="人工费用">
+      <pre class="cost-json">{{ formatCostJson(initiationCosts.labor_costs) }}</pre>
+    </el-descriptions-item>
+    <el-descriptions-item v-if="initiationCosts.economic_indicators" label="经济指标">
+      <pre class="cost-json">{{ formatCostJson(initiationCosts.economic_indicators) }}</pre>
+    </el-descriptions-item>
+  </el-descriptions>
+</div>
 </el-tab-pane>
 
 <!-- 团队 -->
@@ -366,6 +394,14 @@
 <el-table-column prop="actual_value" label="实际" width="80" />
 </el-table>
 <el-button size="small" type="primary" @click="showCostDialog = true">+ 添加</el-button>
+<!-- @deprecated 历史明细（移动端精简版） -->
+<div v-if="initiationCosts" class="history-costs-mobile" style="margin-top:16px;padding:12px;background:#fafafa;border-radius:6px;border:1px solid #ebeef5;">
+  <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#909399">📜 历史明细（立项旧数据）</div>
+  <div v-for="(val, key) in filteredCostFields(initiationCosts)" :key="key" style="margin-bottom:6px;font-size:12px">
+    <span style="color:#606266;font-weight:500">{{ costFieldLabel(key) }}:</span>
+    <pre style="margin:4px 0 0;background:#fff;padding:6px;border-radius:4px;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;">{{ formatCostJson(val) }}</pre>
+  </div>
+</div>
 </div>
 <!-- Step 4: 团队 -->
 <div v-show="mobileStep === 4">
@@ -680,6 +716,8 @@ const loadingProjects = ref(false)
 // ── 项目概述 ──
 const initiationForm = reactive({ background: '', type: '', market: '', refrigerant: '', capacity: '', voltage: '', series: '', energy: '', dev_category: '', origin: '', duration: 0, ip: '', goals: '', deliverables: '', sample_qty: 0 })
 const savingInitiation = ref(false)
+/** @deprecated — 7个废弃JSON成本字段，仅供历史明细展示 */
+const initiationCosts = ref<Record<string, any> | null>(null)
 
 // ── 子表版本号 ──
 const initiationVersion = ref(0)
@@ -729,6 +767,19 @@ try { const res = await planAPI.getPlanInitiation(planId); if (res.data) {
   initiationForm.deliverables = data.deliverables || ''
   initiationForm.sample_qty = data.sample_qty || 0
   initiationVersion.value = data.version_id ?? 0
+  // @deprecated — 收集7个废弃JSON成本字段用于历史明细展示
+  initiationCosts.value = (
+    data.dev_cost_items || data.mold_costs || data.prototype_costs_detail ||
+    data.test_costs || data.cert_costs || data.labor_costs || data.economic_indicators
+  ) ? {
+    dev_cost_items: data.dev_cost_items,
+    mold_costs: data.mold_costs,
+    prototype_costs_detail: data.prototype_costs_detail,
+    test_costs: data.test_costs,
+    cert_costs: data.cert_costs,
+    labor_costs: data.labor_costs,
+    economic_indicators: data.economic_indicators,
+  } : null
 } } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
@@ -1016,6 +1067,37 @@ const totalActualCost = computed(() => {
 })
 function formatCost(val: number): string {
   return `¥${val.toLocaleString('zh-CN')}`
+}
+/** 格式化 JSON 对象为可读字符串（用于历史明细展示） */
+function formatCostJson(val: any): string {
+  if (typeof val === 'string') {
+    try { val = JSON.parse(val) } catch { return val }
+  }
+  if (val && typeof val === 'object') {
+    return JSON.stringify(val, null, 2)
+  }
+  return String(val)
+}
+/** 过滤出有值的废弃成本字段（用于移动端展示） */
+function filteredCostFields(obj: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {}
+  for (const [k, v] of Object.entries(obj)) {
+    if (v != null) result[k] = v
+  }
+  return result
+}
+/** 废弃成本字段中文标签 */
+const COST_FIELD_LABELS: Record<string, string> = {
+  dev_cost_items: '研发费用',
+  mold_costs: '模具费用',
+  prototype_costs_detail: '样机费用',
+  test_costs: '测试费用',
+  cert_costs: '认证费用',
+  labor_costs: '人工费用',
+  economic_indicators: '经济指标',
+}
+function costFieldLabel(key: string): string {
+  return COST_FIELD_LABELS[key] || key
 }
 function costCompareType(target: number, actual: number): string {
   if (actual === 0 && target === 0) return 'info'
@@ -1413,4 +1495,7 @@ onMounted(async () => {
 .project-section-title { font-size: 15px; font-weight: 600; margin: 16px 0 12px; color: #303133; }
 .project-empty { padding: 40px 0; }
 .knowledge-summary { color: #606266; font-size: 12px; line-height: 1.5; }
+/* 历史明细 */
+.history-costs { margin-top: 16px; }
+.cost-json { margin: 0; font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 160px; overflow-y: auto; background: #f8f9fa; padding: 8px; border-radius: 4px; }
 </style>

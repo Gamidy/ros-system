@@ -14,7 +14,7 @@ from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
-from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType
+from app.models.product_plan import ProductPlan, ProductPlanStage, ProductPlanReview, Cost, CostType
 from app.models.project import Project
 from app.services.events import bus, EventTypes
 from app.models.workflow_transition_spec import WorkflowTransitionSpec
@@ -204,6 +204,10 @@ def advance_stage(db: Session, plan_id: str, username: str, comment: Optional[st
     # 更新状态
     plan.status = target
 
+    # RELEASED → 自动创建复盘记录（如不存在）
+    if target == ProductPlanStage.RELEASED:
+        _ensure_review_on_release(plan, db, username)
+
     db.commit()
     db.refresh(plan)
 
@@ -327,6 +331,23 @@ def _get_primary_project_id(plan) -> Optional[int]:
         if link.link_type == 'primary':
             return link.project_id
     return None
+
+
+def _ensure_review_on_release(plan: ProductPlan, db: Session, username: str) -> None:
+    """RELEASED 时自动创建 ProductPlanReview（幂等：已存在则跳过）"""
+    existing = db.query(ProductPlanReview).filter(
+        ProductPlanReview.product_plan_id == plan.id
+    ).first()
+    if existing:
+        logger.info("ProductPlanReview 已存在，跳过自动创建 (plan_id=%s)", plan.id)
+        return
+
+    review = ProductPlanReview(
+        product_plan_id=plan.id,
+        reviewer_id=username,
+    )
+    db.add(review)
+    logger.info("自动创建 ProductPlanReview (plan_id=%s, plan_name=%s)", plan.id, plan.name)
 
 
 def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -> Project:
