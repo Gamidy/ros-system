@@ -79,6 +79,7 @@ from app.models.improvement_task import ImprovementTask, TaskPriority, TaskStatu
 from app.models.standard import StandardRegion, StandardCategory, Standard, StandardCrawl
 from app.models.competitor_crawl import CompetitorCrawl
 from app.models.competitor_search_term import CompetitorSearchTerm
+from app.models.market_param_config import MarketParamConfig
 
 __all__ = [
     "User",
@@ -181,4 +182,5 @@ __all__ = [
     # competitor crawler
     "CompetitorCrawl",
     "CompetitorSearchTerm",
+    "MarketParamConfig",
 ]

@@ -39,6 +39,7 @@ class CompetitorCreate(BaseModel):
     factory_price: Optional[str] = Field(None, max_length=60)
     launch_year: Optional[int] = None
     notes: Optional[str] = None
+    extra_fields: Optional[dict] = None
 
 
 class CompetitorUpdate(BaseModel):
@@ -62,6 +63,7 @@ class CompetitorUpdate(BaseModel):
     factory_price: Optional[str] = Field(None, max_length=60)
     launch_year: Optional[int] = None
     notes: Optional[str] = None
+    extra_fields: Optional[dict] = None
 
 
 # ── 市场能效标准定义 ──────────────────────────────────────────────
@@ -236,6 +238,20 @@ def _serialize(item: CompetitorModel) -> dict:
     completeness = check_competitor_completeness(item)
     eff_value = get_efficiency_value(item, item.market)
     energy_label = get_energy_param_label(item.market)
+    # 从 extra_fields 读取欧盟专有参数
+    extra = item.extra_fields or {}
+    if isinstance(extra, str):
+        import json
+        try:
+            extra = json.loads(extra)
+        except (json.JSONDecodeError, TypeError):
+            extra = {}
+    scop = extra.get("scop")
+    heating_energy_rating = extra.get("heating_energy_rating")
+    pdc = extra.get("pdc")
+    pdh = extra.get("pdh")
+    noise_indoor_power_db = extra.get("noise_indoor_power_db")
+    noise_outdoor_power_db = extra.get("noise_outdoor_power_db")
     return {
         "id": item.id,
         "brand": item.brand,
@@ -250,20 +266,21 @@ def _serialize(item: CompetitorModel) -> dict:
         "heating_w": item.heating_w,
         "eer": item.eer,
         "cspf": item.cspf,
-        "scop": item.scop,
-        "heating_energy_rating": item.heating_energy_rating,
-        "pdc": item.pdc,
-        "pdh": item.pdh,
+        "scop": scop,
+        "heating_energy_rating": heating_energy_rating,
+        "pdc": pdc,
+        "pdh": pdh,
         "noise_indoor_db": item.noise_indoor_db,
         "noise_outdoor_db": item.noise_outdoor_db,
-        "noise_indoor_power_db": item.noise_indoor_power_db,
-        "noise_outdoor_power_db": item.noise_outdoor_power_db,
+        "noise_indoor_power_db": noise_indoor_power_db,
+        "noise_outdoor_power_db": noise_outdoor_power_db,
         "airflow_m3h": item.airflow_m3h,
         "indoor_size_mm": item.indoor_size_mm,
         "outdoor_size_mm": item.outdoor_size_mm,
         "factory_price": item.factory_price,
         "launch_year": item.launch_year,
         "notes": item.notes,
+        "extra_fields": extra,
         "created_at": item.created_at.isoformat() if item.created_at else None,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         # 市场适配的能效值
@@ -282,10 +299,10 @@ def _serialize(item: CompetitorModel) -> dict:
 TRACKED_FIELDS = [
     "brand", "model", "market", "product_type", "cooling_capacity",
     "cooling_capacity_w", "heating_capacity_w", "energy_rating",
-    "cooling_w", "heating_w", "eer", "cspf", "scop", "heating_energy_rating", "pdc", "pdh",
-    "noise_indoor_db", "noise_outdoor_db", "noise_indoor_power_db", "noise_outdoor_power_db", "airflow_m3h",
+    "cooling_w", "heating_w", "eer", "cspf",
+    "noise_indoor_db", "noise_outdoor_db", "airflow_m3h",
     "indoor_size_mm", "outdoor_size_mm", "factory_price",
-    "launch_year", "notes",
+    "launch_year", "notes", "extra_fields",
 ]
 
 
@@ -949,3 +966,78 @@ def delete_market_compressor(
     db.delete(c)
     db.commit()
     return {"message": "已删除"}
+
+
+# ══════════════════════════════════════════════════
+# 从竞品对标生成产品策划
+# ══════════════════════════════════════════════════
+
+
+class CreatePlanFromBenchmark(BaseModel):
+    market: str = Field(..., description="目标市场")
+    targets: dict[str, float | str | None] = Field(..., description="采纳的目标参数 {param_key: value}")
+    competitor_sources: Optional[dict[str, dict]] = Field(None, description="参数来源 {param_key: {brand, model, value}}")
+
+
+@router.post("/create-plan-from-benchmark", status_code=201)
+def create_plan_from_benchmark(
+    data: CreatePlanFromBenchmark,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_role("admin", "product_manager")),
+) -> dict:
+    """从竞品对标数据生成产品策划书"""
+    from app.services.product_plan_workflow import create_product_plan as workflow_create
+    from app.models.product_plan_subs import ProductPlanTechSpec
+
+    # 1. 生成策划名称
+    market = data.market
+    from datetime import datetime
+    name = f"{market}新品-{datetime.now().strftime('%Y%m%d')}"
+
+    # 2. 构建性能参数JSON
+    core_perf = {}
+    for key, val in data.targets.items():
+        if val is not None:
+            core_perf[key] = val
+
+    # 标记来源信息
+    if data.competitor_sources:
+        core_perf["_sources"] = data.competitor_sources
+    core_perf["_market"] = market
+    core_perf["_generated_at"] = datetime.now().isoformat()
+
+    # 3. 创建策划
+    plan_data = {
+        "name": name,
+        "market": market,
+        "performance_target": json.dumps(core_perf, ensure_ascii=False),
+    }
+    try:
+        plan = workflow_create(db, plan_data, current_user.username)
+
+        # 4. 创建技术要求（core_performance）
+        if not db.query(ProductPlanTechSpec).filter(
+            ProductPlanTechSpec.product_plan_id == plan.id
+        ).first():
+            tech_spec = ProductPlanTechSpec(
+                product_plan_id=plan.id,
+                core_performance=json.dumps(core_perf, ensure_ascii=False),
+            )
+            db.add(tech_spec)
+            db.commit()
+
+        # 5. 广播仪表盘刷新
+        from app.services.ws_push import trigger_dashboard_refresh_sync
+        trigger_dashboard_refresh_sync()
+
+        return {
+            "plan_id": plan.id,
+            "plan_name": plan.name,
+            "message": "策划已生成，请在「产品策划」页面继续完善",
+            "params_count": len(core_perf),
+        }
+    except Exception as e:
+        db.rollback()
+        logger.exception("从竞品对标生成策划失败")
+        raise HTTPException(status_code=500, detail=f"生成策划失败: {str(e)}")

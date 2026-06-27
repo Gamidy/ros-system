@@ -1,5 +1,6 @@
 """竞品参数库模型"""
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, func, text
+from sqlalchemy.dialects.mysql import JSON
 from app.core.database import Base
 
 # 数据来源枚举
@@ -26,14 +27,8 @@ class CompetitorModel(Base):
     heating_w = Column(Integer, nullable=True, comment="制热功率(W)")
     eer = Column(Float, nullable=True, comment="能效比 EER")
     cspf = Column(Float, nullable=True, comment="CSPF能效(越南/印尼)")
-    scop = Column(Float, nullable=True, comment="SCOP制热季节能效(欧盟)")
-    heating_energy_rating = Column(String(40), nullable=True, comment="制热能效等级")
-    pdc = Column(Float, nullable=True, comment="制冷设计负荷 Pdesignc(kW)(欧盟)")
-    pdh = Column(Float, nullable=True, comment="制热设计负荷 Pdesignh(kW)(欧盟)")
     noise_indoor_db = Column(Float, nullable=True, comment="室内噪音声压级(dB)")
     noise_outdoor_db = Column(Float, nullable=True, comment="室外噪音声压级(dB)")
-    noise_indoor_power_db = Column(Float, nullable=True, comment="室内噪音声功率级(dB)(欧盟)")
-    noise_outdoor_power_db = Column(Float, nullable=True, comment="室外噪音声功率级(dB)(欧盟)")
     airflow_m3h = Column(Float, nullable=True, comment="循环风量(m³/h)")
     indoor_size_mm = Column(String(60), nullable=True, comment="内机尺寸(mm)")
     outdoor_size_mm = Column(String(60), nullable=True, comment="外机尺寸(mm)")
@@ -44,5 +39,6 @@ class CompetitorModel(Base):
                     server_default=text("'manual'"),
                     comment="数据来源: manual=人工录入, auto=自动采集")
     source_url = Column(String(1024), nullable=True, comment="来源 URL（自动采集时的产品页面链接）")
+    extra_fields = Column(JSON, nullable=True, comment="扩展参数(JSON)，如欧盟SCOP/PDC/PDH/声功率等")
     created_at = Column(DateTime, server_default=func.now(), comment="创建时间")
     updated_at = Column(DateTime, onupdate=func.now(), comment="更新时间")

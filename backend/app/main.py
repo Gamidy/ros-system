@@ -32,6 +32,7 @@ from app.api import notification_test_api
 from app.api import notification_grouping_api
 from app.api import notification_read_api
 from app.api import competitor_import_export
+from app.api import market_param_config
 from app.api import ws
 from app.api import standard_query_api, standard_admin_api
 from app.models import system_config  # ensure table created
@@ -175,6 +176,7 @@ app.include_router(pm_config.router, prefix="/api")
 app.include_router(pm_accessory.router, prefix="/api")
 app.include_router(competitor_bench.router, prefix="/api")
 app.include_router(competitor.router, prefix="/api")
+app.include_router(market_param_config.router, prefix="/api")
 app.include_router(admin_config.router)
 app.include_router(admin_role_templates.router)
 app.include_router(admin_role_mappings.router)

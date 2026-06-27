@@ -148,6 +148,15 @@
       <!-- ══════════════ 热力图对标+采纳（有数据时） ═══════════════ -->
       <div v-if="benchmarkData.length > 0" class="benchmark-section">
         <el-divider content-position="left">🔥 参数对比热力图</el-divider>
+
+        <!-- 生成本品策划 -->
+        <div v-if="hasAdoptedTargets" class="generate-plan-bar">
+          <span class="generate-plan-hint">✅ 已设定 {{ adoptedParamKeys.length }} 项目标参数</span>
+          <el-button type="primary" @click="handleGeneratePlan" :loading="generating">
+            📋 生成本品策划
+          </el-button>
+        </div>
+
         <HeatmapCompare
           :benchmark-data="benchmarkData"
           :brands="brands"
@@ -606,20 +615,25 @@ const BASE_PARAMS = [
   { key: 'heating_capacity_w', label: '制热量', unit: 'W' },
   { key: 'cooling_w', label: '制冷功率', unit: 'W' },
   { key: 'heating_w', label: '制热功率', unit: 'W' },
-  { key: 'noise_indoor_db', label: '室内噪音', unit: 'dB' },
-  { key: 'noise_outdoor_db', label: '室外噪音', unit: 'dB' },
+  { key: 'pdc', label: 'Pdesignc', unit: 'kW' },
+  { key: 'pdh', label: 'Pdesignh', unit: 'kW' },
+  { key: 'noise_indoor_db', label: '室内噪音(声压)', unit: 'dB' },
+  { key: 'noise_outdoor_db', label: '室外噪音(声压)', unit: 'dB' },
+  { key: 'noise_indoor_power_db', label: '室内噪音(声功率)', unit: 'dB' },
+  { key: 'noise_outdoor_power_db', label: '室外噪音(声功率)', unit: 'dB' },
   { key: 'airflow_m3h', label: '循环风量', unit: 'm³/h' },
   { key: 'indoor_size_mm', label: '内机尺寸', unit: 'mm' },
   { key: 'outdoor_size_mm', label: '外机尺寸', unit: 'mm' },
   { key: 'factory_price', label: '出厂价', unit: '' },
   { key: 'launch_year', label: '上市年份', unit: '' },
-  { key: 'energy_rating', label: '能效等级', unit: '' },
+  { key: 'energy_rating', label: '制冷能效等级', unit: '' },
+  { key: 'heating_energy_rating', label: '制热能效等级', unit: '' },
 ]
 
 const effectiveParams = computed(() => {
   const params = [...BASE_PARAMS]
   const ec = energyConfig.value
-  params.splice(11, 0, { key: ec.key, label: ec.label, unit: 'W/W' })
+  params.splice(15, 0, { key: ec.key, label: ec.label, unit: 'W/W' })
   return params
 })
 
@@ -649,6 +663,59 @@ function saveOurTargets(market: string, targets: Record<string, string | number>
 }
 
 const ourTargets = ref<Record<string, string | number>>({})
+
+// 已采纳目标的状态
+const hasAdoptedTargets = computed(() => {
+  return Object.keys(ourTargets.value).length > 0
+})
+const adoptedParamKeys = computed(() => {
+  return Object.keys(ourTargets.value)
+})
+const generating = ref(false)
+
+async function handleGeneratePlan() {
+  if (!selectedMarket.value || !hasAdoptedTargets.value) return
+  generating.value = true
+  try {
+    // 收集每个参数的来源信息
+    const sources: Record<string, { brand: string; model: string; value: number | string }> = {}
+    for (const [key, targetVal] of Object.entries(ourTargets.value)) {
+      // 找哪个品牌哪个型号提供了这个值
+      for (const item of allItems.value) {
+        const itemVal = (item as Record<string, unknown>)[key]
+        if (itemVal !== undefined && itemVal !== null && String(itemVal) === String(targetVal)) {
+          sources[key] = { brand: item.brand, model: item.model, value: typeof targetVal === 'number' ? targetVal : String(targetVal) }
+          break
+        }
+      }
+    }
+
+    const res = await api.post('/pm/create-plan-from-benchmark', {
+      market: selectedMarket.value,
+      targets: { ...ourTargets.value },
+      competitor_sources: Object.keys(sources).length > 0 ? sources : undefined,
+    })
+    const data = res.data as { plan_id: string; plan_name: string; message: string }
+    ElMessage.success(`✅ 策划「${data.plan_name}」已生成`)
+    // 询问是否跳转到策划详情页
+    ElMessageBox.confirm(data.message, '策划已生成', {
+      confirmButtonText: '去完善',
+      cancelButtonText: '留在本页',
+      type: 'success',
+    }).then(() => {
+      window.open(`/product-plans/${data.plan_id}`, '_blank')
+    }).catch(() => {
+      // 留在本页
+    })
+  } catch (e: unknown) {
+    const errMsg = e && typeof e === 'object' && 'response' in e
+      ? (e as { response?: { data?: { detail?: string } } }).response?.data?.detail || '生成失败'
+      : '生成失败'
+    ElMessage.error(errMsg)
+  } finally {
+    generating.value = false
+  }
+}
 
 // 市场变化时加载对应目标值
 watch(() => selectedMarket.value, (market) => {
@@ -1240,6 +1307,23 @@ async function handleExport() {
 .param-label { font-size: 11px; color: var(--c-text-muted); }
 .param-value { font-size: 14px; font-weight: 600; color: var(--c-text); }
 .param-value.param-missing { color: var(--c-danger); font-style: italic; }
+
+/* ── 生成本品策划栏 ─────────────────────────────────────────────── */
+.generate-plan-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  background: #f0f9eb;
+  border: 1px solid #e1f3d8;
+  border-radius: 8px;
+}
+.generate-plan-hint {
+  font-size: 14px;
+  font-weight: 600;
+  color: #67c23a;
+}
 
 /* ── 对标对比表 ────────────────────────────────────────────────── */
 .benchmark-section { margin-top: 24px; }
