@@ -77,7 +77,7 @@ export function createPlan(data: CreatePlanPayload) { return api.post('/product-
 export function getPlanDetail(id: string) { return api.get(`/product-plans/${id}`) }
 export function updatePlan(id: string, data: Record<string, any>) { return api.patch(`/product-plans/${id}`, data) }
 // ── 审批操作 ──
-export function approvePlan(planId: string) { return api.post(`/product-plans/${planId}/approve`) }
+export function approvePlan(planId: string, comment?: string) { return api.post(`/product-plans/${planId}/approve`, { comment }) }
 export function rejectPlan(planId: string, comment?: string) { return api.post(`/product-plans/${planId}/reject`, { comment }) }
 export function withdrawPlan(planId: string) { return api.post(`/product-plans/${planId}/withdraw`) }
 export function updatePlanStage(planId: string, stage: string) { return api.patch(`/product-plans/${planId}/stage`, { stage }) }

@@ -158,14 +158,15 @@ def advance_stage(db: Session, plan_id: str, username: str, comment: Optional[st
     """推进 ProductPlan 到一个新的 stage
 
     流程：
-    1. 查找 plan
+    1. 查找 plan（带行级锁）
     2. 校验当前 stage → 目标 stage 是否合法
     3. 检查 STAGE_REQUIREMENTS 条件
     4. 更新 status
-    5. 若 APPROVED → 自动创建 Project
-    6. commit
+    5. 创建审批链
+    6. 若 APPROVED → 自动创建 Project
+    7. commit
     """
-    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).with_for_update().first()
     if not plan:
         raise HTTPException(status_code=404, detail="策划不存在")
 
@@ -194,14 +195,14 @@ def advance_stage(db: Session, plan_id: str, username: str, comment: Optional[st
     if not ok:
         raise HTTPException(status_code=400, detail=err_msg)
 
-    # 更新状态
-    plan.status = target
-
-    # APPROVED → 创建 ApprovalRequest（代替自动生成 Project）
+    # APPROVED → 先创建审批链，再更新状态
     if target == ProductPlanStage.APPROVED:
         from app.services.product_plan_approval import create_plan_approval
         create_plan_approval(plan.id, db, username, comment=comment)
         # Project 创建将在审批完成后进行
+
+    # 更新状态
+    plan.status = target
 
     db.commit()
     db.refresh(plan)
@@ -346,7 +347,7 @@ def _generate_project_from_plan(plan: ProductPlan, db: Session, username: str) -
 
     # 生成编码
     today = date.today()
-    code_suffix = today.strftime("%y%m%d") + f"{plan.id[:4].upper()}" if plan.id else today.strftime("%y%m%d")
+    code_suffix = today.strftime("%y%m%d") + f"{(plan.id or '')[:4].upper() or today.strftime('%y%m%d')}"
     code = f"P-{code_suffix}"
 
     # 从 costs 表提取成本目标

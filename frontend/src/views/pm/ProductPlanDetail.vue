@@ -135,9 +135,9 @@
 <div class="approval-info"><span class="approval-node">当前节点: {{ stageLabel(plan.status) }}</span><span class="approval-approver">审批人: {{ plan.approver || '待指定' }}</span></div>
 <div class="approval-actions">
 <el-button v-if="canAdvance" type="primary" size="small" @click="advancePlan">推进流程</el-button>
-<el-button v-if="isApprovalStage" type="success" size="small" @click="approvePlan">通过</el-button>
-<el-button v-if="isApprovalStage" type="danger" size="small" @click="rejectPlan">驳回</el-button>
-<el-button v-if="canWithdraw" size="small" @click="withdrawPlan">撤回</el-button>
+<el-button v-if="isApprovalStage" type="success" size="small" @click="approvePlan" :loading="approving">通过</el-button>
+<el-button v-if="isApprovalStage" type="danger" size="small" @click="rejectPlan" :loading="rejecting">驳回</el-button>
+<el-button v-if="canWithdraw" size="small" @click="withdrawPlan" :loading="withdrawing">撤回</el-button>
 </div>
 </div>
 </template>
@@ -425,6 +425,9 @@ const showCostDialog = ref(false)
 const addingCost = ref(false)
 const approvalComment = ref('')
 const submittingApproval = ref(false)
+const approving = ref(false)
+const rejecting = ref(false)
+const withdrawing = ref(false)
 const showApprovalDrawer = ref(false)
 
 // ── 项目概述 ──
@@ -662,22 +665,50 @@ ElMessage.error(_err || '操作失败，请重试')
 }
 }
 async function approvePlan() {
-try { await planAPI.approvePlan(planId); ElMessage.success('已通过'); await fetchPlan() } catch (e: unknown) {
+try {
+const { value: comment } = await ElMessageBox.prompt('请输入审批意见', '审批确认', {
+confirmButtonText: '确认通过',
+cancelButtonText: '取消',
+inputType: 'textarea',
+inputPlaceholder: '请填写审批意见...',
+})
+approving.value = true
+await planAPI.approvePlan(planId, comment || '')
+ElMessage.success('已通过')
+await fetchPlan()
+} catch (e: unknown) {
+if ((e as any)?.action === 'cancel' || (e instanceof Error && e.message === 'cancel')) return // user cancelled
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
+finally { approving.value = false }
 }
 async function rejectPlan() {
-try { await planAPI.rejectPlan(planId); ElMessage.success('已驳回'); await fetchPlan() } catch (e: unknown) {
+try {
+const { value: comment } = await ElMessageBox.prompt('请输入驳回意见', '驳回确认', {
+confirmButtonText: '确认驳回',
+cancelButtonText: '取消',
+inputType: 'textarea',
+inputPlaceholder: '请填写驳回意见...',
+})
+rejecting.value = true
+await planAPI.rejectPlan(planId, comment || '')
+ElMessage.success('已驳回')
+await fetchPlan()
+} catch (e: unknown) {
+if ((e as any)?.action === 'cancel' || (e instanceof Error && e.message === 'cancel')) return // user cancelled
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
+finally { rejecting.value = false }
 }
 async function withdrawPlan() {
+withdrawing.value = true
 try { await planAPI.withdrawPlan(planId); ElMessage.success('已撤回'); await fetchPlan() } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
+finally { withdrawing.value = false }
 }
 
 // ── 移动端保存全部 ──
@@ -724,6 +755,10 @@ finally { savingAll.value = false }
 
 // ── 移动端审批 ──
 async function submitApproval() {
+if (!approvalComment.value || !approvalComment.value.trim()) {
+ElMessage.warning('请输入审批意见')
+return
+}
 submittingApproval.value = true
 try { await api.post(`/product-plans/${planId}/advance`, { comment: approvalComment.value }); ElMessage.success('审批已提交'); approvalComment.value = ''; showApprovalDrawer.value = false; await fetchPlan() } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
