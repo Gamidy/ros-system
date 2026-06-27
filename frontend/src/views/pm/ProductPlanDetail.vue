@@ -1286,11 +1286,61 @@ finally { savingAll.value = false }
 }
 
 // ── 移动端审批 ──
+/** 阶段流转顺序（与后端 PLAN_STAGE_TRANSITIONS 保持一致） */
+const STAGE_FLOW = ['draft', 'competitor', 'definition', 'costing', 'tech_input', 'project_init', 'approved', 'released']
+
+/**
+ * 构建提交审批确认弹窗的 HTML 消息
+ */
+function buildApprovalConfirmMessage(currentStage: string): string {
+  const currentIdx = STAGE_FLOW.indexOf(currentStage)
+  const currentLabel = STAGE_LABELS[currentStage] || currentStage
+
+  if (currentIdx < 0 || currentIdx >= STAGE_FLOW.length - 1) {
+    // 未知或已结束阶段，简单提示
+    return `<p>当前阶段：${currentLabel}</p><p style="color:#909399;font-size:12px;margin-top:8px">确认提交审批吗？</p>`
+  }
+
+  const nextStage = STAGE_FLOW[currentIdx + 1]
+  const nextLabel = STAGE_LABELS[nextStage] || nextStage
+
+  // 中间阶段 = currentIdx+1 到 nextIdx-1 之间的阶段（通常为空，保留逻辑便于扩展）
+  const intermediateLabels: string[] = []
+  // 只需往前看一步（后端每次只推进一级），中间阶段为空
+  // 如有多步推进需求，可调整此处逻辑
+
+  let message = `<div style="font-size:14px;line-height:2">`
+  message += `<p><strong>📌 当前阶段：</strong><span style="color:#409eff;font-weight:600">${currentLabel}</span></p>`
+  message += `<p><strong>🎯 目标阶段：</strong><span style="color:#67c23a;font-weight:600">${nextLabel}</span></p>`
+  if (intermediateLabels.length > 0) {
+    message += `<p><strong>🔄 中间阶段：</strong>${intermediateLabels.join(' → ')}</p>`
+  } else {
+    message += `<p><strong>🔄 中间阶段：</strong><span style="color:#909399">（直接推进，无中间阶段）</span></p>`
+  }
+  message += `<hr style="border:none;border-top:1px solid #ebeef5;margin:12px 0">`
+  message += `<p style="color:#909399;font-size:12px">确认后将提交审批并推进流程，请确认所有信息已填写完整。</p></div>`
+
+  return message
+}
+
 async function submitApproval() {
 if (!approvalComment.value || !approvalComment.value.trim()) {
 ElMessage.warning('请输入审批意见')
 return
 }
+
+// ── 状态预览确认弹窗 ──
+const msg = buildApprovalConfirmMessage(plan.value?.status || '')
+try {
+  await ElMessageBox.confirm(msg, '提交审批确认', {
+    confirmButtonText: '确认提交',
+    cancelButtonText: '取消',
+    dangerouslyUseHTMLString: true,
+  })
+} catch {
+  return // 用户取消
+}
+
 submittingApproval.value = true
 try { await api.post(`/product-plans/${planId}/advance`, { comment: approvalComment.value }); ElMessage.success('审批已提交'); approvalComment.value = ''; showApprovalDrawer.value = false; await fetchPlan() } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
