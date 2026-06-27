@@ -20,14 +20,18 @@ capabilities:
       - "docs/events/plan.approved.v1.schema.json"
       - "docs/events/plan.released.v1.schema.json"
       - "docs/events/plan.cost_updated.v1.schema.json"
-    status: "frozen"          # draft | frozen | implemented | deprecated
+    status: "released"          # draft | frozen | implemented | released | deprecated
     frozen_at: "2026-06-30"
+    released_at: "2026-06-30"
     rfc: "RFC-2026-001"
     approval_score: 98.6
     phase:
-      current: 1
+      current: 7
       total: 7
-      description: "合约冻结（Phase 1/7）"
+      description: "已发布（Phase 7/7）"
+    baselines:
+      - "PC-1.0-BL1 (Capability Contract)"
+      - "EC-1.0-BL1 (Event Contract)"
     owner:
       business_owner: "PM Director"
       technical_owner: "Planning Team Lead"
