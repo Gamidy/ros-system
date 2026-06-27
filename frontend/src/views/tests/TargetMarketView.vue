@@ -160,14 +160,14 @@ async function fetchMarkets() {
     const res = await api.get('/target-markets')
     markets.value = (res.data || []).map((m: TableRow) => ({
       ...m,
-      testItems: null as any[] | null,
-      certItems: null as any[] | null,
-      standardItems: null as any[] | null,
+      testItems: null as TableRow[] | null,
+      certItems: null as TableRow[] | null,
+      standardItems: null as TableRow[] | null,
     }))
   } finally { loading.value = false }
 }
 
-async function onCollapseChange(val: any, market: TableRow) {
+async function onCollapseChange(val: string[], market: TableRow) {
   const key = val?.slice(-1)?.[0] || ''
   if (key.startsWith('tests-') && !market.testItems) {
     try { const r = await api.get(`/target-markets/${market.id}/tests`); market.testItems = r.data } catch { market.testItems = [] }
