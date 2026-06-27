@@ -451,6 +451,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElNotification } from 'element-plus'
 import {
   DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh,
   Cpu, InfoFilled, CircleCloseFilled, Plus, Folder, Coin, Clock,
@@ -464,6 +465,8 @@ import ChartContainer from '../../components/ChartContainer.vue'
 import FunnelChart from '../../components/charts/FunnelChart.vue'
 import BiChart from '../../components/BiChart.vue'
 import type { TableRow, ChartDataPoint } from '@/types/common'
+import { useWebSocket } from '../../composables/useWebSocket'
+import type { WebSocketMessage } from '../../composables/useWebSocket'
 
 interface PlanNode {
   id: string | number
@@ -834,6 +837,41 @@ function onBiDateChange() {
   fetchBiCharts()
 }
 
+// ── WebSocket 实时刷新 [D3-5] ─────────────────────────
+
+const { connect: wsConnect, on: wsOn, off: wsOff } = useWebSocket()
+
+const WS_DEBOUNCE_MS = 30000
+let lastWsRefreshTime = 0
+
+/** 仪表盘刷新防抖处理 — 30 秒内不重复刷新 */
+function handleDashboardRefresh(_msg: WebSocketMessage): void {
+  const now = Date.now()
+  if (now - lastWsRefreshTime < WS_DEBOUNCE_MS) {
+    console.debug('[Dashboard] WS refresh debounced')
+    return
+  }
+  lastWsRefreshTime = now
+
+  // 视觉提示：ElNotification
+  ElNotification({
+    title: '数据已更新',
+    message: '仪表盘数据已自动刷新',
+    type: 'success',
+    duration: 3000,
+    position: 'top-right',
+  })
+
+  // 重新加载 BI 图表数据
+  fetchBiCharts()
+}
+
+function setupWsDashboardRefresh(): void {
+  wsConnect()
+  wsOff('dashboard_refresh', handleDashboardRefresh) // 防重复注册
+  wsOn('dashboard_refresh', handleDashboardRefresh)
+}
+
 function refreshAll() {
   fetchDashboard()
   fetchTrends()
@@ -870,6 +908,7 @@ onMounted(() => {
   fetchTrends()
   fetchProductPlanSummary()
   fetchBiCharts()
+  setupWsDashboardRefresh()
 })
 </script>
 

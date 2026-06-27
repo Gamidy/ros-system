@@ -75,6 +75,53 @@
       </el-col>
     </el-row>
 
+    <!-- ═══════════════ 免打扰配置卡片 ═══════════════ -->
+    <el-card shadow="never" class="section-card">
+      <template #header>
+        <div class="card-header">
+          <span>🌙 免打扰时段</span>
+          <el-switch v-model="dnd.enabled" />
+        </div>
+      </template>
+      <el-form label-width="120px" label-position="left" size="small">
+        <el-form-item label="开始时间">
+          <el-time-picker
+            v-model="dnd.startTime"
+            placeholder="选择开始时间"
+            format="HH:mm"
+            value-format="HH:mm"
+            style="width: 140px"
+          />
+        </el-form-item>
+        <el-form-item label="结束时间">
+          <el-time-picker
+            v-model="dnd.endTime"
+            placeholder="选择结束时间"
+            format="HH:mm"
+            value-format="HH:mm"
+            style="width: 140px"
+          />
+        </el-form-item>
+        <el-form-item label="最低推送优先级">
+          <el-select v-model="dnd.minPriority" style="width: 260px">
+            <el-option :value="0" label="不屏蔽（推送全部通知）" />
+            <el-option :value="1" label="仅重要（屏蔽普通通知）" />
+            <el-option :value="2" label="仅紧急（仅推送紧急通知）" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label=" ">
+          <el-button
+            type="primary"
+            size="small"
+            :loading="dndSaving"
+            @click="saveDnd"
+          >
+            保存免打扰设置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
     <!-- ═══════════════ 通知偏好矩阵 ═══════════════ -->
     <el-card shadow="never" class="section-card">
       <template #header>
@@ -218,6 +265,15 @@ interface ChannelTypeOption {
   width: number
 }
 
+/** 免打扰配置 */
+interface DoNotDisturbConfig {
+  enabled: boolean
+  startTime: string   // HH:MM
+  endTime: string     // HH:MM
+  timezone: string
+  minPriority: number // 0=不屏蔽, 1=仅重要, 2=仅紧急
+}
+
 /* ── 常量 ── */
 const EVENT_TYPE_LABELS: Record<string, string> = {
   approval_request: '审批请求',
@@ -247,6 +303,16 @@ const testingChannel = ref<string | null>(null)
 const prefMatrix = ref<PrefMatrixRow[]>([])
 const prefSaving = ref(false)
 
+/** 免打扰配置 */
+const dnd = reactive<DoNotDisturbConfig>({
+  enabled: false,
+  startTime: '22:00',
+  endTime: '08:00',
+  timezone: 'Asia/Shanghai',
+  minPriority: 1,
+})
+const dndSaving = ref(false)
+
 /* ── API ── */
 
 /** 获取通知偏好配置 */
@@ -275,6 +341,27 @@ async function fetchPrefs() {
     buildPrefMatrix(data as PrefRecord[])
   } catch {
     ElMessage.error('加载通知配置失败')
+  }
+}
+
+/** 获取免打扰配置 */
+async function fetchDnd() {
+  try {
+    const res = await api.get('/user/notification-dnd')
+    const data = res.data as {
+      enabled: boolean
+      start_time: string
+      end_time: string
+      timezone: string
+      min_priority: number
+    }
+    dnd.enabled = data.enabled
+    dnd.startTime = data.start_time
+    dnd.endTime = data.end_time
+    dnd.timezone = data.timezone
+    dnd.minPriority = data.min_priority
+  } catch {
+    // 首次调用失败时静默处理 — 用默认值
   }
 }
 
@@ -353,6 +440,25 @@ async function savePrefs() {
   }
 }
 
+/** 保存免打扰配置 */
+async function saveDnd() {
+  dndSaving.value = true
+  try {
+    await api.put('/user/notification-dnd', {
+      enabled: dnd.enabled,
+      start_time: dnd.startTime,
+      end_time: dnd.endTime,
+      timezone: dnd.timezone,
+      min_priority: dnd.minPriority,
+    })
+    ElMessage.success('免打扰配置已保存')
+  } catch {
+    ElMessage.error('保存免打扰配置失败')
+  } finally {
+    dndSaving.value = false
+  }
+}
+
 /** 刷新历史 */
 async function refreshHistory() {
   historyLoading.value = true
@@ -390,7 +496,10 @@ function eventTypeLabel(t: string): string {
 }
 
 /* ── 生命周期 ── */
-onMounted(fetchPrefs)
+onMounted(() => {
+  fetchPrefs()
+  fetchDnd()
+})
 </script>
 
 <style scoped>

@@ -327,3 +327,28 @@ export function createPlanTemplate(data: CreatePlanTemplatePayload) {
 export function deletePlanTemplate(id: string) {
   return api.delete(`/plan-templates/${id}`)
 }
+
+// ── D2-2 批量操作 ──
+
+export interface BatchCloneRequest {
+  plan_ids: string[]
+}
+
+export interface BatchCreateTemplateItem {
+  template_id: string
+  count: number
+}
+
+export interface BatchCreateRequest {
+  templates: BatchCreateTemplateItem[]
+}
+
+/** 批量克隆策划 */
+export function batchClonePlans(data: BatchCloneRequest) {
+  return api.post('/product-plans/batch-clone', data)
+}
+
+/** 按模板批量创建策划 */
+export function batchCreatePlans(data: BatchCreateRequest) {
+  return api.post('/product-plans/batch-create', data)
+}

@@ -19,6 +19,9 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
 from app.models.user import User
+import logging
+
+logger = logging.getLogger(__name__)
 from app.models.product_plan import ProductPlan, ProductPlanStage, Cost, CostType, BOMType, ProductPlanProjectLink, ProductPlanHistory
 from app.schemas.product_plan_link import ProductPlanLinkOut
 from app.models.product_plan_subs import (
@@ -273,6 +276,9 @@ def create_plan(
     """创建产品策划（DRAFT）"""
     try:
         plan = workflow_create(db, data.model_dump(), current_user.username)
+        # ── 广播仪表盘刷新事件 [D3-5] ──
+        from app.services.ws_push import trigger_dashboard_refresh_sync
+        trigger_dashboard_refresh_sync()
         return _plan_to_dict(plan)
     except SQLAlchemyError as e:
         db.rollback()
@@ -818,3 +824,136 @@ def get_plan_version_snapshot(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"查询版本快照失败: {str(e)}")
+
+
+# ── 批量操作 Schemas ──
+
+
+class BatchCloneRequest(BaseModel):
+    """批量克隆策划请求"""
+    plan_ids: list[str]
+
+
+class TemplateBatchItem(BaseModel):
+    """模板批量创建条目"""
+    template_id: str
+    count: int = 1
+
+
+class BatchCreateRequest(BaseModel):
+    """按模板批量创建策划请求"""
+    templates: list[TemplateBatchItem]
+
+
+# ── 批量操作端点 ──
+
+
+@router.post("/batch-clone", status_code=201)
+def batch_clone_plans(
+    data: BatchCloneRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("product-plans")),
+) -> list[dict]:
+    """批量策划克隆。
+
+    复制源策划的所有基本字段，名称追加"-副本"，返回新建策划列表。
+    克隆策划始终以 DRAFT 状态创建。
+    """
+    if not data.plan_ids:
+        raise HTTPException(status_code=400, detail="plan_ids 不能为空")
+
+    new_plans: list[dict] = []
+    for plan_id in data.plan_ids:
+        try:
+            plan = db.query(ProductPlan).options(
+                selectinload(ProductPlan.initiation),
+            ).filter(ProductPlan.id == plan_id).first()
+            if not plan:
+                continue
+
+            new_name = f"{plan.name}-副本"
+            clone_data = {
+                "name": new_name,
+                "series": plan.series,
+                "market": plan.market,
+                "competitor_id": plan.competitor_id,
+                "cost_target": plan.cost_target,
+                "performance_target": plan.performance_target,
+                "product_type": plan.initiation.product_type if plan.initiation else None,
+                "market_id": None,
+            }
+            new_plan = workflow_create(db, clone_data, current_user.username)
+            new_plans.append(_plan_to_dict(new_plan))
+        except Exception as e:
+            logger.warning("克隆策划 %s 失败: %s", plan_id, str(e))
+            continue
+
+    if not new_plans:
+        raise HTTPException(status_code=400, detail="没有可克隆的策划")
+
+    # ── 广播仪表盘刷新事件 [D3-5] ──
+    from app.services.ws_push import trigger_dashboard_refresh_sync
+    trigger_dashboard_refresh_sync()
+
+    return new_plans
+
+
+@router.post("/batch-create", status_code=201)
+def batch_create_plans(
+    data: BatchCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("product-plans")),
+) -> list[dict]:
+    """按模板批量创建策划。
+
+    接收 [{template_id, count}]，从每个模板的 preset_fields 读取预设值，
+    按指定数量创建策划。返回新建策划列表。
+    """
+    from app.models.plan_template import PlanTemplate
+
+    if not data.templates:
+        raise HTTPException(status_code=400, detail="templates 不能为空")
+
+    new_plans: list[dict] = []
+    for item in data.templates:
+        try:
+            template = db.query(PlanTemplate).filter(
+                PlanTemplate.id == item.template_id,
+                PlanTemplate.is_active == True,
+            ).first()
+            if not template:
+                logger.warning("模板 %s 不存在或已停用，跳过", item.template_id)
+                continue
+
+            preset = template.preset_fields or {}
+            base_name = preset.get("name") or template.name
+            product_type = preset.get("product_type") or template.product_type
+
+            for i in range(item.count):
+                name = f"{base_name}-{i + 1}" if item.count > 1 else base_name
+                create_data = {
+                    "name": name,
+                    "series": preset.get("series"),
+                    "market": template.market,
+                    "product_type": product_type,
+                    "cost_target": preset.get("cost_target"),
+                    "performance_target": preset.get("performance_target"),
+                    "competitor_id": preset.get("competitor_id"),
+                    "market_id": preset.get("market_id"),
+                }
+                new_plan = workflow_create(db, create_data, current_user.username)
+                new_plans.append(_plan_to_dict(new_plan))
+        except Exception as e:
+            logger.warning("按模板 %s 批量创建失败: %s", item.template_id, str(e))
+            continue
+
+    if not new_plans:
+        raise HTTPException(status_code=400, detail="没有成功创建的策划")
+
+    # ── 广播仪表盘刷新事件 [D3-5] ──
+    from app.services.ws_push import trigger_dashboard_refresh_sync
+    trigger_dashboard_refresh_sync()
+
+    return new_plans

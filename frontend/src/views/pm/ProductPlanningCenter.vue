@@ -5,6 +5,8 @@
       <h2>🧠 产品策划中心</h2>
       <div class="ppc-header-actions">
         <el-button type="primary" @click="showCreateDialog = true">+ 新建策划</el-button>
+        <el-button :disabled="selectedPlanIds.length === 0" @click="confirmBatchClone">批量复制</el-button>
+        <el-button @click="showBatchCreateDialog = true">从模板批量创建</el-button>
         <el-button @click="fetchPlans">刷新</el-button>
       </div>
     </div>
@@ -98,7 +100,8 @@
 
         <!-- ═══════════ 桌面端：表格视图 ═══════════ -->
         <template v-if="!isMobile">
-          <el-table :data="plans" stripe border size="small" v-loading="loading" empty-text="暂无策划数据" @row-click="selectPlan" highlight-current-row>
+          <el-table :data="plans" stripe border size="small" v-loading="loading" empty-text="暂无策划数据" @row-click="selectPlan" highlight-current-row @selection-change="onSelectionChange" ref="planTableRef">
+            <el-table-column type="selection" width="50" />
             <el-table-column prop="name" label="策划名称" min-width="180">
               <template #default="{ row }">
                 <div class="plan-name-cell">{{ row.name }}</div>
@@ -381,11 +384,69 @@
         </template>
       </template>
     </el-dialog>
+
+    <!-- ═══════════ 批量复制确认弹窗 ═══════════ -->
+    <el-dialog v-model="showBatchCloneDialog" title="批量复制策划" width="480px">
+      <p style="margin:0 0 16px; color:#606266; font-size:14px;">
+        确认批量复制以下 <strong>{{ selectedPlanIds.length }}</strong> 个策划？
+        复制品名称将自动追加"-副本"。
+      </p>
+      <el-table :data="selectedPlanItems" size="small" max-height="300" border>
+        <el-table-column prop="name" label="策划名称" min-width="200" />
+        <el-table-column prop="status" label="当前阶段" width="120">
+          <template #default="{ row }">
+            <el-tag :type="stageTagType(row.status)" size="small">{{ stageLabel(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="showBatchCloneDialog = false">取消</el-button>
+        <el-button type="primary" @click="doBatchClone" :loading="batchCloning">确认复制</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ═══════════ 从模板批量创建弹窗 ═══════════ -->
+    <el-dialog v-model="showBatchCreateDialog" title="从模板批量创建" width="540px" :close-on-click-modal="false">
+      <el-form :model="batchCreateForm" label-width="100" size="small">
+        <el-form-item label="选择模板" required>
+          <el-select v-model="batchCreateForm.template_id" placeholder="请选择策划模板" filterable style="width:100%">
+            <el-option
+              v-for="t in planTemplates"
+              :key="t.id"
+              :label="t.name"
+              :value="t.id"
+            >
+              <span>{{ t.name }}</span>
+              <span style="float:right;color:#909399;font-size:12px">{{ t.product_type }} / {{ t.market }}</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="创建数量" required>
+          <el-input-number v-model="batchCreateForm.count" :min="1" :max="50" />
+          <span style="margin-left:8px;color:#909399;font-size:12px">最多50个</span>
+        </el-form-item>
+        <el-form-item v-if="selectedTemplatePreview">
+          <el-alert :title="`模板预览: ${selectedTemplatePreview.name}`" type="info" show-icon :closable="false">
+            <template #default>
+              <div style="margin-top:4px;font-size:13px;line-height:1.6">
+                <div>产品类型: {{ selectedTemplatePreview.product_type }}</div>
+                <div>目标市场: {{ selectedTemplatePreview.market }}</div>
+                <div v-if="selectedTemplatePreview.description">描述: {{ selectedTemplatePreview.description }}</div>
+              </div>
+            </template>
+          </el-alert>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showBatchCreateDialog = false">取消</el-button>
+        <el-button type="primary" @click="doBatchCreate" :loading="batchCreating">确认创建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { Search, MagicStick } from '@element-plus/icons-vue'
@@ -394,7 +455,8 @@ import api from '../../api'
 import { generatePlanDraft } from '../../api/ai'
 import GlobalActionCard from '../../components/GlobalActionCard.vue'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
-import type { CreatePlanPayload } from '../../api/productPlan'
+import type { CreatePlanPayload, PlanTemplateItem } from '../../api/productPlan'
+import { batchClonePlans, batchCreatePlans } from '../../api/productPlan'
 
 // ── Types ──
 interface PlanItem {
@@ -493,6 +555,88 @@ const pageSize = ref(20)
 const total = ref(0)
 const filterStatus = ref<string | null>(null)
 const searchText = ref('')
+
+// ── 批量操作 ──
+const selectedPlanIds = ref<string[]>([])
+const selectedPlanItems = computed(() => {
+  return plans.value.filter((p: PlanItem) => selectedPlanIds.value.includes(p.id))
+})
+const showBatchCloneDialog = ref(false)
+const batchCloning = ref(false)
+const showBatchCreateDialog = ref(false)
+const batchCreating = ref(false)
+const planTemplates = ref<PlanTemplateItem[]>([])
+const batchCreateForm = ref({ template_id: '', count: 1 })
+const selectedTemplatePreview = computed(() => {
+  return planTemplates.value.find((t: PlanTemplateItem) => t.id === batchCreateForm.value.template_id) || null
+})
+const planTableRef = ref<InstanceType<typeof import('element-plus')['ElTable']> | null>(null)
+
+function onSelectionChange(rows: PlanItem[]) {
+  selectedPlanIds.value = rows.map((r: PlanItem) => r.id)
+}
+
+async function confirmBatchClone() {
+  if (selectedPlanIds.value.length === 0) {
+    ElMessage.warning('请至少选择一个策划')
+    return
+  }
+  showBatchCloneDialog.value = true
+}
+
+async function doBatchClone() {
+  batchCloning.value = true
+  try {
+    const res = await batchClonePlans({ plan_ids: selectedPlanIds.value })
+    ElMessage.success(`成功复制 ${res.data.length} 个策划`)
+    showBatchCloneDialog.value = false
+    selectedPlanIds.value = []
+    if (planTableRef.value) {
+      planTableRef.value.clearSelection()
+    }
+    await fetchPlans()
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '批量复制失败')
+  } finally {
+    batchCloning.value = false
+  }
+}
+
+async function doBatchCreate() {
+  if (!batchCreateForm.value.template_id) {
+    ElMessage.warning('请选择模板')
+    return
+  }
+  batchCreating.value = true
+  try {
+    const res = await batchCreatePlans({
+      templates: [{ template_id: batchCreateForm.value.template_id, count: batchCreateForm.value.count }],
+    })
+    ElMessage.success(`成功创建 ${res.data.length} 个策划`)
+    showBatchCreateDialog.value = false
+    batchCreateForm.value = { template_id: '', count: 1 }
+    await fetchPlans()
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '批量创建失败')
+  } finally {
+    batchCreating.value = false
+  }
+}
+
+watch(showBatchCreateDialog, async (val) => {
+  if (val) {
+    batchCreateForm.value = { template_id: '', count: 1 }
+    try {
+      const res = await api.get('/plan-templates')
+      planTemplates.value = res.data || []
+    } catch (e: unknown) {
+      const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
+      planTemplates.value = []; ElMessage.error(_err || '获取模板列表失败')
+    }
+  }
+})
 
 // ── 下一步动作 ──
 const selectedPlanId = ref<string | null>(null)
