@@ -183,10 +183,9 @@ def list_approval_requests(
         q = q.filter(ApprovalRequest.status == status)
     if requester:
         q = q.filter(ApprovalRequest.requester == requester)
-    elif not status and not requester:
-        # admin/general_manager 默认查看全部，其他角色默认只看自己的
-        if not is_super_role(current_user.role):
-            q = q.filter(ApprovalRequest.requester == current_user.username)
+    elif not is_super_role(current_user.role):
+        # 非超级角色：如果没有指定申请人，默认只看自己的审批请求
+        q = q.filter(ApprovalRequest.requester == current_user.username)
     q = q.order_by(ApprovalRequest.created_at.desc())
     return [_request_to_out(r, db) for r in q.limit(200).all()]
 

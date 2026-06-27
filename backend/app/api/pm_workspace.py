@@ -1271,6 +1271,11 @@ def submit_proposal(
                 detail=f"产品策划已超出立项阶段（当前: {ProductPlanStage.PROJECT_INIT.value}），无法重复提交",
             )
 
+    # 同步更新 Project 的草稿状态和审批状态
+    p.is_draft = False
+    p.approval_status = "pending"
+    db.flush()
+
     # 创建审批请求
     from app.services.product_plan_approval import create_plan_approval
     approval = create_plan_approval(plan_id, db, current_user.username)
