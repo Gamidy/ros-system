@@ -43,9 +43,10 @@ router = APIRouter(prefix="/pm", tags=["产品经理工作台"])
 # ══════════════════════════════════════════════════════════════
 
 def _require_pm(current_user: User = Depends(get_current_user)) -> User:
-    """校验当前用户为 product_manager 角色"""
-    if current_user.role != "product_manager":
-        raise HTTPException(status_code=403, detail="仅产品经理可访问此接口")
+    """校验当前用户为产品经理或超级管理员"""
+    from app.core.permissions import SUPER_ROLES
+    if current_user.role != "product_manager" and current_user.role not in SUPER_ROLES:
+        raise HTTPException(status_code=403, detail="仅产品经理或管理员可访问此接口")
     return current_user
 
 
