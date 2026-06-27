@@ -75,7 +75,7 @@
             <el-button size="small" type="primary" link @click="openEditDialog(row)">编辑</el-button>
             <el-button size="small" type="primary" link @click="openStandardConfig(row)">标准</el-button>
             <el-button size="small" type="success" link @click="openCertDialog(row)">认证</el-button>
-            <el-button size="small" type="warning" link @click="openCompressorDialog(row)">压缩机</el-button>
+            <el-button size="small" type="warning" link @click="openCompressorDialog(row)">关键元器件</el-button>
             <el-button size="small" :type="row.is_active === 'true' ? 'warning' : 'success'" link @click="toggleActive(row)">
               {{ row.is_active === 'true' ? '停用' : '激活' }}
             </el-button>
@@ -89,11 +89,6 @@
     <el-dialog v-model="dialogVisible" :title="editingCode ? '编辑市场' : '新增市场'" width="700px" :close-on-click-modal="false">
       <el-form :model="form" label-width="130px" size="small">
         <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="市场代码" prop="code">
-              <el-input v-model="form.code" :disabled="!!editingCode" placeholder="如: VN（两位大写字母）" maxlength="10" />
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="国家/市场名称" prop="name">
               <el-input v-model="form.name" placeholder="如: 越南" />
@@ -185,11 +180,6 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="制冷剂灌注量(g)">
-              <el-input-number v-model="form.refrigerant_charge" :min="0" :step="10" controls-position="right" style="width:100%" placeholder="如: 900" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
             <el-form-item label="机型结构">
               <el-select v-model="form.structure_type" clearable placeholder="选择结构" style="width:100%">
                 <el-option label="壁挂分体机" value="壁挂分体机" />
@@ -264,10 +254,10 @@
       </template>
     </el-dialog>
 
-    <!-- 压缩机管理弹窗 -->
-    <el-dialog v-model="compDialogVisible" :title="`压缩机信息 - ${compMarketName}`" width="700px" :close-on-click-modal="false">
+    <!-- 关键元器件管理弹窗 -->
+    <el-dialog v-model="compDialogVisible" :title="`关键元器件的特殊要求 - ${compMarketName}`" width="700px" :close-on-click-modal="false">
       <div class="toolbar" style="margin-bottom:12px">
-        <el-button type="primary" size="small" @click="openAddComp">新增压缩机</el-button>
+        <el-button type="primary" size="small" @click="openAddComp">新增元器件</el-button>
       </div>
       <el-table :data="compressors" border size="small" style="width:100%">
         <el-table-column prop="manufacturer" label="制造商" width="130" />
@@ -286,8 +276,8 @@
       </template>
     </el-dialog>
 
-    <!-- 压缩机编辑子弹窗 -->
-    <el-dialog v-model="compEditVisible" :title="editingCompId ? '编辑压缩机' : '新增压缩机'" width="500px" :close-on-click-modal="false">
+    <!-- 关键元器件编辑子弹窗 -->
+    <el-dialog v-model="compEditVisible" :title="editingCompId ? '编辑元器件' : '新增元器件'" width="500px" :close-on-click-modal="false">
       <el-form :model="compForm" label-width="100px" size="small">
         <el-form-item label="制造商" prop="manufacturer">
           <el-input v-model="compForm.manufacturer" placeholder="如: 海立/GMCC/Gree" />
@@ -430,7 +420,6 @@ interface MarketItem {
   structure_type: string | null
   main_selling_model: string | null
   refrigerant: string | null
-  refrigerant_charge: number | null
   is_active: string
 }
 
@@ -453,17 +442,61 @@ interface CompressorItem {
   notes: string | null
 }
 
+interface MarketForm {
+  code: string
+  name: string
+  region: string
+  energy_standard: string
+  energy_label: string
+  energy_unit: string
+  energy_standard_detail: string | null
+  national_standard: string | null
+  voltage_freq: string | null
+  cooling_max_temp: number | null
+  heating_min_temp: number | null
+  structure_type: string | null
+  main_selling_model: string | null
+  refrigerant: string | null
+}
+
+interface CertForm {
+  cert_type: string
+  cert_standard: string
+  description: string
+  is_required: string
+  sort_order?: number
+}
+
+interface CompressorForm {
+  manufacturer: string
+  model: string
+  capacity_range: string
+  notes: string
+}
+
+interface TestForm {
+  test_category: string
+  standard: string
+  is_required: boolean
+}
+
+interface StandardForm {
+  standard_code: string
+  standard_name: string
+  is_core: boolean
+}
+
 const markets = ref<MarketItem[]>([])
 const dialogVisible = ref(false)
 const editingCode = ref<string | null>(null)
 const saving = ref(false)
-const form = ref<any>({
+const form = ref<MarketForm>({
   code: '', name: '', region: '',
   energy_standard: 'eer', energy_label: 'EER', energy_unit: 'W/W',
   energy_standard_detail: null, national_standard: null,
   voltage_freq: null, cooling_max_temp: null, heating_min_temp: null,
   structure_type: null, main_selling_model: null,
-  refrigerant: null, refrigerant_charge: null,
+  refrigerant: null,
 })
 
 // ── 认证管理 ──
@@ -474,9 +507,9 @@ const certifications = ref<CertificationItem[]>([])
 const certEditVisible = ref(false)
 const editingCertId = ref<number | null>(null)
 const savingCert = ref(false)
-const certForm = ref<any>({ cert_type: 'safety', cert_standard: '', description: '', is_required: 'true' })
+const certForm = ref<CertForm>({ cert_type: 'safety', cert_standard: '', description: '', is_required: 'true' })
 
-// ── 压缩机管理 ──
+// ── 关键元器件管理 ──
 const compDialogVisible = ref(false)
 const compMarketCode = ref('')
 const compMarketName = ref('')
@@ -484,7 +517,7 @@ const compressors = ref<CompressorItem[]>([])
 const compEditVisible = ref(false)
 const editingCompId = ref<number | null>(null)
 const savingComp = ref(false)
-const compForm = ref<any>({ manufacturer: '', model: '', capacity_range: '', notes: '' })
+const compForm = ref<CompressorForm>({ manufacturer: '', model: '', capacity_range: '', notes: '' })
 
 // ── 筛选 ──
 const filterRegion = ref('')
@@ -526,7 +559,7 @@ const testItems = ref<TestItem[]>([])
 const testEditVisible = ref(false)
 const editingTestId = ref<number | null>(null)
 const savingTest = ref(false)
-const testForm = ref<any>({ test_category: 'performance', standard: '', is_required: true })
+const testForm = ref<TestForm>({ test_category: 'performance', standard: '', is_required: true })
 
 // 标准项
 interface StandardItem {
@@ -590,7 +623,7 @@ function openAddDialog() {
     energy_standard_detail: null, national_standard: null,
     voltage_freq: null, cooling_max_temp: null, heating_min_temp: null,
     structure_type: null, main_selling_model: null,
-    refrigerant: null, refrigerant_charge: null,
+    refrigerant: null,
   }
   dialogVisible.value = true
 }
@@ -612,14 +645,13 @@ function openEditDialog(item: MarketItem) {
     structure_type: item.structure_type ?? null,
     main_selling_model: item.main_selling_model ?? null,
     refrigerant: item.refrigerant ?? null,
-    refrigerant_charge: item.refrigerant_charge ?? null,
   }
   dialogVisible.value = true
 }
 
 async function handleSave() {
-  if (!form.value.code || !form.value.name) {
-    ElMessage.warning('请填写市场代码和名称')
+  if (!form.value.name) {
+    ElMessage.warning('请填写市场名称')
     return
   }
   saving.value = true
@@ -628,7 +660,10 @@ async function handleSave() {
       await api.put(`/pm/markets/${editingCode.value}`, form.value)
       ElMessage.success('更新成功')
     } else {
-      await api.post('/pm/markets', form.value)
+      // 新增时自动用名称作为市场代码
+      const payload = { ...form.value }
+      if (!payload.code) payload.code = payload.name
+      await api.post('/pm/markets', payload)
       ElMessage.success('新增成功')
     }
     dialogVisible.value = false
@@ -731,7 +766,7 @@ async function handleDeleteCert(item: CertificationItem) {
   } catch { /* cancelled */ }
 }
 
-// ── 压缩机 CRUD ──
+// ── 关键元器件 CRUD ──
 
 async function openCompressorDialog(item: MarketItem) {
   compMarketCode.value = item.code
@@ -746,7 +781,7 @@ async function fetchCompressors() {
     const res = await api.get(`/pm/markets/${compMarketCode.value}/compressors`)
     compressors.value = res.data || []
   } catch {
-    ElMessage.error('加载压缩机信息失败')
+    ElMessage.error('加载元器件信息失败')
   }
 }
 
@@ -769,7 +804,7 @@ function openEditComp(item: CompressorItem) {
 
 async function handleSaveComp() {
   if (!compForm.value.manufacturer) {
-    ElMessage.warning('请填写压缩机制造商')
+    ElMessage.warning('请填写元器件制造商')
     return
   }
   savingComp.value = true
@@ -793,7 +828,7 @@ async function handleSaveComp() {
 
 async function handleDeleteComp(item: CompressorItem) {
   try {
-    await ElMessageBox.confirm('确定删除该压缩机信息？', '确认删除', { type: 'warning' })
+    await ElMessageBox.confirm('确定删除该元器件信息？', '确认删除', { type: 'warning' })
     await api.delete(`/pm/markets/${compMarketCode.value}/compressors/${item.id}`)
     ElMessage.success('已删除')
     await fetchCompressors()
