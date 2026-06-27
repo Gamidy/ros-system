@@ -43,6 +43,7 @@ from app.models.cert_auto_gen import CertAutoGenLog
 from app.models.notification_channel import NotificationChannel
 from app.models.notification_log import NotificationLog
 from app.models.user_notification_pref import UserNotificationPref
+from app.models.notification_grouping import NotificationCategory, NotificationDoNotDisturb
 from app.models.ecr_eco import ECRAttachment, ECRRequest, ECO, ECOItem
 from app.models.safety import (
     SafetyStandard, SafetyInspectionItem,
@@ -115,6 +116,8 @@ __all__ = [
     "NotificationChannel",
     "NotificationLog",
     "UserNotificationPref",
+    "NotificationCategory",
+    "NotificationDoNotDisturb",
     "ECRAttachment",
     "ECRRequest",
     "ECO",

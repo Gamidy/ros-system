@@ -94,7 +94,12 @@
       <!-- 操作栏 -->
       <div class="toolbar-row">
         <span class="toolbar-title">共 {{ allItems.length }} 条竞品记录</span>
-        <el-button size="small" @click="checkCompleteness">🔍 校验完整性</el-button>
+        <div class="toolbar-actions">
+          <el-button size="small" @click="checkCompleteness">🔍 校验完整性</el-button>
+          <el-button size="small" @click="downloadTemplate">📥 下载模板</el-button>
+          <el-button size="small" type="success" @click="openImportDialog">📤 导入</el-button>
+          <el-button size="small" type="warning" @click="handleExport">📎 导出</el-button>
+        </div>
       </div>
 
       <!-- 竞品卡片 -->
@@ -318,13 +323,52 @@
         <el-button type="primary" @click="handleSave" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- ========== 导入弹窗 ========== -->
+    <el-dialog
+      v-model="importDialogVisible"
+      title="导入竞品数据"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <el-upload
+        ref="uploadRef"
+        drag
+        :accept="'.xlsx,.csv'"
+        :auto-upload="false"
+        :limit="1"
+        :on-change="onImportFileChange"
+        :file-list="importFileList"
+      >
+        <el-icon class="el-icon--upload" :size="40"><UploadFilled /></el-icon>
+        <div class="el-upload__text">拖拽文件到此处，或<em>点击选择</em></div>
+        <template #tip>
+          <div class="el-upload__tip">
+            支持 .xlsx 或 .csv 格式，请先<a @click="downloadTemplate" style="cursor:pointer;color:var(--el-color-primary)">下载模板</a>填写
+          </div>
+        </template>
+      </el-upload>
+      <div v-if="importResult" class="import-result">
+        <p>✅ 导入完成：共 {{ importResult.total }} 行，成功 {{ importResult.imported }} 条</p>
+        <p v-if="importResult.errors > 0" style="color:var(--el-color-danger)">
+          ⚠️ {{ importResult.errors }} 条失败
+        </p>
+        <ul v-if="importResult.error_details?.length" class="error-list">
+          <li v-for="(err, ei) in importResult.error_details" :key="ei">{{ err }}</li>
+        </ul>
+      </div>
+      <template #footer>
+        <el-button @click="closeImportDialog">取消</el-button>
+        <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading, Plus } from '@element-plus/icons-vue'
+import { Loading, Plus, UploadFilled } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import api from '../../api'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -755,6 +799,106 @@ async function handleDelete(item: CompetitorItem) {
     await fetchData()
   } catch {
     // cancelled or error
+  }
+}
+
+// ── 导入导出 ──────────────────────────────────────────────────────
+
+interface ImportResult {
+  total: number
+  imported: number
+  errors: number
+  error_details?: string[]
+  items: Record<string, unknown>[]
+}
+
+const importDialogVisible = ref(false)
+const importFileList = ref<{ name: string; raw?: File }[]>([])
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+const importResult = ref<ImportResult | null>(null)
+
+function openImportDialog() {
+  importDialogVisible.value = true
+  importFileList.value = []
+  importFile.value = null
+  importResult.value = null
+}
+
+function closeImportDialog() {
+  importDialogVisible.value = false
+  importFileList.value = []
+  importFile.value = null
+  importResult.value = null
+}
+
+function onImportFileChange(file: { raw: File; name: string }) {
+  importFile.value = file.raw
+}
+
+async function submitImport() {
+  if (!importFile.value) {
+    ElMessage.warning('请选择要导入的文件')
+    return
+  }
+  importing.value = true
+  importResult.value = null
+  try {
+    const formData = new FormData()
+    formData.append('file', importFile.value)
+    const res = await api.post('/pm/competitors/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    importResult.value = res.data as ImportResult
+    if (res.data.imported > 0) {
+      ElMessage.success(`成功导入 ${res.data.imported} 条竞品数据`)
+      await fetchData()
+    }
+  } catch {
+    ElMessage.error('导入失败')
+  } finally {
+    importing.value = false
+  }
+}
+
+async function downloadTemplate() {
+  try {
+    const res = await api.get('/pm/competitors/template', {
+      responseType: 'blob',
+    })
+    const url = URL.createObjectURL(new Blob([res.data]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'competitor_import_template.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载模板失败')
+  }
+}
+
+async function handleExport() {
+  try {
+    const params: Record<string, string> = {}
+    if (selectedMarket.value) params.market = selectedMarket.value
+    const res = await api.get('/pm/competitors/export', {
+      params,
+      responseType: 'blob',
+    })
+    const filename = `competitors${selectedMarket.value ? '_' + selectedMarket.value : ''}.xlsx`
+    const url = URL.createObjectURL(new Blob([res.data]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
   }
 }
 </script>

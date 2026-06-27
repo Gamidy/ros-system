@@ -27,8 +27,10 @@ from app.api import event_logs
 from app.api import product_plan_review
 from app.api import review_templates
 from app.api import plan_templates
-from app.api import ws
 from app.api import notification_test_api
+from app.api import notification_grouping_api
+from app.api import competitor_import_export
+from app.api import ws
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -202,8 +204,14 @@ app.include_router(ws.router)
 # ── D6-1 通知多渠道测试端点 ──
 app.include_router(notification_test_api.router)
 
+# ── D6-3 通知分组 & 免打扰 ──
+app.include_router(notification_grouping_api.router)
+
 # ── D2-1 策划模板 ──
 app.include_router(plan_templates.router, prefix="/api")
+
+# ── D1-2 竞品导入导出 ──
+app.include_router(competitor_import_export.router)
 
 _celery_thread = None
 
