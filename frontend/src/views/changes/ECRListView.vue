@@ -283,7 +283,7 @@ function urgencyType(s: string) { return (urgencyTypeMap[s] || 'info') as any }
 async function fetchData() {
   loading.value = true
   try {
-    const params: any = { page: page.value, page_size: pageSize.value }
+    const params: Record<string, unknown> = { page: page.value, page_size: pageSize.value }
     if (filter.status) params.status = filter.status
     if (filter.ecr_type) params.ecr_type = filter.ecr_type
     if (filter.urgency) params.urgency = filter.urgency

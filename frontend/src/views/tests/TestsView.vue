@@ -209,7 +209,7 @@ async function fetchProtoList() {
   } catch { /* optional */ }
 }
 
-function editTest(row: any) {
+function editTest(row: Record<string, unknown>) {
   editingTestId.value = row.id
   testForm.value = {
     title: row.title || '',
@@ -224,7 +224,7 @@ function editTest(row: any) {
   showTestDialog.value = true
 }
 
-function showDetail(row: any) {
+function showDetail(row: Record<string, unknown>) {
   selectedTest.value = row
 }
 

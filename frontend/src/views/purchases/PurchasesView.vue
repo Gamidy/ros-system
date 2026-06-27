@@ -87,17 +87,48 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ShoppingCart } from '@element-plus/icons-vue'
 import api from '../../api'
 
+interface OrderDto {
+  id: number
+  order_no: string
+  supplier_name: string
+  total_amount: number
+  status: string
+  requester: string
+  created_at: string
+}
+
+interface SupplierDto {
+  code: string
+  name: string
+  contact: string
+  phone: string
+  email: string
+}
+
+interface OrderItemDto {
+  part_no: string
+  part_name: string
+  quantity: number
+  unit_price: number
+}
+
+interface NewOrderDto {
+  supplier_code: string
+  remark: string
+  items: OrderItemDto[]
+}
+
 const activeTab = ref('orders')
 const loading = ref(false)
 const saving = ref(false)
-const orders = ref<any[]>([])
-const suppliers = ref<any[]>([])
+const orders = ref<OrderDto[]>([])
+const suppliers = ref<SupplierDto[]>([])
 const page = ref(1)
 const total = ref(0)
 const showCreateDialog = ref(false)
 const showSupplierDialog = ref(false)
 
-const newOrder = ref<any>({ supplier_code: '', remark: '', items: [{ part_no: '', part_name: '', quantity: 1, unit_price: 0 }] })
+const newOrder = ref<NewOrderDto>({ supplier_code: '', remark: '', items: [{ part_no: '', part_name: '', quantity: 1, unit_price: 0 }] })
 
 function statusType(s: string) {
   const m: Record<string, string> = { draft: 'info', pending_approval: 'warning', approved: 'primary', ordered: 'success', received: '', cancelled: 'danger' }
@@ -125,7 +156,7 @@ async function fetchSuppliers() {
 
 async function createOrder() {
   // 校验：至少有一个物料单价 > 0
-  if (!newOrder.value.items.some((it: any) => it.unit_price > 0)) {
+  if (!newOrder.value.items.some((it: OrderItemDto) => it.unit_price > 0)) {
     ElMessage.warning('请至少为一行明细填写大于 0 的单价')
     return
   }
@@ -139,17 +170,17 @@ async function createOrder() {
   } finally { saving.value = false }
 }
 
-function viewOrder(row: any) {
+function viewOrder(row: OrderDto) {
   ElMessage.info(`订单 ${row.order_no} 详情功能开发中`)
 }
-function submitOrder(row: any) {
+function submitOrder(row: OrderDto) {
   ElMessageBox.confirm('确认提交审批?', '提示').then(async () => {
     await api.patch(`/purchases/orders/${row.id}`, { status: 'pending_approval' })
     ElMessage.success('已提交审批')
     fetchOrders()
   }).catch(() => {})
 }
-function viewSupplier(row: any) {
+function viewSupplier(row: SupplierDto) {
   ElMessage.info(`供应商 ${row.name} 详情功能开发中`)
 }
 

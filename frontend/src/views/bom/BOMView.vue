@@ -192,9 +192,35 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
+// ——— 类型定义 ———
+interface CostLevelItem {
+  level: number
+  level_name: string
+  total_cost: number
+  item_count: number
+}
+interface CostSummary {
+  total_cost: number
+  cost_by_level: CostLevelItem[]
+}
+interface TreeNode {
+  id: string | number
+  part_no: string
+  part_name: string
+  quantity: number
+  item_type: string
+  level?: number
+  children?: TreeNode[]
+}
+interface BomItem {
+  id: number | string
+  bom_no: string
+  product_code: string
+}
+
 // ——— 原有：物料 & BOM ———
-const parts = ref<any[]>([])
-const boms = ref<any[]>([])
+const parts = ref<Record<string, unknown>[]>([])
+const boms = ref<BomItem[]>([])
 const saving = ref(false)
 
 const showPartDialog = ref(false)
@@ -204,19 +230,19 @@ const bomForm = ref({ bom_no: '', product_code: '' })
 
 // ——— 新增：BOM树可视化 ———
 const selectedBomId = ref<number | string | null>(null)
-const treeData = ref<any[]>([])
-const selectedNode = ref<any>(null)
+const treeData = ref<TreeNode[]>([])
+const selectedNode = ref<TreeNode | null>(null)
 const showNodeDetail = ref(false)
-const costSummary = ref<any>(null)
+const costSummary = ref<CostSummary | null>(null)
 const loadingCost = ref(false)
 
 const treeProps = { children: 'children', label: 'part_name' }
 
 /** 递归遍历树节点 */
-function walkTree(nodes: any[], level: number, fn: (node: any, level: number) => void) {
+function walkTree(nodes: TreeNode[], level: number, fn: (node: TreeNode, level: number) => void) {
   for (const node of nodes) {
     fn(node, level)
-    if (node.children && node.children.length) {
+    if (node.children?.length) {
       walkTree(node.children, level + 1, fn)
     }
   }
@@ -282,7 +308,7 @@ async function refreshCost() {
 }
 
 /** 树节点点击 */
-function onNodeClick(data: any) {
+function onNodeClick(data: TreeNode) {
   selectedNode.value = data
   showNodeDetail.value = true
 }

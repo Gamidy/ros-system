@@ -337,7 +337,7 @@ function formatFileSize(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
-function downloadAttachment(row: any) {
+function downloadAttachment(row: Record<string, unknown>) {
   window.open(row.file_path, '_blank')
 }
 

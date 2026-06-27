@@ -157,8 +157,21 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '../../api'
 
+interface EventDto {
+  id: number
+  event_version?: string
+  saga_id?: string
+  payload?: Record<string, unknown>
+  state_snapshot?: Record<string, unknown>
+  handler_summary?: Record<string, unknown>
+  event_type: string
+  plan_id?: string | number
+  status: string
+  created_at: string
+}
+
 // ── Data ──
-const events = ref<any[]>([])
+const events = ref<EventDto[]>([])
 const eventTypes = ref<string[]>([])
 const loading = ref(false)
 const typesLoading = ref(false)
@@ -204,7 +217,7 @@ function statusTagType(status: string): string {
   return map[status] || 'info'
 }
 
-function rowClass({ row }: { row: any }): string {
+function rowClass({ row }: { row: EventDto }): string {
   return expandedRows.value.has(row.id) ? 'expanded-row' : ''
 }
 
@@ -226,7 +239,7 @@ async function fetchEventTypes() {
 async function fetchEvents() {
   loading.value = true
   try {
-    const params: Record<string, any> = {
+    const params: Record<string, unknown> = {
       page: currentPage.value,
       page_size: pageSize.value,
     }
@@ -246,7 +259,7 @@ async function fetchEvents() {
 }
 
 // ── Events ──
-function toggleRowExpand(row: any) {
+function toggleRowExpand(row: EventDto) {
   const id = row.id
   if (expandedRows.value.has(id)) {
     expandedRows.value.delete(id)

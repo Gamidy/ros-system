@@ -171,7 +171,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: Record<string, unknown>) {
   if (row) {
     editingId.value = row.id
     form.value = { ...row }
@@ -185,7 +185,7 @@ function openDialog(row?: any) {
 async function save() {
   saving.value = true
   try {
-    const payload: any = { ...form.value }
+    const payload: Record<string, unknown> = { ...form.value }
     if (editingId.value) {
       await api.patch(`/certifications/quality-issues/${editingId.value}`, payload)
       ElMessage.success('更新成功')

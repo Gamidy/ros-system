@@ -228,8 +228,8 @@ const sources = ['年度规划', '客户需求', '品质整改', '研发降本',
 
 const filteredProjects = computed(() => {
   let list = projects.value
-  if (filterClass.value) list = list.filter((p: any) => p.project_class === filterClass.value)
-  if (filterStatus.value) list = list.filter((p: any) => p.status === filterStatus.value)
+  if (filterClass.value) list = list.filter((p: Record<string, unknown>) => p.project_class === filterClass.value)
+  if (filterStatus.value) list = list.filter((p: Record<string, unknown>) => p.status === filterStatus.value)
   return list
 })
 
@@ -248,8 +248,8 @@ async function fetchAll() {
 async function onTabChange(name: string) {
   if (name === 'risks') {
     try {
-      const all = await Promise.all(projects.value.map((p: any) => api.get(`/projects/${p.id}/risks`).catch(() => ({ data: [] }))))
-      allRisks.value = all.flatMap((r: any) => r.data)
+      const all = await Promise.all(projects.value.map((p: Record<string, unknown>) => api.get(`/projects/${p.id}/risks`).catch(() => ({ data: [] }))))
+      allRisks.value = all.flatMap((r: Record<string, unknown>) => r.data)
     } catch {}
   }
 }
@@ -262,7 +262,7 @@ async function saveProject() {
   try { await api.post('/projects', pjForm.value); ElMessage.success('项目创建成功，M1~M9已自动生成'); showProjectDialog.value = false; pjForm.value = { ...pjForm.value, code: '', name: '' }; await fetchAll() } catch {}
 }
 
-async function openProjectDetail(row: any) {
+async function openProjectDetail(row: Record<string, unknown>) {
   try {
     const [pd, g, t, r] = await Promise.all([
       api.get(`/projects/${row.id}`),
@@ -271,7 +271,7 @@ async function openProjectDetail(row: any) {
       api.get(`/projects/${row.id}/risks`)
     ])
     detailProject.value = pd.data
-    detailGates.value = (g.data || []).sort((a:any,b:any) => a.seq - b.seq).map((g:any) => ({...g, _newStatus: ''}))
+    detailGates.value = (g.data || []).sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a.seq as number) - (b.seq as number)).map((g: Record<string, unknown>) => ({...g, _newStatus: ''}))
     detailTasks.value = t.data || []
     detailRisks.value = r.data || []
     showDetailDialog.value = true

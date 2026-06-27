@@ -173,11 +173,11 @@ const closedThisMonth = computed(() => {
 
 // ── 分布百分比 ──
 function statusPercent(count: number) {
-  const total = Object.values(processStatusDistribution.value).reduce((a: number, b: any) => a + (Number(b) || 0), 0)
+  const total = Object.values(processStatusDistribution.value).reduce((a: number, b: number) => a + (Number(b) || 0), 0)
   return total > 0 ? Math.round((count / total) * 100) : 0
 }
 function typePercent(count: number) {
-  const total = Object.values(typeDistribution.value).reduce((a: number, b: any) => a + (Number(b) || 0), 0)
+  const total = Object.values(typeDistribution.value).reduce((a: number, b: number) => a + (Number(b) || 0), 0)
   return total > 0 ? Math.round((count / total) * 100) : 0
 }
 

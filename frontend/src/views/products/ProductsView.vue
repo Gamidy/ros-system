@@ -267,9 +267,9 @@ import api from '../../api'
 const tab = ref('platforms')
 
 // Data
-const platforms = ref<any[]>([])
-const products = ref<any[]>([])
-const markets = ref<any[]>([])
+const platforms = ref<Record<string, unknown>[]>([])
+const products = ref<Record<string, unknown>[]>([])
+const markets = ref<Record<string, unknown>[]>([])
 
 // Filters
 const platformTypeFilter = ref('')
@@ -291,18 +291,18 @@ const verForm = ref({ version_no: '', reason: '', change_type: '', customer_perc
 const variantForm = ref({ factory_code: '', factory_name: '', mbom_version: '' })
 
 // State
-const currentProduct = ref<any>(null)
-const currentVersions = ref<any[]>([])
+const currentProduct = ref<Record<string, unknown> | null>(null)
+const currentVersions = ref<Record<string, unknown>[]>([])
 const selectedMarkets = ref<string[]>([])
 const evaluating = ref(false)
 const ruleForm = ref({ change_description: '', material_level: 'minor', change_category: 'bom_only', is_customer_perceivable: false })
-const ruleResult = ref<any>(null)
+const ruleResult = ref<Record<string, unknown> | null>(null)
 
 // Computed
-const iduPlatforms = computed(() => platforms.value.filter((p: any) => p.platform_type === 'IDU'))
-const oduPlatforms = computed(() => platforms.value.filter((p: any) => p.platform_type === 'ODU'))
-const filteredPlatforms = computed(() => platformTypeFilter.value ? platforms.value.filter((p: any) => p.platform_type === platformTypeFilter.value) : platforms.value)
-const filteredProducts = computed(() => productPlatformFilter.value ? products.value.filter((p: any) => p.platform_id === productPlatformFilter.value) : products.value)
+const iduPlatforms = computed(() => platforms.value.filter((p) => p.platform_type === 'IDU'))
+const oduPlatforms = computed(() => platforms.value.filter((p) => p.platform_type === 'ODU'))
+const filteredPlatforms = computed(() => platformTypeFilter.value ? platforms.value.filter((p) => p.platform_type === platformTypeFilter.value) : platforms.value)
+const filteredProducts = computed(() => productPlatformFilter.value ? products.value.filter((p) => p.platform_id === productPlatformFilter.value) : products.value)
 
 const versionStatusOptions = [
   { value: 'draft', label: '草稿' }, { value: 'developing', label: '开发中' },
@@ -319,8 +319,8 @@ async function fetchAll() {
     platforms.value = pRes.data
     products.value = prodRes.data
     markets.value = mRes.data
-  } catch (e: any) {
-    ElMessage.error('加载失败: ' + (e?.message || ''))
+  } catch (e: unknown) {
+    ElMessage.error('加载失败: ' + (e instanceof Error ? e.message : ''))
   }
 }
 
@@ -364,15 +364,15 @@ async function saveMarket() {
 }
 
 // Market Assign
-function openMarketAssign(product: any) {
+function openMarketAssign(product: Record<string, unknown>) {
   currentProduct.value = product
-  selectedMarkets.value = [...(product.market_codes || [])]  // BUGFIX: use market_codes
+  selectedMarkets.value = [...((product.market_codes as string[]) || [])]
   showMarketAssignDialog.value = true
 }
 
 async function saveMarketAssign() {
   try {
-    await api.post(`/products/${currentProduct.value.id}/markets`, { market_codes: selectedMarkets.value })
+    await api.post(`/products/${(currentProduct.value as Record<string, unknown>).id}/markets`, { market_codes: selectedMarkets.value })
     ElMessage.success('市场分配成功')
     showMarketAssignDialog.value = false
     await fetchAll()
@@ -380,10 +380,10 @@ async function saveMarketAssign() {
 }
 
 // Version
-function openVersionManage(product: any) {
+function openVersionManage(product: Record<string, unknown>) {
   currentProduct.value = product
   showVersionListDialog.value = true
-  fetchVersions(product.id)
+  fetchVersions(product.id as number)
 }
 
 async function fetchVersions(pid: number) {
@@ -395,11 +395,11 @@ async function fetchVersions(pid: number) {
 
 async function saveVersion() {
   try {
-    await api.post(`/products/${currentProduct.value.id}/versions`, verForm.value)
+    await api.post(`/products/${(currentProduct.value as Record<string, unknown>).id}/versions`, verForm.value)
     ElMessage.success('版本创建成功')
     showVersionDialog.value = false
     verForm.value = { version_no: '', reason: '', change_type: '', customer_perceivable: false }
-    await fetchVersions(currentProduct.value.id)
+    await fetchVersions((currentProduct.value as Record<string, unknown>).id as number)
   } catch {}
 }
 
@@ -407,7 +407,7 @@ async function changeVersionStatus(vid: number, status: string) {
   try {
     await api.patch(`/products/versions/${vid}/status`, { status })
     ElMessage.success('状态更新成功')
-    await fetchVersions(currentProduct.value.id)
+    await fetchVersions((currentProduct.value as Record<string, unknown>).id as number)
   } catch {}
 }
 
@@ -422,7 +422,7 @@ async function saveVariant() {
     await api.post(`/products/versions/${vid}/variants`, variantForm.value)
     ElMessage.success('制造变体添加成功')
     variantForm.value = { factory_code: '', factory_name: '', mbom_version: '' }
-    await fetchVersions(currentProduct.value.id)
+    await fetchVersions((currentProduct.value as Record<string, unknown>).id as number)
   } catch {}
 }
 

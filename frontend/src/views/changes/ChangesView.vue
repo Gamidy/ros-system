@@ -216,7 +216,7 @@ async function fetchData() {
 }
 
 // ECR actions
-function openEcrDialog(row?: any) {
+function openEcrDialog(row?: Record<string, unknown>) {
   if (row) {
     editingEcrId.value = row.id
     ecrForm.value = { ...row }
@@ -230,7 +230,7 @@ function openEcrDialog(row?: any) {
 async function saveEcr() {
   saving.value = true
   try {
-    const payload: any = { ...ecrForm.value }
+    const payload: Record<string, unknown> = { ...ecrForm.value }
     if (editingEcrId.value) {
       await api.patch(`/certifications/ecrs/${editingEcrId.value}`, payload)
       ElMessage.success('更新成功')
@@ -253,7 +253,7 @@ function openEcnDialog() {
 async function saveEcn() {
   saving.value = true
   try {
-    const payload: any = { ...ecnForm.value }
+    const payload: Record<string, unknown> = { ...ecnForm.value }
     if (!payload.ecr_id) delete payload.ecr_id
     await api.post('/certifications/ecns', payload)
     ElMessage.success('创建成功')
