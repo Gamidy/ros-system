@@ -305,6 +305,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Plus } from '@element-plus/icons-vue'
+import { useRoute } from 'vue-router'
 import api from '../../api'
 import type { FormInstance, FormRules } from 'element-plus'
 
@@ -358,6 +359,8 @@ const selectedMarket = ref('')
 const selectedCapacity = ref('')
 const selectedEnergyRating = ref('')
 const selectedProductType = ref('')
+
+const route = useRoute()
 
 // ── 市场能效配置（动态从API获取）───────────────────────────────────
 const MARKET_ENERGY_MAP = ref<Record<string, { key: string; label: string }>>({})
@@ -549,8 +552,19 @@ watch(() => selectedMarket.value, (newMarket) => {
 }, { immediate: false })
 
 // 初始化从DB加载市场列表
-onMounted(() => {
-  fetchMarkets()
+onMounted(async () => {
+  await fetchMarkets()
+
+  // 从查询参数自动选中市场和产品类型
+  if (route.query.market) {
+    const market = route.query.market as string
+    const type = (route.query.type as string) || ''
+    selectedProductType.value = type
+    selectedMarket.value = market
+    form.value.market = market
+    form.value.product_type = type
+    // watch on selectedMarket 会自动触发 fetchData()
+  }
 })
 
 // ── 弹窗 & 表单 ──────────────────────────────────────────────────

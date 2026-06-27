@@ -27,7 +27,7 @@
 <el-row :gutter="12">
 <el-col :span="8"><el-form-item label="策划名称"><el-input v-model="editForm.name" /></el-form-item></el-col>
 <el-col :span="8"><el-form-item label="产品系列"><el-input v-model="editForm.series" /></el-form-item></el-col>
-<el-col :span="8"><el-form-item label="目标市场"><el-select v-model="editForm.market" filterable clearable style="width:100%"><el-option v-for="m in marketOptions" :key="m.name" :label="m.name" :value="m.name" /></el-select></el-form-item></el-col>
+<el-col :span="8"><el-form-item label="目标市场"><el-select v-model="editForm.market" filterable clearable style="width:100%"><el-option v-for="m in marketOptions" :key="m.name" :label="m.name" :value="m.name" /></el-select><el-button size="small" type="primary" link @click="goCompetitor" style="margin-left:8px">📊 查看同类竞品</el-button></el-form-item></el-col>
 </el-row>
 <el-row :gutter="12">
 <el-col :span="8"><el-form-item label="竞品关联"><el-input-number v-model="editForm.competitor_id" :min="0" style="width:100%" /></el-form-item></el-col>
@@ -323,7 +323,7 @@
 <el-form label-width="80" size="small">
 <el-form-item label="策划名称"><el-input v-model="editForm.name" /></el-form-item>
 <el-form-item label="产品系列"><el-input v-model="editForm.series" /></el-form-item>
-<el-form-item label="目标市场"><el-select v-model="editForm.market" filterable clearable style="width:100%"><el-option v-for="m in marketOptions" :key="m.name" :label="m.name" :value="m.name" /></el-select></el-form-item>
+<el-form-item label="目标市场"><el-select v-model="editForm.market" filterable clearable style="width:100%"><el-option v-for="m in marketOptions" :key="m.name" :label="m.name" :value="m.name" /></el-select><el-button size="small" type="primary" link @click="goCompetitor" style="margin-left:8px">📊 查看同类竞品</el-button></el-form-item>
 <el-form-item label="竞品ID"><el-input-number v-model="editForm.competitor_id" :min="0" style="width:100%" /></el-form-item>
 <el-divider />
 <el-form-item label="立项背景"><el-input v-model="initiationForm.background" type="textarea" :rows="2" /></el-form-item>
@@ -455,7 +455,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
@@ -544,6 +544,7 @@ interface TeamMember {
 }
 
 const route = useRoute()
+const router = useRouter()
 const planId = route.params.id as string
 const { isMobile } = useResponsive()
 
@@ -938,6 +939,13 @@ const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {
 ElMessage.error(_err || '操作失败，请重试')
 }
 finally { saving.value = false }
+}
+
+/** 跳转到竞品对标页，携带当前市场和产品类型 */
+function goCompetitor() {
+  const market = editForm.value.market
+  const type = initiationForm.type || ''
+  router.push(`/competitor-bench?market=${encodeURIComponent(market)}&type=${encodeURIComponent(type)}`)
 }
 
 // ── 成本 ──
