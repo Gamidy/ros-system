@@ -444,6 +444,14 @@ const router = createRouter({
           component: () => import('../views/bi/CostAnalytics.vue'),
           meta: { title: 'BI成本分析', menu: 'bi' },
         },
+        // D4-3 复盘看板
+        {
+          path: 'review/dashboard',
+          name: 'ReviewDashboard',
+          component: () => import('../views/review/ReviewDashboard.vue'),
+          meta: { title: '复盘看板', menu: 'product-plans' },
+        },
+
         // P2-T5 — 规则管理
         {
           path: 'cert/rules',

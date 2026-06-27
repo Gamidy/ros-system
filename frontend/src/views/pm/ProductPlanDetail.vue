@@ -268,6 +268,140 @@
 </div>
 </template>
 
+<!-- 版本历史 Tab -->
+<template v-if="!isMobile">
+<el-tab-pane label="版本历史" name="versionHistory">
+  <div class="version-history-container">
+    <el-row :gutter="16">
+      <!-- 左侧：版本选择器 + 时间线 -->
+      <el-col :span="9">
+        <div class="vh-panel">
+          <div class="vh-panel-header">
+            <h3>📜 版本时间线</h3>
+            <span class="vh-count">共 {{ versionTotal }} 个版本</span>
+          </div>
+          <!-- 版本选择 -->
+          <div class="vh-selectors">
+            <el-select v-model="selectedVersionA" placeholder="选择旧版本" size="small" style="width:100%;margin-bottom:6px" @change="onVersionChange">
+              <el-option v-for="v in versionList" :key="v.version" :label="`v${v.version} (${v.changed_by || 'system'})`" :value="v.version" />
+            </el-select>
+            <el-select v-model="selectedVersionB" placeholder="选择新版本" size="small" style="width:100%" @change="onVersionChange">
+              <el-option v-for="v in versionList" :key="v.version" :label="`v${v.version} (${v.changed_by || 'system'})`" :value="v.version" />
+            </el-select>
+          </div>
+          <!-- 时间线 -->
+          <el-timeline v-if="versionList.length > 0" class="vh-timeline">
+            <el-timeline-item
+              v-for="v in versionList"
+              :key="v.version"
+              :timestamp="v.changed_at || ''"
+              placement="top"
+              :color="versionHighlightColor(v.version)"
+            >
+              <div class="vh-timeline-item">
+                <div class="vh-timeline-header">
+                  <el-tag size="small" :type="v.version === planVersion ? 'success' : 'primary'" effect="plain">
+                    v{{ v.version }}
+                    <template v-if="v.version === planVersion">（当前）</template>
+                  </el-tag>
+                  <span class="vh-changer">{{ v.changed_by || 'system' }}</span>
+                </div>
+                <div class="vh-timeline-actions" v-if="v.version !== planVersion">
+                  <el-button link size="small" type="primary" @click="selectedVersionA = v.version; onVersionChange()">← 旧版</el-button>
+                  <el-button link size="small" type="primary" @click="selectedVersionB = v.version; onVersionChange()">新版 →</el-button>
+                </div>
+              </div>
+            </el-timeline-item>
+          </el-timeline>
+          <div v-else class="vh-empty-timeline">
+            <el-empty description="暂无版本历史" :image-size="60" />
+          </div>
+          <div class="vh-timeline-footer" v-if="versionTotal > pageSize">
+            <el-pagination
+              v-model:current-page="versionPage"
+              :page-size="pageSize"
+              :total="versionTotal"
+              layout="prev, pager, next"
+              small
+              @current-change="fetchVersions"
+            />
+          </div>
+        </div>
+      </el-col>
+      <!-- 右侧：Diff 对比视图 -->
+      <el-col :span="15">
+        <div class="vh-panel">
+          <div class="vh-panel-header">
+            <h3>🔍 版本对比</h3>
+            <div class="vh-actions">
+              <el-button size="small" type="primary" @click="compareVersions" :disabled="!canCompare" :loading="comparing">
+                对比
+              </el-button>
+              <el-button size="small" @click="clearSelection">清除选择</el-button>
+              <el-button
+                v-if="diffResult && selectedVersionA"
+                size="small"
+                type="warning"
+                @click="handleRollback(selectedVersionA)"
+                :loading="rollingBack"
+              >
+                回滚到 v{{ selectedVersionA }}
+              </el-button>
+            </div>
+          </div>
+          <div v-if="!canCompare" class="vh-empty-diff">
+            <el-empty description="请选择两个版本进行对比" :image-size="80" />
+          </div>
+          <div v-else-if="comparing" class="vh-loading-diff">
+            <el-skeleton :rows="5" animated />
+          </div>
+          <div v-else-if="diffResult" class="vh-diff-result">
+            <div class="vh-diff-summary">
+              <el-alert
+                :title="`对比 v${diffResult.version_a} → v${diffResult.version_b}，共 ${diffResult.changes.length} 处变更`"
+                :type="diffResult.changes.length > 0 ? 'warning' : 'success'"
+                :closable="false"
+                show-icon
+              />
+            </div>
+            <div v-if="diffResult.changes.length > 0" class="vh-diff-table">
+              <div class="vh-diff-row vh-diff-row-header">
+                <span class="vh-diff-col-field">字段</span>
+                <span class="vh-diff-col-old">旧值（v{{ diffResult.version_a }}）</span>
+                <span class="vh-diff-col-new">新值（v{{ diffResult.version_b }}）</span>
+                <span class="vh-diff-col-type">类型</span>
+              </div>
+              <div
+                v-for="change in diffResult.changes"
+                :key="change.field"
+                class="vh-diff-row"
+                :class="'vh-diff-' + change.type"
+              >
+                <span class="vh-diff-col-field">
+                  <el-tooltip :content="change.field" placement="top">
+                    <span>{{ change.label }}</span>
+                  </el-tooltip>
+                </span>
+                <span class="vh-diff-col-old" v-html="formatDiffValue(change.old_value)"></span>
+                <span class="vh-diff-col-new" v-html="formatDiffValue(change.new_value)"></span>
+                <span class="vh-diff-col-type">
+                  <el-tag size="small" :type="diffTagType(change.type)" effect="dark">
+                    {{ diffTagLabel(change.type) }}
+                  </el-tag>
+                </span>
+              </div>
+            </div>
+            <div v-else class="vh-diff-no-changes">
+              <el-result icon="success" title="两个版本内容一致" sub-title="无差异" />
+            </div>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+  </div>
+</el-tab-pane>
+</template>
+
 <!-- ─── 移动端: 5步分步表单 ─── -->
 <template v-if="isMobile && plan">
 <el-steps :active="mobileStep" finish-status="success" simple style="margin-bottom:12px;overflow-x:auto;">
@@ -1414,6 +1548,158 @@ async function quickSubmit() {
   }
 }
 
+// ── D2-3 版本历史 ──
+
+const versionList = ref<planAPI.PlanVersionItem[]>([])
+const versionTotal = ref(0)
+const versionPage = ref(1)
+const pageSize = 20
+const selectedVersionA = ref<number | null>(null)
+const selectedVersionB = ref<number | null>(null)
+const diffResult = ref<planAPI.VersionDiffResult | null>(null)
+const comparing = ref(false)
+const rollingBack = ref(false)
+
+/** 当前策划的最新版本号 */
+const planVersion = computed(() => plan.value?.version ?? 0)
+
+/** 是否可以选择两个版本进行对比 */
+const canCompare = computed(() => {
+  return (
+    selectedVersionA.value !== null &&
+    selectedVersionB.value !== null &&
+    selectedVersionA.value !== selectedVersionB.value
+  )
+})
+
+/** 版本时间线图标颜色 — 被选中时高亮 */
+function versionHighlightColor(v: number): string | undefined {
+  if (v === selectedVersionA.value || v === selectedVersionB.value) {
+    return '#409eff'
+  }
+  return undefined
+}
+
+/** 版本变更类型 → tag 类型 */
+function diffTagType(type: string): 'success' | 'danger' | 'warning' {
+  if (type === 'added') return 'success'
+  if (type === 'removed') return 'danger'
+  return 'warning'
+}
+
+/** 版本变更类型 → 中文标签 */
+function diffTagLabel(type: string): string {
+  if (type === 'added') return '新增'
+  if (type === 'removed') return '删除'
+  return '修改'
+}
+
+/** 格式化 diff 值（处理 null/undefined/对象） */
+function formatDiffValue(val: unknown): string {
+  if (val === null || val === undefined) return '<span class="vh-diff-null">—</span>'
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val, null, 2)
+    } catch {
+      return String(val)
+    }
+  }
+  return String(val)
+}
+
+/** 版本选择变化时触发的回调 */
+function onVersionChange() {
+  // 如果两个版本相同，清除第二个
+  if (
+    selectedVersionA.value !== null &&
+    selectedVersionB.value !== null &&
+    selectedVersionA.value === selectedVersionB.value
+  ) {
+    selectedVersionB.value = null
+  }
+}
+
+/** 清除所有选择 */
+function clearSelection() {
+  selectedVersionA.value = null
+  selectedVersionB.value = null
+  diffResult.value = null
+}
+
+/** 获取版本历史列表 */
+async function fetchVersions() {
+  try {
+    const res = await planAPI.listPlanVersions(planId, {
+      page: versionPage.value,
+      page_size: pageSize,
+    })
+    const data = res.data as planAPI.PlanVersionListResult
+    versionList.value = data.items || []
+    versionTotal.value = data.total || 0
+  } catch {
+    versionList.value = []
+    versionTotal.value = 0
+  }
+}
+
+/** 对比两个版本 */
+async function compareVersions() {
+  if (!canCompare.value) {
+    ElMessage.warning('请选择两个不同的版本进行对比')
+    return
+  }
+  comparing.value = true
+  diffResult.value = null
+  try {
+    const vA = selectedVersionA.value!
+    const vB = selectedVersionB.value!
+    const res = await planAPI.getPlanVersionDiff(planId, vA, vB)
+    diffResult.value = res.data as planAPI.VersionDiffResult
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e
+      ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail
+      : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '对比失败，请稍后重试')
+  } finally {
+    comparing.value = false
+  }
+}
+
+/** 回滚到指定版本 */
+async function handleRollback(version: number) {
+  try {
+    await ElMessageBox.confirm(
+      `确定将策划回滚到 v${version} 吗？<br><br><span style="color:#e6a23c;font-size:12px">⚠️ 回滚后当前数据将被覆盖，且会创建新的版本快照。</span>`,
+      '回滚确认',
+      {
+        confirmButtonText: '确认回滚',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true,
+      },
+    )
+  } catch {
+    return // 用户取消
+  }
+
+  rollingBack.value = true
+  try {
+    await planAPI.rollbackPlanVersion(planId, version)
+    ElMessage.success(`已成功回滚到 v${version}`)
+    diffResult.value = null
+    selectedVersionA.value = null
+    selectedVersionB.value = null
+    await Promise.all([fetchPlan(), fetchVersions()])
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e
+      ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail
+      : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '回滚失败，请稍后重试')
+  } finally {
+    rollingBack.value = false
+  }
+}
+
 onMounted(async () => {
   await Promise.all([
     fetchPlan(),
@@ -1423,6 +1709,7 @@ onMounted(async () => {
     fetchTeam(),
     fetchMarketOptions(),
     fetchTemplates(),
+    fetchVersions(),
   ])
   refreshStatus()
 })
@@ -1485,4 +1772,43 @@ onMounted(async () => {
 .validation-error-list { margin: 8px 0 0; padding-left: 20px; list-style: disc; }
 .validation-error-list li { font-size: 13px; line-height: 1.8; color: #f56c6c; }
 .validation-error-list .error-field { font-weight: 600; }
+/* D2-3 版本历史 */
+.version-history-container { min-height: 480px; }
+.vh-panel { border: 1px solid #ebeef5; border-radius: 6px; padding: 16px; background: #fff; height: 100%; }
+.vh-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.vh-panel-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.vh-count { font-size: 12px; color: #909399; }
+.vh-selectors { margin-bottom: 12px; }
+.vh-timeline { max-height: 440px; overflow-y: auto; }
+.vh-timeline-item { font-size: 13px; }
+.vh-timeline-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.vh-changer { font-size: 12px; color: #909399; }
+.vh-timeline-actions { display: flex; gap: 4px; margin-top: 2px; }
+.vh-empty-timeline { padding: 20px 0; }
+.vh-timeline-footer { margin-top: 12px; text-align: center; }
+.vh-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.vh-empty-diff { padding: 40px 0; display: flex; justify-content: center; }
+.vh-loading-diff { padding: 24px; }
+.vh-diff-summary { margin-bottom: 12px; }
+.vh-diff-result { max-height: 500px; overflow-y: auto; }
+.vh-diff-table { border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+.vh-diff-row { display: flex; align-items: flex-start; border-bottom: 1px solid #f2f2f2; font-size: 13px; line-height: 1.6; }
+.vh-diff-row:last-child { border-bottom: none; }
+.vh-diff-row-header { background: #f5f7fa; font-weight: 600; color: #606266; }
+.vh-diff-col-field { flex: 0 0 120px; padding: 8px 10px; word-break: break-all; }
+.vh-diff-col-old { flex: 1; padding: 8px 10px; word-break: break-all; white-space: pre-wrap; font-family: monospace; font-size: 12px; }
+.vh-diff-col-new { flex: 1; padding: 8px 10px; word-break: break-all; white-space: pre-wrap; font-family: monospace; font-size: 12px; }
+.vh-diff-col-type { flex: 0 0 56px; padding: 8px 6px; text-align: center; }
+/* 变更行颜色 */
+.vh-diff-added { background: #f0f9eb; }
+.vh-diff-added .vh-diff-col-new { background: #e1f3d8; color: #67c23a; font-weight: 600; }
+.vh-diff-added .vh-diff-col-old { color: #909399; }
+.vh-diff-removed { background: #fef0f0; }
+.vh-diff-removed .vh-diff-col-old { background: #fde2e2; color: #f56c6c; font-weight: 600; text-decoration: line-through; }
+.vh-diff-removed .vh-diff-col-new { color: #909399; }
+.vh-diff-modified { background: #fdf6ec; }
+.vh-diff-modified .vh-diff-col-old { background: #fde2e2; color: #f56c6c; }
+.vh-diff-modified .vh-diff-col-new { background: #e1f3d8; color: #67c23a; }
+.vh-diff-null { color: #c0c4cc; font-style: italic; }
+.vh-diff-no-changes { padding: 32px 0; }
 </style>

@@ -402,3 +402,54 @@ export function batchClonePlans(data: BatchCloneRequest) {
 export function batchCreatePlans(data: BatchCreateRequest) {
   return api.post('/product-plans/batch-create', data)
 }
+
+// ── D2-3 版本历史 ──
+
+/** 版本历史条目 */
+export interface PlanVersionItem {
+  version: number
+  changed_by: string | null
+  changed_at: string | null
+}
+
+/** 版本历史列表结果 */
+export interface PlanVersionListResult {
+  items: PlanVersionItem[]
+  total: number
+  page: number
+  page_size: number
+  current_version: number
+}
+
+/** 版本差异变更项 */
+export interface VersionDiffChange {
+  field: string
+  label: string
+  type: 'added' | 'removed' | 'modified'
+  old_value: unknown
+  new_value: unknown
+}
+
+/** 版本差异结果 */
+export interface VersionDiffResult {
+  version_a: number
+  version_b: number
+  changes: VersionDiffChange[]
+}
+
+/** 获取策划版本历史列表 */
+export function listPlanVersions(planId: string, params?: { page?: number; page_size?: number }) {
+  return api.get(`/product-plans/${planId}/versions`, { params })
+}
+
+/** 获取两个版本的差异对比 */
+export function getPlanVersionDiff(planId: string, versionA: number, versionB: number) {
+  return api.get(`/product-plans/${planId}/versions/diff`, {
+    params: { version_a: versionA, version_b: versionB },
+  })
+}
+
+/** 回滚到指定历史版本 */
+export function rollbackPlanVersion(planId: string, version: number) {
+  return api.post(`/product-plans/${planId}/versions/${version}/rollback`)
+}

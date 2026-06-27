@@ -92,6 +92,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/market-mgmt', title: '市场管理', icon: Stamp },
       { path: '/pm/requirements', title: '需求管理', icon: Document },
       { path: '/pm/requirements/submit', title: '需求录入', icon: Edit },
+      { path: '/review/dashboard', title: '复盘看板', icon: DataAnalysis },
     ]
   },
   {
@@ -236,6 +237,7 @@ export const ALL_MENUS: MenuItem[] = [
   // P2 需求录入
   { path: '/pm/requirements',        title: '需求管理', icon: Document },
   { path: '/pm/requirements/submit', title: '需求录入', icon: Edit },
+  { path: '/review/dashboard',       title: '复盘看板', icon: DataAnalysis },
 ]
 
 /**

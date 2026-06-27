@@ -826,6 +826,171 @@ def get_plan_version_snapshot(
         raise HTTPException(status_code=500, detail=f"查询版本快照失败: {str(e)}")
 
 
+@router.get("/{plan_id}/versions/diff")
+def diff_plan_versions(
+    plan_id: str,
+    version_a: int = Query(..., description="版本A（旧版本）"),
+    version_b: int = Query(..., description="版本B（新版本）"),
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("product-plans")),
+) -> dict:
+    """比较两个版本的策划快照，返回字段级差异列表。
+
+    Args:
+        plan_id: 策划 ID
+        version_a: 旧版本号（左侧显示）
+        version_b: 新版本号（右侧显示）
+
+    Returns:
+        dict: { version_a, version_b, changes: [{ field, type, old_value, new_value }] }
+    """
+    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="策划不存在")
+
+    try:
+        ha = db.query(ProductPlanHistory).filter(
+            ProductPlanHistory.product_plan_id == plan_id,
+            ProductPlanHistory.version == version_a,
+        ).first()
+        hb = db.query(ProductPlanHistory).filter(
+            ProductPlanHistory.product_plan_id == plan_id,
+            ProductPlanHistory.version == version_b,
+        ).first()
+
+        if not ha:
+            raise HTTPException(status_code=404, detail=f"版本 {version_a} 不存在")
+        if not hb:
+            raise HTTPException(status_code=404, detail=f"版本 {version_b} 不存在")
+
+        snap_a: dict = json.loads(ha.snapshot)
+        snap_b: dict = json.loads(hb.snapshot)
+
+        # 字段展示标签映射
+        FIELD_LABELS: dict[str, str] = {
+            "name": "策划名称",
+            "series": "产品系列",
+            "market": "目标市场",
+            "target_market_detail": "目标市场(详细)",
+            "competitor_id": "竞品关联ID",
+            "cost_target": "成本目标",
+            "performance_target": "技术指标目标",
+            "status": "流程阶段",
+            "org_id": "所属组织",
+            "created_by": "创建者",
+            "version": "版本号",
+        }
+
+        # 排除元数据字段（不参与对比）
+        SKIP_FIELDS: set[str] = {"id", "created_at", "updated_at"}
+
+        all_keys: set[str] = set(snap_a.keys()) | set(snap_b.keys())
+        changes: list[dict] = []
+
+        for key in sorted(all_keys):
+            if key in SKIP_FIELDS:
+                continue
+            val_a = snap_a.get(key)
+            val_b = snap_b.get(key)
+            if val_a == val_b:
+                continue
+
+            change_type: str
+            if val_a is None and val_b is not None:
+                change_type = "added"
+            elif val_a is not None and val_b is None:
+                change_type = "removed"
+            else:
+                change_type = "modified"
+
+            changes.append({
+                "field": key,
+                "label": FIELD_LABELS.get(key, key),
+                "type": change_type,
+                "old_value": val_a,
+                "new_value": val_b,
+            })
+
+        return {
+            "version_a": version_a,
+            "version_b": version_b,
+            "changes": changes,
+        }
+    except HTTPException:
+        raise
+    except (json.JSONDecodeError, TypeError) as e:
+        raise HTTPException(status_code=500, detail=f"快照数据解析失败: {str(e)}")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"查询版本快照失败: {str(e)}")
+
+
+@router.post("/{plan_id}/versions/{version}/rollback")
+def rollback_plan_version(
+    plan_id: str,
+    version: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("product-plans")),
+) -> dict:
+    """回滚到指定历史版本。
+
+    将策划当前数据替换为指定版本的快照数据，
+    同时自动触发版本快照（保留回滚前的状态）。
+
+    Args:
+        plan_id: 策划 ID
+        version: 目标回滚版本号
+
+    Returns:
+        dict: 更新后的策划基本信息
+    """
+    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="策划不存在")
+
+    # [P1-2] 数据级权限: 非管理员只能回滚自己创建的策划
+    if current_user.role not in ("admin", "general_manager") and plan.created_by != current_user.username:
+        raise HTTPException(status_code=403, detail="只能回滚自己创建的策划")
+
+    try:
+        history = db.query(ProductPlanHistory).filter(
+            ProductPlanHistory.product_plan_id == plan_id,
+            ProductPlanHistory.version == version,
+        ).first()
+
+        if not history:
+            raise HTTPException(status_code=404, detail=f"版本 {version} 不存在")
+
+        snapshot: dict = json.loads(history.snapshot)
+
+        # 可回滚的字段（排除不可回滚的）
+        ROLLBACK_FIELDS: set[str] = {
+            "name", "series", "market", "target_market_detail",
+            "competitor_id", "cost_target", "performance_target",
+            "status",
+        }
+
+        for key, val in snapshot.items():
+            if key in ROLLBACK_FIELDS and val is not None:
+                setattr(plan, key, val)
+
+        plan.updated_at = func.now()
+        plan._change_user = current_user.username
+        db.commit()
+        db.refresh(plan)
+
+        return _plan_to_dict(plan)
+    except HTTPException:
+        raise
+    except (json.JSONDecodeError, TypeError) as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"快照数据解析失败: {str(e)}")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"回滚失败: {str(e)}")
+
+
 # ── 批量操作 Schemas ──
 
 

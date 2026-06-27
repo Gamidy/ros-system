@@ -11,48 +11,81 @@
             <router-link to="/pm-workspace" class="empty-guide-btn">前往工作台</router-link>
           </div>
           <template v-else>
-            <el-table :data="list" stripe border max-height="420" v-loading="loading">
-              <el-table-column prop="id" label="审批编号" width="140" />
-              <el-table-column prop="request_type" label="类型" width="110">
-                <template #default="{ row }">
-                  <el-tag size="small">{{ typeMap[row.request_type] || row.request_type }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
-              <el-table-column prop="applicant" label="申请人" width="100" />
-              <el-table-column prop="status" label="状态" width="100">
-                <template #default="{ row }">
-                  <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="submitted_at" label="提交时间" width="170" />
-              <el-table-column label="操作" width="220" fixed="right">
-                <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
-                  <!-- TODO: 此分支将在后续版本移除 — proposal 重定向已弃用, 改为内联审批 -->
-                  <template v-if="row.request_type === 'proposal'">
-                    <el-button link type="primary" size="small" @click="goToProposal(row)">查看审批</el-button>
+            <!-- 桌面端表格 -->
+            <div class="desktop-table">
+              <el-table :data="list" stripe border max-height="420" v-loading="loading">
+                <el-table-column prop="id" label="审批编号" width="140" />
+                <el-table-column prop="request_type" label="类型" width="110">
+                  <template #default="{ row }">
+                    <el-tag size="small">{{ typeMap[row.request_type] || row.request_type }}</el-tag>
                   </template>
-                  <template v-else-if="row.request_type === 'product_plan'">
-                    <el-button type="success" size="small" @click="showProductPlanDialog(row)">审批</el-button>
+                </el-table-column>
+                <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+                <el-table-column prop="applicant" label="申请人" width="100" />
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="{ row }">
+                    <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
                   </template>
-                  <template v-else>
-                    <el-button type="success" size="small" @click="handleApprove(row)">通过</el-button>
-                    <el-button type="danger" size="small" @click="handleReject(row)">驳回</el-button>
+                </el-table-column>
+                <el-table-column prop="submitted_at" label="提交时间" width="170" />
+                <el-table-column label="操作" width="220" fixed="right">
+                  <template #default="{ row }">
+                    <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
+                    <!-- TODO: 此分支将在后续版本移除 — proposal 重定向已弃用, 改为内联审批 -->
+                    <template v-if="row.request_type === 'proposal'">
+                      <el-button link type="primary" size="small" @click="goToProposal(row)">查看审批</el-button>
+                    </template>
+                    <template v-else-if="row.request_type === 'product_plan'">
+                      <el-button type="success" size="small" @click="showProductPlanDialog(row)">审批</el-button>
+                    </template>
+                    <template v-else>
+                      <el-button type="success" size="small" @click="handleApprove(row)">通过</el-button>
+                      <el-button type="danger" size="small" @click="handleReject(row)">驳回</el-button>
+                    </template>
                   </template>
-                </template>
-              </el-table-column>
-            </el-table>
-            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-              <el-pagination
-                v-model:current-page="page"
-                v-model:page-size="pageSize"
-                :total="total"
-                :page-sizes="[10, 20, 50]"
-                layout="total, sizes, prev, pager, next, jumper"
-                @size-change="fetchList"
-                @current-change="fetchList"
-              />
+                </el-table-column>
+              </el-table>
+              <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                <el-pagination
+                  v-model:current-page="page"
+                  v-model:page-size="pageSize"
+                  :total="total"
+                  :page-sizes="[10, 20, 50]"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="fetchList"
+                  @current-change="fetchList"
+                />
+              </div>
+            </div>
+            <!-- 移动端审批卡片 -->
+            <div v-if="isMobile" class="mobile-cards" v-loading="loading">
+              <div
+                v-for="item in list"
+                :key="String(item.id)"
+                class="approval-card"
+                @click="openMobileDetail(item)"
+              >
+                <div class="card-header">
+                  <span class="card-applicant">{{ (item.applicant as string) || '-' }}</span>
+                  <el-tag
+                    :type="(statusType[(item.status as string)] as 'warning' | 'success' | 'danger' | 'info') || 'info'"
+                    size="small"
+                    effect="plain"
+                  >
+                    {{ (statusMap[(item.status as string)] as string) || (item.status as string) || '-' }}
+                  </el-tag>
+                </div>
+                <div class="card-title">{{ (item.title as string) || '-' }}</div>
+                <div class="card-type-label">{{ (typeMap[(item.request_type as string)] as string) || (item.request_type as string) }}</div>
+                <div class="card-footer">
+                  <span class="card-submitted">{{ (item.submitted_at as string) || '-' }}</span>
+                </div>
+              </div>
+              <div v-if="list.length === 0" class="empty-guide">
+                <div class="empty-guide-icon">📋</div>
+                <h3 class="empty-guide-title">暂无待审批项</h3>
+                <p class="empty-guide-desc">项目提交审批后将在此处显示</p>
+              </div>
             </div>
           </template>
         </el-tab-pane>
@@ -73,37 +106,70 @@
             <p class="empty-guide-desc">完成审批的记录将在此处显示</p>
           </div>
           <template v-else>
-            <el-table :data="list" stripe border max-height="420" v-loading="loading">
-              <el-table-column prop="id" label="审批编号" width="140" />
-              <el-table-column prop="request_type" label="类型" width="110">
-                <template #default="{ row }">
-                  <el-tag size="small">{{ typeMap[row.request_type] || row.request_type }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
-              <el-table-column prop="applicant" label="申请人" width="100" />
-              <el-table-column prop="status" label="状态" width="100">
-                <template #default="{ row }">
-                  <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="submitted_at" label="提交时间" width="170" />
-              <el-table-column label="操作" width="100" fixed="right">
-                <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="showDetail(row)">查看</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-              <el-pagination
-                v-model:current-page="page"
-                v-model:page-size="pageSize"
-                :total="total"
-                :page-sizes="[10, 20, 50]"
-                layout="total, sizes, prev, pager, next, jumper"
-                @size-change="fetchList"
-                @current-change="fetchList"
-              />
+            <!-- 桌面端表格 -->
+            <div class="desktop-table">
+              <el-table :data="list" stripe border max-height="420" v-loading="loading">
+                <el-table-column prop="id" label="审批编号" width="140" />
+                <el-table-column prop="request_type" label="类型" width="110">
+                  <template #default="{ row }">
+                    <el-tag size="small">{{ typeMap[row.request_type] || row.request_type }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+                <el-table-column prop="applicant" label="申请人" width="100" />
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="{ row }">
+                    <el-tag :type="statusType[row.status] || 'info'" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="submitted_at" label="提交时间" width="170" />
+                <el-table-column label="操作" width="100" fixed="right">
+                  <template #default="{ row }">
+                    <el-button link type="primary" size="small" @click="showDetail(row)">查看</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                <el-pagination
+                  v-model:current-page="page"
+                  v-model:page-size="pageSize"
+                  :total="total"
+                  :page-sizes="[10, 20, 50]"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="fetchList"
+                  @current-change="fetchList"
+                />
+              </div>
+            </div>
+            <!-- 移动端审批卡片 -->
+            <div v-if="isMobile" class="mobile-cards">
+              <div
+                v-for="item in list"
+                :key="String(item.id)"
+                class="approval-card"
+                @click="openMobileDetail(item)"
+              >
+                <div class="card-header">
+                  <span class="card-applicant">{{ (item.applicant as string) || '-' }}</span>
+                  <el-tag
+                    :type="(statusType[(item.status as string)] as 'warning' | 'success' | 'danger' | 'info') || 'info'"
+                    size="small"
+                    effect="plain"
+                  >
+                    {{ (statusMap[(item.status as string)] as string) || (item.status as string) || '-' }}
+                  </el-tag>
+                </div>
+                <div class="card-title">{{ (item.title as string) || '-' }}</div>
+                <div class="card-type-label">{{ (typeMap[(item.request_type as string)] as string) || (item.request_type as string) }}</div>
+                <div class="card-footer">
+                  <span class="card-submitted">{{ (item.submitted_at as string) || '-' }}</span>
+                </div>
+              </div>
+              <div v-if="list.length === 0" class="empty-guide">
+                <div class="empty-guide-icon">📋</div>
+                <h3 class="empty-guide-title">暂无审批历史</h3>
+                <p class="empty-guide-desc">完成审批的记录将在此处显示</p>
+              </div>
             </div>
           </template>
         </el-tab-pane>
@@ -234,11 +300,126 @@
         <el-button type="primary" :loading="savingChain" @click="saveChain">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 移动端全屏审批详情抽屉 -->
+    <el-drawer
+      v-model="mobileDetailVisible"
+      direction="btt"
+      size="100%"
+      :with-header="false"
+      class="mobile-detail-drawer"
+    >
+      <template v-if="detailItem">
+        <div class="mobile-detail-header">
+          <button class="mobile-detail-back" @click="mobileDetailVisible = false">✕</button>
+          <span class="mobile-detail-title">审批详情</span>
+        </div>
+        <div class="mobile-detail-body">
+          <div class="mobile-detail-section">
+            <h4 class="mobile-section-title">申请信息</h4>
+            <div class="mobile-detail-grid">
+              <div class="mobile-detail-row">
+                <span class="mobile-detail-label">审批编号</span>
+                <span class="mobile-detail-value">{{ detailItem.id }}</span>
+              </div>
+              <div class="mobile-detail-row">
+                <span class="mobile-detail-label">申请类型</span>
+                <span class="mobile-detail-value">{{ (typeMap[(detailItem.request_type as string)] as string) || (detailItem.request_type as string) }}</span>
+              </div>
+              <div class="mobile-detail-row">
+                <span class="mobile-detail-label">标题</span>
+                <span class="mobile-detail-value">{{ (detailItem.title as string) || '-' }}</span>
+              </div>
+              <div class="mobile-detail-row">
+                <span class="mobile-detail-label">申请人</span>
+                <span class="mobile-detail-value">{{ (detailItem.applicant as string) || (detailItem.requester as string) || '-' }}</span>
+              </div>
+              <template v-if="detailItem.applicant_info">
+                <div class="mobile-detail-row">
+                  <span class="mobile-detail-label">真实姓名</span>
+                  <span class="mobile-detail-value">{{ (detailItem.applicant_info as Record<string, string>).full_name || '-' }}</span>
+                </div>
+                <div class="mobile-detail-row">
+                  <span class="mobile-detail-label">部门</span>
+                  <span class="mobile-detail-value">{{ (detailItem.applicant_info as Record<string, string>).department || '-' }}</span>
+                </div>
+                <div class="mobile-detail-row">
+                  <span class="mobile-detail-label">职位</span>
+                  <span class="mobile-detail-value">{{ (detailItem.applicant_info as Record<string, string>).position || '-' }}</span>
+                </div>
+                <div class="mobile-detail-row">
+                  <span class="mobile-detail-label">手机号</span>
+                  <span class="mobile-detail-value">{{ (detailItem.applicant_info as Record<string, string>).phone || '-' }}</span>
+                </div>
+                <div class="mobile-detail-row">
+                  <span class="mobile-detail-label">申请理由</span>
+                  <span class="mobile-detail-value">{{ (detailItem.applicant_info as Record<string, string>).reason || '-' }}</span>
+                </div>
+              </template>
+              <div class="mobile-detail-row">
+                <span class="mobile-detail-label">提交时间</span>
+                <span class="mobile-detail-value">{{ (detailItem.created_at as string) || (detailItem.submitted_at as string) || '-' }}</span>
+              </div>
+              <div class="mobile-detail-row">
+                <span class="mobile-detail-label">状态</span>
+                <span class="mobile-detail-value">
+                  <el-tag
+                    :type="(statusType[(detailItem.status as string)] as 'warning' | 'success' | 'danger' | 'info') || 'info'"
+                    size="small"
+                  >
+                    {{ (statusMap[(detailItem.status as string)] as string) || (detailItem.status as string) || '-' }}
+                  </el-tag>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 审批进度 -->
+          <template v-if="detailItem.steps && Array.isArray(detailItem.steps) && (detailItem.steps as unknown[]).length > 0">
+            <div class="mobile-detail-section">
+              <h4 class="mobile-section-title">审批进度</h4>
+              <ApprovalProgress
+                :approval-id="Number(detailItem.id)"
+                :steps="detailItem.steps as unknown[]"
+                :current-step="Number(detailItem.current_step || 0)"
+                :step-meta="(detailItem.step_meta || {}) as Record<string, unknown>"
+                :records="(detailItem.records || []) as unknown[]"
+                direction="vertical"
+              />
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- 驳回输入区域 -->
+      <div v-if="mobileRejectMode" class="mobile-reject-area">
+        <el-input
+          v-model="mobileRejectOpinion"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入驳回原因"
+          maxlength="500"
+          show-word-limit
+        />
+      </div>
+
+      <!-- 底部固定操作按钮 -->
+      <div class="mobile-detail-footer">
+        <template v-if="!mobileRejectMode">
+          <el-button class="mobile-btn-reject" size="large" @click="mobileRejectMode = true">驳回</el-button>
+          <el-button class="mobile-btn-approve" size="large" type="primary" @click="mobileApprove()">通过</el-button>
+        </template>
+        <template v-else>
+          <el-button class="mobile-btn-cancel" size="large" @click="mobileRejectMode = false; mobileRejectOpinion = ''">取消</el-button>
+          <el-button class="mobile-btn-confirm-reject" size="large" type="danger" @click="mobileDoReject()">确认驳回</el-button>
+        </template>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
@@ -261,6 +442,26 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 const statusFilter = ref('')
+
+// ── 移动端响应式状态 ──
+const isMobile = ref(window.innerWidth < 768)
+const mobileDetailVisible = ref(false)
+const mobileRejectMode = ref(false)
+const mobileRejectOpinion = ref('')
+let resizeHandler: (() => void) | null = null
+
+function onResize(): void {
+  isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+  resizeHandler = onResize
+  window.addEventListener('resize', onResize)
+})
+
+onUnmounted(() => {
+  if (resizeHandler) window.removeEventListener('resize', onResize)
+})
 
 const statusMap: Record<string, string> = { pending: '待审批', approved: '已通过', rejected: '已驳回' }
 const statusType: Record<string, string> = { pending: 'warning', approved: 'success', rejected: 'danger' }
@@ -309,6 +510,47 @@ function onTabChange() { resetPage() }
 function showDetail(row: TableRow) {
   detailItem.value = row
   detailVisible.value = true
+}
+
+// ── 移动端详情抽屉 ──
+function openMobileDetail(row: TableRow): void {
+  mobileRejectMode.value = false
+  mobileRejectOpinion.value = ''
+  detailItem.value = row
+  mobileDetailVisible.value = true
+}
+
+function mobileApprove(): void {
+  if (!detailItem.value) return
+  const id = detailItem.value.id
+  api.post(`/approval/requests/${id}/approve`)
+    .then(() => {
+      ElMessage.success('审批通过')
+      mobileDetailVisible.value = false
+      detailItem.value = null
+      fetchList()
+      window.dispatchEvent(new CustomEvent('approval-updated'))
+    })
+    .catch(() => { ElMessage.error('审批操作失败') })
+}
+
+function mobileDoReject(): void {
+  if (!mobileRejectOpinion.value.trim()) {
+    ElMessage.warning('请输入驳回意见')
+    return
+  }
+  if (!detailItem.value) return
+  const id = detailItem.value.id
+  api.post(`/approval/requests/${id}/reject`, { opinion: mobileRejectOpinion.value })
+    .then(() => {
+      ElMessage.success('已驳回')
+      mobileDetailVisible.value = false
+      detailItem.value = null
+      mobileRejectOpinion.value = ''
+      fetchList()
+      window.dispatchEvent(new CustomEvent('approval-updated'))
+    })
+    .catch(() => { ElMessage.error('驳回操作失败') })
 }
 
 // 通过
@@ -529,5 +771,226 @@ onMounted(() => { fetchList(); fetchChains() })
 .empty-guide-btn:hover {
   background: #c96442;
   transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════
+   移动端审批卡片 & 抽屉
+   ═══════════════════════════════════════════ */
+
+/* 桌面端表格默认显示，移动端隐藏 */
+.desktop-table {
+  display: block;
+}
+
+/* 移动端卡片列表默认隐藏 */
+.mobile-cards {
+  display: none;
+}
+
+/* ── 审批卡片 ── */
+.approval-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.approval-card:active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-applicant {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.card-title {
+  font-size: 15px;
+  color: #606266;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-type-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 6px;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-submitted {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
+/* ── 移动端全屏抽屉 ── */
+.mobile-detail-drawer {
+  z-index: 2001 !important;
+}
+
+.mobile-detail-drawer .el-drawer__body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mobile-detail-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #ebeef5;
+  flex-shrink: 0;
+}
+
+.mobile-detail-back {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f5f7fa;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  transition: background 0.2s;
+}
+
+.mobile-detail-back:active {
+  background: #e4e7ed;
+}
+
+.mobile-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.mobile-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 140px; /* space for footer + reject area */
+}
+
+.mobile-detail-section {
+  margin-bottom: 20px;
+}
+
+.mobile-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #409eff;
+  margin: 0 0 12px;
+}
+
+.mobile-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mobile-detail-label {
+  font-size: 13px;
+  color: #909399;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.mobile-detail-value {
+  font-size: 13px;
+  color: #303133;
+  text-align: right;
+  word-break: break-all;
+}
+
+/* 驳回输入区域 */
+.mobile-reject-area {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid #ebeef5;
+  background: #fff;
+}
+
+/* 底部固定操作按钮 */
+.mobile-detail-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 8px));
+  border-top: 1px solid #ebeef5;
+  background: #fff;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.mobile-detail-footer .el-button {
+  flex: 1;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.mobile-btn-reject {
+  color: #f56c6c !important;
+  border-color: #f56c6c !important;
+}
+
+.mobile-btn-approve {
+  background: #409eff !important;
+}
+
+.mobile-btn-cancel {
+  color: #909399 !important;
+  border-color: #dcdfe6 !important;
+}
+
+.mobile-btn-confirm-reject {
+  background: #f56c6c !important;
+  border-color: #f56c6c !important;
+}
+
+/* ── 响应式媒体查询 ── */
+@media (max-width: 767px) {
+  .desktop-table {
+    display: none;
+  }
+
+  .mobile-cards {
+    display: block;
+  }
 }
 </style>

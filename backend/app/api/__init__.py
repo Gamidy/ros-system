@@ -48,6 +48,8 @@ from app.api import (
     # P4 复盘
     product_plan_review,
     improvement_task_api,
+    # D4-3 复盘看板
+    review_dashboard,
 )
 
 __all__ = [
@@ -85,4 +87,5 @@ __all__ = [
     "product_requirements",
     "product_plan_review",
     "improvement_task_api",
+    "review_dashboard",
 ]
