@@ -27,7 +27,7 @@
 <el-row :gutter="12">
 <el-col :span="8"><el-form-item label="策划名称"><el-input v-model="editForm.name" /></el-form-item></el-col>
 <el-col :span="8"><el-form-item label="产品系列"><el-input v-model="editForm.series" /></el-form-item></el-col>
-<el-col :span="8"><el-form-item label="目标市场"><el-input v-model="editForm.market" /></el-form-item></el-col>
+<el-col :span="8"><el-form-item label="目标市场"><el-select v-model="editForm.market" filterable clearable style="width:100%"><el-option v-for="m in marketOptions" :key="m.name" :label="m.name" :value="m.name" /></el-select></el-form-item></el-col>
 </el-row>
 <el-row :gutter="12">
 <el-col :span="8"><el-form-item label="竞品关联"><el-input-number v-model="editForm.competitor_id" :min="0" style="width:100%" /></el-form-item></el-col>
@@ -154,7 +154,7 @@
 <el-form label-width="80" size="small">
 <el-form-item label="策划名称"><el-input v-model="editForm.name" /></el-form-item>
 <el-form-item label="产品系列"><el-input v-model="editForm.series" /></el-form-item>
-<el-form-item label="目标市场"><el-input v-model="editForm.market" /></el-form-item>
+<el-form-item label="目标市场"><el-select v-model="editForm.market" filterable clearable style="width:100%"><el-option v-for="m in marketOptions" :key="m.name" :label="m.name" :value="m.name" /></el-select></el-form-item>
 <el-form-item label="竞品ID"><el-input-number v-model="editForm.competitor_id" :min="0" style="width:100%" /></el-form-item>
 <el-divider />
 <el-form-item label="立项背景"><el-input v-model="initiationForm.background" type="textarea" :rows="2" /></el-form-item>
@@ -268,7 +268,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import * as planAPI from '../../api/productPlan'
-import type { TeamMemberPayload } from '../../api/productPlan'
+import type { TeamMemberPayload, MarketOption } from '../../api/productPlan'
 import { useSubTableProgress } from '../../composables/useSubTableProgress'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
 
@@ -420,6 +420,15 @@ const costs = ref<CostItem[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const editForm = ref({ name: '', series: '', market: '', competitor_id: null as number | null })
+const marketOptions = ref<MarketOption[]>([])
+/** 市场名称 → 能效标准映射 */
+const marketEnergyMap = computed(() => {
+  const map: Record<string, { key: string; label: string }> = {}
+  for (const m of marketOptions.value) {
+    map[m.name] = { key: m.energy_standard, label: m.energy_label }
+  }
+  return map
+})
 const costForm = ref({ item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' })
 const showCostDialog = ref(false)
 const addingCost = ref(false)
@@ -497,6 +506,18 @@ finally { savingInitiation.value = false }
 const marketForm = reactive({ main_capacity: '', energy_efficiency: '', cert_requirements: '', target_price: 0, customer_requirements: '' })
 const savingMarket = ref(false)
 
+/** 从API加载市场选项列表 */
+async function fetchMarketOptions() {
+  try {
+    const res = await planAPI.fetchMarkets()
+    const data = (res.data || []) as MarketOption[]
+    marketOptions.value = data
+  } catch {
+    // API不可用时使用空列表，用户可手动输入
+    marketOptions.value = []
+  }
+}
+
 async function fetchMarket() {
 try { const res = await planAPI.getPlanMarket(planId); if (res.data) {
   const data = res.data
@@ -506,6 +527,11 @@ try { const res = await planAPI.getPlanMarket(planId); if (res.data) {
   marketForm.target_price = data.target_price || 0
   marketForm.customer_requirements = data.customer_requirements || ''
   marketVersion.value = data.version_id ?? 0
+  // 自动填充能效标准（如果市场已选但能效为空）
+  if (editForm.value.market && !marketForm.energy_efficiency) {
+    const std = marketEnergyMap.value[editForm.value.market]
+    if (std) marketForm.energy_efficiency = `${std.label} (${std.key})`
+  }
 } } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
