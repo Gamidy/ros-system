@@ -229,6 +229,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+import type { TableRow } from '@/types/common'
 
 const router = useRouter()
 
@@ -241,7 +242,7 @@ interface ChainForm {
 
 const activeTab = ref('pending')
 const loading = ref(false)
-const list = ref<any[]>([])
+const list = ref<TableRow[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
@@ -253,7 +254,7 @@ const typeMap: Record<string, string> = { ecr: 'ECR变更', ecn: 'ECN变更', bo
 
 // Detail dialog
 const detailVisible = ref(false)
-const detailItem = ref<any>(null)
+const detailItem = ref<TableRow | null>(null)
 
 // Reject dialog
 const rejectVisible = ref(false)
@@ -261,10 +262,10 @@ const rejectForm = ref({ opinion: '' })
 const rejecting = ref(false)
 
 // Chain management
-const chains = ref<any[]>([])
+const chains = ref<TableRow[]>([])
 const loadingChains = ref(false)
 const chainEditVisible = ref(false)
-const editingChain = ref<any>(null)
+const editingChain = ref<TableRow | null>(null)
 const savingChain = ref(false)
 const chainForm = ref<ChainForm>({ name: '', steps: [{ name: '', role: '' }] })
 
@@ -273,7 +274,7 @@ function resetPage() { page.value = 1; fetchList() }
 async function fetchList() {
   loading.value = true
   try {
-    const params: any = { page: page.value, page_size: pageSize.value }
+    const params: Record<string, unknown> = { page: page.value, page_size: pageSize.value }
     if (activeTab.value === 'pending') {
       const res = await api.get('/approval/requests/pending', { params })
       list.value = res.data.items ?? res.data ?? []
@@ -291,13 +292,13 @@ async function fetchList() {
 function onTabChange() { resetPage() }
 
 // 详情弹窗
-function showDetail(row: any) {
+function showDetail(row: TableRow) {
   detailItem.value = row
   detailVisible.value = true
 }
 
 // 通过
-async function handleApprove(row: any) {
+async function handleApprove(row: TableRow) {
   detailItem.value = row
   detailVisible.value = true
 }
@@ -317,7 +318,7 @@ function doApprove() {
 }
 
 // 驳回
-function handleReject(row: any) {
+function handleReject(row: TableRow) {
   detailItem.value = row
   openRejectDialog()
 }
@@ -345,13 +346,13 @@ async function doReject() {
 }
 
 // ⚠️ 已废弃: proposal 重定向将在后续版本移除, 改为内联审批弹窗
-function goToProposal(_row: any) {
+function goToProposal(_row: TableRow) {
   router.push('/approvals/proposals')
 }
 
 // 产品规划审批弹窗
 const productPlanVisible = ref(false)
-const productPlanItem = ref<any>(null)
+const productPlanItem = ref<TableRow | null>(null)
 const productPlanComment = ref('')
 const productPlanLoading = ref(false)
 
@@ -371,7 +372,7 @@ const planStageLabel = computed(() => {
   return planStageMap[raw] || raw || '-'
 })
 
-function showProductPlanDialog(row: any) {
+function showProductPlanDialog(row: TableRow) {
   productPlanItem.value = row
   productPlanComment.value = ''
   productPlanVisible.value = true
@@ -417,13 +418,13 @@ async function fetchChains() {
   finally { loadingChains.value = false }
 }
 
-function editChain(chain: any) {
+function editChain(chain: TableRow) {
   editingChain.value = chain
   chainForm.value = {
     id: chain.id,
     code: chain.code,
     name: chain.name,
-    steps: (chain.steps || []).map((s: any) => ({ ...s })),
+    steps: (chain.steps || []).map((s: TableRow) => ({ ...s })),
   }
   chainEditVisible.value = true
 }

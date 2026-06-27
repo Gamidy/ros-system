@@ -194,6 +194,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+import type { JsonRow } from '@/types/common'
 
 const saving = ref(false)
 const saveSuccess = ref(false)
@@ -272,7 +273,7 @@ async function loadConfig() {
 
     if (data.proto_unit_cost) {
       const parsed = JSON.parse(data.proto_unit_cost)
-      Object.entries(parsed).forEach(([k, v]: [string, any]) => {
+      Object.entries(parsed).forEach(([k, v]: [string, unknown]) => {
         const row = unitCostRows.find(r => r.key === k)
         if (row) row.value = Number(v)
       })
@@ -280,7 +281,7 @@ async function loadConfig() {
     if (data.test_unit_price) testUnitPrice.value = Number(data.test_unit_price)
     if (data.mfg_cost_threshold) {
       const parsed = JSON.parse(data.mfg_cost_threshold)
-      parsed.forEach((item: any, i: number) => {
+      parsed.forEach((item: JsonRow, i: number) => {
         if (mfgCostRows[i]) {
           mfgCostRows[i].max_kw = item.max_kw
           mfgCostRows[i].cost = item.cost
@@ -289,7 +290,7 @@ async function loadConfig() {
     }
     if (data.cert_cost) {
       const parsed = JSON.parse(data.cert_cost)
-      Object.entries(parsed).forEach(([k, v]: [string, any]) => {
+      Object.entries(parsed).forEach(([k, v]: [string, unknown]) => {
         const row = certCostRows.find(r => r.key === k)
         if (row) row.value = Number(v)
       })
@@ -298,27 +299,27 @@ async function loadConfig() {
       const parsed = JSON.parse(data.accessory_defaults)
       if (Array.isArray(parsed)) {
         accessoryDefaultRows.length = 0
-        parsed.forEach((item: any) => accessoryDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
+        parsed.forEach((item: JsonRow) => accessoryDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
       }
     }
     if (data.feature_defaults) {
       const parsed = JSON.parse(data.feature_defaults)
       if (Array.isArray(parsed)) {
         featureDefaultRows.length = 0
-        parsed.forEach((item: any) => featureDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
+        parsed.forEach((item: JsonRow) => featureDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
       }
     }
     if (data.trial_qty_per_class) {
       const parsed = JSON.parse(data.trial_qty_per_class)
       trialQtyRows.length = 0
-      Object.entries(parsed).forEach(([cls, qty]: [string, any]) => {
+      Object.entries(parsed).forEach(([cls, qty]: [string, unknown]) => {
         trialQtyRows.push({ class: cls, qty: Number(qty) })
       })
     }
     if (data.product_short_names) {
       const parsed = JSON.parse(data.product_short_names)
       shortNameRows.length = 0
-      Object.entries(parsed).forEach(([full, short]: [string, any]) => {
+      Object.entries(parsed).forEach(([full, short]: [string, unknown]) => {
         shortNameRows.push({ full, short: String(short) })
       })
     }

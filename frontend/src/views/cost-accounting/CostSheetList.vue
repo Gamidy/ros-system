@@ -321,7 +321,7 @@ const loadData = async () => {
     const res = await API.listSheets(params)
     sheetList.value = res.data?.items ?? res.data ?? []
     total.value = (res.data as any)?.total ?? 0
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.response?.data?.detail || e?.message || '加载核算单列表失败')
   } finally {
     tableLoading.value = false
@@ -440,7 +440,7 @@ const handleGenerate = async () => {
     ElMessage.success('核算单生成成功')
     generateDialogVisible.value = false
     loadData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.response?.data?.detail || e?.message || '生成核算单失败')
   } finally {
     generating.value = false
@@ -471,7 +471,7 @@ const handleFinalize = async (row: SheetRecord) => {
     await API.finalizeSheet(row.id)
     ElMessage.success('定稿成功')
     loadData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.response?.data?.detail || e?.message || '定稿失败')
   } finally {
     finalizingId.value = null
@@ -493,7 +493,7 @@ const handleRecalculate = async (row: SheetRecord) => {
     await API.recalculateSheet(row.id)
     ElMessage.success('重新核算成功')
     loadData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.response?.data?.detail || e?.message || '重新核算失败')
   } finally {
     recalculatingId.value = null
@@ -515,7 +515,7 @@ const handleDelete = async (row: SheetRecord) => {
     await API.deleteSheet(row.id)
     ElMessage.success('删除成功')
     loadData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.response?.data?.detail || e?.message || '删除失败')
   } finally {
     deletingId.value = null

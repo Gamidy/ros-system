@@ -382,6 +382,47 @@ import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
 import BarChart from '../../components/charts/BarChart.vue'
 import LineChart from '../../components/charts/LineChart.vue'
+import type { TableRow, ChartDataPoint } from '@/types/common'
+
+interface PlanNode {
+  id: string | number
+  name?: string
+  status?: string
+  phase?: string
+  products?: ProductNode[]
+}
+interface ProductNode {
+  id: string | number
+  name?: string
+  versions?: VersionNode[]
+}
+interface VersionNode {
+  id: string | number
+  name?: string
+  version_no?: string
+  boms?: BomNode[]
+}
+interface BomNode {
+  id: string | number
+  name?: string
+  bom_no?: string
+}
+interface ChainLink {
+  label: string
+  type: string
+}
+interface PenetrationRoot {
+  project_name?: string
+  products?: Array<{
+    name?: string
+    versions?: Array<{
+      version_no?: string
+      boms?: Array<{
+        bom_no?: string
+      }>
+    }>
+  }>
+}
 
 const router = useRouter()
 const loading = ref(false)
@@ -403,7 +444,7 @@ function stageLabel(s: string): string { return STAGE_LABELS[s] || s }
 function stageTagType(s: string): string { return STAGE_TAGS[s] || 'info' }
 
 // ── 产品策划数据 ──
-const allPlans = ref<any[]>([])
+const allPlans = ref<PlanNode[]>([])
 interface PlanKPIs {
   inProgress: number
   stageDistribution: Record<string, number>
@@ -427,7 +468,7 @@ const recentPlans = computed(() => {
   return sorted.slice(0, 5)
 })
 
-function nextActionForPlan(plan: any): string {
+function nextActionForPlan(plan: PlanNode): string {
   // 根据阶段计算下一步动作提示
   const stage = plan.status || 'draft'
   const idx = STAGE_ORDER.indexOf(stage)
@@ -443,7 +484,7 @@ async function fetchProductPlanSummary() {
   try {
     // 获取前100条数据用于仪表盘统计
     const res = await api.get('/product-plans', { params: { page: 1, page_size: 100 } })
-    const items: any[] = res.data.items || []
+    const items: TableRow[] = res.data.items || []
     allPlans.value = items
 
     // 计算KPI
@@ -483,7 +524,7 @@ async function fetchProductPlanSummary() {
 function goToNewPlan() {
   router.push('/product-plans')
 }
-function goToPlan(plan: any) {
+function goToPlan(plan: PlanNode) {
   router.push(`/product-plans/${plan.id}`)
 }
 
@@ -514,8 +555,8 @@ const healthData = ref<Record<string, string>>({})
 const opsData = ref<Record<string, string>>({})
 const acMetrics = ref<Record<string, string>>({})
 const acError = ref(false)
-const penetrationData = ref<any>(null)
-const projectList = ref<any[]>([])
+const penetrationData = ref<PenetrationRoot | null>(null)
+const projectList = ref<TableRow[]>([])
 
 const isL1Empty = computed(() => {
   const keys = Object.keys(L1Cards)
@@ -570,11 +611,11 @@ const penetrationTreeData = computed(() => {
   const p = penetrationData.value
   return {
     name: p.project_name || '项目',
-    children: (p.products || []).map((prod: any) => ({
+    children: (p.products || []).map((prod: ProductNode) => ({
       name: prod.name || '产品',
-      children: (prod.versions || []).map((ver: any) => ({
+      children: (prod.versions || []).map((ver: VersionNode) => ({
         name: ver.version_no || '版本',
-        children: (ver.boms || []).map((bom: any) => ({
+        children: (ver.boms || []).map((bom: BomNode) => ({
           name: bom.bom_no || 'BOM',
         })),
       })),
@@ -584,10 +625,10 @@ const penetrationTreeData = computed(() => {
 
 const penetrationChains = computed(() => {
   if (!penetrationData.value) return []
-  const chains: any[] = []
+  const chains: ChainLink[][] = []
   const p = penetrationData.value
-  ;(p.products || []).forEach((prod: any) => {
-    ;(prod.versions || []).forEach((ver: any) => {
+  ;(p.products || []).forEach((prod: ProductNode) => {
+    ;(prod.versions || []).forEach((ver: VersionNode) => {
       chains.push([
         { label: p.project_name || '项目', type: 'primary' },
         { label: prod.name || '产品', type: 'success' },
@@ -633,7 +674,7 @@ async function fetchTrends() {
   try {
     const res = await api.get('/dashboard/trends')
     const data = Array.isArray(res.data) ? res.data : []
-    trendsData.value = data.map((d: any) => ({ name: d.date, value: d.value }))
+    trendsData.value = data.map((d: ChartDataPoint) => ({ name: d.date, value: d.value }))
   } catch {
     trendsData.value = [
       { name: 'D-30', value: 2 }, { name: 'D-25', value: 3 }, { name: 'D-20', value: 1 },
@@ -668,7 +709,7 @@ function drillDown(key: string) {
   if (path) router.push(path)
 }
 
-function goToProject(row: any) {
+function goToProject(row: TableRow) {
   router.push({ path: '/projects', query: { highlight: row.id } })
 }
 

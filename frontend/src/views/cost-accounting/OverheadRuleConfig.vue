@@ -166,7 +166,7 @@ async function fetchData() {
   try {
     const { data } = await listOverheadRules()
     items.value = Array.isArray(data) ? data : data?.items ?? []
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '加载分摊规则失败')
   } finally {
     loading.value = false
@@ -236,7 +236,7 @@ async function handleSave() {
     }
     dialogVisible.value = false
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '操作失败')
   } finally {
     saving.value = false
@@ -260,7 +260,7 @@ async function handleToggle(row: any) {
     await toggleOverheadRule(row.id)
     ElMessage.success(`${actionLabel}成功`)
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || `${actionLabel}失败`)
   }
 }
@@ -281,7 +281,7 @@ async function handleDelete(row: any) {
     await deleteOverheadRule(row.id)
     ElMessage.success('删除成功')
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '删除失败')
   }
 }

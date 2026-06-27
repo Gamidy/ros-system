@@ -128,7 +128,7 @@ async function fetchData() {
   try {
     const { data } = await listLaborRates()
     items.value = Array.isArray(data) ? data : data?.items ?? []
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '加载工时费率失败')
   } finally {
     loading.value = false
@@ -187,7 +187,7 @@ async function handleSave() {
     }
     dialogVisible.value = false
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '操作失败')
   } finally {
     saving.value = false
@@ -209,7 +209,7 @@ async function handleDelete(row: any) {
     await deleteLaborRate(row.id)
     ElMessage.success('删除成功')
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '删除失败')
   }
 }

@@ -159,7 +159,7 @@ async function fetchData() {
   try {
     const { data } = await listPeriods()
     items.value = Array.isArray(data) ? data : data?.items ?? []
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '加载核算期间失败')
   } finally {
     loading.value = false
@@ -198,7 +198,7 @@ async function handleSave() {
     ElMessage.success('创建成功')
     dialogVisible.value = false
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '创建失败')
   } finally {
     saving.value = false
@@ -221,7 +221,7 @@ async function handleClosePeriod(row: any) {
     await closePeriod(row.id)
     ElMessage.success('期间已关闭')
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '关闭失败')
   }
 }
@@ -242,7 +242,7 @@ async function handleDelete(row: any) {
     await deletePeriod(row.id)
     ElMessage.success('删除成功')
     await fetchData()
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.message || '删除失败')
   }
 }

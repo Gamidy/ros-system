@@ -347,7 +347,7 @@ async function fetchSheet() {
       loadVarianceAnalysis()
       loadStructure()
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     ElMessage.error(e?.response?.data?.detail || e?.message || '加载核算单详情失败')
   } finally {
     loading.value = false
