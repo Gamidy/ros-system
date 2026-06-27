@@ -262,7 +262,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
@@ -517,6 +517,15 @@ async function fetchMarketOptions() {
     marketOptions.value = []
   }
 }
+
+/** 监听市场选择变化 — 自动填充能效标准 */
+watch(() => editForm.value.market, (newMarket) => {
+  if (!newMarket) return
+  const std = marketEnergyMap.value[newMarket]
+  if (std && !marketForm.energy_efficiency) {
+    marketForm.energy_efficiency = `${std.label} (${std.key})`
+  }
+})
 
 async function fetchMarket() {
 try { const res = await planAPI.getPlanMarket(planId); if (res.data) {
