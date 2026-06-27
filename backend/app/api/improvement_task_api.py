@@ -4,9 +4,12 @@
 - GET    /api/reviews/{review_id}/tasks — 获取复盘关联的改进任务列表
 - POST   /api/reviews/{review_id}/tasks — 创建改进任务
 - PUT    /api/tasks/{task_id} — 更新任务状态/字段
+- GET    /api/reviews — 列出所有复盘（含策划名称/系列）
+- GET    /api/reviews/compare — 多复盘对比分析
 """
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -15,7 +18,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
 from app.models.user import User
-from app.models.product_plan import ProductPlanReview
+from app.models.product_plan import ProductPlanReview, ProductPlan
 from app.models.improvement_task import (
     ImprovementTask, TaskPriority, TaskStatus,
 )
@@ -245,3 +248,167 @@ def update_task(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"更新改进任务失败: {str(e)}")
+
+
+# ── D4-5 复盘对比 Schemas ──
+
+
+class ReviewListItem(BaseModel):
+    """复盘列表条目（含策划名称/系列）"""
+    id: str
+    plan_id: str
+    plan_name: str
+    plan_series: Optional[str] = None
+    review_date: Optional[str] = None
+    rating: Optional[int] = None
+
+
+class ReviewListOut(BaseModel):
+    """复盘列表输出"""
+    items: List[ReviewListItem]
+    total: int
+
+
+class ReviewCompareItem(BaseModel):
+    """单个复盘的对比数据"""
+    review_id: str
+    plan_id: str
+    plan_name: str
+    plan_series: Optional[str] = None
+    review_date: Optional[str] = None
+    rating: Optional[int] = None
+    cost_variance_pct: Optional[float] = None
+    schedule_variance_days: Optional[int] = None
+    main_issues: Optional[str] = None
+    task_total: int = 0
+    task_resolved: int = 0
+    task_completion_rate: float = 0.0
+
+
+class ReviewCompareOut(BaseModel):
+    """复盘对比输出"""
+    items: List[ReviewCompareItem]
+    total: int
+
+
+# ── D4-5 复盘列表 / 对比端点 ──
+
+
+@router.get("/api/reviews", response_model=ReviewListOut)
+def list_all_reviews(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("product-plans")),
+) -> dict:
+    """列出所有复盘记录（含策划名称/系列），供对比选择"""
+    try:
+        reviews = (
+            db.query(ProductPlanReview)
+            .join(ProductPlan, ProductPlanReview.product_plan_id == ProductPlan.id)
+            .order_by(ProductPlanReview.created_at.desc())
+            .all()
+        )
+        items: list[dict] = []
+        for r in reviews:
+            plan = r.product_plan
+            items.append({
+                "id": r.id,
+                "plan_id": r.product_plan_id,
+                "plan_name": plan.name if plan else "—",
+                "plan_series": plan.series if plan and plan.series else None,
+                "review_date": str(r.review_date) if r.review_date else None,
+                "rating": r.rating,
+            })
+        return {"items": items, "total": len(items)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查询复盘列表失败: {str(e)}")
+
+
+@router.get("/api/reviews/compare", response_model=ReviewCompareOut)
+def compare_reviews(
+    review_ids: str = Query(..., description="复盘ID列表，逗号分隔"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("product-plans")),
+) -> dict:
+    """多复盘对比分析
+
+    接收 review_ids 逗号分隔，返回各复盘的对比数据。
+    对比字段：评分、成本偏差、进度偏差、主要问题、改进任务完成率。
+    """
+    try:
+        id_list = [rid.strip() for rid in review_ids.split(",") if rid.strip()]
+        if len(id_list) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="至少选择2个复盘进行对比",
+            )
+
+        reviews = (
+            db.query(ProductPlanReview)
+            .filter(ProductPlanReview.id.in_(id_list))
+            .all()
+        )
+        if len(reviews) != len(id_list):
+            found_ids = {r.id for r in reviews}
+            missing = [rid for rid in id_list if rid not in found_ids]
+            raise HTTPException(
+                status_code=404,
+                detail=f"部分复盘记录不存在: {missing}",
+            )
+
+        # 构建结果
+        items: list[dict] = []
+        for r in reviews:
+            plan = r.product_plan
+            # 计算改进任务完成率
+            task_stats = (
+                db.query(
+                    func.count(ImprovementTask.id).label("total"),
+                    func.sum(
+                        func.cast(
+                            ImprovementTask.status.in_(["resolved", "closed"]),
+                            type_=func.Integer,
+                        )
+                    ).label("resolved"),
+                )
+                .filter(ImprovementTask.review_id == r.id)
+                .first()
+            )
+            task_total = task_stats.total if task_stats and task_stats.total else 0
+            task_resolved = task_stats.resolved if task_stats and task_stats.resolved else 0
+            task_completion_rate = (
+                round(task_resolved / task_total * 100, 1) if task_total > 0 else 0.0
+            )
+
+            # 合并主要问题（从市场反馈和经验教训提取摘要）
+            issues_parts: list[str] = []
+            if r.market_feedback:
+                issues_parts.append(r.market_feedback[:100])
+            if r.lessons_learned:
+                issues_parts.append(r.lessons_learned[:100])
+            main_issues = "；".join(issues_parts) if issues_parts else None
+            if main_issues and len(main_issues) > 200:
+                main_issues = main_issues[:200] + "..."
+
+            items.append({
+                "review_id": r.id,
+                "plan_id": r.product_plan_id,
+                "plan_name": plan.name if plan else "—",
+                "plan_series": plan.series if plan and plan.series else None,
+                "review_date": str(r.review_date) if r.review_date else None,
+                "rating": r.rating,
+                "cost_variance_pct": r.cost_variance_pct,
+                "schedule_variance_days": r.schedule_variance_days,
+                "main_issues": main_issues,
+                "task_total": task_total,
+                "task_resolved": task_resolved,
+                "task_completion_rate": task_completion_rate,
+            })
+
+        return {"items": items, "total": len(items)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"复盘对比查询失败: {str(e)}")

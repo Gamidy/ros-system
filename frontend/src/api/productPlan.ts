@@ -302,6 +302,58 @@ export function updateImprovementTask(taskId: string, data: UpdateImprovementTas
   return api.put(`/tasks/${taskId}`, data)
 }
 
+// ── D4-5 复盘对比 ──
+
+/** 复盘列表条目（含策划名称/系列） */
+export interface ReviewListItem {
+  id: string
+  plan_id: string
+  plan_name: string
+  plan_series: string | null
+  review_date: string | null
+  rating: number | null
+}
+
+/** 复盘列表结果 */
+export interface ReviewListResult {
+  items: ReviewListItem[]
+  total: number
+}
+
+/** 单个复盘的对比数据 */
+export interface ReviewCompareItem {
+  review_id: string
+  plan_id: string
+  plan_name: string
+  plan_series: string | null
+  review_date: string | null
+  rating: number | null
+  cost_variance_pct: number | null
+  schedule_variance_days: number | null
+  main_issues: string | null
+  task_total: number
+  task_resolved: number
+  task_completion_rate: number
+}
+
+/** 复盘对比结果 */
+export interface ReviewCompareResult {
+  items: ReviewCompareItem[]
+  total: number
+}
+
+/** 获取复盘列表 */
+export function listAllReviews() {
+  return api.get<ReviewListResult>('/reviews')
+}
+
+/** 对比多个复盘 */
+export function compareReviews(reviewIds: string[]) {
+  return api.get<ReviewCompareResult>('/reviews/compare', {
+    params: { review_ids: reviewIds.join(',') },
+  })
+}
+
 /** 创建复盘模板（管理端） */
 export function createReviewTemplate(data: {
   product_type: string

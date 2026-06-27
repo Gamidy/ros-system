@@ -145,53 +145,59 @@
 
       <div class="charts-row">
         <!-- 趋势折线图 -->
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('立项趋势', 'bi-line')">
           <div class="chart-header">
             <span class="chart-title">立项趋势</span>
           </div>
-          <ChartContainer :loading="biLoading" :isEmpty="biTrendEmpty" height="300">
-            <BiChart
-              type="line"
-              :data="biTrendData"
-              nameKey="month"
-              valueKey="count"
-              :height="300"
-              :showLegend="false"
-              area
-              smooth
-            />
-          </ChartContainer>
+          <LazyLoad :enabled="isMobile" :placeholderHeight="150">
+            <ChartContainer :loading="biLoading" :isEmpty="biTrendEmpty" height="300">
+              <BiChart
+                type="line"
+                :data="biTrendData"
+                nameKey="month"
+                valueKey="count"
+                :height="300"
+                :showLegend="false"
+                area
+                smooth
+              />
+            </ChartContainer>
+          </LazyLoad>
         </div>
         <!-- 转化漏斗图 -->
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('转化漏斗', 'bi-funnel')">
           <div class="chart-header">
             <span class="chart-title">转化漏斗</span>
           </div>
-          <ChartContainer :loading="biLoading" :isEmpty="biFunnelEmpty" height="300">
-            <FunnelChart
-              :data="biFunnelData"
-              :height="300"
-            />
-          </ChartContainer>
+          <LazyLoad :enabled="isMobile" :placeholderHeight="150">
+            <ChartContainer :loading="biLoading" :isEmpty="biFunnelEmpty" height="300">
+              <FunnelChart
+                :data="biFunnelData"
+                :height="300"
+              />
+            </ChartContainer>
+          </LazyLoad>
         </div>
       </div>
 
       <div class="charts-row">
         <!-- 分布饼图 -->
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('市场分布', 'bi-pie')">
           <div class="chart-header">
             <span class="chart-title">市场分布</span>
           </div>
-          <ChartContainer :loading="biLoading" :isEmpty="biDistEmpty" height="300">
-            <BiChart
-              type="pie"
-              :data="biDistData"
-              nameKey="name"
-              valueKey="value"
-              :height="300"
-              donut
-            />
-          </ChartContainer>
+          <LazyLoad :enabled="isMobile" :placeholderHeight="150">
+            <ChartContainer :loading="biLoading" :isEmpty="biDistEmpty" height="300">
+              <BiChart
+                type="pie"
+                :data="biDistData"
+                nameKey="name"
+                valueKey="value"
+                :height="300"
+                donut
+              />
+            </ChartContainer>
+          </LazyLoad>
         </div>
         <div class="chart-card chart-card-empty" />
       </div>
@@ -278,16 +284,19 @@
       </div>
 
       <div class="charts-row">
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('产品状态分布', 'pie')">
           <div class="chart-header">
             <span class="chart-title">产品状态分布</span>
           </div>
-          <PieChart :data="productStatusData" :height="260" />
+          <LazyLoad :enabled="isMobile" :placeholderHeight="130">
+            <PieChart :data="productStatusData" :height="260" />
+          </LazyLoad>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('穿透分析预览', 'penetration')">
           <div class="chart-header">
             <span class="chart-title">穿透分析预览</span>
           </div>
+          <LazyLoad :enabled="isMobile" :placeholderHeight="130">
           <div class="penetration-preview">
             <div v-if="!penetrationData" class="empty-state">
               <el-icon :size="32" color="var(--c-text-tertiary)"><Connection /></el-icon>
@@ -306,6 +315,7 @@
               </div>
             </div>
           </div>
+          </LazyLoad>
         </div>
       </div>
     </section>
@@ -343,17 +353,21 @@
       </div>
 
       <div class="charts-row">
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('项目状态分布', 'bar')">
           <div class="chart-header">
             <span class="chart-title">项目状态分布</span>
           </div>
-          <BarChart :data="projectStatusData" :height="260" />
+          <LazyLoad :enabled="isMobile" :placeholderHeight="130">
+            <BarChart :data="projectStatusData" :height="260" />
+          </LazyLoad>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('最近30天趋势', 'line')">
           <div class="chart-header">
             <span class="chart-title">最近30天趋势</span>
           </div>
-          <LineChart :data="trendsData" :height="260" area />
+          <LazyLoad :enabled="isMobile" :placeholderHeight="130">
+            <LineChart :data="trendsData" :height="260" area />
+          </LazyLoad>
         </div>
       </div>
 
@@ -440,17 +454,21 @@
       </div>
 
       <div class="charts-row">
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('研发阶段进度', 'bar')">
           <div class="chart-header">
             <span class="chart-title">研发阶段进度</span>
           </div>
-          <BarChart :data="phaseProgressData" :height="260" />
+          <LazyLoad :enabled="isMobile" :placeholderHeight="130">
+            <BarChart :data="phaseProgressData" :height="260" />
+          </LazyLoad>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" @click="openFullscreen('测试通过率 vs 问题关闭率', 'line')">
           <div class="chart-header">
             <span class="chart-title">测试通过率 vs 问题关闭率</span>
           </div>
-          <LineChart :data="acTrendData" :height="260" />
+          <LazyLoad :enabled="isMobile" :placeholderHeight="130">
+            <LineChart :data="acTrendData" :height="260" />
+          </LazyLoad>
         </div>
       </div>
       </template>
@@ -475,8 +493,10 @@
             <button class="action-btn" @click="fetchDashboard">刷新数据</button>
           </div>
         </div>
-        <div v-else>
-          <TreeChart :data="penetrationTreeData" :height="400" orient="TB" />
+        <div v-else class="penetration-tree-wrapper" @click="openFullscreen('穿透分析树', 'tree')">
+          <LazyLoad :enabled="isMobile" :placeholderHeight="200">
+            <TreeChart :data="penetrationTreeData" :height="400" orient="TB" />
+          </LazyLoad>
         </div>
       </div>
     </section>
@@ -884,6 +904,85 @@
         </div>
       </div>
     </el-drawer>
+
+    <!-- ═══════════ 移动端全屏图表查看器 [D5-2] ═══════════ -->
+    <Teleport to="body">
+      <div v-if="fullscreenChart.visible" class="chart-fullscreen-overlay" @click.self="closeFullscreen">
+        <div class="chart-fullscreen-header">
+          <span class="chart-fullscreen-title">{{ fullscreenChart.title }}</span>
+          <button class="chart-fullscreen-close" @click="closeFullscreen">
+            <el-icon :size="24"><Close /></el-icon>
+          </button>
+        </div>
+        <div class="chart-fullscreen-body">
+          <!-- BI Line -->
+          <template v-if="fullscreenChart.variant === 'bi-line'">
+            <BiChart
+              type="line"
+              :data="biTrendData"
+              nameKey="month"
+              valueKey="count"
+              :height="fullscreenHeight"
+              :showLegend="false"
+              area
+              smooth
+            />
+          </template>
+          <!-- BI Funnel -->
+          <template v-else-if="fullscreenChart.variant === 'bi-funnel'">
+            <FunnelChart :data="biFunnelData" :height="fullscreenHeight" />
+          </template>
+          <!-- BI Pie -->
+          <template v-else-if="fullscreenChart.variant === 'bi-pie'">
+            <BiChart
+              type="pie"
+              :data="biDistData"
+              nameKey="name"
+              valueKey="value"
+              :height="fullscreenHeight"
+              donut
+            />
+          </template>
+          <!-- Pie -->
+          <template v-else-if="fullscreenChart.variant === 'pie'">
+            <PieChart :data="productStatusData" :height="fullscreenHeight" />
+          </template>
+          <!-- Bar -->
+          <template v-else-if="fullscreenChart.variant === 'bar'">
+            <BarChart :data="currentBarData" :height="fullscreenHeight" />
+          </template>
+          <!-- Line -->
+          <template v-else-if="fullscreenChart.variant === 'line'">
+            <LineChart :data="currentLineData" :height="fullscreenHeight" area />
+          </template>
+          <!-- Penetration tree -->
+          <template v-else-if="fullscreenChart.variant === 'tree'">
+            <TreeChart :data="penetrationTreeData" :height="fullscreenHeight" orient="TB" />
+          </template>
+          <!-- Penetration preview -->
+          <template v-else-if="fullscreenChart.variant === 'penetration'">
+            <div class="penetration-preview-full">
+              <div v-if="!penetrationData" class="empty-state">
+                <el-icon :size="48" color="var(--c-text-tertiary)"><Connection /></el-icon>
+                <p>暂无穿透数据</p>
+              </div>
+              <div v-else class="penetration-chain">
+                <div v-for="(chain, idx) in penetrationChains" :key="idx" class="chain-row">
+                  <span
+                    v-for="(node, nidx) in chain"
+                    :key="nidx"
+                    class="chain-node"
+                    :class="node.type"
+                  >
+                    {{ node.label }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -896,7 +995,7 @@ import {
   DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh,
   Cpu, InfoFilled, CircleCloseFilled, Plus, Folder, Coin, Clock,
   CircleCheck, List,
-  WarningFilled, CircleCheckFilled, Time, Loading, ArrowLeft,
+  WarningFilled, CircleCheckFilled, Time, Loading, ArrowLeft, Close,
 } from '@element-plus/icons-vue'
 import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
@@ -908,6 +1007,8 @@ import BiChart from '../../components/BiChart.vue'
 import type { TableRow, ChartDataPoint } from '@/types/common'
 import { useWebSocket } from '../../composables/useWebSocket'
 import type { WebSocketMessage } from '../../composables/useWebSocket'
+import { useResponsive } from '../../composables/useResponsive'
+import LazyLoad from '../../components/LazyLoad.vue'
 
 interface PlanNode {
   id: string | number
@@ -993,6 +1094,27 @@ const roleView = computed<string>(() => {
 
 const loading = ref(false)
 const planLoading = ref(false)
+
+const { isMobile } = useResponsive()
+
+interface FullscreenChartConfig {
+  visible: boolean
+  title: string
+  variant: string
+}
+const fullscreenChart = ref<FullscreenChartConfig>({
+  visible: false,
+  title: '',
+  variant: '',
+})
+
+function openFullscreen(title: string, variant: string): void {
+  fullscreenChart.value = { visible: true, title, variant }
+}
+
+function closeFullscreen(): void {
+  fullscreenChart.value.visible = false
+}
 
 // ── 策划阶段常量（复用 PlanningCenter 定义）──
 const STAGE_ORDER = ['draft', 'competitor', 'definition', 'costing', 'tech_input', 'project_init', 'approved', 'released']

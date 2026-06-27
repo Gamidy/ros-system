@@ -4,7 +4,7 @@
     <div class="dashboard-header">
       <div>
         <h1 class="page-title">复盘看板</h1>
-        <p class="page-subtitle">P4复盘汇总视图 — 评分分布、趋势、常见问题</p>
+        <p class="page-subtitle">P4复盘汇总视图 — 评分分布、趋势、常见问题、多版本对比</p>
       </div>
       <div class="header-actions">
         <el-button :icon="Refresh" @click="fetchData" :class="{ spinning: loading }">刷新</el-button>
@@ -33,166 +33,233 @@
       </div>
     </el-card>
 
-    <!-- ═══════════ KPI 卡片 ═══════════ -->
-    <el-row :gutter="16" class="kpi-row">
-      <el-col :span="6">
-        <el-card shadow="never" class="kpi-card">
-          <div class="kpi-label">复盘总数</div>
-          <div class="kpi-value">{{ summary.totalReviews ?? '-' }}</div>
-          <div class="kpi-subtitle">已提交的复盘记录</div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="never" class="kpi-card">
-          <div class="kpi-label">平均评分</div>
-          <div class="kpi-value" :style="{ color: avgRatingColor }">{{ summary.avgRating ?? '-' }}</div>
-          <div class="kpi-subtitle">满分 5.0</div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="never" class="kpi-card">
-          <div class="kpi-label">完成率</div>
-          <div class="kpi-value" :style="{ color: completionColor }">{{ completionRateText }}</div>
-          <div class="kpi-subtitle">已复盘/应复盘</div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="never" class="kpi-card">
-          <div class="kpi-label">常见问题</div>
-          <div class="kpi-value">{{ summary.topIssueCount ?? '-' }}</div>
-          <div class="kpi-subtitle">TOP 关键词数</div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <!-- ═══════════ 综述 / 对比 切换 ═══════════ -->
+    <div class="mode-switch-bar">
+      <el-radio-group v-model="viewMode" size="small">
+        <el-radio-button value="summary">📈 汇总视图</el-radio-button>
+        <el-radio-button value="compare">🔍 对比模式</el-radio-button>
+      </el-radio-group>
+    </div>
 
-    <!-- ═══════════ 图表区域 ═══════════ -->
-    <el-row :gutter="16" class="chart-row">
-      <!-- 评分分布柱状图 -->
-      <el-col :span="12">
-        <el-card shadow="never" class="chart-card">
+    <!-- ── 对比模式 ── -->
+    <template v-if="viewMode === 'compare'">
+      <ReviewCompare
+        v-if="compareItems.length > 0"
+        :items="compareItems"
+        @back="exitCompare"
+      />
+      <div v-else class="compare-select-section">
+        <!-- 复盘列表（多选） -->
+        <el-card shadow="never" class="select-card">
           <template #header>
-            <div class="chart-header">
-              <span class="chart-title">评分分布</span>
-              <span class="chart-desc">各评分等级数量（1-5分）</span>
+            <div class="select-header">
+              <span>选择复盘进行对比（至少选 2 个）</span>
+              <div class="select-actions">
+                <el-button size="small" @click="clearSelection">清空</el-button>
+                <el-button size="small" type="primary" :disabled="selectedReviewIds.length < 2" @click="doCompare">
+                  对比 ({{ selectedReviewIds.length }})
+                </el-button>
+              </div>
             </div>
           </template>
-          <BiChart
-            type="bar"
-            :data="ratingChartData"
-            name-key="label"
-            value-key="value"
-            :loading="loading"
-            :empty="ratingChartData.length === 0 && !loading"
-            empty-text="暂无复盘评分数据"
-            :height="340"
-          />
+          <el-table
+            ref="reviewTableRef"
+            :data="reviewList"
+            stripe
+            border
+            size="small"
+            style="width:100%"
+            @selection-change="onSelectionChange"
+          >
+            <el-table-column type="selection" width="44" />
+            <el-table-column prop="plan_name" label="策划名称" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="plan_series" label="产品系列" width="120">
+              <template #default="{ row }">
+                <el-tag v-if="row.plan_series" size="small" effect="plain">{{ row.plan_series }}</el-tag>
+                <span v-else class="no-data">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="review_date" label="复盘日期" width="120" />
+            <el-table-column prop="rating" label="评分" width="100" align="center">
+              <template #default="{ row }">
+                <el-rate v-if="row.rating" :model-value="row.rating" disabled :max="5" size="small" />
+                <span v-else class="no-data">—</span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="loadingReviewList" style="text-align:center;padding:24px">
+            <el-skeleton :rows="3" animated />
+          </div>
+          <div v-else-if="reviewList.length === 0" style="text-align:center;padding:24px;color:#909399;font-size:13px">
+            暂无复盘记录
+          </div>
         </el-card>
-      </el-col>
-      <!-- 月度评分趋势折线图 -->
-      <el-col :span="12">
-        <el-card shadow="never" class="chart-card">
-          <template #header>
-            <div class="chart-header">
-              <span class="chart-title">月度评分趋势</span>
-              <span class="chart-desc">每月平均评分变化</span>
-            </div>
-          </template>
-          <BiChart
-            type="line"
-            :data="trendChartData"
-            name-key="month"
-            value-key="avg_rating"
-            :loading="loading"
-            :empty="trendChartData.length === 0 && !loading"
-            empty-text="暂无月度趋势数据"
-            :height="340"
-            :area="true"
-            :smooth="true"
-          />
-        </el-card>
-      </el-col>
-    </el-row>
+      </div>
+    </template>
 
-    <el-row :gutter="16" class="chart-row">
-      <!-- 完成率环形图 -->
-      <el-col :span="8">
-        <el-card shadow="never" class="chart-card">
-          <template #header>
-            <div class="chart-header">
-              <span class="chart-title">完成率</span>
-              <span class="chart-desc">已复盘数 / 应复盘数</span>
+    <!-- ── 汇总视图（原有） ── -->
+    <template v-if="viewMode === 'summary'">
+      <!-- KPI 卡片 -->
+      <el-row :gutter="16" class="kpi-row">
+        <el-col :span="6">
+          <el-card shadow="never" class="kpi-card">
+            <div class="kpi-label">复盘总数</div>
+            <div class="kpi-value">{{ summary.totalReviews ?? '-' }}</div>
+            <div class="kpi-subtitle">已提交的复盘记录</div>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="never" class="kpi-card">
+            <div class="kpi-label">平均评分</div>
+            <div class="kpi-value" :style="{ color: avgRatingColor }">{{ summary.avgRating ?? '-' }}</div>
+            <div class="kpi-subtitle">满分 5.0</div>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="never" class="kpi-card">
+            <div class="kpi-label">完成率</div>
+            <div class="kpi-value" :style="{ color: completionColor }">{{ completionRateText }}</div>
+            <div class="kpi-subtitle">已复盘/应复盘</div>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="never" class="kpi-card">
+            <div class="kpi-label">常见问题</div>
+            <div class="kpi-value">{{ summary.topIssueCount ?? '-' }}</div>
+            <div class="kpi-subtitle">TOP 关键词数</div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <!-- 图表区域 -->
+      <el-row :gutter="16" class="chart-row">
+        <el-col :span="12">
+          <el-card shadow="never" class="chart-card">
+            <template #header>
+              <div class="chart-header">
+                <span class="chart-title">评分分布</span>
+                <span class="chart-desc">各评分等级数量（1-5分）</span>
+              </div>
+            </template>
+            <BiChart
+              type="bar"
+              :data="ratingChartData"
+              name-key="label"
+              value-key="value"
+              :loading="loading"
+              :empty="ratingChartData.length === 0 && !loading"
+              empty-text="暂无复盘评分数据"
+              :height="340"
+            />
+          </el-card>
+        </el-col>
+        <el-col :span="12">
+          <el-card shadow="never" class="chart-card">
+            <template #header>
+              <div class="chart-header">
+                <span class="chart-title">月度评分趋势</span>
+                <span class="chart-desc">每月平均评分变化</span>
+              </div>
+            </template>
+            <BiChart
+              type="line"
+              :data="trendChartData"
+              name-key="month"
+              value-key="avg_rating"
+              :loading="loading"
+              :empty="trendChartData.length === 0 && !loading"
+              empty-text="暂无月度趋势数据"
+              :height="340"
+              :area="true"
+              :smooth="true"
+            />
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="16" class="chart-row">
+        <el-col :span="8">
+          <el-card shadow="never" class="chart-card">
+            <template #header>
+              <div class="chart-header">
+                <span class="chart-title">完成率</span>
+                <span class="chart-desc">已复盘数 / 应复盘数</span>
+              </div>
+            </template>
+            <BiChart
+              type="pie"
+              :data="completionChartData"
+              name-key="name"
+              value-key="value"
+              :loading="loading"
+              :empty="completionChartData.length === 0 && !loading"
+              empty-text="暂无完成率数据"
+              :height="300"
+              :donut="true"
+              :show-legend="true"
+            />
+          </el-card>
+        </el-col>
+        <el-col :span="16">
+          <el-card shadow="never" class="chart-card">
+            <template #header>
+              <div class="chart-header">
+                <span class="chart-title">常见问题 Top10</span>
+                <span class="chart-desc">从"经验教训"字段提取的高频关键词</span>
+              </div>
+            </template>
+            <div v-if="loading" class="loading-placeholder">
+              <el-skeleton :rows="5" animated />
             </div>
-          </template>
-          <BiChart
-            type="pie"
-            :data="completionChartData"
-            name-key="name"
-            value-key="value"
-            :loading="loading"
-            :empty="completionChartData.length === 0 && !loading"
-            empty-text="暂无完成率数据"
-            :height="300"
-            :donut="true"
-            :show-legend="true"
-          />
-        </el-card>
-      </el-col>
-      <!-- 常见问题 Top10 列表 -->
-      <el-col :span="16">
-        <el-card shadow="never" class="chart-card">
-          <template #header>
-            <div class="chart-header">
-              <span class="chart-title">常见问题 Top10</span>
-              <span class="chart-desc">从"经验教训"字段提取的高频关键词</span>
+            <div v-else-if="commonIssues.length === 0" class="empty-placeholder">
+              <el-empty description="暂无常见问题数据" :image-size="60" />
             </div>
-          </template>
-          <div v-if="loading" class="loading-placeholder">
-            <el-skeleton :rows="5" animated />
-          </div>
-          <div v-else-if="commonIssues.length === 0" class="empty-placeholder">
-            <el-empty description="暂无常见问题数据" :image-size="60" />
-          </div>
-          <div v-else class="issues-content">
-            <el-table :data="commonIssues" stripe style="width: 100%" size="small" max-height="260">
-              <el-table-column type="index" label="#" width="48" />
-              <el-table-column prop="word" label="关键词" min-width="140">
-                <template #default="{ row }">
-                  <span class="issue-word">{{ row.word }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="count" label="出现次数" width="120" sortable>
-                <template #default="{ row }">
-                  <el-tag :type="getTagType(row.count)" effect="plain" size="small">
-                    {{ row.count }} 次
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="频次占比" min-width="140">
-                <template #default="{ row }">
-                  <div class="issue-progress-wrapper">
-                    <el-progress
-                      :percentage="getIssuePercent(row.count)"
-                      :stroke-width="14"
-                      :show-text="false"
-                      :color="getProgressColor(row.count)"
-                    />
-                    <span class="issue-percent-text">{{ getIssuePercent(row.count) }}%</span>
-                  </div>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+            <div v-else class="issues-content">
+              <el-table :data="commonIssues" stripe style="width: 100%" size="small" max-height="260">
+                <el-table-column type="index" label="#" width="48" />
+                <el-table-column prop="word" label="关键词" min-width="140">
+                  <template #default="{ row }">
+                    <span class="issue-word">{{ row.word }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="count" label="出现次数" width="120" sortable>
+                  <template #default="{ row }">
+                    <el-tag :type="getTagType(row.count)" effect="plain" size="small">
+                      {{ row.count }} 次
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="频次占比" min-width="140">
+                  <template #default="{ row }">
+                    <div class="issue-progress-wrapper">
+                      <el-progress
+                        :percentage="getIssuePercent(row.count)"
+                        :stroke-width="14"
+                        :show-text="false"
+                        :color="getProgressColor(row.count)"
+                      />
+                      <span class="issue-percent-text">{{ getIssuePercent(row.count) }}%</span>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import BiChart from '../../components/BiChart.vue'
+import ReviewCompare from './ReviewCompare.vue'
 import api from '../../api/index'
+import { listAllReviews, compareReviews } from '../../api/productPlan'
+import type { ReviewListItem, ReviewCompareItem } from '../../api/productPlan'
 
 // ── 类型定义 ──
 
@@ -225,6 +292,55 @@ interface ReviewSummary {
 const loading = ref(false)
 const monthRange = ref<string[]>([])
 const data = ref<ReviewSummary | null>(null)
+
+// ── D4-5 对比模式 ──
+
+const viewMode = ref<'summary' | 'compare'>('summary')
+const reviewList = ref<ReviewListItem[]>([])
+const selectedReviewIds = ref<string[]>([])
+const compareItems = ref<ReviewCompareItem[]>([])
+const loadingReviewList = ref(false)
+
+function onSelectionChange(rows: ReviewListItem[]) {
+  selectedReviewIds.value = rows.map(r => r.id)
+}
+
+function clearSelection() {
+  selectedReviewIds.value = []
+}
+
+async function doCompare() {
+  const ids = selectedReviewIds.value
+  if (ids.length < 2) {
+    ElMessage.warning('请至少选择 2 个复盘进行对比')
+    return
+  }
+  try {
+    const res = await compareReviews(ids)
+    compareItems.value = (res.data as { items: ReviewCompareItem[] }).items
+  } catch (err) {
+    console.error('对比查询失败', err)
+    ElMessage.error('对比查询失败')
+  }
+}
+
+function exitCompare() {
+  compareItems.value = []
+  viewMode.value = 'compare'
+}
+
+async function fetchReviewList() {
+  loadingReviewList.value = true
+  try {
+    const res = await listAllReviews()
+    reviewList.value = (res.data as { items: ReviewListItem[] }).items
+  } catch (err) {
+    console.error('获取复盘列表失败', err)
+    reviewList.value = []
+  } finally {
+    loadingReviewList.value = false
+  }
+}
 
 // ── 计算属性 ──
 
@@ -367,6 +483,14 @@ function clearFilter() {
 onMounted(() => {
   fetchData()
 })
+
+// ── D4-5: 进入对比模式时加载复盘列表 ──
+
+watch(viewMode, (mode) => {
+  if (mode === 'compare') {
+    fetchReviewList()
+  }
+})
 </script>
 
 <style scoped>
@@ -408,6 +532,39 @@ onMounted(() => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ── 模式切换 ── */
+
+.mode-switch-bar {
+  margin-bottom: 16px;
+}
+
+/* ── 对比模式 ── */
+
+.compare-select-section {
+  margin-top: 0;
+}
+
+.select-card {
+  border-radius: 12px;
+}
+
+.select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.select-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.no-data {
+  color: #c0c4cc;
 }
 
 .filter-card {

@@ -404,10 +404,19 @@
 
 <!-- ─── 移动端: 5步分步表单 ─── -->
 <template v-if="isMobile && plan">
+<!-- 编辑模式切换 -->
+<div class="mobile-mode-toggle" v-if="!isEditing">
+  <el-button type="primary" size="small" @click="enterEditMode">✏️ 编辑</el-button>
+</div>
+<div class="mobile-mode-toggle" v-else>
+  <el-button size="small" @click="exitEditMode" :loading="savingStep">✓ 完成编辑</el-button>
+</div>
+
+<template v-if="isEditing">
 <el-steps :active="mobileStep" finish-status="success" simple style="margin-bottom:12px;overflow-x:auto;">
 <el-step v-for="(s, i) in mobileSteps" :key="i" :title="s.label" :status="stepStatus(s.key)" />
 </el-steps>
-<div class="mobile-step-form" style="padding-bottom:72px">
+<div class="mobile-step-form" @focusin="handleMobileFocus">
 <!-- Step 0: 项目概述 -->
 <div v-show="mobileStep === 0">
 <h3 class="step-title">📄 项目概述</h3>
@@ -429,7 +438,12 @@
 <el-form-item label="产品系列"><el-input v-model="editForm.series" /></el-form-item>
 <el-form-item label="目标市场"><el-select v-model="editForm.market" filterable clearable style="width:100%"><el-option v-for="m in marketOptions" :key="m.name" :label="m.name" :value="m.name" /></el-select><el-button size="small" type="primary" link @click="goCompetitor" style="margin-left:8px">📊 查看同类竞品</el-button></el-form-item>
 <el-form-item label="竞品ID"><el-input-number v-model="editForm.competitor_id" :min="0" style="width:100%" /></el-form-item>
-<el-divider />
+</el-form>
+</div>
+<!-- Step 1: 立项信息 -->
+<div v-show="mobileStep === 1">
+<h3 class="step-title">📋 立项信息</h3>
+<el-form label-width="80" size="small">
 <el-form-item label="立项背景"><el-input v-model="initiationForm.background" type="textarea" :rows="2" /></el-form-item>
 <el-form-item label="产品类型"><el-input v-model="initiationForm.type" /></el-form-item>
 <el-row :gutter="8"><el-col :span="12"><el-form-item label="制冷剂"><el-input v-model="initiationForm.refrigerant" /></el-form-item></el-col><el-col :span="12"><el-form-item label="容量"><el-input v-model="initiationForm.capacity" /></el-form-item></el-col></el-row>
@@ -440,10 +454,17 @@
 <el-form-item label="交付物"><el-input v-model="initiationForm.deliverables" type="textarea" :rows="2" /></el-form-item>
 <el-form-item label="样品数量"><el-input-number v-model="initiationForm.sample_qty" :min="0" style="width:100%" /></el-form-item>
 </el-form>
+<div class="bom-types" style="margin-top:16px">
+<div v-for="bt in bomTypes" :key="bt.key" class="bom-card">
+<div class="bom-icon">{{ bt.icon }}</div>
+<div class="bom-name">{{ bt.label }}</div>
+<el-tag size="small" :type="bt.status === 'active' ? 'warning' : 'info'" effect="plain">{{ bt.status === 'active' ? '待生成' : '未开始' }}</el-tag>
 </div>
-<!-- Step 1: 市场与客户 -->
-<div v-show="mobileStep === 1">
-<h3 class="step-title">🎯 市场与客户</h3>
+</div>
+</div>
+<!-- Step 2: 市场信息 -->
+<div v-show="mobileStep === 2">
+<h3 class="step-title">🎯 市场信息</h3>
 <el-form label-width="90" size="small">
 <el-form-item label="主要容量"><el-input v-model="marketForm.main_capacity" /></el-form-item>
 <el-form-item label="能效要求"><el-input v-model="marketForm.energy_efficiency" /><div v-if="marketEnergyMap[editForm.market]" class="energy-standard-hint">当前市场标准: {{ marketEnergyMap[editForm.market]?.label }} ({{ marketEnergyMap[editForm.market]?.key }})</div></el-form-item>
@@ -452,17 +473,17 @@
 <el-form-item label="客户需求"><el-input v-model="marketForm.customer_requirements" type="textarea" :rows="3" /></el-form-item>
 </el-form>
 </div>
-<!-- Step 2: 技术要求 -->
-<div v-show="mobileStep === 2">
-<h3 class="step-title">⚡ 技术要求</h3>
+<!-- Step 3: 技术规格 -->
+<div v-show="mobileStep === 3">
+<h3 class="step-title">⚡ 技术规格</h3>
 <el-form label-width="90" size="small">
 <el-form-item label="核心性能指标"><el-input v-model="techSpecForm.core_performance" type="textarea" :rows="3" /></el-form-item>
 <el-form-item label="安全合规要求"><el-input v-model="techSpecForm.safety_compliance" type="textarea" :rows="3" /></el-form-item>
 <el-form-item label="可选配置"><el-input v-model="techSpecForm.optional_config" type="textarea" :rows="3" /></el-form-item>
 </el-form>
 </div>
-<!-- Step 3: 成本核算 -->
-<div v-show="mobileStep === 3">
+<!-- Step 4: 成本核算 -->
+<div v-show="mobileStep === 4">
 <h3 class="step-title">💰 成本核算</h3>
 <el-table :data="costs" stripe border size="small" empty-text="暂无数据" style="margin-bottom:12px">
 <el-table-column prop="item_name" label="成本项" min-width="100" />
@@ -479,24 +500,84 @@
   </div>
 </div>
 </div>
-<!-- Step 4: 团队 -->
-<div v-show="mobileStep === 4">
-<h3 class="step-title">👥 团队</h3>
-<el-button size="small" type="primary" @click="showTeamDialog = true; teamDialogMode = 'add'" style="margin-bottom:12px">+ 添加成员</el-button>
-<div v-if="teamMembers.length === 0" style="text-align:center;padding:24px 0;color:#909399">暂无团队成员</div>
-<div v-for="m in teamMembers" :key="m.id" class="mobile-team-card">
-<div class="team-card-row"><span class="team-card-name">{{ m.member_name }}</span><el-tag size="small">{{ m.role_name }}</el-tag></div>
-<div class="team-card-detail">{{ m.department }} · {{ m.responsibility }}</div>
-<div class="team-card-actions"><el-button link size="small" type="primary" @click="editTeamMember(m)">编辑</el-button><el-button link size="small" type="danger" @click="deleteTeamMember(m)">删除</el-button></div>
-</div>
-</div>
 </div>
 <div class="mobile-step-footer">
-<el-button v-if="mobileStep > 0" size="large" @click="prevStep" :disabled="savingAll">上一步</el-button>
+<el-button v-if="mobileStep > 0" size="large" @click="prevStep" :disabled="savingStep">上一步</el-button>
 <el-button v-if="mobileStep < mobileSteps.length - 1" type="primary" size="large" @click="nextStep">下一步</el-button>
-<el-button v-if="mobileStep === mobileSteps.length - 1 && plan.status === 'project_init'" type="warning" size="large" @click="showApprovalDrawer = true" style="flex:1">提交审批</el-button>
-<el-button v-else-if="mobileStep === mobileSteps.length - 1" type="primary" size="large" @click="saveAll" :loading="savingAll" style="flex:1">保存全部</el-button>
+<el-button v-if="mobileStep === mobileSteps.length - 1" type="primary" size="large" @click="saveAll" :loading="savingAll" style="flex:1">提交</el-button>
 </div>
+</template>
+
+<!-- ─── 移动端只读模式：卡片展示信息 ─── -->
+<template v-else>
+<div class="mobile-readonly">
+  <!-- 只读卡片：项目概述 -->
+  <div class="readonly-card">
+    <div class="readonly-card-header"><h4>📄 项目概述</h4></div>
+    <el-descriptions :column="1" border size="small">
+      <el-descriptions-item label="策划名称">{{ editForm.name || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="产品系列">{{ editForm.series || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="目标市场">{{ editForm.market || '—' }}</el-descriptions-item>
+    </el-descriptions>
+  </div>
+  <!-- 只读卡片：立项信息 -->
+  <div class="readonly-card">
+    <div class="readonly-card-header"><h4>📋 立项信息</h4></div>
+    <el-descriptions :column="1" border size="small">
+      <el-descriptions-item label="立项背景">{{ initiationForm.background || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="产品类型">{{ initiationForm.type || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="制冷剂">{{ initiationForm.refrigerant || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="容量">{{ initiationForm.capacity || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="电压">{{ initiationForm.voltage || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="能效">{{ initiationForm.energy || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="开发类别">{{ initiationForm.dev_category || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="产地">{{ initiationForm.origin || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="开发周期(月)">{{ initiationForm.duration || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="IP等级">{{ initiationForm.ip || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="项目目标">{{ initiationForm.goals || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="交付物">{{ initiationForm.deliverables || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="样品数量">{{ initiationForm.sample_qty || '—' }}</el-descriptions-item>
+    </el-descriptions>
+  </div>
+  <!-- 只读卡片：市场信息 -->
+  <div class="readonly-card">
+    <div class="readonly-card-header"><h4>🎯 市场信息</h4></div>
+    <el-descriptions :column="1" border size="small">
+      <el-descriptions-item label="主要容量">{{ marketForm.main_capacity || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="能效要求">{{ marketForm.energy_efficiency || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="认证要求">{{ marketForm.cert_requirements || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="目标价格">{{ marketForm.target_price ? '¥' + Number(marketForm.target_price).toLocaleString('zh-CN') : '—' }}</el-descriptions-item>
+      <el-descriptions-item label="客户需求">{{ marketForm.customer_requirements || '—' }}</el-descriptions-item>
+    </el-descriptions>
+  </div>
+  <!-- 只读卡片：技术规格 -->
+  <div class="readonly-card">
+    <div class="readonly-card-header"><h4>⚡ 技术规格</h4></div>
+    <el-descriptions :column="1" border size="small">
+      <el-descriptions-item label="核心性能指标">{{ techSpecForm.core_performance || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="安全合规要求">{{ techSpecForm.safety_compliance || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="可选配置">{{ techSpecForm.optional_config || '—' }}</el-descriptions-item>
+    </el-descriptions>
+  </div>
+  <!-- 只读卡片：成本核算 -->
+  <div class="readonly-card">
+    <div class="readonly-card-header"><h4>💰 成本核算</h4></div>
+    <div v-if="costs.length > 0" style="overflow-x:auto">
+      <el-table :data="costs" stripe border size="small">
+        <el-table-column prop="item_name" label="成本项" min-width="100" />
+        <el-table-column prop="cost_type" label="类型" width="70"><template #default="{ row }"><el-tag size="small">{{ row.cost_type }}</el-tag></template></el-table-column>
+        <el-table-column prop="target_value" label="目标值" width="80" />
+        <el-table-column prop="actual_value" label="实际值" width="80" />
+      </el-table>
+    </div>
+    <div v-else class="readonly-empty">暂无成本数据</div>
+  </div>
+  <!-- 只读底部编辑按钮 -->
+  <div class="readonly-edit-btn">
+    <el-button type="primary" size="large" @click="enterEditMode" style="width:100%">✏️ 编辑策划</el-button>
+  </div>
+</div>
+</template>
 </template>
 
 <!-- 成本弹窗 -->
@@ -691,14 +772,31 @@ const {
 const mobileStep = ref(0)
 const savingAll = ref(false)
 const savingStep = ref(false)
+/** 移动端编辑模式切换（默认只读） */
+const isEditing = ref(false)
+
+function enterEditMode() { isEditing.value = true }
+async function exitEditMode() {
+  await saveCurrentStep(mobileStep.value)
+  isEditing.value = false
+}
+
 const mobileSteps = [
-{ label: '项目概述', key: 'initiation' },
-{ label: '市场客户', key: 'market' },
-{ label: '技术要求', key: 'techSpec' },
-{ label: '成本核算', key: 'costingNew' },
-{ label: '团队', key: 'team' },
-{ label: '复盘', key: 'review' },
+{ label: '项目概述', key: 'overview' },
+{ label: '立项信息', key: 'initiation' },
+{ label: '市场信息', key: 'market' },
+{ label: '技术规格', key: 'techSpec' },
+{ label: '成本核算', key: 'costing' },
 ]
+
+/** 移动端步骤 key → 子表 key 映射（用于步骤完成状态） */
+const STEP_STATUS_KEY_MAP: Record<string, string> = {
+  overview: 'initiation',
+  initiation: 'initiation',
+  market: 'market',
+  techSpec: 'techSpec',
+  costing: 'costingNew',
+}
 
 /** Auto-save current mobile step before navigating */
 async function saveCurrentStep(stepIdx: number) {
@@ -706,6 +804,10 @@ async function saveCurrentStep(stepIdx: number) {
   savingStep.value = true
   try {
     switch (key) {
+      case 'overview':
+        // 项目概述：保存 editForm 基本信息
+        await api.patch(`/product-plans/${planId}`, editForm.value)
+        break
       case 'initiation': {
         const p = initiationForm
         const payload: InitiationPayload = {}
@@ -744,11 +846,11 @@ async function saveCurrentStep(stepIdx: number) {
         await planAPI.upsertPlanTechSpec(planId, techSpecForm)
         setSubTableDone('techSpec', true)
         break
-      // costingNew / team — 通过弹窗管理，无需自动保存
+      // costing — 通过弹窗管理，无需自动保存
     }
   } catch (e: unknown) {
     const _autoSaveErr = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
-    /* silent — auto-save 不应阻塞导航 */ ElMessage.error(_autoSaveErr || '自动保存失败')
+    ElMessage.error(_autoSaveErr || '自动保存失败')
   }
   finally { savingStep.value = false }
 }
@@ -764,16 +866,28 @@ async function prevStep() {
   mobileStep.value--
 }
 
-/** Guide 引导条点击 — 同步 activeTab + 移动端切换步骤 */
+/** Guide 引导条点击 — 同步 activeTab（桌面端），移动端使用步骤条不联动 */
 function guideClick(key: string, idx: number) {
   guideClickFromComposable(key, idx)
-  if (isMobile.value) mobileStep.value = idx
 }
 
-/** 移动端步骤完成状态 — 已完成步骤显示✓ */
+/** 移动端步骤完成状态 — 映射到子表完成状态 */
 function stepStatus(key: string): 'success' | undefined {
-  if (tabStatus.value[key] === 'done') return 'success'
+  const tabKey = STEP_STATUS_KEY_MAP[key]
+  if (tabKey && tabStatus.value[tabKey] === 'done') return 'success'
   return undefined
+}
+
+// ── 移动端键盘弹起时滚动不遮挡输入框 ──
+function handleMobileFocus(e: FocusEvent) {
+  const target = e.target as HTMLElement
+  if (!target || !target.closest) return
+  const tag = target.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 350)
+  }
 }
 
 // ── Data ──
@@ -1740,11 +1854,6 @@ onMounted(async () => {
 .approval-info { display: flex; gap: 20px; font-size: 13px; }
 .approval-node { font-weight: 600; }
 .approval-actions { display: flex; gap: 8px; }
-/* Mobile */
-.mobile-step-form { padding: 0 12px; }
-.step-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5; }
-.mobile-step-footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 12px; padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e4e7ed; box-shadow: 0 -2px 8px rgba(0,0,0,0.06); z-index: 100; }
-.mobile-step-footer .el-button { flex: 1; }
 .mobile-team-card { background: #f5f7fa; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
 .team-card-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .team-card-name { font-weight: 600; font-size: 14px; }
@@ -1811,4 +1920,23 @@ onMounted(async () => {
 .vh-diff-modified .vh-diff-col-new { background: #e1f3d8; color: #67c23a; }
 .vh-diff-null { color: #c0c4cc; font-style: italic; }
 .vh-diff-no-changes { padding: 32px 0; }
+/* Mobile read-only mode */
+.mobile-readonly { padding: 0 12px 24px; }
+.readonly-card { background: #fff; border: 1px solid #ebeef5; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.readonly-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.readonly-card-header h4 { margin: 0; font-size: 15px; font-weight: 600; color: #303133; }
+.readonly-card :deep(.el-descriptions__cell) { padding: 6px 10px; }
+.readonly-empty { text-align: center; padding: 24px 0; color: #909399; font-size: 13px; }
+.readonly-edit-btn { padding: 16px 0 calc(32px + env(safe-area-inset-bottom, 0px)); }
+.mobile-mode-toggle { display: flex; justify-content: flex-end; padding: 0 12px 8px; }
+/* Step title */
+.step-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5; }
+/* Mobile step form — 表单字段100%宽度 */
+.mobile-step-form { padding: 0 12px 100px; }
+.mobile-step-form .el-form-item { width: 100%; }
+.mobile-step-form :deep(.el-form-item__content) { width: 100%; }
+.mobile-step-form :deep(.el-input), .mobile-step-form :deep(.el-select), .mobile-step-form :deep(.el-input-number) { width: 100% !important; }
+/* Mobile step footer */
+.mobile-step-footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 12px; padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e4e7ed; box-shadow: 0 -2px 8px rgba(0,0,0,0.06); z-index: 100; }
+.mobile-step-footer .el-button { flex: 1; }
 </style>
