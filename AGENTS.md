@@ -65,12 +65,36 @@
 
 ## 变更记录
 
+### 2026-06-29（持续修复）
+- **后端重构**: 拆分 competitor.py (1215→951行)，Market CRUD + 能效等级API 迁移至独立 `backend/app/api/markets.py`（含 Pydantic schema: MarketCreate/MarketUpdate/EnergyLevelCreate/EnergyLevelUpdate）
+- **前端修复**: 3个Hub组件(ChangesHub/SafetyHub/CertHub) 动态 `import(rel)` → 静态 `defineAsyncComponent` 映射，修复Vite编译失败导致的路由500错误
+- **组件拆分**: MarketMgmt.vue 标准配置弹窗提取为独立 StandardConfigDialog.vue (327行), MarketMgmt.vue 从1059行降至774行
+- **前端测试框架**: 搭建 Vitest + jsdom, 4个 EnergyLevelManager 组件测试通过
+- **测试组织**: test_market_energy_levels.py 移入子包 backend/tests/market/
+- **全量测试**: 102 passed, 1 legacy fail (不变)
+- 全站主题色回退: #2563eb(深蓝)→#d97757(橙红)，按钮文字白色(#ffffff)
+- 导航选中态、logo-mini、collapse-btn-hover、role-tag全部回退至橙红色系
+- **菜单整合**: 侧边栏3项合并: 变更/ECR/ECO→「变更管理」(ChangesHub)
+- **菜单整合**: 认证11项合并→「认证管理」(CertHub)
+- **菜单整合**: 安规4项合并→「安规管理」(SafetyHub)
+- **新增功能**: 市场中新增"最低电压要求(V)"字段（表单+表格显示）
+- **新增功能**: 标准配置弹窗新增「能效等级」tab，支持多等级CRUD（SEER/EER/CSPF门槛值）
+- 后端: Market模型新增min_voltage列 + MarketEnergyLevel表 + 4个CRUD端点
+- **合规修复**: MarketItem接口补充min_voltage/refrigerant_charge字段
+- **合规修复**: SafetyHub.vue路径统一（TAB_MAP文件路径整改）
+- **合规修复**: EnergyLevelManager.vue bare catch加(e: unknown)参数
+- **合规修复**: 能效等级API增加市场存在性验证（404友好）
+- **合规修复**: structure_type机型恢复6个选项（分体壁挂/天花/风管/柜机/窗机/移动空调）
+
+### 2026-06-28
+- AI-Z合规修复: catch参数补齐、AGENTS.md变更记录更新
+
 ### 2026-06-27
 - MarketMgmt.vue: 新增筛选栏(区域/状态/搜索) + 标准配置弹窗(测试要求+标准要求)
 - 目标市场配置(TargetMarketView)合并入市场管理，移除独立路由
 - 新增市场弹窗: 取消market_code输入(自动用名称生成)、取消refrigerant_charge字段
 - "压缩机"→"关键元器件的特殊要求" 全局文案替换
-- 全局主题色: #d97757(橙红)→#2563eb(深蓝)，导航选中态保留橙红点缀
+- 全局主题色: #d97757(橙红)→#2563eb(深蓝)，导航选中态保留橙红点缀 (后于2026-06-29回退)
 - 类型约束: ref<any>全部替换为具体类型接口(MarketForm/CertForm/CompressorForm/TestForm/StandardForm)
 - 错误处理: 所有catch块加(e: unknown)参数
 - backend: target_markets.py 新增GET/PUT端点 for tests+standards
