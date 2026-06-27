@@ -370,14 +370,13 @@ def add_team_member(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """添加团队成员"""
-    _get_plan_or_404(db, plan_id)
+    plan = _get_plan_or_404(db, plan_id)
     member = ProductPlanTeam(product_plan_id=plan_id, **data.model_dump())
     db.add(member)
+    # 同步父表更新时间（单次 commit，避免部分写入风险）
+    plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(member)
-    # 同步父表更新时间
-    _get_plan_or_404(db, plan_id).updated_at = datetime.utcnow()
-    db.commit()
     return member
 
 

@@ -11,6 +11,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel, Field
 from typing import Optional
 from app.core.database import get_db
@@ -239,8 +240,12 @@ def create_plan(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """创建产品策划（DRAFT）"""
-    plan = workflow_create(db, data.model_dump(), current_user.username)
-    return _plan_to_dict(plan)
+    try:
+        plan = workflow_create(db, data.model_dump(), current_user.username)
+        return _plan_to_dict(plan)
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"创建策划失败: {str(e)}")
 
 
 @router.get("")
@@ -254,28 +259,32 @@ def list_plans(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """产品策划列表（分页+筛选）"""
-    q = db.query(ProductPlan)
+    try:
+        q = db.query(ProductPlan)
 
-    if status:
-        try:
-            s = ProductPlanStage(status)
-            q = q.filter(ProductPlan.status == s)
-        except ValueError:
-            pass
-    if series:
-        q = q.filter(ProductPlan.series.ilike(f"%{series}%"))
-    if search:
-        q = q.filter(ProductPlan.name.ilike(f"%{search}%"))
+        if status:
+            try:
+                s = ProductPlanStage(status)
+                q = q.filter(ProductPlan.status == s)
+            except ValueError:
+                pass
+        if series:
+            q = q.filter(ProductPlan.series.ilike(f"%{series}%"))
+        if search:
+            q = q.filter(ProductPlan.name.ilike(f"%{search}%"))
 
-    total = q.count()
-    plans = q.order_by(ProductPlan.updated_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+        total = q.count()
+        plans = q.order_by(ProductPlan.updated_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
-    return {
-        "items": [_plan_to_dict(p) for p in plans],
-        "total": total,
-        "page": page,
-        "page_size": page_size,
-    }
+        return {
+            "items": [_plan_to_dict(p) for p in plans],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"查询策划列表失败: {str(e)}")
 
 
 @router.get("/{plan_id}", response_model=PlanDetailOut)
@@ -560,22 +569,26 @@ def update_plan(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """更新策划基本信息"""
-    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
-    if not plan:
-        raise HTTPException(status_code=404, detail="策划不存在")
+    try:
+        plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+        if not plan:
+            raise HTTPException(status_code=404, detail="策划不存在")
 
-    # [P1-2] 数据级权限: 非管理员只能编辑自己创建的策划
-    if current_user.role not in ("admin", "general_manager") and plan.created_by != current_user.username:
-        raise HTTPException(status_code=403, detail="只能编辑自己创建的策划")
+        # [P1-2] 数据级权限: 非管理员只能编辑自己创建的策划
+        if current_user.role not in ("admin", "general_manager") and plan.created_by != current_user.username:
+            raise HTTPException(status_code=403, detail="只能编辑自己创建的策划")
 
-    update_data = data.model_dump(exclude_unset=True)
-    for key, val in update_data.items():
-        if val is not None and hasattr(plan, key):
-            setattr(plan, key, val)
-    plan.updated_at = func.now()
-    db.commit()
-    db.refresh(plan)
-    return _plan_to_dict(plan)
+        update_data = data.model_dump(exclude_unset=True)
+        for key, val in update_data.items():
+            if val is not None and hasattr(plan, key):
+                setattr(plan, key, val)
+        plan.updated_at = func.now()
+        db.commit()
+        db.refresh(plan)
+        return _plan_to_dict(plan)
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"更新策划失败: {str(e)}")
 
 
 @router.delete("/{plan_id}")
@@ -586,25 +599,29 @@ def delete_plan(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """删除产品策划"""
-    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
-    if not plan:
-        raise HTTPException(status_code=404, detail="策划不存在")
+    try:
+        plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+        if not plan:
+            raise HTTPException(status_code=404, detail="策划不存在")
 
-    # [P1-2] 数据级权限: 非管理员只能删除自己创建的策划
-    if current_user.role not in ("admin", "general_manager") and plan.created_by != current_user.username:
-        raise HTTPException(status_code=403, detail="只能删除自己创建的策划")
+        # [P1-2] 数据级权限: 非管理员只能删除自己创建的策划
+        if current_user.role not in ("admin", "general_manager") and plan.created_by != current_user.username:
+            raise HTTPException(status_code=403, detail="只能删除自己创建的策划")
 
-    # 级联删除关联子表记录
-    db.query(ProductPlanTeam).filter(ProductPlanTeam.product_plan_id == plan_id).delete()
-    db.query(Cost).filter(Cost.product_plan_id == plan_id).delete()
-    db.query(ProductPlanInitiation).filter(ProductPlanInitiation.product_plan_id == plan_id).delete()
-    db.query(ProductPlanMarket).filter(ProductPlanMarket.product_plan_id == plan_id).delete()
-    db.query(ProductPlanTechSpec).filter(ProductPlanTechSpec.product_plan_id == plan_id).delete()
-    db.query(ProductPlanProjectLink).filter(ProductPlanProjectLink.product_plan_id == plan_id).delete()
+        # 级联删除关联子表记录
+        db.query(ProductPlanTeam).filter(ProductPlanTeam.product_plan_id == plan_id).delete()
+        db.query(Cost).filter(Cost.product_plan_id == plan_id).delete()
+        db.query(ProductPlanInitiation).filter(ProductPlanInitiation.product_plan_id == plan_id).delete()
+        db.query(ProductPlanMarket).filter(ProductPlanMarket.product_plan_id == plan_id).delete()
+        db.query(ProductPlanTechSpec).filter(ProductPlanTechSpec.product_plan_id == plan_id).delete()
+        db.query(ProductPlanProjectLink).filter(ProductPlanProjectLink.product_plan_id == plan_id).delete()
 
-    db.delete(plan)
-    db.commit()
-    return {"ok": True}
+        db.delete(plan)
+        db.commit()
+        return {"ok": True}
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"删除策划失败: {str(e)}")
 
 
 # ── Cost 子资源 ──
@@ -617,28 +634,32 @@ def create_cost(
     _=Depends(require_menu("product-plans")),
 ) -> dict:
     """添加成本记录"""
-    plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
-    if not plan:
-        raise HTTPException(status_code=404, detail="策划不存在")
-
     try:
-        ct = CostType(data.cost_type)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"无效成本类型: {data.cost_type}")
+        plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
+        if not plan:
+            raise HTTPException(status_code=404, detail="策划不存在")
 
-    cost = Cost(
-        product_plan_id=plan_id,
-        cost_type=ct,
-        item_name=data.item_name,
-        target_value=data.target_value,
-        actual_value=data.actual_value,
-        currency=data.currency or "CNY",
-        remark=data.remark,
-    )
-    db.add(cost)
-    db.commit()
-    db.refresh(cost)
-    return _cost_to_dict(cost)
+        try:
+            ct = CostType(data.cost_type)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"无效成本类型: {data.cost_type}")
+
+        cost = Cost(
+            product_plan_id=plan_id,
+            cost_type=ct,
+            item_name=data.item_name,
+            target_value=data.target_value,
+            actual_value=data.actual_value,
+            currency=data.currency or "CNY",
+            remark=data.remark,
+        )
+        db.add(cost)
+        db.commit()
+        db.refresh(cost)
+        return _cost_to_dict(cost)
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"添加成本记录失败: {str(e)}")
 
 
 @router.delete("/{plan_id}/costs/{cost_id}")

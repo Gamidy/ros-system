@@ -344,14 +344,40 @@ async function saveCurrentStep(stepIdx: number) {
   savingStep.value = true
   try {
     switch (key) {
-      case 'initiation':
-        await planAPI.upsertPlanInitiation(planId, initiationForm)
+      case 'initiation': {
+        const p = initiationForm
+        const payload: Record<string, any> = {}
+        if (p.background) payload.background_basis = p.background
+        if (p.type) payload.product_type = p.type
+        if (p.market) payload.target_market = p.market
+        if (p.refrigerant) payload.refrigerant = p.refrigerant
+        if (p.capacity) payload.capacity_range = p.capacity
+        if (p.voltage) payload.voltage_freq = p.voltage
+        if (p.series) payload.series_name = p.series
+        if (p.energy) payload.energy_rating = p.energy
+        if (p.dev_category) payload.dev_category = p.dev_category
+        if (p.origin) payload.project_origin = p.origin
+        if (p.duration) payload.project_duration = p.duration
+        if (p.ip) payload.ip_ownership = p.ip
+        if (p.goals) payload.overall_goal = p.goals
+        if (p.deliverables) payload.deliverables = p.deliverables
+        if (p.sample_qty) payload.sample_qty = p.sample_qty
+        await planAPI.upsertPlanInitiation(planId, payload)
         setSubTableDone('initiation', true)
         break
-      case 'market':
-        await planAPI.upsertPlanMarket(planId, marketForm)
+      }
+      case 'market': {
+        const p = marketForm
+        const payload: Record<string, any> = {}
+        if (p.main_capacity) payload.main_capacity = p.main_capacity
+        if (p.energy_efficiency) payload.energy_efficiency_req = p.energy_efficiency
+        if (p.cert_requirements) payload.cert_requirements = p.cert_requirements
+        if (p.target_price) payload.target_price = p.target_price
+        if (p.customer_requirements) payload.customer_requirements = p.customer_requirements
+        await planAPI.upsertPlanMarket(planId, payload)
         setSubTableDone('market', true)
         break
+      }
       case 'techSpec':
         await planAPI.upsertPlanTechSpec(planId, techSpecForm)
         setSubTableDone('techSpec', true)
@@ -659,8 +685,34 @@ async function saveAll() {
 savingAll.value = true
 try {
 await api.patch(`/product-plans/${planId}`, editForm.value)
-await planAPI.upsertPlanInitiation(planId, initiationForm)
-await planAPI.upsertPlanMarket(planId, marketForm)
+// Initiation 字段映射
+const ip = initiationForm
+const initPayload: Record<string, any> = {}
+if (ip.background) initPayload.background_basis = ip.background
+if (ip.type) initPayload.product_type = ip.type
+if (ip.market) initPayload.target_market = ip.market
+if (ip.refrigerant) initPayload.refrigerant = ip.refrigerant
+if (ip.capacity) initPayload.capacity_range = ip.capacity
+if (ip.voltage) initPayload.voltage_freq = ip.voltage
+if (ip.series) initPayload.series_name = ip.series
+if (ip.energy) initPayload.energy_rating = ip.energy
+if (ip.dev_category) initPayload.dev_category = ip.dev_category
+if (ip.origin) initPayload.project_origin = ip.origin
+if (ip.duration) initPayload.project_duration = ip.duration
+if (ip.ip) initPayload.ip_ownership = ip.ip
+if (ip.goals) initPayload.overall_goal = ip.goals
+if (ip.deliverables) initPayload.deliverables = ip.deliverables
+if (ip.sample_qty) initPayload.sample_qty = ip.sample_qty
+await planAPI.upsertPlanInitiation(planId, initPayload)
+// Market 字段映射
+const mp = marketForm
+const marketPayload: Record<string, any> = {}
+if (mp.main_capacity) marketPayload.main_capacity = mp.main_capacity
+if (mp.energy_efficiency) marketPayload.energy_efficiency_req = mp.energy_efficiency
+if (mp.cert_requirements) marketPayload.cert_requirements = mp.cert_requirements
+if (mp.target_price) marketPayload.target_price = mp.target_price
+if (mp.customer_requirements) marketPayload.customer_requirements = mp.customer_requirements
+await planAPI.upsertPlanMarket(planId, marketPayload)
 await planAPI.upsertPlanTechSpec(planId, techSpecForm)
 ElMessage.success('全部保存成功')
 } catch (e: unknown) {

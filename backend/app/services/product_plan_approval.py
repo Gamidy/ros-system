@@ -185,20 +185,37 @@ def on_approval_completed(request_id: int, request_type: str, **kwargs):
         # 推进到 APPROVED
         plan.status = ProductPlanStage.APPROVED
 
-        # 创建 Project
         from app.services.product_plan_workflow import _generate_project_from_plan
         from app.models.product_plan import ProductPlanProjectLink
         username = kwargs.get("username", request.requester)
-        project = _generate_project_from_plan(plan, db, username)
-        link = ProductPlanProjectLink(product_plan_id=plan.id, project_id=project.id, link_type='primary')
-        db.add(link)
+
+        # 幂等性检查：避免重复创建 Project + Link
+        existing_link = db.query(ProductPlanProjectLink).filter(
+            ProductPlanProjectLink.product_plan_id == plan.id,
+            ProductPlanProjectLink.link_type == 'primary'
+        ).first()
+        if existing_link:
+            logger.warning(
+                "Project already exists for plan=%s, project_id=%s, skipping creation",
+                plan.id, existing_link.project_id,
+            )
+            project_id = existing_link.project_id
+        else:
+            project = _generate_project_from_plan(plan, db, username)
+            link = ProductPlanProjectLink(
+                product_plan_id=plan.id,
+                project_id=project.id,
+                link_type='primary',
+            )
+            db.add(link)
+            project_id = project.id
 
         db.commit()
         db.refresh(plan)
 
         logger.info(
             "Plan approval completed: plan=%s, project=%s, request=%s",
-            plan_id, project.id, request_id,
+            plan_id, project_id, request_id,
         )
 
         # 发射 plan.approved 事件（触发 Saga 后续步骤）
@@ -206,7 +223,7 @@ def on_approval_completed(request_id: int, request_type: str, **kwargs):
             EventTypes.PLAN_APPROVED,
             plan_id=plan.id,
             plan_name=plan.name,
-            project_id=project.id,
+            project_id=project_id,
             created_by=plan.created_by or request.requester,
             username=username,
         )
