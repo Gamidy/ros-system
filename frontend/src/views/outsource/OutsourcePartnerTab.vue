@@ -44,7 +44,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import type { TableRow } from '@/types/common'
+import { computed, ref, onMounted } from 'vue'
 import { listOutsourcePartners, createOutsourcePartner, updateOutsourcePartner, deleteOutsourcePartner } from '../../api/outsource'
 import type { FormInstance } from 'element-plus'
 
@@ -56,8 +57,8 @@ function typeLabel(t: string) { const m: Record<string,string>={mold:'模具',el
 
 async function fetchData() { loading.value=true; try { const { data } = await listOutsourcePartners({ page:page.value, page_size:pageSize.value, keyword:keyword.value||undefined, partner_type:filterType.value||undefined }); items.value=data.items||[]; total.value=data.total||0 } catch{} finally{loading.value=false} }
 function showCreate() { isEdit.value=false; editingId.value=null; form.value={code:'',name:'',partner_type:'other',contact_person:'',contact_phone:'',address:'',business_scope:'',qualification_level:'B',rating:null,remark:''}; dialogVisible.value=true }
-function showEdit(row:any) { isEdit.value=true; editingId.value=row.id; form.value={...row}; dialogVisible.value=true }
+function showEdit(row: TableRow) { isEdit.value=true; editingId.value=row.id; form.value={...row}; dialogVisible.value=true }
 async function handleSave() { if(!await formRef.value?.validate().catch(()=>false)) return; saving.value=true; try { if(isEdit.value&&editingId.value) await updateOutsourcePartner(editingId.value, form.value); else await createOutsourcePartner(form.value); dialogVisible.value=false; fetchData() } catch{} finally{saving.value=false} }
-async function handleDelete(row:any) { try{await deleteOutsourcePartner(row.id);fetchData()}catch{} }
+async function handleDelete(row: TableRow) { try{await deleteOutsourcePartner(row.id);fetchData()}catch{} }
 onMounted(fetchData)
 </script>
