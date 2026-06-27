@@ -451,12 +451,25 @@ const router = createRouter({
           component: () => import('../views/cert/CertRulesView.vue'),
           meta: { title: '变更影响规则', menu: 'cert-rules' },
         },
-        // P1-T5 — 前端事件监控面板
+        // P1-T5 前端事件监控面板
         {
           path: 'monitor/events',
           name: 'EventMonitor',
           component: () => import('../views/monitor/EventMonitorView.vue'),
           meta: { title: '事件监控面板', menu: 'event-monitor' },
+        },
+        // P2 需求录入
+        {
+          path: 'pm/requirements/submit',
+          name: 'RequirementSubmit',
+          component: () => import('../views/pm/RequirementSubmit.vue'),
+          meta: { title: '需求录入', menu: 'pm-requirements' },
+        },
+        {
+          path: 'pm/requirements',
+          name: 'RequirementList',
+          component: () => import('../views/pm/RequirementList.vue'),
+          meta: { title: '需求管理', menu: 'pm-requirements' },
         },
       ],
     },

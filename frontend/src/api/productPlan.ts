@@ -138,6 +138,22 @@ export function createPlanProjectLink(planId: string, data: CreateProjectLinkPay
 export function updatePlanProjectLink(planId: string, linkId: number, data: UpdateProjectLinkPayload) { return api.put(`/product-plans/${planId}/project-links/${linkId}`, data) }
 export function deletePlanProjectLink(planId: string, linkId: number) { return api.delete(`/product-plans/${planId}/project-links/${linkId}`) }
 
+// ── 产品需求 (Product Requirement) ──
+
+/** 提交需求 */
+export function submitRequirement(data: Record<string, unknown>) { return api.post('/product-requirements', data) }
+
+/** 查询需求列表 */
+export function listRequirements(params?: Record<string, unknown>) { return api.get('/product-requirements', { params }) }
+
+/** 更新需求状态（采纳/拒绝） */
+export function updateRequirementStatus(id: number, status: string, reject_reason?: string) {
+  return api.put(`/product-requirements/${id}/status`, { status, reject_reason })
+}
+
+/** 需求转策划 */
+export function convertToPlan(id: number) { return api.post(`/product-requirements/${id}/convert`) }
+
 // ── 市场选项 (Markets) ──
 export interface MarketOption {
   code: string

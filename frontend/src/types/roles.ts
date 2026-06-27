@@ -90,6 +90,8 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/planning/calendar', title: '年度规划日历', icon: DataAnalysis },
       { path: '/competitor-bench', title: '竞品对标', icon: DataAnalysis },
       { path: '/market-mgmt', title: '市场管理', icon: Stamp },
+      { path: '/pm/requirements', title: '需求管理', icon: Document },
+      { path: '/pm/requirements/submit', title: '需求录入', icon: Edit },
     ]
   },
   {
@@ -231,6 +233,9 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/monitor/events',    title: '事件监控面板', icon: DataAnalysis },
   // P2-T5 规则管理
   { path: '/cert/rules',        title: '变更影响规则', icon: DataAnalysis },
+  // P2 需求录入
+  { path: '/pm/requirements',        title: '需求管理', icon: Document },
+  { path: '/pm/requirements/submit', title: '需求录入', icon: Edit },
 ]
 
 /**

@@ -128,6 +128,63 @@
 </template></el-table-column>
 </el-table>
 </el-tab-pane>
+
+<!-- 关联项目 -->
+<el-tab-pane label="关联项目" name="projectLinks">
+  <div v-if="loadingProjects" style="text-align:center;padding:40px;color:#909399">
+    <span style="font-size:32px">⏳</span>
+    <p style="margin-top:12px">加载项目详情...</p>
+  </div>
+  <div v-else-if="projectDetails.length === 0" class="project-empty">
+    <el-empty description="暂无关联项目" />
+  </div>
+  <div v-else v-for="proj in projectDetails" :key="proj.id" class="project-link-card">
+    <el-divider v-if="projectDetails.length > 1 && proj !== projectDetails[0]" content-position="left" />
+    <!-- 项目摘要 -->
+    <h4 class="project-section-title">📋 项目摘要</h4>
+    <el-descriptions :column="2" border size="small">
+      <el-descriptions-item label="项目编号">{{ proj.code }}</el-descriptions-item>
+      <el-descriptions-item label="项目名称">
+        <el-link type="primary" @click="$router.push(`/projects/${proj.id}`)">{{ proj.name }}</el-link>
+      </el-descriptions-item>
+      <el-descriptions-item label="项目等级">
+        <el-tag :type="classTagType(proj.project_class)" size="small">{{ proj.project_class }}级</el-tag>
+      </el-descriptions-item>
+      <el-descriptions-item label="状态">
+        <el-tag :type="projectStatusTagType(proj.status)" size="small">{{ projectStatusLabel(proj.status) }}</el-tag>
+      </el-descriptions-item>
+      <el-descriptions-item label="项目经理">{{ proj.owner || '未指定' }}</el-descriptions-item>
+    </el-descriptions>
+
+    <!-- 门禁进度 -->
+    <h4 class="project-section-title" style="margin-top:24px">🚧 门禁进度</h4>
+    <el-steps :active="gateActiveStep(proj)" finish-status="success" simple>
+      <el-step
+        v-for="g in visibleGates(proj)"
+        :key="g.gate_code"
+        :title="g.gate_code"
+        :description="g.gate_name"
+        :status="gateStatus(g)"
+      />
+    </el-steps>
+
+    <!-- 成本对比 -->
+    <h4 class="project-section-title" style="margin-top:24px">💰 成本对比</h4>
+    <el-descriptions :column="3" border size="small">
+      <el-descriptions-item label="策划目标成本">
+        <span style="font-weight:600">{{ formatCost(totalTargetCost) }}</span>
+      </el-descriptions-item>
+      <el-descriptions-item label="项目实际成本">
+        <span style="font-weight:600">{{ formatCost(totalActualCost) }}</span>
+      </el-descriptions-item>
+      <el-descriptions-item label="对比结果">
+        <el-tag :type="costCompareType(totalTargetCost, totalActualCost)" size="small">
+          {{ costCompareLabel(totalTargetCost, totalActualCost) }}
+        </el-tag>
+      </el-descriptions-item>
+    </el-descriptions>
+  </div>
+</el-tab-pane>
 </el-tabs>
 
 <!-- 底部审批操作栏 -->
@@ -285,6 +342,44 @@ interface PlanInfo {
   version_id?: number
   created_at?: string
   created_by?: string
+  project_links?: ProjectLinkInfo[]
+}
+
+interface ProjectLinkInfo {
+  id: number
+  project_id: number
+  link_type: string
+  snapshot_data?: string | null
+  version_major: number
+  version_minor: number
+  scenario_group_id?: string | null
+  created_at?: string
+}
+
+interface ProjectGateInfo {
+  id: number
+  gate_code: string
+  gate_name: string
+  seq: number
+  status: string
+  planned_date?: string | null
+  actual_date?: string | null
+  decision_level?: string | null
+  is_hidden?: boolean
+  is_high_risk_zone?: boolean
+}
+
+interface ProjectDetailInfo {
+  id: number
+  code: string
+  name: string
+  project_class: string
+  status: string
+  owner?: string | null
+  budget?: number | null
+  start_date?: string | null
+  target_end_date?: string | null
+  gates: ProjectGateInfo[]
 }
 
 interface CostItem {
@@ -438,6 +533,11 @@ const approving = ref(false)
 const rejecting = ref(false)
 const withdrawing = ref(false)
 const showApprovalDrawer = ref(false)
+
+// ── 关联项目 ──
+const projectLinks = ref<ProjectLinkInfo[]>([])
+const projectDetails = ref<ProjectDetailInfo[]>([])
+const loadingProjects = ref(false)
 
 // ── 项目概述 ──
 const initiationForm = reactive({ background: '', type: '', market: '', refrigerant: '', capacity: '', voltage: '', series: '', energy: '', dev_category: '', origin: '', duration: 0, ip: '', goals: '', deliverables: '', sample_qty: 0 })
@@ -643,13 +743,34 @@ try {
 const res = await api.get(`/product-plans/${planId}`)
 plan.value = res.data
 costs.value = res.data.costs || []
+projectLinks.value = res.data.project_links || []
 setSubTableDone('costingNew', costs.value.length > 0)
 editForm.value = { name: res.data.name || '', series: res.data.series || '', market: res.data.market || '', competitor_id: res.data.competitor_id ?? null }
+// 加载关联项目详情
+if (projectLinks.value.length > 0) {
+  fetchProjectDetails()
+}
 } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
 finally { loading.value = false }
+}
+
+async function fetchProjectDetails() {
+loadingProjects.value = true
+try {
+  const results = await Promise.allSettled(
+    projectLinks.value.map(link => api.get(`/projects/${link.project_id}`))
+  )
+  projectDetails.value = results
+    .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+    .map(r => r.value.data as ProjectDetailInfo)
+} catch {
+  // 静默处理 — 项目详情加载失败不影响主页面
+} finally {
+  loadingProjects.value = false
+}
 }
 async function saveQuickEdit() {
 saving.value = true
@@ -687,6 +808,60 @@ const bomTypes = [
 // ── 阶段映射 ──
 function stageLabel(s: string): string { return STAGE_LABELS[s] || s }
 function stageTagType(s: string): string { return STAGE_TAGS[s] || 'info' }
+
+// ── 项目辅助函数 ──
+function classTagType(cls: string): string {
+  const map: Record<string, string> = { T: 'danger', A: 'warning', B: 'primary', C: 'info' }
+  return map[cls] || 'info'
+}
+function projectStatusLabel(s: string): string {
+  const map: Record<string, string> = { planning: '规划中', running: '进行中', completed: '已完成', paused: '暂停', cancelled: '已取消' }
+  return map[s] || s
+}
+function projectStatusTagType(s: string): string {
+  const map: Record<string, string> = { planning: 'info', running: 'primary', completed: 'success', paused: 'warning', cancelled: 'danger' }
+  return map[s] || 'info'
+}
+function visibleGates(proj: ProjectDetailInfo): ProjectGateInfo[] {
+  return (proj.gates || []).filter(g => !g.is_hidden).sort((a, b) => a.seq - b.seq)
+}
+function gateStatus(g: ProjectGateInfo): 'success' | 'process' | 'wait' {
+  if (g.status === 'passed') return 'success'
+  if (g.status === 'failed') return 'error'
+  // 如果当前 gate 之前有未通过的，则是等待状态
+  return 'wait'
+}
+function gateActiveStep(proj: ProjectDetailInfo): number {
+  const gates = visibleGates(proj)
+  // 找到最后一个已通过 gate 的索引 + 1 = active step
+  let lastPassed = -1
+  for (let i = 0; i < gates.length; i++) {
+    if (gates[i].status === 'passed') lastPassed = i
+    else break // 一旦遇到未通过的，后续都是等待
+  }
+  return lastPassed + 1
+}
+const totalTargetCost = computed(() => {
+  return costs.value.reduce((sum, c) => sum + (Number(c.target_value) || 0), 0)
+})
+const totalActualCost = computed(() => {
+  return costs.value.reduce((sum, c) => sum + (Number(c.actual_value) || 0), 0)
+})
+function formatCost(val: number): string {
+  return `¥${val.toLocaleString('zh-CN')}`
+}
+function costCompareType(target: number, actual: number): string {
+  if (actual === 0 && target === 0) return 'info'
+  if (actual > target * 1.05) return 'danger'    // 超支 >5%
+  if (actual < target * 0.95) return 'success'   // 节省 >5%
+  return 'warning'                                 // 持平 ±5%
+}
+function costCompareLabel(target: number, actual: number): string {
+  if (actual === 0 && target === 0) return '无数据'
+  if (actual > target * 1.05) return '超支'
+  if (actual < target * 0.95) return '节省'
+  return '持平'
+}
 
 // ── 底部审批操作栏 ──
 const canAdvance = computed(() => plan.value && ['draft', 'competitor', 'definition', 'costing', 'tech_input'].includes(plan.value.status))
@@ -859,4 +1034,8 @@ onMounted(async () => {
 .drawer-content { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px; -webkit-overflow-scrolling: touch; }
 .comment-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #303133; }
 .drawer-footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 12px; padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e4e7ed; z-index: 10; }
+/* Project Link Card */
+.project-link-card { padding: 8px 0; }
+.project-section-title { font-size: 15px; font-weight: 600; margin: 16px 0 12px; color: #303133; }
+.project-empty { padding: 40px 0; }
 </style>
