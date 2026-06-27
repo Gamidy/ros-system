@@ -1,0 +1,52 @@
+# ROS Capability Registry
+# ──────────────────────
+# 所有 Capability 必须在此注册。
+# Architecture Board 管理的唯一权威注册表。
+
+registry_version: "1.0.0"
+managed_by: "Architecture Board"
+last_updated: "2026-06-30"
+
+capabilities:
+
+  planning:
+    id: "planning"
+    name: "Product Planning"
+    display_name: "产品策划中心"
+    contract_file: "docs/capabilities/planning.capability.yaml"
+    event_schemas:
+      - "docs/events/plan.created.v1.schema.json"
+      - "docs/events/plan.stage_advanced.v1.schema.json"
+      - "docs/events/plan.approved.v1.schema.json"
+      - "docs/events/plan.released.v1.schema.json"
+      - "docs/events/plan.cost_updated.v1.schema.json"
+    status: "frozen"          # draft | frozen | implemented | deprecated
+    frozen_at: "2026-06-30"
+    rfc: "RFC-2026-001"
+    approval_score: 98.6
+    phase:
+      current: 1
+      total: 7
+      description: "合约冻结（Phase 1/7）"
+    owner:
+      business_owner: "PM Director"
+      technical_owner: "Planning Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "project_management"
+      - "review_closed_loop"
+      - "knowledge_base"
+      - "dashboard"
+      - "bi_analytics"
+    kpis:
+      - "Planning Cycle Time"
+      - "Gate Pass Rate"
+      - "Planning Rework Rate"
+      - "Cost Target Accuracy"
+      - "Requirement Stability"
+      - "Plan Created P95"
+
+  # 后续 Capability 在此追加...
+  # verification:
+  #   id: "verification"
+  #   ...

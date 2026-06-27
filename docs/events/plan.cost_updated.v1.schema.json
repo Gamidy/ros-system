@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/events/plan.cost_updated.v1.schema.json",
+  "title": "策划成本更新事件",
+  "description": "当策划的成本目标或核算发生变更时发射。下游 Dashboard/BI 模块消费此事件刷新成本分析。",
+  "type": "object",
+  "required": ["event_id", "event_type", "version", "timestamp", "source", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "format": "uuid"},
+    "event_type": {"type": "string", "const": "plan.cost_updated"},
+    "version": {"type": "integer", "const": 1},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "const": "planning"},
+    "trace_id": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "payload": {
+      "type": "object",
+      "required": ["plan_id", "cost_type", "updated_by"],
+      "properties": {
+        "plan_id": {"type": "string", "format": "uuid"},
+        "cost_type": {
+          "type": "string",
+          "enum": ["target", "actual", "estimate"],
+          "description": "成本类型"
+        },
+        "previous_total": {"type": "number", "description": "变更前总成本"},
+        "current_total": {"type": "number", "description": "变更后总成本"},
+        "delta": {"type": "number", "description": "成本变动量（正=增加，负=减少）"},
+        "changed_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_name": {"type": "string"},
+              "previous_target": {"type": "number"},
+              "current_target": {"type": "number"}
+            }
+          }
+        },
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "updated_by": {"type": "string"},
+        "updated_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "user_id": {"type": "string"},
+        "correlation_id": {"type": "string", "format": "uuid"}
+      }
+    }
+  }
+}

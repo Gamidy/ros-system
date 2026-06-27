@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/events/plan.approved.v1.schema.json",
+  "title": "策划审批通过事件",
+  "description": "当审批链中所有节点通过后发射。下游模块由此触发 Project 创建。",
+  "type": "object",
+  "required": ["event_id", "event_type", "version", "timestamp", "source", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "format": "uuid"},
+    "event_type": {"type": "string", "const": "plan.approved"},
+    "version": {"type": "integer", "const": 1},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "const": "planning"},
+    "trace_id": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "payload": {
+      "type": "object",
+      "required": ["plan_id", "approval_chain", "approved_by", "approved_at"],
+      "properties": {
+        "plan_id": {"type": "string", "format": "uuid"},
+        "approval_chain": {
+          "type": "object",
+          "properties": {
+            "chain_id": {"type": "integer"},
+            "chain_code": {"type": "string"},
+            "total_steps": {"type": "integer"},
+            "completed_steps": {"type": "integer"}
+          }
+        },
+        "approved_by": {"type": "array", "items": {"type": "string"}},
+        "approved_at": {"type": "string", "format": "date-time"},
+        "comment": {"type": "string"}
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "user_id": {"type": "string"},
+        "correlation_id": {"type": "string", "format": "uuid"}
+      }
+    }
+  }
+}

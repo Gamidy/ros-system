@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/events/plan.released.v1.schema.json",
+  "title": "策划发布事件",
+  "description": "当策划进入 RELEASED 状态时发射。这是级联触发事件，下游模块消费此事件创建 Project 和复盘。",
+  "type": "object",
+  "required": ["event_id", "event_type", "version", "timestamp", "source", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "format": "uuid"},
+    "event_type": {"type": "string", "const": "plan.released"},
+    "version": {"type": "integer", "const": 1},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "const": "planning"},
+    "trace_id": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "payload": {
+      "type": "object",
+      "required": ["plan_id", "plan_snapshot", "released_by", "released_at"],
+      "properties": {
+        "plan_id": {"type": "string", "format": "uuid"},
+        "plan_snapshot": {
+          "type": "object",
+          "description": "发布时的完整策划快照（供下游模块参考）",
+          "properties": {
+            "name": {"type": "string"},
+            "market": {"type": "string"},
+            "series": {"type": "string"},
+            "portfolio": {"type": "string"},
+            "cost_target": {"type": "object"},
+            "performance_target": {"type": "object"},
+            "initiation_summary": {"type": "object"},
+            "market_summary": {"type": "object"},
+            "tech_spec_summary": {"type": "object"},
+            "team_members": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "released_by": {"type": "string"},
+        "released_at": {"type": "string", "format": "date-time"},
+        "trigger_tasks": {
+          "type": "object",
+          "description": "级联触发任务",
+          "properties": {
+            "create_project": {"type": "boolean", "const": true},
+            "create_review": {"type": "boolean", "const": true}
+          },
+          "required": ["create_project", "create_review"]
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "user_id": {"type": "string"},
+        "correlation_id": {"type": "string", "format": "uuid"}
+      }
+    }
+  }
+}

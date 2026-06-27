@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/events/plan.created.v1.schema.json",
+  "title": "产品策划创建事件",
+  "description": "当 ProductManager 创建新的产品策划时发射。",
+  "type": "object",
+  "required": ["event_id", "event_type", "version", "timestamp", "source", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "format": "uuid", "description": "事件唯一ID"},
+    "event_type": {"type": "string", "const": "plan.created"},
+    "version": {"type": "integer", "const": 1, "description": "事件版本"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "const": "planning"},
+    "trace_id": {"type": "string", "description": "OpenTelemetry trace ID"},
+    "tenant_id": {"type": "string", "description": "租户ID"},
+    "payload": {
+      "type": "object",
+      "required": ["plan_id", "name", "created_by"],
+      "properties": {
+        "plan_id": {"type": "string", "format": "uuid"},
+        "name": {"type": "string", "maxLength": 200},
+        "series": {"type": "string"},
+        "portfolio": {"type": "string", "enum": ["Residential AC", "Commercial AC", "Heat Pump", "Portable AC"]},
+        "market": {"type": "string", "maxLength": 80},
+        "created_by": {"type": "string"},
+        "created_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "user_id": {"type": "string"},
+        "correlation_id": {"type": "string", "format": "uuid"}
+      }
+    }
+  }
+}

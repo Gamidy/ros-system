@@ -1,0 +1,272 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Product Planning Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-001
+# Approval Score: 98.6/100
+
+capability:
+  id: "planning"
+  name: "Product Planning"
+  display_name: "产品策划中心"
+  description: >
+    管理空调产品从概念到批准发布的全生命周期策划流程。
+    包含竞品对标、产品定义、成本目标设定、技术方案、立项审批、
+    团队管理等核心业务能力。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 98.6
+  rfc_number: "RFC-2026-001"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "PM Director"
+  technical_owner: "Planning Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "product_manager"
+  backup_role: "admin"
+  stewardship_level: "exclusive"  # exclusive | shared | read-only
+
+lifecycle:
+  states:
+    - draft
+    - competitor        # 竞品分析进行中
+    - definition        # 产品定义
+    - costing           # 成本目标设定
+    - tech_input        # 技术方案
+    - project_init      # 立项审批
+    - approved          # 已批准
+    - released          # 已发布（冻结）
+  initial_state: "draft"
+  terminal_states: ["released"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    - method: POST
+      path: /product-plans
+      description: 创建策划草案
+      request: "CreatePlanPayload"
+      response: "PlanOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    - method: GET
+      path: /product-plans
+      description: 策划列表（分页+筛选）
+      response: "PaginatedPlans"
+      auth: "require_menu('product-plans')"
+      sla_ms: 300
+
+    - method: GET
+      path: /product-plans/{id}
+      description: 获取策划详情（含子表+关联项目+复盘+知识）
+      response: "PlanDetailOut"
+      auth: "require_menu('product-plans')"
+      sla_ms: 200
+
+    - method: POST
+      path: /product-plans/{id}/advance
+      description: 推进策划到下一阶段
+      request: "{ comment?: string }"
+      response: "PlanDetailOut"
+      auth: "product_manager | admin"
+      idempotency: true
+      sla_ms: 300
+
+    - method: POST
+      path: /product-plans/{id}/approve
+      description: 审批通过策划
+      request: "{ comment: string }"
+      response: "{ status: 'approved' }"
+      auth: "rd_director | general_manager"
+      idempotency: true
+      sla_ms: 500
+
+  events_published:
+    - "plan.created"              # 策划创建时
+    - "plan.stage_advanced"       # 每次阶段推进
+    - "plan.approved"             # 审批通过
+    - "plan.released"             # 发布（触发级联）
+    - "plan.cost_updated"         # 成本变更
+
+  events_subscribed:
+    - "project.status_changed"    # 下游项目状态变更回写
+    - "competitor.data_updated"   # 竞品数据更新通知
+    - "standard.updated"          # 标准变更影响评估
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "ProductPlan"               # 核心策划对象
+    - "ProductPlanInitiation"     # 子表: 项目概述
+    - "ProductPlanMarket"         # 子表: 市场与客户
+    - "ProductPlanTechSpec"       # 子表: 技术要求
+    - "ProductPlanCosting"        # 子表: 成本核算（模型名: Cost）
+    - "ProductPlanTeam"           # 子表: 团队
+    - "ProductPlanReview"         # 复盘
+    - "ProductPlanProjectLink"    # 策划→项目关联桥
+
+  workflows:
+    - "plan_creation"             # 创建→竞品→定义→成本→技术→立项→审批→发布
+    - "plan_approval"             # 审批流程（并行+终审）
+    - "plan_review"               # 复盘流程
+
+  views:
+    - "PMWorkspace"               # PM 工作台
+    - "ProductPlanDetail"         # 策划详情（5子表+复盘+知识）
+    - "CompetitorBench"           # 竞品对标
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "market_knowledge"
+      entities: ["Market", "EnergyStandard"]
+      contract: "docs/capabilities/market-knowledge.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+    - capability: "competitor_analysis"
+      entities: ["CompetitorModel", "CompetitorVersion"]
+      contract: "docs/capabilities/competitor-analysis.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"              # JWT认证
+    - "approval_engine"           # 审批链引擎
+    - "event_bus"                 # 事件总线
+    - "notification_center"       # 通知中心
+    - "ai_router"                 # AI辅助策划
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "Project"           # APPROVED → 自动创建 Project
+      trigger: "plan.released"
+      consumer: "project_management"
+
+    - entity: "ProductPlanReview" # RELEASED → 自动创建复盘
+      trigger: "plan.released"
+      consumer: "review_closed_loop"
+
+    - entity: "ApprovalRequest"   # PROJECT_INIT → 创建审批请求
+      trigger: "plan.stage_advanced"
+      consumer: "approval_engine"
+
+  knowledge:
+    - "plan_template"             # 策划模板沉淀
+    - "lessons_learned"           # 经验教训 → 知识库
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "approval_engine"
+    - "auth_service"
+    - "event_bus"
+
+  soft_dependencies:
+    - "competitor_analysis"       # 竞品对标可选
+    - "market_knowledge"          # 市场知识库可选
+    - "ai_router"                 # AI辅助可选
+
+  downstream_consumers:
+    - capability: "project_management"
+      consumes: ["Project", "ProductPlanProjectLink"]
+    - capability: "review_closed_loop"
+      consumes: ["ProductPlanReview"]
+    - capability: "knowledge_base"
+      consumes: ["lessons_learned"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "ProductPlan.*"
+    - "ProductPlanInitiation.*"
+    - "ProductPlanMarket.*"
+    - "ProductPlanTechSpec.*"
+    - "ProductPlanCosting.*"
+    - "ProductPlanTeam.*"
+    - "ProductPlanReview.*"
+
+  shared_read:
+    - "ProductPlan": ["project_management", "dashboard", "bi_analytics"]
+    - "ProductPlanReview": ["review_closed_loop", "knowledge_base"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  plan_creation:
+    strategy: "business_key"     # name+market 去重
+  stage_advancement:
+    strategy: "state_check"      # 当前状态校验
+  approval:
+    strategy: "request_id"       # 审批请求 ID 去重
+  cost_update:
+    strategy: "version_check"    # 乐观锁
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有数据无需迁移。新增字段均有默认值。
+    废弃字段通过 AliasChoices 兼容旧数据。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Planning Cycle Time"
+    description: "Idea → Planning 完成天数"
+    target: "≤ 14 天"
+    data_source: "Event Log"
+  - name: "Gate Pass Rate"
+    description: "Gate 评审一次通过率"
+    target: "≥ 70%"
+    data_source: "Gate Eval Record"
+  - name: "Planning Rework Rate"
+    description: "退回上一阶段占比"
+    target: "≤ 15%"
+    data_source: "Status History"
+  - name: "Cost Target Accuracy"
+    description: "目标成本与实际成本偏差"
+    target: "± 10%"
+    data_source: "Cost Data"
+  - name: "Requirement Stability"
+    description: "策划创建后需求变更次数"
+    target: "≤ 3 次"
+    data_source: "ECO Link"
+  - name: "Plan Created P95"
+    description: "创建策划 API P95 延迟"
+    target: "< 200ms"
+    data_source: "APM Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation Compliance + Event Bus 接入"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "AI 辅助 Gate 评估 + KPI 自动统计"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "自动优化 Gate 阈值 + Digital Twin 互联"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主 Gate（AI 主导，人工抽查）"
+    target: "2028+"
+    status: "vision"
