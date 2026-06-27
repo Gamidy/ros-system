@@ -26,6 +26,7 @@ from app.api import password_reset_api
 from app.api import event_logs
 from app.api import product_plan_review
 from app.api import review_templates
+from app.api import plan_templates
 from app.api import ws
 from app.api import notification_test_api
 from app.models import system_config  # ensure table created
@@ -201,6 +202,9 @@ app.include_router(ws.router)
 # ── D6-1 通知多渠道测试端点 ──
 app.include_router(notification_test_api.router)
 
+# ── D2-1 策划模板 ──
+app.include_router(plan_templates.router, prefix="/api")
+
 _celery_thread = None
 
 
@@ -294,6 +298,16 @@ def on_startup():
         seed_db.close()
     except Exception as exc:
         logger.warning("初始化默认校验规则失败: %s", exc)
+
+    # ── 初始化默认策划模板 ──
+    try:
+        from app.core.database import SessionLocal
+        from app.services.plan_template_seeder import seed_default_templates
+        seed_db = SessionLocal()
+        seed_default_templates(seed_db)
+        seed_db.close()
+    except Exception as exc:
+        logger.warning("初始化默认策划模板失败: %s", exc)
 
     # ── Phase 4 初始化 ──
     _init_phase4()

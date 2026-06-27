@@ -37,6 +37,17 @@
   <template #label>
     <span>项目概述 <el-tag size="small" type="primary" v-if="initiationVersion > 0">v{{initiationVersion}}</el-tag></span>
   </template>
+<!-- 模板选择器 -->
+<div v-if="templates.length > 0" class="template-selector" style="margin-bottom:12px;padding:12px;background:#f0f9eb;border-radius:6px;border:1px solid #e1f3d8;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+  <span style="font-size:13px;font-weight:600;white-space:nowrap;">📋 选择模板</span>
+  <el-select v-model="selectedTemplateId" placeholder="选择模板一键填充..." filterable clearable style="width:320px" size="small" @change="applyTemplate">
+    <el-option v-for="t in templates" :key="t.id" :label="t.name" :value="t.id">
+      <span>{{ t.name }}</span>
+      <span style="float:right;color:#909399;font-size:12px">{{ t.product_type }} · {{ t.market }}</span>
+    </el-option>
+  </el-select>
+  <span style="font-size:12px;color:#67c23a;">选择模板后自动填充表单，可手动修改</span>
+</div>
 <el-form :model="editForm" label-width="100" size="small" class="quick-edit">
 <el-row :gutter="12">
 <el-col :span="8"><el-form-item label="策划名称"><el-input v-model="editForm.name" /></el-form-item></el-col>
@@ -266,6 +277,19 @@
 <!-- Step 0: 项目概述 -->
 <div v-show="mobileStep === 0">
 <h3 class="step-title">📄 项目概述</h3>
+<!-- 模板选择器（移动端） -->
+<div v-if="templates.length > 0" class="template-selector" style="margin-bottom:12px;padding:10px;background:#f0f9eb;border-radius:6px;border:1px solid #e1f3d8;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+    <span style="font-size:13px;font-weight:600;">📋 选择模板</span>
+    <span style="font-size:11px;color:#67c23a;">自动填充，可手动修改</span>
+  </div>
+  <el-select v-model="selectedTemplateId" placeholder="选择模板..." filterable clearable style="width:100%" size="small" @change="applyTemplate">
+    <el-option v-for="t in templates" :key="t.id" :label="t.name" :value="t.id">
+      <span>{{ t.name }}</span>
+      <span style="float:right;color:#909399;font-size:11px">{{ t.product_type }} · {{ t.market }}</span>
+    </el-option>
+  </el-select>
+</div>
 <el-form label-width="80" size="small">
 <el-form-item label="策划名称"><el-input v-model="editForm.name" /></el-form-item>
 <el-form-item label="产品系列"><el-input v-model="editForm.series" /></el-form-item>
@@ -391,7 +415,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import * as planAPI from '../../api/productPlan'
-import type { TeamMemberPayload, MarketOption, ValidationError } from '../../api/productPlan'
+import type { TeamMemberPayload, MarketOption, ValidationError, PlanTemplateItem } from '../../api/productPlan'
 import ReviewPanel from './ReviewPanel.vue'
 import { useSubTableProgress } from '../../composables/useSubTableProgress'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
@@ -647,6 +671,71 @@ const submittingQuick = ref(false)
 // ── 完整性校验状态 ──
 const validationErrors = ref<ValidationError[]>([])
 const validationFailed = computed(() => validationErrors.value.length > 0)
+
+// ── D2-1 策划模板 ──
+const templates = ref<PlanTemplateItem[]>([])
+const selectedTemplateId = ref<string>('')
+
+/** 加载可用模板列表 */
+async function fetchTemplates() {
+  try {
+    const market = editForm.value.market || undefined
+    const productType = initiationForm.type || undefined
+    const res = await planAPI.listPlanTemplates({ product_type: productType, market })
+    templates.value = (res.data || []) as PlanTemplateItem[]
+  } catch {
+    templates.value = []
+  }
+}
+
+/** 应用模板预设值到表单的各个字段 */
+function applyTemplate(templateId: string) {
+  if (!templateId) return
+  const tmpl = templates.value.find(t => t.id === templateId)
+  if (!tmpl || !tmpl.preset_fields) return
+  const pf = tmpl.preset_fields
+
+  // 填充 editForm（策划基本信息）
+  if (typeof pf.name === 'string') editForm.value.name = pf.name
+  if (typeof pf.market === 'string') editForm.value.market = pf.market
+  if (typeof pf.series === 'string') editForm.value.series = pf.series
+
+  // 填充 initiationForm（项目概述）
+  if (typeof pf.product_type === 'string') initiationForm.type = pf.product_type
+  if (typeof pf.refrigerant === 'string') initiationForm.refrigerant = pf.refrigerant
+  if (typeof pf.capacity === 'string') initiationForm.capacity = pf.capacity
+  if (typeof pf.voltage === 'string') initiationForm.voltage = pf.voltage
+  if (typeof pf.energy_rating === 'string') initiationForm.energy = pf.energy_rating
+  if (typeof pf.dev_category === 'string') initiationForm.dev_category = pf.dev_category
+  if (typeof pf.origin === 'string') initiationForm.origin = pf.origin
+  if (typeof pf.duration === 'number') initiationForm.duration = pf.duration
+  if (typeof pf.ip_rating === 'string') initiationForm.ip = pf.ip_rating
+  if (typeof pf.sample_qty === 'number') initiationForm.sample_qty = pf.sample_qty
+
+  // 填充 marketForm（市场与客户）
+  if (typeof pf.target_price === 'number') marketForm.target_price = pf.target_price
+  if (typeof pf.cooling_capacity_w === 'number') marketForm.main_capacity = `${pf.cooling_capacity_w}W`
+
+  // 填充 techSpecForm（技术要求）
+  const perfItems: string[] = []
+  if (typeof pf.cooling_capacity_w === 'number') perfItems.push(`制冷量: ${pf.cooling_capacity_w}W`)
+  if (typeof pf.heating_capacity_w === 'number' && pf.heating_capacity_w > 0) perfItems.push(`制热量: ${pf.heating_capacity_w}W`)
+  if (typeof pf.eer === 'number') perfItems.push(`EER: ${pf.eer}`)
+  if (typeof pf.energy_rating === 'string') perfItems.push(`能效等级: ${pf.energy_rating}`)
+  if (perfItems.length > 0) techSpecForm.core_performance = perfItems.join('；')
+
+  // 清除校验错误
+  validationErrors.value = []
+
+  // 重新加载模板列表（市场已变更）
+  setTimeout(() => fetchTemplates(), 100)
+  ElMessage.success(`已应用模板「${tmpl.name}」`)
+}
+
+/** 监听市场变化时重新加载模板 */
+watch(() => editForm.value.market, () => { fetchTemplates() })
+/** 监听产品类型变化时重新加载模板 */
+watch(() => initiationForm.type, () => { fetchTemplates() })
 
 /** 监听表单字段变化时自动清除校验错误 */
 watch(
@@ -1333,6 +1422,7 @@ onMounted(async () => {
     fetchTechSpec(),
     fetchTeam(),
     fetchMarketOptions(),
+    fetchTemplates(),
   ])
   refreshStatus()
 })

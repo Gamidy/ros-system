@@ -93,7 +93,8 @@ def _get_user_channels(db: Session, username: str) -> list[dict]:
     """查询用户可用的通知通道
 
     当前实现: 返回所有已启用的全局通知通道。
-    未来可扩展为按用户偏好过滤（user_notification_preferences 表）。
+    未来可扩展为按用户偏好过滤（user_notification_prefs 表，支持
+    event_type + channel_type 粒度控制）。
     """
     channels = (
         db.query(NotificationChannel)

@@ -53,6 +53,82 @@
       </el-col>
     </el-row>
 
+    <!-- D4-2: 自动计算偏差区域 -->
+    <el-divider content-position="left">自动计算偏差 <el-tag size="small" type="info" effect="plain">D4-2</el-tag></el-divider>
+
+    <el-row :gutter="16">
+      <!-- 成本偏差 -->
+      <el-col :span="8">
+        <el-form-item label="成本偏差(%)">
+          <div v-if="!manualOverride" class="auto-field-wrapper">
+            <el-input
+              :model-value="displayCostVariance"
+              disabled
+              :class="['auto-field-input', autoVariance.has_project_data ? 'auto-calculated' : 'awaiting-data']"
+            >
+              <template #suffix>
+                <span v-if="autoVariance.has_project_data" class="auto-badge" title="由项目数据自动生成">自动</span>
+                <span v-else class="awaiting-badge" title="等待项目数据">等待</span>
+              </template>
+            </el-input>
+          </div>
+          <el-input-number v-else v-model="reviewForm.cost_variance_pct" :precision="2" :step="0.1" style="width:100%" />
+        </el-form-item>
+      </el-col>
+
+      <!-- 进度偏差 -->
+      <el-col :span="8">
+        <el-form-item label="进度偏差(天)">
+          <div v-if="!manualOverride" class="auto-field-wrapper">
+            <el-input
+              :model-value="displayScheduleVariance"
+              disabled
+              :class="['auto-field-input', autoVariance.has_project_data ? 'auto-calculated' : 'awaiting-data']"
+            >
+              <template #suffix>
+                <span v-if="autoVariance.has_project_data" class="auto-badge" title="由项目数据自动生成">自动</span>
+                <span v-else class="awaiting-badge" title="等待项目数据">等待</span>
+              </template>
+            </el-input>
+          </div>
+          <el-input-number v-else v-model="reviewForm.schedule_variance_days" :precision="0" :step="1" style="width:100%" />
+        </el-form-item>
+      </el-col>
+
+      <!-- 手动覆盖开关 -->
+      <el-col :span="8">
+        <el-form-item label="手动覆盖">
+          <el-switch
+            v-model="manualOverride"
+            active-text="启用"
+            inactive-text="关闭"
+            @change="onManualOverrideChange"
+          />
+          <div v-if="manualOverride" style="font-size:12px;color:#e6a23c;margin-top:4px">
+            ⚠️ 开启后偏差值由您手动输入
+          </div>
+        </el-form-item>
+      </el-col>
+    </el-row>
+
+    <!-- 数据来源说明 -->
+    <el-alert
+      v-if="!manualOverride && autoVariance.has_project_data"
+      title="偏差值由项目数据自动计算生成，如需手动输入请开启上方「手动覆盖」开关"
+      type="info"
+      :closable="false"
+      show-icon
+      style="margin-bottom:16px"
+    />
+    <el-alert
+      v-else-if="!manualOverride && !autoVariance.has_project_data"
+      title="暂无项目数据，偏差值将在关联项目数据录入后自动计算"
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-bottom:16px"
+    />
+
     <el-form-item :label="fieldLabel('market_feedback', '市场反馈')">
       <el-input v-model="reviewForm.market_feedback" type="textarea" :rows="3" placeholder="市场反馈信息" />
     </el-form-item>
@@ -156,7 +232,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as planAPI from '../../api/productPlan'
-import type { ReviewData, KnowledgeItem, ReviewTemplateItem, TemplateField } from '../../api/productPlan'
+import type { ReviewData, KnowledgeItem, ReviewTemplateItem, TemplateField, AutoVarianceData } from '../../api/productPlan'
 
 const props = defineProps<{
   planId: string
@@ -176,12 +252,79 @@ const reviewData = ref<ReviewData | null>(null)
 const reviewForm = reactive({
   review_date: '',
   actual_cost_total: null as number | null,
+  cost_variance_pct: null as number | null,
   actual_launch_date: '',
+  schedule_variance_days: null as number | null,
   market_feedback: '',
   lessons_learned: '',
   rating: 0,
 })
 const savingReview = ref(false)
+
+// ── D4-2: 自动计算偏差 ──
+const autoVariance = reactive<AutoVarianceData>({
+  cost_variance_pct: null,
+  schedule_variance_days: null,
+  has_project_data: false,
+  target_cost_total: null,
+  actual_cost_total: null,
+  planned_launch_date: null,
+  actual_launch_date: null,
+})
+const manualOverride = ref(false)
+
+/** 展示成本偏差 — 优先显示自动计算值 */
+const displayCostVariance = computed(() => {
+  if (manualOverride.value) return reviewForm.cost_variance_pct
+  if (autoVariance.cost_variance_pct != null) {
+    const pct = autoVariance.cost_variance_pct
+    if (pct > 0) return `+${pct.toFixed(2)}%`
+    if (pct < 0) return `${pct.toFixed(2)}%`
+    return '0.00%'
+  }
+  return autoVariance.has_project_data ? '—' : '等待项目数据'
+})
+
+/** 展示进度偏差 — 优先显示自动计算值 */
+const displayScheduleVariance = computed(() => {
+  if (manualOverride.value) return reviewForm.schedule_variance_days
+  if (autoVariance.schedule_variance_days != null) {
+    const days = autoVariance.schedule_variance_days
+    if (days > 0) return `延迟 ${days} 天`
+    if (days < 0) return `提前 ${Math.abs(days)} 天`
+    return '准时'
+  }
+  return autoVariance.has_project_data ? '—' : '等待项目数据'
+})
+
+/** 手动覆盖开关变化时，将自动计算值填入表单 */
+function onManualOverrideChange(val: boolean) {
+  if (val) {
+    // 开启手动覆盖时，将自动计算值拷贝到表单
+    if (autoVariance.cost_variance_pct != null) {
+      reviewForm.cost_variance_pct = autoVariance.cost_variance_pct
+    }
+    if (autoVariance.schedule_variance_days != null) {
+      reviewForm.schedule_variance_days = autoVariance.schedule_variance_days
+    }
+  } else {
+    // 关闭手动覆盖时，清除手动输入值
+    reviewForm.cost_variance_pct = null
+    reviewForm.schedule_variance_days = null
+  }
+}
+
+/** 获取自动计算的偏差值 */
+async function fetchAutoVariance() {
+  try {
+    const res = await planAPI.getAutoVariance(props.planId)
+    if (res.data) {
+      Object.assign(autoVariance, res.data)
+    }
+  } catch {
+    // 静默处理 — 自动计算失败不影响其他功能
+  }
+}
 
 // ── 复盘模板 ──
 const templateOptions = ref<ReviewTemplateItem[]>([])
@@ -235,6 +378,23 @@ async function fetchReview() {
       reviewForm.lessons_learned = res.data.lessons_learned || ''
       reviewForm.rating = res.data.rating || 0
       selectedTemplateId.value = res.data.review_template_id || ''
+
+      // D4-2: 处理自动计算偏差的回显
+      if (res.data.cost_variance_pct_auto != null) {
+        autoVariance.cost_variance_pct = res.data.cost_variance_pct_auto
+      }
+      if (res.data.schedule_variance_days_auto != null) {
+        autoVariance.schedule_variance_days = res.data.schedule_variance_days_auto
+      }
+      // 如果已经有手动输入的偏差值，开启手动覆盖
+      if (res.data.cost_variance_source === 'manual' && res.data.cost_variance_pct != null) {
+        manualOverride.value = true
+        reviewForm.cost_variance_pct = res.data.cost_variance_pct
+      }
+      if (res.data.schedule_variance_source === 'manual' && res.data.schedule_variance_days != null) {
+        reviewForm.schedule_variance_days = res.data.schedule_variance_days
+      }
+
       emit('review-changed', true)
     }
   } catch {
@@ -273,7 +433,15 @@ async function saveReview() {
       lessons_learned: reviewForm.lessons_learned || undefined,
       rating: reviewForm.rating || undefined,
       review_template_id: selectedTemplateId.value || undefined,
+      // D4-2: 手动覆盖标记
+      manual_override: manualOverride.value || undefined,
     }
+    // D4-2: 手动覆盖模式下，发送偏差值
+    if (manualOverride.value) {
+      payload.cost_variance_pct = reviewForm.cost_variance_pct ?? undefined
+      payload.schedule_variance_days = reviewForm.schedule_variance_days ?? undefined
+    }
+
     if (reviewData.value?.id) {
       await planAPI.updateReview(props.planId, payload)
       ElMessage.success('复盘更新成功')
@@ -282,6 +450,7 @@ async function saveReview() {
       ElMessage.success('复盘提交成功')
     }
     await fetchReview()
+    await fetchAutoVariance()
     emit('refresh')
   } catch (e: unknown) {
     const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
@@ -395,6 +564,7 @@ const launchDeviationLabel = computed(() => {
 onMounted(async () => {
   await Promise.all([
     fetchReview(),
+    fetchAutoVariance(),
     fetchKnowledge(),
     fetchTemplates(),
   ])
@@ -403,4 +573,45 @@ onMounted(async () => {
 
 <style scoped>
 .knowledge-summary { color: #606266; font-size: 12px; line-height: 1.5; }
+
+/* D4-2: 自动计算字段样式 */
+.auto-field-wrapper {
+  width: 100%;
+}
+.auto-field-input :deep(.el-input__wrapper) {
+  background-color: #f5f7fa;
+}
+.auto-field-input.auto-calculated :deep(.el-input__wrapper) {
+  background-color: #f0f9eb;
+  border-color: #c2e7b0;
+}
+.auto-field-input.awaiting-data :deep(.el-input__wrapper) {
+  background-color: #fdf6ec;
+  border-color: #e6a23c;
+}
+.auto-field-input :deep(.el-input__inner) {
+  color: #606266;
+  font-weight: 500;
+  cursor: default;
+}
+.auto-badge {
+  display: inline-block;
+  background: #67c23a;
+  color: #fff;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.awaiting-badge {
+  display: inline-block;
+  background: #e6a23c;
+  color: #fff;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
 </style>

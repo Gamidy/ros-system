@@ -196,18 +196,38 @@ export interface ReviewData {
   product_plan_id?: string
   review_date?: string
   actual_cost_total?: number
+  cost_variance_pct?: number
   actual_launch_date?: string
+  schedule_variance_days?: number
   market_feedback?: string
   lessons_learned?: string
   rating?: number
   review_template_id?: string
   created_at?: string
   updated_at?: string
+  // D4-2: 自动计算标识
+  cost_variance_pct_auto?: number | null
+  schedule_variance_days_auto?: number | null
+  cost_variance_source?: string
+  schedule_variance_source?: string
+  manual_override?: boolean
+}
+
+export interface AutoVarianceData {
+  cost_variance_pct: number | null
+  schedule_variance_days: number | null
+  has_project_data: boolean
+  target_cost_total: number | null
+  actual_cost_total: number | null
+  planned_launch_date: string | null
+  actual_launch_date: string | null
 }
 
 export function getReview(planId: string) { return api.get(`/product-plans/${planId}/review`) }
 export function submitReview(planId: string, data: ReviewData) { return api.post(`/product-plans/${planId}/review`, data) }
 export function updateReview(planId: string, data: ReviewData) { return api.put(`/product-plans/${planId}/review`, data) }
+// D4-2: 获取自动计算的偏差值
+export function getAutoVariance(planId: string) { return api.get(`/product-plans/${planId}/auto-variance`) }
 
 // ── 复盘模板 (Review Template) ──
 export interface TemplateField {
@@ -270,3 +290,40 @@ export interface ValidationResult {
 
 /** 提交策划数据前进行完整性校验 */
 export function validatePlan(data: Record<string, unknown>) { return api.post('/product-plans/validate', data) }
+
+// ── D2-1 策划模板 ──
+export interface PlanTemplateItem {
+  id: string
+  product_type: string
+  market: string
+  name: string
+  description?: string
+  preset_fields: Record<string, unknown>
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreatePlanTemplatePayload {
+  product_type: string
+  market: string
+  name: string
+  description?: string
+  preset_fields?: Record<string, unknown>
+  is_active?: boolean
+}
+
+/** 按产品类型和市场获取模板列表 */
+export function listPlanTemplates(params?: { product_type?: string; market?: string }) {
+  return api.get('/plan-templates', { params })
+}
+
+/** 创建模板（管理端） */
+export function createPlanTemplate(data: CreatePlanTemplatePayload) {
+  return api.post('/plan-templates', data)
+}
+
+/** 删除模板 */
+export function deletePlanTemplate(id: string) {
+  return api.delete(`/plan-templates/${id}`)
+}

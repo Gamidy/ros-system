@@ -75,16 +75,48 @@
       </el-col>
     </el-row>
 
-    <!-- ═══════════════ 事件订阅 ═══════════════ -->
+    <!-- ═══════════════ 通知偏好矩阵 ═══════════════ -->
     <el-card shadow="never" class="section-card">
       <template #header>
-        <span>📋 事件订阅</span>
+        <div class="card-header">
+          <span>📋 通知偏好设置</span>
+          <el-button
+            size="small"
+            type="primary"
+            :loading="prefSaving"
+            @click="savePrefs"
+          >
+            保存偏好
+          </el-button>
+        </div>
       </template>
-      <el-checkbox-group v-model="subscribedEvents" @change="saveEventSubscriptions">
-        <el-checkbox value="approval">审批类 — 通知审批人/申请人流转状态</el-checkbox>
-        <el-checkbox value="planning">策划推进类 — 产品策划节点变更/里程碑提醒</el-checkbox>
-        <el-checkbox value="cost_alert">成本告警类 — 成本超阈值预警</el-checkbox>
-      </el-checkbox-group>
+      <el-table
+        :data="prefMatrix"
+        border
+        size="small"
+        style="width: 100%"
+        max-height="480"
+      >
+        <el-table-column label="事件类型" width="140" prop="eventLabel">
+          <template #default="{ row }">
+            <strong>{{ row.eventLabel }}</strong>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-for="ct in channelTypeList"
+          :key="ct.key"
+          :label="ct.label"
+          :width="ct.width"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-checkbox
+              v-model="row.channels[ct.key]"
+              size="small"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
     </el-card>
 
     <!-- ═══════════════ 发送历史 ═══════════════ -->
@@ -165,16 +197,55 @@ interface HistoryRecord {
   created_at: string
 }
 
+interface PrefRecord {
+  id: number
+  user_id: number
+  event_type: string
+  channel_type: string
+  enabled: boolean
+}
+
+/** 矩阵行 — 某个事件类型在各渠道的开关 */
+interface PrefMatrixRow {
+  eventType: string
+  eventLabel: string
+  channels: Record<string, boolean>
+}
+
+interface ChannelTypeOption {
+  key: string
+  label: string
+  width: number
+}
+
+/* ── 常量 ── */
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  approval_request: '审批请求',
+  plan_submitted: '策划提交',
+  review_due: '评审到期',
+  alert: '系统预警',
+}
+
+const channelTypeList: ChannelTypeOption[] = [
+  { key: 'wecom', label: '企业微信', width: 100 },
+  { key: 'dingtalk', label: '钉钉', width: 80 },
+  { key: 'email', label: '邮件', width: 80 },
+  { key: 'websocket', label: '站内通知', width: 100 },
+]
+
 /* ── 状态 ── */
 const channels = reactive<Channels>({
   wecom: { enabled: false, configured: false, webhook_url: '' },
   dingtalk: { enabled: false, configured: false, webhook_url: '' },
 })
 
-const subscribedEvents = ref<string[]>([])
 const historyList = ref<HistoryRecord[]>([])
 const historyLoading = ref(false)
 const testingChannel = ref<string | null>(null)
+
+/** 通知偏好矩阵 */
+const prefMatrix = ref<PrefMatrixRow[]>([])
+const prefSaving = ref(false)
 
 /* ── API ── */
 
@@ -183,31 +254,63 @@ async function fetchPrefs() {
   try {
     const res = await api.get('/user/notification-prefs')
     const data = res.data
-    channels.wecom.enabled = data.wecom_enabled ?? false
-    channels.wecom.configured = data.wecom_configured ?? false
-    channels.wecom.webhook_url = data.wecom_webhook_url ?? ''
-    channels.dingtalk.enabled = data.dingtalk_enabled ?? false
-    channels.dingtalk.configured = data.dingtalk_configured ?? false
-    channels.dingtalk.webhook_url = data.dingtalk_webhook_url ?? ''
-    subscribedEvents.value = data.subscribed_events ?? []
-    if (data.history) {
-      historyList.value = data.history
+
+    // 兼容旧版 — 旧结构仍有数据时处理
+    if (!Array.isArray(data)) {
+      const d = data as Record<string, unknown>
+      channels.wecom.enabled = (d.wecom_enabled as boolean) ?? false
+      channels.wecom.configured = (d.wecom_configured as boolean) ?? false
+      channels.wecom.webhook_url = (d.wecom_webhook_url as string) ?? ''
+      channels.dingtalk.enabled = (d.dingtalk_enabled as boolean) ?? false
+      channels.dingtalk.configured = (d.dingtalk_configured as boolean) ?? false
+      channels.dingtalk.webhook_url = (d.dingtalk_webhook_url as string) ?? ''
+      if (d.history) {
+        historyList.value = d.history as HistoryRecord[]
+      }
+      return
     }
+
+    // 新结构：数组形式 —
+    // 构建偏好矩阵
+    buildPrefMatrix(data as PrefRecord[])
   } catch {
     ElMessage.error('加载通知配置失败')
   }
 }
 
-/** 保存渠道开关 */
+/** 从 API 返回的 PrefRecord 列表构建矩阵 */
+function buildPrefMatrix(records: PrefRecord[]): void {
+  const matrixMap: Record<string, PrefMatrixRow> = {}
+
+  // 为每个事件类型初始化一行
+  for (const [eventType, eventLabel] of Object.entries(EVENT_TYPE_LABELS)) {
+    const channelsMap: Record<string, boolean> = {}
+    for (const ct of channelTypeList) {
+      channelsMap[ct.key] = true // 默认开启
+    }
+    matrixMap[eventType] = { eventType, eventLabel, channels: channelsMap }
+  }
+
+  // 用实际记录覆盖
+  for (const rec of records) {
+    const row = matrixMap[rec.event_type]
+    if (row) {
+      row.channels[rec.channel_type] = rec.enabled
+    }
+  }
+
+  prefMatrix.value = Object.values(matrixMap)
+}
+
+/** 保存渠道开关 — 切换某渠道在所有事件类型下的启用状态 */
 async function saveChannel(channel: string) {
   try {
-    const payload: Record<string, boolean> = {}
-    if (channel === 'wecom') {
-      payload.wecom_enabled = channels.wecom.enabled
-    } else {
-      payload.dingtalk_enabled = channels.dingtalk.enabled
+    const enabled = channel === 'wecom' ? channels.wecom.enabled : channels.dingtalk.enabled
+    const prefs: { event_type: string; channel_type: string; enabled: boolean }[] = []
+    for (const et of Object.keys(EVENT_TYPE_LABELS)) {
+      prefs.push({ event_type: et, channel_type: channel, enabled })
     }
-    await api.put('/user/notification-prefs', payload)
+    await api.put('/user/notification-prefs', { prefs })
     ElMessage.success(`${channel === 'wecom' ? '企微' : '钉钉'}开关已更新`)
   } catch {
     ElMessage.error('保存失败')
@@ -227,13 +330,26 @@ async function testChannel(channel: string) {
   }
 }
 
-/** 保存事件订阅 */
-async function saveEventSubscriptions(events: string[]) {
+/** 保存通知偏好矩阵 */
+async function savePrefs() {
+  prefSaving.value = true
   try {
-    await api.put('/user/notification-prefs', { subscribed_events: events })
-    ElMessage.success('事件订阅已更新')
+    const prefs: { event_type: string; channel_type: string; enabled: boolean }[] = []
+    for (const row of prefMatrix.value) {
+      for (const ct of channelTypeList) {
+        prefs.push({
+          event_type: row.eventType,
+          channel_type: ct.key,
+          enabled: row.channels[ct.key],
+        })
+      }
+    }
+    await api.put('/user/notification-prefs', { prefs })
+    ElMessage.success('通知偏好已保存')
   } catch {
-    ElMessage.error('保存事件订阅失败')
+    ElMessage.error('保存通知偏好失败')
+  } finally {
+    prefSaving.value = false
   }
 }
 
@@ -270,12 +386,7 @@ function formatTime(iso: string): string {
 }
 
 function eventTypeLabel(t: string): string {
-  const labels: Record<string, string> = {
-    approval: '审批类',
-    planning: '策划推进',
-    cost_alert: '成本告警',
-  }
-  return labels[t] ?? t
+  return EVENT_TYPE_LABELS[t] ?? t
 }
 
 /* ── 生命周期 ── */
