@@ -809,6 +809,7 @@ onMounted(async () => {
     fetchMarket(),
     fetchTechSpec(),
     fetchTeam(),
+    fetchMarketOptions(),
   ])
   refreshStatus()
 })
