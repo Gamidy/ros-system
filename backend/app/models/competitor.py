@@ -28,6 +28,8 @@ class CompetitorModel(Base):
     cspf = Column(Float, nullable=True, comment="CSPF能效(越南/印尼)")
     scop = Column(Float, nullable=True, comment="SCOP制热季节能效(欧盟)")
     heating_energy_rating = Column(String(40), nullable=True, comment="制热能效等级")
+    pdc = Column(Float, nullable=True, comment="制冷设计负荷 Pdesignc(kW)(欧盟)")
+    pdh = Column(Float, nullable=True, comment="制热设计负荷 Pdesignh(kW)(欧盟)")
     noise_indoor_db = Column(Float, nullable=True, comment="室内噪音声压级(dB)")
     noise_outdoor_db = Column(Float, nullable=True, comment="室外噪音声压级(dB)")
     noise_indoor_power_db = Column(Float, nullable=True, comment="室内噪音声功率级(dB)(欧盟)")

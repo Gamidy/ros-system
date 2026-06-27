@@ -17,6 +17,8 @@ EU_UPDATES = {
     "CLIMADESIGN 9000": {
         "scop": 4.0,
         "heating_energy_rating": "A+",
+        "pdc": 2.6,
+        "pdh": 2.1,
         "noise_indoor_power_db": 52.0,
         "noise_outdoor_power_db": 59.0,
         "launch_year": None,
@@ -24,6 +26,8 @@ EU_UPDATES = {
     "CLIMADESIGN 12000": {
         "scop": 4.0,
         "heating_energy_rating": "A+",
+        "pdc": 3.4,
+        "pdh": 2.4,
         "noise_indoor_power_db": 54.0,
         "noise_outdoor_power_db": 61.0,
         "launch_year": None,
@@ -31,6 +35,8 @@ EU_UPDATES = {
     "CLIMADESIGN 18000": {
         "scop": 4.0,
         "heating_energy_rating": "A+",
+        "pdc": 5.1,
+        "pdh": 3.3,
         "noise_indoor_power_db": 56.0,
         "noise_outdoor_power_db": 62.0,
         "launch_year": None,
@@ -38,6 +44,8 @@ EU_UPDATES = {
     "CLIMADESIGN 24000": {
         "scop": 4.0,
         "heating_energy_rating": "A+",
+        "pdc": 6.7,
+        "pdh": 5.7,
         "noise_indoor_power_db": 64.0,
         "noise_outdoor_power_db": 63.0,
         "launch_year": None,
@@ -45,6 +53,8 @@ EU_UPDATES = {
     "ARGO DELUXE 9000": {
         "scop": 4.6,
         "heating_energy_rating": "A++",
+        "pdc": 2.7,
+        "pdh": 2.3,
         "noise_indoor_power_db": 54.0,
         "noise_outdoor_power_db": 61.0,
         "launch_year": None,
@@ -52,6 +62,8 @@ EU_UPDATES = {
     "ARGO DELUXE 12000": {
         "scop": 4.6,
         "heating_energy_rating": "A++",
+        "pdc": 3.5,
+        "pdh": 2.8,
         "noise_indoor_power_db": 56.0,
         "noise_outdoor_power_db": 62.0,
         "launch_year": None,
@@ -59,6 +71,8 @@ EU_UPDATES = {
     "ARGO DELUXE 18000": {
         "scop": 4.6,
         "heating_energy_rating": "A++",
+        "pdc": 5.3,
+        "pdh": 4.4,
         "noise_indoor_power_db": 56.0,
         "noise_outdoor_power_db": 63.0,
         "launch_year": None,
@@ -66,6 +80,8 @@ EU_UPDATES = {
     "ARGO DELUXE 24000": {
         "scop": 4.6,
         "heating_energy_rating": "A++",
+        "pdc": 6.1,
+        "pdh": 5.4,
         "noise_indoor_power_db": 62.0,
         "noise_outdoor_power_db": 65.0,
         "launch_year": None,
