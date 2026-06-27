@@ -492,6 +492,25 @@ const router = createRouter({
           component: () => import('../views/profile/ProfileView.vue'),
           meta: { title: '个人中心' },
         },
+        // 标准知识库
+        {
+          path: 'standards',
+          name: 'Standards',
+          component: () => import('../views/standards/StandardsView.vue'),
+          meta: { title: '标准知识库' },
+        },
+        {
+          path: 'standards/:id',
+          name: 'StandardDetail',
+          component: () => import('../views/standards/StandardDetail.vue'),
+          meta: { title: '标准详情' },
+        },
+        {
+          path: 'admin/standards',
+          name: 'StandardManage',
+          component: () => import('../views/admin/StandardManage.vue'),
+          meta: { title: '标准配置', roles: ['admin'] },
+        },
       ],
     },
   ],

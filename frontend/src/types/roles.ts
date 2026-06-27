@@ -153,6 +153,14 @@ export const MENU_GROUPS: MenuGroup[] = [
     ]
   },
   {
+    title: '标准知识库',
+    icon: Document,
+    children: [
+      { path: '/standards', title: '标准列表', icon: Document },
+      { path: '/admin/standards', title: '标准配置', icon: Setting },
+    ]
+  },
+  {
     title: '系统',
     icon: Setting,
     children: [

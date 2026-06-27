@@ -76,6 +76,7 @@ from app.models.plan_validation import ValidationRule
 from app.models.plan_template import PlanTemplate
 from app.models.review_template import ReviewTemplate
 from app.models.improvement_task import ImprovementTask, TaskPriority, TaskStatus
+from app.models.standard import StandardRegion, StandardCategory, Standard, StandardCrawl
 
 __all__ = [
     "User",
@@ -170,4 +171,9 @@ __all__ = [
     "ImprovementTask",
     "TaskPriority",
     "TaskStatus",
+    # standard monitoring
+    "StandardRegion",
+    "StandardCategory",
+    "Standard",
+    "StandardCrawl",
 ]

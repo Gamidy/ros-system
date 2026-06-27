@@ -20,6 +20,7 @@ EVENT_TYPES: list[str] = [
     "plan_submitted",
     "review_due",
     "alert",
+    "standard_update",
 ]
 
 CHANNEL_TYPES: list[str] = [

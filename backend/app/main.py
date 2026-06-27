@@ -33,6 +33,7 @@ from app.api import notification_grouping_api
 from app.api import notification_read_api
 from app.api import competitor_import_export
 from app.api import ws
+from app.api import standard_query_api, standard_admin_api
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -219,6 +220,10 @@ app.include_router(plan_templates.router, prefix="/api")
 # ── D1-2 竞品导入导出 ──
 app.include_router(competitor_import_export.router)
 
+# ── 标准监控 ──
+app.include_router(standard_query_api.router)
+app.include_router(standard_admin_api.router)
+
 _celery_thread = None
 
 
@@ -322,6 +327,16 @@ def on_startup():
         seed_db.close()
     except Exception as exc:
         logger.warning("初始化默认策划模板失败: %s", exc)
+
+    # ── 初始化标准监控预置数据 ──
+    try:
+        from app.core.database import SessionLocal
+        from app.services.standard_seeder import seed_standard_data
+        seed_db = SessionLocal()
+        seed_standard_data(seed_db)
+        seed_db.close()
+    except Exception as exc:
+        logger.warning("初始化标准监控预置数据失败: %s", exc)
 
     # ── Phase 4 初始化 ──
     _init_phase4()

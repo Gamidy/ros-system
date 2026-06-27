@@ -995,7 +995,7 @@ import {
   DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh,
   Cpu, InfoFilled, CircleCloseFilled, Plus, Folder, Coin, Clock,
   CircleCheck, List,
-  WarningFilled, CircleCheckFilled, Time, Loading, ArrowLeft, Close,
+  WarningFilled, CircleCheckFilled, Timer, Loading, ArrowLeft, Close,
 } from '@element-plus/icons-vue'
 import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
