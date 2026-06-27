@@ -102,6 +102,26 @@ export interface TeamMemberPayload {
   version_id?: number
 }
 
+/** 需求录入条目 */
+export interface RequirementItem {
+  id: string
+  market: string
+  customer?: string
+  contact?: string
+  product_type: string
+  capacity_target?: string
+  price_target?: number | null
+  energy_standard?: string
+  sales_volume_forecast?: number | null
+  notes?: string
+  status: string
+  reject_reason?: string
+  submitter_name?: string
+  submitter_phone?: string
+  created_at?: string
+  updated_at?: string
+}
+
 // ── API 函数 ──
 
 export function listPlans(params?: PlanListParams) { return api.get('/product-plans', { params }) }

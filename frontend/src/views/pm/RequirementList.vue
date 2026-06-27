@@ -86,11 +86,12 @@ import {
   updateRequirementStatus,
   convertToPlan,
 } from '../../api/productPlan'
+import type { RequirementItem } from '../../api/productPlan'
 
 const router = useRouter()
 
 const loading = ref(false)
-const list = ref<any[]>([])
+const list = ref<RequirementItem[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -150,7 +151,7 @@ function handleTabChange() {
 // ── 操作 ──
 
 /** 采纳需求 */
-async function handleAccept(row: any) {
+async function handleAccept(row: RequirementItem) {
   try {
     await ElMessageBox.confirm('确认采纳该需求？', '采纳确认', { type: 'info' })
     await updateRequirementStatus(row.id, 'accepted')
@@ -162,7 +163,7 @@ async function handleAccept(row: any) {
 }
 
 /** 拒绝需求（需填写原因） */
-async function handleReject(row: any) {
+async function handleReject(row: RequirementItem) {
   try {
     const { value } = await ElMessageBox.prompt('请填写拒绝原因', '拒绝', {
       confirmButtonText: '确认',
@@ -179,7 +180,7 @@ async function handleReject(row: any) {
 }
 
 /** 需求转策划 */
-async function handleConvert(row: any) {
+async function handleConvert(row: RequirementItem) {
   try {
     await ElMessageBox.confirm('确认将该需求转为产品策划？', '转策划确认', { type: 'info' })
     const res = await convertToPlan(row.id)

@@ -112,7 +112,7 @@ def _parse_date(val: Optional[str]) -> Optional[date]:
 
 # ── API 端点 ──
 
-@router.post("/{plan_id}/review")
+@router.post("/{plan_id}/review", response_model=ReviewOut)
 def create_review(
     plan_id: str,
     data: ReviewCreate,
@@ -159,7 +159,7 @@ def create_review(
         raise HTTPException(status_code=500, detail=f"创建复盘失败: {str(e)}")
 
 
-@router.get("/{plan_id}/review")
+@router.get("/{plan_id}/review", response_model=ReviewOut)
 def get_review(
     plan_id: str,
     db: Session = Depends(get_db),
@@ -182,7 +182,7 @@ def get_review(
         raise HTTPException(status_code=500, detail=f"查询复盘失败: {str(e)}")
 
 
-@router.put("/{plan_id}/review")
+@router.put("/{plan_id}/review", response_model=ReviewOut)
 def update_review(
     plan_id: str,
     data: ReviewUpdate,
