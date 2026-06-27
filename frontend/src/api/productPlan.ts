@@ -137,3 +137,16 @@ export function listPlanProjectLinks(planId: string, params?: ProjectLinkListPar
 export function createPlanProjectLink(planId: string, data: CreateProjectLinkPayload) { return api.post(`/product-plans/${planId}/project-links`, data) }
 export function updatePlanProjectLink(planId: string, linkId: number, data: UpdateProjectLinkPayload) { return api.put(`/product-plans/${planId}/project-links/${linkId}`, data) }
 export function deletePlanProjectLink(planId: string, linkId: number) { return api.delete(`/product-plans/${planId}/project-links/${linkId}`) }
+
+// ── 市场选项 (Markets) ──
+export interface MarketOption {
+  code: string
+  name: string
+  region?: string
+  energy_standard: string
+  energy_label: string
+  energy_unit?: string
+  is_active?: string
+}
+export function fetchMarkets() { return api.get('/pm/markets') }
+export function fetchAllMarkets() { return api.get('/pm/markets/all') }
