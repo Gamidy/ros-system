@@ -261,7 +261,7 @@ const onPageChange = (p: number) => {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const onExpandChange = (_row: any, expandedRows: any[]) => {
+const onExpandChange = (_row: ImpactRecord, expandedRows: ImpactRecord[]) => {
   // Can be used to lazy-load detail data if needed
   void _row
   void expandedRows

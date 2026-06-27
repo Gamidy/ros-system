@@ -38,7 +38,7 @@
           <el-descriptions-item label="明细项数">{{ eco.item_count }}</el-descriptions-item>
           <el-descriptions-item label="实施方案" :span="2">{{ eco.implementation_plan || '-' }}</el-descriptions-item>
           <el-descriptions-item label="生效日期">{{ eco.effective_date || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="创建人">{{ (eco as any).created_by_name || eco.created_by }}</el-descriptions-item>
+          <el-descriptions-item label="创建人">{{ eco.created_by_name || eco.created_by }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ eco.created_at }}</el-descriptions-item>
           <el-descriptions-item label="更新时间">{{ eco.updated_at }}</el-descriptions-item>
         </el-descriptions>
@@ -498,7 +498,7 @@ const statusEvents = computed(() => {
     events.push({
       label: statusFlowLabels[s],
       time: passed ? eco.value.updated_at : '-',
-      type: statusFlowType[s] as any,
+      type: statusFlowType[s],
       active: s === currentStatus,
     })
     if (s === currentStatus) break

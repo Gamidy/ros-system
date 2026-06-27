@@ -127,6 +127,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { TableRow } from '@/types/common'
 import api from '../../api'
 
 const items = ref<any[]>([])
@@ -154,7 +155,7 @@ const statusTypeMap: Record<string, string> = {
 }
 
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return statusTypeMap[s] || 'info' as any }
+function statusType(s: string): string { return statusTypeMap[s] || 'info' }
 
 async function fetchData() {
   loading.value = true
@@ -169,7 +170,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: TableRow) {
   if (row) {
     editingId.value = row.id
     form.value = { ...row }
@@ -183,7 +184,7 @@ function openDialog(row?: any) {
 async function save() {
   saving.value = true
   try {
-    const payload: any = { ...form.value }
+    const payload: Record<string, unknown> = { ...form.value }
     if (editingId.value) {
       await api.patch(`/certifications/${editingId.value}`, payload)
       ElMessage.success('更新成功')

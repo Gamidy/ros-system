@@ -53,6 +53,7 @@ export interface ECODetailOut extends ECOOut {
   items: ECOItemOut[]
   ecr_code?: string
   ecr_title?: string
+  created_by_name?: string
 }
 
 export interface ECOListResponse {

@@ -677,7 +677,7 @@ await planAPI.approvePlan(planId, comment || '')
 ElMessage.success('已通过')
 await fetchPlan()
 } catch (e: unknown) {
-if ((e as any)?.action === 'cancel' || (e instanceof Error && e.message === 'cancel')) return // user cancelled
+if ((e as {action?: string})?.action === 'cancel' || (e instanceof Error && e.message === 'cancel')) return // user cancelled
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
@@ -696,7 +696,7 @@ await planAPI.rejectPlan(planId, comment || '')
 ElMessage.success('已驳回')
 await fetchPlan()
 } catch (e: unknown) {
-if ((e as any)?.action === 'cancel' || (e instanceof Error && e.message === 'cancel')) return // user cancelled
+if ((e as {action?: string})?.action === 'cancel' || (e instanceof Error && e.message === 'cancel')) return // user cancelled
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }

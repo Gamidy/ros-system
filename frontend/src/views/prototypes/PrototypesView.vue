@@ -155,6 +155,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+import type { TableRow } from '@/types/common'
 
 const items = ref<any[]>([])
 const projects = ref<any[]>([])
@@ -181,7 +182,7 @@ const statusTypeMap: Record<string, string> = {
 }
 
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return statusTypeMap[s] || 'info' as any }
+function statusType(s: string): string { return statusTypeMap[s] || 'info' }
 function versionType(v: string) {
   if (v === 'P0') return 'info'
   if (v === 'P1') return 'warning'
@@ -210,7 +211,7 @@ async function fetchProjects() {
   } catch { /* optional */ }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: TableRow) {
   if (row) {
     editingId.value = row.id
     form.value = {
@@ -251,7 +252,7 @@ async function save() {
   } finally { saving.value = false }
 }
 
-async function upgradeVersion(row: any) {
+async function upgradeVersion(row: TableRow) {
   upgradingId.value = row.id
   try {
     await api.post(`/prototypes/${row.id}/upgrade`)
@@ -260,7 +261,7 @@ async function upgradeVersion(row: any) {
   } finally { upgradingId.value = null }
 }
 
-async function onExpandChange(row: any, expanded: boolean) {
+async function onExpandChange(row: TableRow, expanded: boolean) {
   if (!expanded) return
   // Load timeline data
   row._timeline = null

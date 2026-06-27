@@ -125,18 +125,18 @@ async function fetchData() {
       api.get('/bi/cost/departments'),
     ])
 
-    budgetData.value = (budgetRes.data as any[])?.map((d: any) => ({
+    budgetData.value = (budgetRes.data as Record<string,unknown>[])?.map((d: Record<string,unknown>) => ({
       month: d.month || '',
       budget: Number(d.budget ?? 0),
       actual: Number(d.actual ?? 0),
     })) || []
 
-    deptCostData.value = (deptRes.data as any[])?.map((d: any) => ({
+    deptCostData.value = (deptRes.data as Record<string,unknown>[])?.map((d: Record<string,unknown>) => ({
       name: d.name || d.department || '',
       value: Number(d.value ?? d.cost ?? 0),
     })) || []
 
-    overBudgetList.value = (alertRes.data as any[])?.map((d: any) => ({
+    overBudgetList.value = (alertRes.data as Record<string,unknown>[])?.map((d: Record<string,unknown>) => ({
       department: d.department || '',
       category: d.category || '',
       budget: Number(d.budget ?? 0),

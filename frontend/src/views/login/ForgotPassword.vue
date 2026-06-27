@@ -136,7 +136,7 @@ const rules1: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
 }
 
-const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
+const validateConfirmPassword = (_rule: Record<string, unknown>, value: string, callback: Function) => {
   if (value !== form2.newPassword) {
     callback(new Error('两次输入的密码不一致'))
   } else {

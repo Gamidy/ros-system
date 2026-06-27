@@ -90,7 +90,7 @@ const execStatusTypeMap: Record<string, string> = {
 }
 
 function execStatusLabel(s: string) { return execStatusMap[s] || s }
-function execStatusType(s: string) { return (execStatusTypeMap[s] || 'info') as any }
+function execStatusType(s: string): string { return execStatusTypeMap[s] || 'info' }
 
 async function fetchExecutions() {
   if (!props.testRequestId) return

@@ -108,13 +108,13 @@ async function fetchData() {
     ]
 
     // 阶段分布
-    phaseData.value = (phaseRes.data as any[])?.map((d: any) => ({
+    phaseData.value = (phaseRes.data as Record<string,unknown>[])?.map((d: Record<string,unknown>) => ({
       name: d.name || d.phase || '',
       value: Number(d.value ?? d.count ?? 0),
     })) || []
 
     // 审批时效
-    approvalData.value = (approvalRes.data as any[])?.map((d: any) => ({
+    approvalData.value = (approvalRes.data as Record<string,unknown>[])?.map((d: Record<string,unknown>) => ({
       date: d.date || d.day || '',
       hours: Number(d.hours ?? d.avg_hours ?? 0),
     })) || []

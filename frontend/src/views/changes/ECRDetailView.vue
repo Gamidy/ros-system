@@ -268,10 +268,10 @@ const urgencyTypeMap: Record<string, string> = {
 }
 
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string): string { return statusTypeMap[s] || 'info' }
 function ecrTypeLabel(s: string) { return ecrTypeMap[s] || s }
 function urgencyLabel(s: string) { return urgencyMap[s] || s }
-function urgencyType(s: string) { return (urgencyTypeMap[s] || 'info') as any }
+function urgencyType(s: string): string { return urgencyTypeMap[s] || 'info' }
 
 // ====== 状态时间线 ======
 const statusSteps = computed(() => {

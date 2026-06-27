@@ -176,7 +176,7 @@ function openEditDialog(row: ECOOut) {
   form.change_summary = row.change_summary
   form.implementation_plan = row.implementation_plan || ''
   form.effective_date = row.effective_date || undefined
-  form.ecr_id = (row as any).ecr_id || undefined
+  form.ecr_id = (row as ECOOut).ecr_id || undefined
   dialogVisible.value = true
 }
 

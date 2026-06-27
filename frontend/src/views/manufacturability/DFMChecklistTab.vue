@@ -110,6 +110,7 @@
 import { ref, onMounted } from 'vue'
 import { listDFMChecklist, createDFMChecklist, updateDFMChecklist, deleteDFMChecklist, listDFMScoreWeights, createDFMScoreWeight, updateDFMScoreWeight } from '../../api/manufacturability'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 
 const items = ref<any[]>([])
 const total = ref(0)
@@ -142,7 +143,7 @@ async function fetchData() {
 }
 
 function showCreate() { isEdit.value = false; editingId.value = null; form.value = { item_code: '', item_name: '', description: '', dfm_category: 'structural', severity: 'major', applicable_product_types: '', reference_standard: '', check_method: '', weight: 1.0, sort_order: 0, status: 'active' }; dialogVisible.value = true }
-function showEdit(row: any) { isEdit.value = true; editingId.value = row.id; form.value = { ...row }; dialogVisible.value = true }
+function showEdit(row: TableRow) { isEdit.value = true; editingId.value = row.id; form.value = { ...row }; dialogVisible.value = true }
 
 async function handleSave() {
   const valid = await formRef.value?.validate().catch(() => false)
@@ -154,7 +155,7 @@ async function handleSave() {
     dialogVisible.value = false; fetchData()
   } catch {} finally { saving.value = false }
 }
-async function handleDelete(row: any) { try { await deleteDFMChecklist(row.id); fetchData() } catch {} }
+async function handleDelete(row: TableRow) { try { await deleteDFMChecklist(row.id); fetchData() } catch {} }
 
 async function loadWeights() {
   try {
@@ -162,7 +163,7 @@ async function loadWeights() {
     weights.value = data.items || []
   } catch {}
 }
-async function saveWeight(row: any) {
+async function saveWeight(row: TableRow) {
   try {
     if (row.id) await updateDFMScoreWeight(row.id, { weight: row.weight })
     else await createDFMScoreWeight({ product_type: weightProductType.value, dfm_category: row.dfm_category, weight: row.weight })

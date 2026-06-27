@@ -47,7 +47,7 @@ export const useNotificationStore = defineStore('notification', () => {
    * 从 WebSocket 消息创建通知
    */
   function handleWSMessage(msg: WSMessage) {
-    const payload = msg.payload as any
+    const payload = msg.payload as Record<string,unknown>
     let title = '新消息'
     let content = ''
 

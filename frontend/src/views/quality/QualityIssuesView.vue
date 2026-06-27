@@ -155,8 +155,8 @@ const statusTypeMap: Record<string, string> = {
 const severityTypeMap: Record<string, string> = { A: 'danger', B: 'warning', C: 'info' }
 
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return statusTypeMap[s] || 'info' as any }
-function severityType(s: string) { return severityTypeMap[s] || 'info' as any }
+function statusType(s: string): string { return statusTypeMap[s] || 'info' }
+function severityType(s: string): string { return severityTypeMap[s] || 'info' }
 
 async function fetchData() {
   loading.value = true

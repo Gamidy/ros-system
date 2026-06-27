@@ -96,6 +96,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { TableRow } from '@/types/common'
 import api from '../../api'
 
 const moduleOverview = ref<Record<string, any>>({})
@@ -146,7 +147,7 @@ function statusType(s: string) {
   return map[s] || 'info'
 }
 
-function handleApprove(row: any) {
+function handleApprove(row: TableRow) {
   ElMessage.info(`审批任务：${row.title}（功能待对接）`)
 }
 

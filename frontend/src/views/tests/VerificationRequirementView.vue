@@ -183,7 +183,7 @@ const statusTypeMap: Record<string, string> = {
 }
 
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string): string { return statusTypeMap[s] || 'info' }
 
 async function fetchData() {
   loading.value = true

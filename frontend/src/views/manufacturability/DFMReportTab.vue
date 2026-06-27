@@ -159,6 +159,7 @@ import {
   getDFMReportScore, createDFMReportItem, updateDFMReportItem, deleteDFMReportItem
 } from '../../api/manufacturability'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 
 const reports = ref<any[]>([])
 const total = ref(0)
@@ -220,7 +221,7 @@ async function saveReport() {
   } catch {} finally { savingReport.value = false }
 }
 
-async function openReportDetail(row: any) {
+async function openReportDetail(row: TableRow) {
   currentReport.value = null; scoreResult.value = null
   try {
     const { data } = await getDFMReport(row.id)
@@ -247,7 +248,7 @@ async function completeReport() {
   } catch {}
 }
 
-async function handleDeleteReport(row: any) {
+async function handleDeleteReport(row: TableRow) {
   try { await deleteDFMReport(row.id); fetchData() } catch {}
 }
 
@@ -258,7 +259,7 @@ function showAddItem() {
   itemDialogVisible.value = true
 }
 
-function editItem(item: any) {
+function editItem(item: TableRow) {
   isEditItem.value = true; editingItemId.value = item.id
   itemForm.value = { ...item }
   itemDialogVisible.value = true
@@ -280,11 +281,11 @@ async function saveItem() {
   } catch {} finally { savingItem.value = false }
 }
 
-async function deleteItem(item: any) {
+async function deleteItem(item: TableRow) {
   try { await deleteDFMReportItem(item.id); if (currentReport.value) openReportDetail(currentReport.value) } catch {}
 }
 
-async function updateItemStatus(item: any, newStatus: string) {
+async function updateItemStatus(item: TableRow, newStatus: string) {
   try {
     await updateDFMReportItem(item.id, { status: newStatus })
     if (currentReport.value) openReportDetail(currentReport.value)
