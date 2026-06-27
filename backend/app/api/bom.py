@@ -69,7 +69,7 @@ def create_part(data: PartCreate, db: Session = Depends(get_db), _=Depends(requi
 # ══════════════════════════════════════════════════
 
 @router.get("/parts/cdf-expiring", response_model=list[PartDetailOut])
-def cdf_expiring(days: int = Query(90, ge=1), db: Session = Depends(get_db), _=Depends(require_menu("bom"))) -> list:
+def cdf_expiring(days: int = Query(90, ge=1), db: Session = Depends(get_db), _=Depends(require_menu("bom"))) -> list[PartDetailOut]:
     """CDF证书即将到期的物料 — 按有效期过滤"""
     today = date.today()
     cutoff = today + timedelta(days=days)
@@ -156,7 +156,7 @@ def remove_avl(part_id: int, avl_id: int, db: Session = Depends(get_db), _=Depen
 # ══════════════════════════════════════════════════
 
 @router.get("/parts/{part_id}/alternatives", response_model=list[PartOut])
-def list_alternatives(part_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))) -> list:
+def list_alternatives(part_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))) -> list[PartOut]:
     """列出物料的替代料 — 不同part_no，功能可替代"""
     part = db.query(Part).filter(Part.id == part_id).first()
     if not part:
@@ -207,7 +207,7 @@ def list_boms(
     status: str = "",
     db: Session = Depends(get_db),
     _=Depends(require_menu("bom")),
-) -> list:
+) -> list[BOMOut]:
     """列出BOM，可按产品编码/工厂/状态筛选"""
     q = db.query(BOM)
     if product_code:
@@ -282,7 +282,7 @@ def add_bom_item(bom_id: int, data: BOMItemCreate, db: Session = Depends(get_db)
 
 
 @router.get("/{bom_id}/items", response_model=list[BOMItemOut])
-def list_bom_items(bom_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))) -> list:
+def list_bom_items(bom_id: int, db: Session = Depends(get_db), _=Depends(require_menu("bom"))) -> list[BOMItemOut]:
     """列出BOM所有条目（平铺）"""
     bom = db.query(BOM).filter(BOM.id == bom_id).first()
     if not bom:

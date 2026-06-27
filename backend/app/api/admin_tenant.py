@@ -109,7 +109,7 @@ def create_org(
     req: OrgCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager")),
-) -> dict:
+) -> OrgOut:
     """创建组织（仅admin/general_manager可操作）"""
     # 检查编码唯一性
     existing = db.query(Organization).filter(Organization.code == req.code).first()
@@ -137,7 +137,7 @@ def list_orgs(
     skip: int = Query(0, ge=0, description="偏移量"),
     limit: int = Query(20, ge=1, le=100, description="每页数量"),
     keyword: Optional[str] = Query(None, description="搜索关键词（名称/编码）"),
-) -> list:
+) -> list[OrgOut]:
     """获取组织列表（分页，支持关键词搜索）"""
     query = db.query(Organization).filter(Organization.is_active == True)
     if keyword:
@@ -154,7 +154,7 @@ def get_org(
     org_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> dict:
+) -> OrgOut:
     """获取组织详情"""
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
@@ -168,7 +168,7 @@ def update_org(
     req: OrgUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager")),
-) -> dict:
+) -> OrgOut:
     """更新组织信息（仅admin/general_manager可操作）"""
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
@@ -209,7 +209,7 @@ def add_member(
     req: OrgMemberAdd,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager")),
-) -> dict:
+) -> OrgMemberOut:
     """向组织添加成员（仅admin/general_manager可操作）"""
     # 检查组织存在且启用
     org = db.query(Organization).filter(Organization.id == org_id).first()
@@ -265,7 +265,7 @@ def list_members(
     current_user: User = Depends(get_current_user),
     skip: int = Query(0, ge=0, description="偏移量"),
     limit: int = Query(50, ge=1, le=200, description="每页数量"),
-) -> list:
+) -> list[OrgMemberOut]:
     """获取组织成员列表"""
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
@@ -315,7 +315,7 @@ def update_member_role(
     req: OrgMemberRoleUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "general_manager")),
-) -> dict:
+) -> OrgMemberOut:
     """修改成员角色（仅admin/general_manager可操作）"""
     member = db.query(OrganizationMember).filter(
         OrganizationMember.org_id == org_id,
@@ -343,7 +343,7 @@ def update_member_role(
 def get_my_org(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> dict:
+) -> Optional[MyOrgOut]:
     """获取当前用户所属组织信息"""
     org_id = current_user.org_id
     if not org_id:

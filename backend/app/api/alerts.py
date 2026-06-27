@@ -25,7 +25,7 @@ def list_notifications(
     channel: str = Query("", description="通知渠道"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-) -> list:
+) -> list[NotificationOut]:
     q = db.query(Notification)
     if target_user:
         q = q.filter(Notification.target_user == target_user)
@@ -60,7 +60,7 @@ def list_alerts(
     alert_type: str = Query("", description="预警类型"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-) -> list:
+) -> list[AlertOut]:
     """获取预警记录列表，支持按 is_read / level / alert_type 筛选"""
     q = db.query(Alert)
     if is_read is not None:
@@ -79,7 +79,7 @@ def list_alert_rules(
     is_enabled: bool = Query(None, description="是否启用"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("alerts")),
-) -> list:
+) -> list[AlertRuleOut]:
     """获取预警规则列表，支持按 is_enabled 筛选"""
     q = db.query(AlertRule)
     if is_enabled is not None:
