@@ -3,18 +3,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.system_config import SystemConfig
+from app.core.permissions import require_role
 from app.core.security import get_current_user
 
 router = APIRouter(prefix="/api/admin/config", tags=["admin-config"])
 
-# ── 配置分类 ──────────────────────────────────────────────────────
-# 敏感配置：包含商业敏感数据（成本、价格、阈值），仅 admin 可读
+# ── 配置分类 ──
 SENSITIVE_KEYS = {"proto_unit_cost", "test_unit_price", "mfg_cost_threshold", "cert_cost"}
-# 公开配置：UI渲染和计算所需的非敏感配置，所有登录用户可读
 PUBLIC_KEYS = {"product_short_names", "accessory_defaults", "feature_defaults",
                "trial_qty_per_class", "indirect_cost", "capacity_unit_cost_map"}
-
-# 默认配置
 DEFAULTS = {
     "proto_unit_cost": '{"7K":0.075,"9K":0.095,"12K":0.105,"18K":0.142,"24K":0.178}',
     "test_unit_price": "0.11",
@@ -29,11 +26,6 @@ DEFAULTS = {
 }
 
 
-def _require_admin(user):
-    if user.role != "admin":
-        raise HTTPException(403, "仅管理员可操作")
-
-
 def _get_config_dict(db: Session) -> dict:
     """获取所有配置的字典"""
     rows = db.query(SystemConfig).all()
@@ -44,9 +36,11 @@ def _get_config_dict(db: Session) -> dict:
 
 
 @router.get("")
-def get_config(db: Session = Depends(get_db), user=Depends(get_current_user)) -> dict:
+def get_config(
+    db: Session = Depends(get_db),
+    _=Depends(require_role("admin")),
+) -> dict:
     """获取完整系统配置（仅admin）"""
-    _require_admin(user)
     return {"data": _get_config_dict(db)}
 
 
@@ -63,10 +57,9 @@ def update_config(
     key: str,
     value: str,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    _=Depends(require_role("admin")),
 ) -> dict:
     """更新单个配置项（仅admin）"""
-    _require_admin(user)
     if key not in DEFAULTS:
         raise HTTPException(400, f"未知配置项: {key}")
 
@@ -84,10 +77,9 @@ def update_config(
 def update_config_batch(
     data: dict,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    _=Depends(require_role("admin")),
 ) -> dict:
     """批量更新配置（仅admin）"""
-    _require_admin(user)
     for key, value in data.items():
         if key not in DEFAULTS:
             continue

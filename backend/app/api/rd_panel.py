@@ -9,25 +9,17 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.models.user import User
+from app.core.permissions import require_role
 from app.models.project import Project, ProjectGate, Risk
 from app.models.approval import ApprovalRequest  # 统一审批引擎
 
 router = APIRouter(prefix="/rd", tags=["研发总监面板"])
 
 
-def _require_rd_director(current_user: User = Depends(get_current_user)) -> User:
-    """仅研发总监可访问"""
-    if current_user.role != "rd_director":
-        raise HTTPException(status_code=403, detail="仅研发总监可访问")
-    return current_user
-
-
 @router.get("/panel")
 def rd_panel(
     db: Session = Depends(get_db),
-    current_user: User = Depends(_require_rd_director),
+    _=Depends(require_role("rd_director")),
 ) -> dict:
     """研发总监面板 — 聚合项目统计/进度/风险/审批/延期"""
     today = date.today()
