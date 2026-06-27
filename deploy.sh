@@ -12,7 +12,7 @@ deploy_frontend() {
   echo ">>> 部署前端..."
   cd "$FRONTEND_SRC"
   tar czf /tmp/ros-frontend-dist.tar.gz -C dist .
-  ssh "$HOST" "tar xzf /dev/stdin -C /usr/share/nginx/html/" < /tmp/ros-frontend-dist.tar.gz
+  ssh "$HOST" "rm -rf /opt/ros-system/frontend/dist_old && mv /opt/ros-system/frontend/dist /opt/ros-system/frontend/dist_old && mkdir -p /opt/ros-system/frontend/dist && tar xzf /dev/stdin -C /opt/ros-system/frontend/dist/" < /tmp/ros-frontend-dist.tar.gz
   echo "前端 ✅"
 }
 

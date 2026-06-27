@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
 from app.services.state_machine import assert_transition
 from app.schemas import (
-    ProgramCreate, ProjectCreate, ProjectUpdate, ProjectOut, TaskCreate, RiskCreate,
+    ProgramCreate, ProgramOut, ProjectCreate, ProjectUpdate, ProjectOut, TaskCreate, RiskCreate,
     MilestoneCreate, GateStatusUpdate,
 )
 
@@ -147,12 +147,12 @@ def _validate_gate_transition(project_id: int, target_code: str, new_status: str
 # Program (项目群) Endpoints
 # ══════════════════════════════════════════════════════════════
 
-@program_router.get("")
+@program_router.get("", response_model=list[ProgramOut])
 def list_programs(
     status: str | None = Query(None),
     db: Session = Depends(get_db),
     _=Depends(require_menu("projects")),
-) -> list:
+) -> list[ProgramOut]:
     q = db.query(Program)
     if status:
         q = q.filter(Program.status == status)

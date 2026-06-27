@@ -1,6 +1,6 @@
 """ECR/ECN 工程变更 — Pydantic Schema（旧版）"""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import date, datetime
 
@@ -23,7 +23,7 @@ class ECROut(ECRCreate):
     submitted_by: Optional[str] = None
     approved_by: Optional[str] = None
     created_at: datetime
-    class Config: from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ═══════════════ ECN ═══════════════
@@ -44,4 +44,4 @@ class ECNOut(ECNCreate):
     ecn_no: str
     status: str
     created_at: datetime
-    class Config: from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

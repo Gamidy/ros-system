@@ -1,6 +1,6 @@
 """项目管理 — Pydantic Schema"""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import date, datetime
 
@@ -19,7 +19,8 @@ class ProgramOut(ProgramCreate):
     id: int
     status: str
     created_at: datetime
-    class Config: from_attributes = True
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ═══════════════ 项目 ═══════════════

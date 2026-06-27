@@ -15,9 +15,9 @@ from app.schemas import (
     CertificationCreate, CertificationOut,
     PrototypeCreate, PrototypeOut,
     QualityIssueCreate, QualityIssueOut, IssueUpdate,
-    ECRCreate, ECROut,
     ECNCreate, ECNOut,
 )
+from app.schemas.ecr_ecn import ECRCreate, ECROut
 
 import logging
 logger = logging.getLogger(__name__)

@@ -108,6 +108,7 @@ class Market(Base):
     main_selling_model = Column(String(200), nullable=True, comment="主销机型描述")
     refrigerant = Column(String(50), nullable=True, comment="主要制冷剂，如 R32/R410A/R290")
     refrigerant_charge = Column(Float, nullable=True, comment="标准制冷剂灌注量 g")
+    min_voltage = Column(Integer, nullable=True, comment="最低电压要求 V")
     # ── 结束新增 ──
     is_active = Column(String(5), default="true")
 
@@ -115,6 +116,24 @@ class Market(Base):
                           primaryjoin="Market.code == product_markets.c.market_code",
                           secondaryjoin="Product.id == product_markets.c.product_id",
                           back_populates="markets")
+
+
+class MarketEnergyLevel(Base):
+    """市场能效等级要求"""
+    __tablename__ = "market_energy_levels"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    market_code = Column(String(20), ForeignKey("markets.code"), nullable=False, comment="市场代码")
+    level_name = Column(String(50), nullable=False, comment="等级名称，如 一级/Grade A/Class 1")
+    sort_order = Column(Integer, default=0, comment="排序")
+    seer_min = Column(Float, nullable=True, comment="最低SEER要求")
+    eer_min = Column(Float, nullable=True, comment="最低EER要求")
+    cspf_min = Column(Float, nullable=True, comment="最低CSPF要求")
+    is_primary = Column(String(5), default="false", comment="是否主销等级")
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    market = relationship("Market", backref="energy_levels")
 
 
 class Version(Base):

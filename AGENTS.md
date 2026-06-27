@@ -1,4 +1,15 @@
-# ROS 研发运营系统 — 项目契约
+# ROS — AI-native R&D Operating System
+
+> **正式定义**：ROS（R&D Operating System）是一个 AI-native、事件驱动、数据驱动、
+> 数字主线驱动的研发操作系统。它以统一的业务架构、数据架构和治理体系为基础，
+> 通过可扩展的 Capability 机制，支撑产品全生命周期研发，并能够持续演进，
+> 而无需重构核心平台。
+>
+> **架构阶段：已关闭 ✅** — Foundation 已冻结（LTS / Production Ready）
+> **版本管理**：**ROS Foundation**（7 套标准永久维护） + **Capability Library**
+>
+> **ROS Constitution**（十二条 + Scope + Interpretation + Compliance + Architecture Principles）已建立，见根目录 `CONSTITUTION.md`
+> **ROS Foundation**（LTS 状态 — 不可变），见 `FOUNDATION.md`
 
 > 本项目遵循 **vibe-coding 38条通用编程原则**。
 > 每次代码任务完成后必须运行 **compliance-auditor** 合规审计。
