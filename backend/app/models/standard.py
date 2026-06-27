@@ -71,6 +71,8 @@ class StandardRegion(Base):
     """标准发布机构/地区"""
     __tablename__ = "standard_regions"
 
+    __allow_unmapped__ = True
+
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     code: str = Column(String(20), unique=True, nullable=False, comment="地区/机构代码: EU, US, SA, IEC")
     name: str = Column(String(100), nullable=False, comment="中文名称")
@@ -95,6 +97,8 @@ class StandardCategory(Base):
     """标准分类"""
     __tablename__ = "standard_categories"
 
+    __allow_unmapped__ = True
+
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     code: str = Column(String(32), unique=True, nullable=False, comment="分类编码")
     name: str = Column(String(100), nullable=False, comment="分类名称")
@@ -111,6 +115,8 @@ class StandardCategory(Base):
 class Standard(Base):
     """核心标准条目"""
     __tablename__ = "standards"
+
+    __allow_unmapped__ = True
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     region_id: int = Column(Integer, ForeignKey("standard_regions.id"), nullable=False, comment="所属地区 ID")
@@ -162,6 +168,8 @@ class Standard(Base):
 class StandardCrawl(Base):
     """标准爬取任务日志"""
     __tablename__ = "standard_crawls"
+
+    __allow_unmapped__ = True
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     region_id: int = Column(Integer, ForeignKey("standard_regions.id"), nullable=False, comment="爬取来源地区 ID")
