@@ -30,7 +30,7 @@ def list_verification_requirements(
     project_id: int = Query(None, description="项目ID"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("verification-requirements")),
-) -> list:
+) -> list[VerificationRequirementOut]:
     q = db.query(VerificationRequirement)
     if category:
         q = q.filter(VerificationRequirement.category == category)
@@ -49,7 +49,7 @@ def create_verification_requirement(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("verification-requirements")),
-) -> dict:
+) -> VerificationRequirementOut:
     vr = VerificationRequirement(
         **data.model_dump(),
         vr_code=_gen_vr_code(),
@@ -67,7 +67,7 @@ def get_verification_requirement(
     rid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("verification-requirements")),
-) -> dict:
+) -> VerificationRequirementOut:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
         raise HTTPException(status_code=404, detail="验证需求不存在")
@@ -80,7 +80,7 @@ def update_verification_requirement(
     data: VerificationRequirementCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("verification-requirements")),
-) -> dict:
+) -> VerificationRequirementOut:
     vr = db.query(VerificationRequirement).filter(VerificationRequirement.id == rid).first()
     if not vr:
         raise HTTPException(status_code=404, detail="验证需求不存在")

@@ -22,7 +22,7 @@ def create_test_execution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("test-executions")),
-) -> dict:
+) -> TestExecutionOut:
     execution = TestExecution(
         **data.model_dump(),
         status="running",
@@ -39,7 +39,7 @@ def complete_test_execution(
     eid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("test-executions")),
-) -> dict:
+) -> TestExecutionOut:
     """完成执行：设置 end_time，自动计算 duration"""
     execution = db.query(TestExecution).filter(TestExecution.id == eid).first()
     if not execution:
@@ -62,7 +62,7 @@ def list_test_executions(
     test_request_id: int = Query(None, description="实验申请ID"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("test-executions")),
-) -> list:
+) -> list[TestExecutionOut]:
     q = db.query(TestExecution)
     if test_request_id is not None:
         q = q.filter(TestExecution.test_request_id == test_request_id)

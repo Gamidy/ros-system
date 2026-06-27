@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Generic, TypeVar
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
@@ -129,6 +129,16 @@ class NextActionOut(BaseModel):
     can_advance: bool
 
 
+T = TypeVar("T")
+
+
+class PaginatedResult(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+
+
 # ── 子表 Schemas（引用自 product_plan_subs）──
 
 from app.api.product_plan_subs import (
@@ -238,7 +248,7 @@ def create_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> PlanOut:
     """创建产品策划（DRAFT）"""
     try:
         plan = workflow_create(db, data.model_dump(), current_user.username)
@@ -257,7 +267,7 @@ def list_plans(
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> PaginatedResult[PlanOut]:
     """产品策划列表（分页+筛选）"""
     try:
         q = db.query(ProductPlan)
@@ -292,7 +302,7 @@ def get_plan_detail(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> PlanDetailOut:
     """策划详情（含 costs + 子表数据）"""
     # [P0-1] N+1 修复: 使用 selectinload 预加载所有关联
     plan = db.query(ProductPlan).options(
@@ -324,7 +334,7 @@ def get_plan_status(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> PlanStatusOut:
     """流程状态详情"""
     plan = db.query(ProductPlan).filter(ProductPlan.id == plan_id).first()
     if not plan:
@@ -555,7 +565,7 @@ def get_next_action(
     plan_id: str,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> NextActionOut:
     """获取下一步动作引导"""
     return workflow_next_action(db, plan_id)
 

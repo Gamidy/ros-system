@@ -191,7 +191,7 @@ def get_initiation(
     version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> InitiationOut:
     """获取立项信息"""
     _get_plan_or_404(db, plan_id)
     initiation = db.query(ProductPlanInitiation).filter(
@@ -211,7 +211,7 @@ def upsert_initiation(
     data: InitiationCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> InitiationOut:
     """创建或更新立项信息"""
     plan = _get_plan_or_404(db, plan_id)
     initiation = db.query(ProductPlanInitiation).filter(
@@ -244,7 +244,7 @@ def get_market(
     version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> MarketOut:
     """获取市场信息"""
     _get_plan_or_404(db, plan_id)
     market = db.query(ProductPlanMarket).filter(
@@ -264,7 +264,7 @@ def upsert_market(
     data: MarketCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> MarketOut:
     """创建或更新市场信息"""
     plan = _get_plan_or_404(db, plan_id)
     market = db.query(ProductPlanMarket).filter(
@@ -297,7 +297,7 @@ def get_tech_spec(
     version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> TechSpecOut:
     """获取技术规格"""
     _get_plan_or_404(db, plan_id)
     tech = db.query(ProductPlanTechSpec).filter(
@@ -317,7 +317,7 @@ def upsert_tech_spec(
     data: TechSpecCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> TechSpecOut:
     """创建或更新技术规格"""
     plan = _get_plan_or_404(db, plan_id)
     tech = db.query(ProductPlanTechSpec).filter(
@@ -350,7 +350,7 @@ def list_team_members(
     version: Optional[int] = Query(None, description="指定版本查询"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> list:
+) -> list[TeamOut]:
     """获取团队成员列表"""
     _get_plan_or_404(db, plan_id)
     members = db.query(ProductPlanTeam).filter(
@@ -368,7 +368,7 @@ def add_team_member(
     data: TeamCreate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> TeamOut:
     """添加团队成员"""
     plan = _get_plan_or_404(db, plan_id)
     member = ProductPlanTeam(product_plan_id=plan_id, **data.model_dump())
@@ -387,7 +387,7 @@ def update_team_member(
     data: TeamUpdate,
     db: Session = Depends(get_db),
     _=Depends(require_menu("product-plans")),
-) -> dict:
+) -> TeamOut:
     """更新团队成员"""
     _get_plan_or_404(db, plan_id)
     member = db.query(ProductPlanTeam).filter(
