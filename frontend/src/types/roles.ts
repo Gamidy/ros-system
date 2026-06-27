@@ -123,6 +123,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/s2/certificates', title: '证书管理', icon: Stamp },
       { path: '/s2/gate-rules', title: '认证门禁规则', icon: WarningFilled },
       { path: '/s2/impact', title: '变更影响分析', icon: DataAnalysis },
+      { path: '/cert/impact', title: '影响链可视化', icon: DataAnalysis },
       { path: '/safety/standards', title: '安全标准库', icon: Document },
       { path: '/safety/inspection-items', title: '安规检测项', icon: Document },
       { path: '/safety/supplier-qualifications', title: '供应商安规', icon: ShoppingCart },
@@ -217,6 +218,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/s2/certificates', title: '证书管理',     icon: Stamp },
   { path: '/s2/gate-rules',   title: '认证门禁规则',  icon: WarningFilled },
   { path: '/s2/impact',       title: '变更影响分析',  icon: DataAnalysis },
+  // P2-T4 影响链可视化
+  { path: '/cert/impact',     title: '影响链可视化',  icon: DataAnalysis },
   // S4 成本核算
   { path: '/cost-accounting',      title: '成本核算',    icon: DataAnalysis },
   { path: '/cost-accounting/labor-rates', title: '工时费率', icon: DataAnalysis },
@@ -226,6 +229,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/cost-accounting/analysis',   title: '成本分析', icon: DataAnalysis },
   // P1-T5 事件监控面板
   { path: '/monitor/events',    title: '事件监控面板', icon: DataAnalysis },
+  // P2-T5 规则管理
+  { path: '/cert/rules',        title: '变更影响规则', icon: DataAnalysis },
 ]
 
 /**

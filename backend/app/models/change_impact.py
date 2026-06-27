@@ -37,7 +37,7 @@ class ChangeImpactRecord(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     ecr_id = Column(Integer, nullable=True, comment="预留ECR关联ID")
-    prototype_id = Column(Integer, ForeignKey("prototypes.id"), nullable=False, comment="关联样机")
+    prototype_id = Column(Integer, ForeignKey("prototypes.id"), nullable=True, comment="关联样机（ECR/ECO触发时可空）")
     changed_part = Column(String(200), nullable=True, comment="变更部件描述")
     matched_rule_id = Column(Integer, ForeignKey("change_impact_rules.id"), nullable=True, comment="匹配的规则ID")
     impact_level = Column(String(20), nullable=False, comment=f"影响等级: {[e.value for e in ImpactLevel]}")

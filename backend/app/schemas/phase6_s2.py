@@ -345,7 +345,7 @@ class ChangeImpactRuleOut(BaseModel):
 class ChangeImpactRecordOut(BaseModel):
     id: int
     ecr_id: Optional[int] = None
-    prototype_id: int
+    prototype_id: Optional[int] = None
     changed_part: Optional[str] = None
     matched_rule_id: Optional[int] = None
     impact_level: str

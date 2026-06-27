@@ -68,6 +68,8 @@ ALL_MENUS = [
     "cert-change-impact",      # 变更影响分析
     "certificates",            # 证书管理
     "cert-gate-rules",         # 认证门禁规则
+    # P2-T5 — 规则管理
+    "cert-rules",              # 变更影响规则
     # Phase 6 S3 — ECR/ECO 工程变更控制
     "ecr",                     # ECR变更申请
     "eco",                     # ECO变更指令
@@ -211,7 +213,10 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "target-markets",
         # S2 认证中心
         'cert-requirements', 'cert-projects', 'cert-samples',
-        'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
+        'cert-executions', 'cert-results', 'cert-change-impact',
+        'certificates', 'cert-gate-rules',
+        # P2-T5 — 规则管理
+        'cert-rules',
         # S3 ECR/ECO
         'ecr', 'eco',
         # P0-6 安规管理
@@ -369,6 +374,9 @@ MENU_PATH_MAP: dict[str, str] = {
     "cert-results": "/s2/results",
     "certificates": "/s2/certificates",
     "cert-gate-rules": "/s2/gate-rules",
+    # P2-T5 — 规则管理
+    "cert-rules": "/cert/rules",
+    "cert-change-impact": "/cert/impact",
     # Phase 6 S3 — ECR/ECO
     "ecr": "/ecr",
     "eco": "/eco",

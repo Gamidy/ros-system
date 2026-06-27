@@ -155,6 +155,13 @@ const router = createRouter({
           component: () => import('../views/s2/S2ImpactView.vue'),
           meta: { title: '变更影响分析', menu: 'certifications' },
         },
+        // P2-T4 影响链可视化（新页面）
+        {
+          path: 'cert/impact',
+          name: 'CertImpact',
+          component: () => import('../views/cert/CertImpactView.vue'),
+          meta: { title: '影响链可视化', menu: 'certifications' },
+        },
         {
           path: 'prototypes',
           name: 'Prototypes',
@@ -436,6 +443,13 @@ const router = createRouter({
           name: 'BiCost',
           component: () => import('../views/bi/CostAnalytics.vue'),
           meta: { title: 'BI成本分析', menu: 'bi' },
+        },
+        // P2-T5 — 规则管理
+        {
+          path: 'cert/rules',
+          name: 'CertRules',
+          component: () => import('../views/cert/CertRulesView.vue'),
+          meta: { title: '变更影响规则', menu: 'cert-rules' },
         },
         // P1-T5 — 前端事件监控面板
         {
