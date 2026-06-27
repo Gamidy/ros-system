@@ -131,7 +131,7 @@ def delete_rule(
     rule_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-):
+) -> dict:
     """删除成本超标预警规则"""
     rule = db.query(CostAlertRule).filter(CostAlertRule.id == rule_id).first()
     if not rule:

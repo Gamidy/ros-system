@@ -691,7 +691,7 @@ def get_cost_trend(plan_id: str, limit: int = Query(6), db: Session = Depends(ge
 # ════════════════════════════════════════
 
 @router.get("/reports/export/csv")
-def export_csv(sheet_id: int = Query(...), db: Session = Depends(get_db), _=_PERIOD_DEP):
+def export_csv(sheet_id: int = Query(...), db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
     s = db.query(CostAccountingSheet).filter(CostAccountingSheet.id == sheet_id).first()
     if not s: raise HTTPException(404, "核算单不存在")
     items = db.query(CostAccountingItem).filter(CostAccountingItem.sheet_id == s.id).all()
