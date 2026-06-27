@@ -50,6 +50,9 @@
         <el-table-column prop="voltage_freq" label="电压频率" width="100">
           <template #default="{ row }">{{ row.voltage_freq || '-' }}</template>
         </el-table-column>
+        <el-table-column prop="min_voltage" label="最低电压" width="80">
+          <template #default="{ row }">{{ row.min_voltage ? row.min_voltage + 'V' : '-' }}</template>
+        </el-table-column>
         <el-table-column label="温度范围" width="130">
           <template #default="{ row }">
             <span v-if="row.cooling_max_temp || row.heating_min_temp">
@@ -150,17 +153,22 @@
         </el-row>
         <el-divider content-position="left">电气与温度参数</el-divider>
         <el-row :gutter="16">
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="电压/频率">
               <el-input v-model="form.voltage_freq" placeholder="如: 220V/50Hz" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
+            <el-form-item label="最低电压(V)">
+              <el-input-number v-model="form.min_voltage" :min="100" :max="500" :step="10" controls-position="right" style="width:100%" placeholder="如: 220" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
             <el-form-item label="制冷最高温度°C">
               <el-input-number v-model="form.cooling_max_temp" :min="-50" :max="80" :step="0.5" controls-position="right" style="width:100%" placeholder="如: 46" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="制热最低温度°C">
               <el-input-number v-model="form.heating_min_temp" :min="-50" :max="80" :step="0.5" controls-position="right" style="width:100%" placeholder="如: -7" />
             </el-form-item>
@@ -182,7 +190,12 @@
           <el-col :span="8">
             <el-form-item label="机型结构">
               <el-select v-model="form.structure_type" clearable placeholder="选择结构" style="width:100%">
-                <el-option label="壁挂分体机" value="壁挂分体机" />
+                <el-option label="分体壁挂" value="分体壁挂" />
+                <el-option label="天花机" value="天花机" />
+                <el-option label="风管机" value="风管机" />
+                <el-option label="柜机" value="柜机" />
+                <el-option label="窗机" value="窗机" />
+                <el-option label="移动空调" value="移动空调" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -298,104 +311,12 @@
       </template>
     </el-dialog>
 
-    <!-- 标准配置弹窗（测试要求 + 标准要求） -->
-    <el-dialog v-model="stdConfigDialogVisible" :title="`标准配置 - ${stdConfigMarketName}`" width="750px" :close-on-click-modal="false" destroy-on-close>
-      <el-tabs v-model="activeStdTab">
-        <el-tab-pane label="📋 测试要求" name="tests">
-          <div class="toolbar" style="margin-bottom:10px">
-            <el-button type="primary" size="small" @click="openAddTest">新增测试项</el-button>
-          </div>
-          <el-table :data="testItems" border size="small" style="width:100%">
-            <el-table-column prop="test_category" label="测试分类" width="120">
-              <template #default="{ row }">
-                <el-tag size="small">{{ row.test_category || '-' }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="standard" label="测试标准" min-width="180" />
-            <el-table-column prop="is_required" label="是否强制" width="80">
-              <template #default="{ row }">
-                <el-tag :type="row.is_required ? 'danger' : 'info'" size="small">{{ row.is_required ? '是' : '否' }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="110">
-              <template #default="{ row }">
-                <el-button size="small" type="primary" link @click="openEditTest(row)">编辑</el-button>
-                <el-button size="small" type="danger" link @click="handleDeleteTest(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-tab-pane>
-        <el-tab-pane label="📄 标准要求" name="standards">
-          <div class="toolbar" style="margin-bottom:10px">
-            <el-button type="primary" size="small" @click="openAddStandard">新增标准项</el-button>
-          </div>
-          <el-table :data="standardItems" border size="small" style="width:100%">
-            <el-table-column prop="standard_code" label="标准编号" width="120" />
-            <el-table-column prop="standard_name" label="标准名称" min-width="220" show-overflow-tooltip />
-            <el-table-column prop="is_core" label="核心标准" width="80">
-              <template #default="{ row }">
-                <el-tag :type="row.is_core ? 'primary' : 'info'" size="small">{{ row.is_core ? '是' : '否' }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="110">
-              <template #default="{ row }">
-                <el-button size="small" type="primary" link @click="openEditStandard(row)">编辑</el-button>
-                <el-button size="small" type="danger" link @click="handleDeleteStandard(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-tab-pane>
-      </el-tabs>
-      <template #footer>
-        <el-button @click="stdConfigDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 测试项编辑子弹窗 -->
-    <el-dialog v-model="testEditVisible" :title="editingTestId ? '编辑测试项' : '新增测试项'" width="500px" :close-on-click-modal="false">
-      <el-form :model="testForm" label-width="100px" size="small">
-        <el-form-item label="测试分类" prop="test_category">
-          <el-select v-model="testForm.test_category" placeholder="选择分类" style="width:100%">
-            <el-option label="性能测试 Performance" value="performance" />
-            <el-option label="可靠性 Reliability" value="reliability" />
-            <el-option label="噪音 Noise" value="noise" />
-            <el-option label="电气安全 Electrical" value="electrical" />
-            <el-option label="EMC电磁兼容" value="emc" />
-            <el-option label="环境 Environmental" value="environmental" />
-            <el-option label="其他 Other" value="other" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="测试标准" prop="standard">
-          <el-input v-model="testForm.standard" placeholder="如: EN 14511" />
-        </el-form-item>
-        <el-form-item label="是否强制">
-          <el-switch v-model="testForm.is_required" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="testEditVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveTest" :loading="savingTest">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 标准项编辑子弹窗 -->
-    <el-dialog v-model="stdEditVisible" :title="editingStdId ? '编辑标准项' : '新增标准项'" width="500px" :close-on-click-modal="false">
-      <el-form :model="stdForm" label-width="100px" size="small">
-        <el-form-item label="标准编号" prop="standard_code">
-          <el-input v-model="stdForm.standard_code" placeholder="如: IEC 60335-2-40" />
-        </el-form-item>
-        <el-form-item label="标准名称" prop="standard_name">
-          <el-input v-model="stdForm.standard_name" placeholder="标准全称" />
-        </el-form-item>
-        <el-form-item label="核心标准">
-          <el-switch v-model="stdForm.is_core" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="stdEditVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveStandard" :loading="savingStd">保存</el-button>
-      </template>
-    </el-dialog>
+    <StandardConfigDialog
+      v-if="stdConfigDialogVisible"
+      :market-code="stdConfigMarketCode"
+      :market-name="stdConfigMarketName"
+      @close="stdConfigDialogVisible = false"
+    />
   </div>
 </template>
 
@@ -420,6 +341,8 @@ interface MarketItem {
   structure_type: string | null
   main_selling_model: string | null
   refrigerant: string | null
+  refrigerant_charge: number | null
+  min_voltage: number | null
   is_active: string
 }
 
@@ -452,6 +375,7 @@ interface MarketForm {
   energy_standard_detail: string | null
   national_standard: string | null
   voltage_freq: string | null
+  min_voltage: number | null
   cooling_max_temp: number | null
   heating_min_temp: number | null
   structure_type: string | null
@@ -474,18 +398,6 @@ interface CompressorForm {
   notes: string
 }
 
-interface TestForm {
-  test_category: string
-  standard: string
-  is_required: boolean
-}
-
-interface StandardForm {
-  standard_code: string
-  standard_name: string
-  is_core: boolean
-}
-
 const markets = ref<MarketItem[]>([])
 const dialogVisible = ref(false)
 const editingCode = ref<string | null>(null)
@@ -494,7 +406,7 @@ const form = ref<MarketForm>({
   code: '', name: '', region: '',
   energy_standard: 'eer', energy_label: 'EER', energy_unit: 'W/W',
   energy_standard_detail: null, national_standard: null,
-  voltage_freq: null, cooling_max_temp: null, heating_min_temp: null,
+  voltage_freq: null, min_voltage: null, cooling_max_temp: null, heating_min_temp: null,
   structure_type: null, main_selling_model: null,
   refrigerant: null,
 })
@@ -539,42 +451,10 @@ const filteredMarkets = computed(() => {
 })
 function applyFilters() { /* reactivity handles it via computed */ }
 
-// ── 标准配置（测试要求 + 标准要求）──
+// ── 标准配置弹窗（独立组件 StandardConfigDialog）──
 const stdConfigDialogVisible = ref(false)
 const stdConfigMarketName = ref('')
 const stdConfigMarketCode = ref('')
-const activeStdTab = ref('tests')
-const targetMarketId = ref<number | null>(null)
-
-// 测试项
-interface TestItem {
-  id: number
-  target_market_id: number
-  test_category: string
-  standard: string
-  is_required: boolean
-  sort_order: number
-}
-const testItems = ref<TestItem[]>([])
-const testEditVisible = ref(false)
-const editingTestId = ref<number | null>(null)
-const savingTest = ref(false)
-const testForm = ref<TestForm>({ test_category: 'performance', standard: '', is_required: true })
-
-// 标准项
-interface StandardItem {
-  id: number
-  target_market_id: number
-  standard_code: string
-  standard_name: string
-  is_core: boolean
-  sort_order: number
-}
-const standardItems = ref<StandardItem[]>([])
-const stdEditVisible = ref(false)
-const editingStdId = ref<number | null>(null)
-const savingStd = ref(false)
-const stdForm = ref<StandardForm>({ standard_code: '', standard_name: '', is_core: true })
 
 const REGION_LABELS: Record<string, string> = {
   SEA: '东南亚', CA: '中亚', SA: '南亚',
@@ -835,152 +715,11 @@ async function handleDeleteComp(item: CompressorItem) {
   } catch { /* cancelled */ }
 }
 
-// ── 标准配置 CRUD ──
-
-async function ensureTargetMarket(marketCode: string): Promise<number> {
-  // 查找是否已有 target_market 记录
-  const res = await api.get(`/target-markets?market_code=${marketCode}`)
-  const list = res.data || []
-  if (list.length > 0) return list[0].id
-  // 没有则自动创建
-  const market = markets.value.find(m => m.code === marketCode)
-  const createRes = await api.post('/target-markets', {
-    market_code: marketCode,
-    market_name: market?.name || marketCode,
-  })
-  return createRes.data.id
-}
-
-async function openStandardConfig(item: MarketItem) {
+// ── 标准配置弹窗 ──
+function openStandardConfig(item: MarketItem) {
   stdConfigMarketName.value = item.name
   stdConfigMarketCode.value = item.code
   stdConfigDialogVisible.value = true
-  try {
-    targetMarketId.value = await ensureTargetMarket(item.code)
-    await Promise.all([fetchTests(), fetchStandards()])
-  } catch (e: unknown) {
-    ElMessage.error('加载标准配置失败')
-  }
-}
-
-// ── 测试项 CRUD ──
-
-async function fetchTests() {
-  if (!targetMarketId.value) return
-  try {
-    const res = await api.get(`/target-markets/${targetMarketId.value}/tests`)
-    testItems.value = res.data || []
-  } catch (e: unknown) {
-    ElMessage.error('加载测试要求失败')
-  }
-}
-
-function openAddTest() {
-  editingTestId.value = null
-  testForm.value = { test_category: 'performance', standard: '', is_required: true }
-  testEditVisible.value = true
-}
-
-function openEditTest(item: TestItem) {
-  editingTestId.value = item.id
-  testForm.value = {
-    test_category: item.test_category,
-    standard: item.standard,
-    is_required: item.is_required,
-  }
-  testEditVisible.value = true
-}
-
-async function handleSaveTest() {
-  if (!testForm.value.test_category || !testForm.value.standard) {
-    ElMessage.warning('请填写测试分类和标准')
-    return
-  }
-  savingTest.value = true
-  try {
-    if (editingTestId.value) {
-      await api.put(`/target-markets/${targetMarketId.value}/tests/${editingTestId.value}`, testForm.value)
-    } else {
-      await api.post(`/target-markets/${targetMarketId.value}/tests`, testForm.value)
-    }
-    ElMessage.success('保存成功')
-    testEditVisible.value = false
-    await fetchTests()
-  } catch (e: unknown) {
-    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
-    ElMessage.error(_err || '操作失败')
-  } finally {
-    savingTest.value = false
-  }
-}
-
-async function handleDeleteTest(item: TestItem) {
-  try {
-    await ElMessageBox.confirm('确定删除该测试项？', '确认删除', { type: 'warning' })
-    await api.delete(`/target-markets/${targetMarketId.value}/tests/${item.id}`)
-    ElMessage.success('已删除')
-    await fetchTests()
-  } catch { /* cancelled */ }
-}
-
-// ── 标准项 CRUD ──
-
-async function fetchStandards() {
-  if (!targetMarketId.value) return
-  try {
-    const res = await api.get(`/target-markets/${targetMarketId.value}/standards`)
-    standardItems.value = res.data || []
-  } catch (e: unknown) {
-    ElMessage.error('加载标准要求失败')
-  }
-}
-
-function openAddStandard() {
-  editingStdId.value = null
-  stdForm.value = { standard_code: '', standard_name: '', is_core: true }
-  stdEditVisible.value = true
-}
-
-function openEditStandard(item: StandardItem) {
-  editingStdId.value = item.id
-  stdForm.value = {
-    standard_code: item.standard_code,
-    standard_name: item.standard_name,
-    is_core: item.is_core,
-  }
-  stdEditVisible.value = true
-}
-
-async function handleSaveStandard() {
-  if (!stdForm.value.standard_code) {
-    ElMessage.warning('请填写标准编号')
-    return
-  }
-  savingStd.value = true
-  try {
-    if (editingStdId.value) {
-      await api.put(`/target-markets/${targetMarketId.value}/standards/${editingStdId.value}`, stdForm.value)
-    } else {
-      await api.post(`/target-markets/${targetMarketId.value}/standards`, stdForm.value)
-    }
-    ElMessage.success('保存成功')
-    stdEditVisible.value = false
-    await fetchStandards()
-  } catch (e: unknown) {
-    const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
-    ElMessage.error(_err || '操作失败')
-  } finally {
-    savingStd.value = false
-  }
-}
-
-async function handleDeleteStandard(item: StandardItem) {
-  try {
-    await ElMessageBox.confirm('确定删除该标准项？', '确认删除', { type: 'warning' })
-    await api.delete(`/target-markets/${targetMarketId.value}/standards/${item.id}`)
-    ElMessage.success('已删除')
-    await fetchStandards()
-  } catch { /* cancelled */ }
 }
 
 onMounted(fetchMarkets)
