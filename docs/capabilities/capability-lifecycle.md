@@ -1,8 +1,11 @@
-# ROS Capability Engineering Methodology
+# ROS Capability Engineering Methodology (ROS-CEM)
 
 > **所有 Capability 统一遵循的 7 阶段治理与交付流程。**
 >
 > 这是 ROS 与传统 PLM 平台最本质的区别之一——统一的 Capability Engineering Methodology。
+>
+> **ROS-CEM 是 ROS Foundation 的固定组成部分。**
+> 所有新的 Capability（Planning、Verification、Certification、Supplier、Manufacturing、Digital Twin 等）必须遵循 ROS-CEM。
 
 ---
 
@@ -57,27 +60,63 @@ Phase 7 ─── Registry & Release ─── BASELINE
 
 ## Phase 2 — Event Contract（事件契约认证）
 
-**目标**：建立完整的事件契约平台，包括 Identity、Metadata、Compatibility、Validation、Registry、Replay Certification。
+**目标**：建立完整的事件契约平台。
 
-| 子阶段 | 说明 |
-|:-------|:------|
-| 2.1 Event Identity | 统一事件命名规范 |
-| 2.2 Event Metadata | 统一 Header（10 个必填字段） |
-| 2.3 Event Compatibility | Mandatory / Optional / Deprecated / Reserved 字段定义 |
-| 2.4 Event Validation | Schema Validation（Producer + Consumer 双端） |
-| 2.5 Event Registry | 事件注册表（Event / Version / Producer / Consumer / Status） |
-| 2.6 Event Replay Certification | Replay → State → Snapshot → Current State 一致性验证 |
+**3 项 Board 强制要求（适用于所有 Capability）：**
 
-**验收标准**：
+| # | 要求 | 级别 | 说明 |
+|:-:|:-----|:----:|:------|
+| A | Event Classification | P0 | Category / Criticality / Replay Required / Persistent |
+| B | Event Lifecycle | P0 | Draft → Reviewed → Certified → Released → Deprecated → Retired |
+| C | Consumer Compatibility Matrix | P1 | 每个 Event 的 Producer + Consumer 显式声明 |
+
+### 子阶段
+
+| 子阶段 | 目标 | 产出 |
+|:-------|:------|:------|
+| 2.1 Event Identity | 统一事件命名规范 | D2-1 Event Identity Standard |
+| 2.2 Event Metadata | 统一 Header（10 个必填字段） | D2-2 Event Metadata Standard |
+| 2.3 Event Compatibility | Mandatory / Optional / Deprecated / Reserved 字段定义 | D2-3 Compatibility Rules |
+| 2.4 Event Validation | Schema Validation（Producer + Consumer 双端） | D2-4 Validation Framework |
+| 2.5 Event Registry | 事件注册表（含 Classification / Lifecycle / Consumer Matrix） | D2-5 Event Registry + D2-6 Consumer Matrix |
+| 2.6 Event Replay Certification | Replay → State → Snapshot → Current State 一致性验证 | D2-7 Replay Certification Report |
+
+### 交付物清单（8 项）
+
+| 编号 | 交付物 | 说明 |
+|:----|:-------|:------|
+| D2-1 | Event Identity Standard | 命名规范 + 版本策略 |
+| D2-2 | Event Metadata Standard | 统一 Header Schema |
+| D2-3 | Compatibility Rules | 字段兼容性规则 |
+| D2-4 | Validation Framework | Schema Validation 框架 |
+| D2-5 | Event Registry | 事件注册表（含 Classification + Lifecycle） |
+| D2-6 | Consumer Matrix | 消费者兼容性矩阵 |
+| D2-7 | Replay Certification Report | Replay 一致性验证报告 |
+| D2-8 | Event Baseline (EC-1.0-BL1) | Phase 2 冻结基线 |
+
+### 质量指标
+
+| 指标 | 目标 |
+|:-----|:-----|
+| Event Schema Coverage | 100% |
+| Producer Validation | 100% |
+| Consumer Validation | 100% |
+| Replay Success | 100% |
+| Version Compatibility | 100% |
+| Deprecated Events | 0 |
+
+### 验收标准
+
 - [ ] Event Naming 100% 符合规范
 - [ ] Event Metadata 统一 Header
 - [ ] Schema Validation Producer + Consumer 全覆盖
-- [ ] Event Registry 已建立
+- [ ] Event Registry 已建立（含 Classification + Lifecycle）
+- [ ] Consumer Matrix 已建立
 - [ ] Replay Test 100% 通过
 - [ ] Version Policy 已验证
 - [ ] Constitution Compliance PASS
 
-**Gate**：Event Certification 通过后才能进入 Phase 3。
+> **Gate**：Event Contract 必须完成 **Architecture Certification**，形成 **EC-1.0-BL1 (Event Contract Baseline)** 后，方可进入 Phase 3 Data Contract。
 
 ---
 
