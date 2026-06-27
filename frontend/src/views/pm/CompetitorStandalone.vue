@@ -306,10 +306,49 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Plus } from '@element-plus/icons-vue'
 import api from '../../api'
+import type { FormInstance, FormRules } from 'element-plus'
+
+interface MarketOption {
+  code: string
+  name: string
+  energy_standard: string
+  energy_label: string
+}
+
+interface CompetitorFormData {
+  brand: string
+  model: string
+  market: string
+  product_type: string
+  cooling_capacity: string
+  cooling_capacity_w: number | null
+  heating_capacity_w: number | null
+  energy_rating: string
+  cooling_w: number | null
+  heating_w: number | null
+  eer: number | null
+  cspf: number | null
+  iseer: number | null
+  seer: number | null
+  noise_indoor_db: number | null
+  noise_outdoor_db: number | null
+  airflow_m3h: number | null
+  indoor_size_mm: string
+  outdoor_size_mm: string
+  factory_price: string
+  launch_year: number | null
+  notes: string
+}
+
+interface CompetitorItem extends CompetitorFormData {
+  id: number
+  is_complete: boolean
+  missing_fields?: string[]
+}
 
 // ── 市场 & 冷量段选项 ──────────────────────────────────────────────
 const markets = ref<string[]>([])
-const marketOptions = ref<Array<{code: string; name: string; energy_standard: string; energy_label: string}>>([])
+const marketOptions = ref<MarketOption[]>([])
 const capacities = ['9000BTU', '12000BTU', '18000BTU', '24000BTU']
 const energyRatings = ['3星', '4星', '5星']
 const productTypes = ['分体壁挂式', '分体柜式', '窗式', '移动式', '天花式']
@@ -326,11 +365,12 @@ const MARKET_ENERGY_MAP = ref<Record<string, { key: string; label: string }>>({}
 async function fetchMarkets() {
   try {
     const res = await api.get('/pm/markets')
-    marketOptions.value = res.data || []
-    markets.value = (res.data || []).map((m: any) => m.name)
+    const data = (res.data || []) as MarketOption[]
+    marketOptions.value = data
+    markets.value = data.map((m) => m.name)
     // 构建能效映射
     const map: Record<string, { key: string; label: string }> = {}
-    for (const m of res.data || []) {
+    for (const m of data) {
       map[m.name] = { key: m.energy_standard, label: m.energy_label }
     }
     MARKET_ENERGY_MAP.value = map
@@ -372,12 +412,12 @@ const effectiveParams = computed(() => {
 
 // ── 数据状态 ──────────────────────────────────────────────────────
 const loading = ref(false)
-const allItems = ref<any[]>([])
+const allItems = ref<CompetitorItem[]>([])
 const allComplete = ref(false)
 
 // ── 统计 ──────────────────────────────────────────────────────────
 const brandCount = computed(() => {
-  const brands = new Set(allItems.value.map((it: any) => it.brand))
+  const brands = new Set(allItems.value.map((it: CompetitorItem) => it.brand))
   return brands.size
 })
 const modelCount = computed(() => allItems.value.length)
@@ -403,7 +443,7 @@ interface BenchmarkRow {
   competitors: Record<string, CompetitorEntry>
 }
 
-function transformToBenchmark(items: any[]): BenchmarkRow[] {
+function transformToBenchmark(items: CompetitorItem[]): BenchmarkRow[] {
   if (!items || items.length === 0) return []
   const paramDefs = effectiveParams.value
   return paramDefs.map((p) => {
@@ -414,7 +454,7 @@ function transformToBenchmark(items: any[]): BenchmarkRow[] {
       competitors: {},
     }
     for (const item of items) {
-      const val = item[p.key]
+      const val = (item as unknown as Record<string, unknown>)[p.key]
       if (val !== undefined && val !== null && val !== '') {
         if (!row.competitors[item.brand]) {
           row.competitors[item.brand] = {
@@ -436,7 +476,7 @@ function getCompetitorValue(row: BenchmarkRow, brand: string): string {
   return String(entry.value)
 }
 
-function getParamValue(item: any, key: string): string {
+function getParamValue(item: Record<string, unknown>, key: string): string {
   if (key === energyKey.value) {
     // 用市场适配的能效字段
     const val = item[energyKey.value]
@@ -454,7 +494,7 @@ async function fetchData() {
   }
   loading.value = true
   try {
-    const params: Record<string, any> = {
+    const params: Record<string, string | number> = {
       market: selectedMarket.value,
       page: 1,
       page_size: 200,
@@ -466,7 +506,7 @@ async function fetchData() {
     const res = await api.get('/pm/competitors', { params })
     allItems.value = res.data.items || []
     // 检查完整性
-    allComplete.value = allItems.value.every((it: any) => it.is_complete)
+    allComplete.value = allItems.value.every((it) => it.is_complete)
   } catch {
     allItems.value = []
   } finally {
@@ -483,12 +523,12 @@ async function checkCompleteness() {
     const res = await api.get('/pm/competitors/check-completeness', {
       params: { market: selectedMarket.value }
     })
-    const data = res.data
+    const data = res.data as { all_complete: boolean; details: Array<{ is_complete: boolean; brand: string }> }
     if (data.all_complete) {
       ElMessage.success('✅ 所有竞品数据完整！')
     } else {
-      const incomplete = data.details.filter((d: any) => !d.is_complete)
-      ElMessage.warning(`⚠️ 有 ${incomplete.length} 条数据不完整，缺少字段: ${incomplete.map((d: any) => d.brand).join(', ')}`)
+      const incomplete = data.details.filter((d) => !d.is_complete)
+      ElMessage.warning(`⚠️ 有 ${incomplete.length} 条数据不完整，缺少字段: ${incomplete.map((d) => d.brand).join(', ')}`)
     }
   } catch {
     ElMessage.error('校验失败')
@@ -516,7 +556,7 @@ onMounted(() => {
 const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
-const formRef = ref<any>(null)
+const formRef = ref<FormInstance | null>(null)
 
 const defaultForm = () => ({
   brand: '',
@@ -543,10 +583,10 @@ const defaultForm = () => ({
   notes: '',
 })
 
-const form = ref<Record<string, any>>(defaultForm())
+const form = ref<CompetitorFormData>(defaultForm())
 
 // 所有必填字段的校验规则
-const formRules: Record<string, any> = {
+const formRules: FormRules = {
   brand: [{ required: true, message: '请输入品牌', trigger: 'blur' }],
   model: [{ required: true, message: '请输入型号', trigger: 'blur' }],
   market: [{ required: true, message: '请选择目标市场', trigger: 'change' }],
@@ -572,7 +612,7 @@ function openAddDialog() {
   dialogVisible.value = true
 }
 
-function openEditDialog(item: any) {
+function openEditDialog(item: CompetitorItem) {
   editingId.value = item.id
   form.value = {
     brand: item.brand || '',
@@ -612,8 +652,8 @@ async function handleSave() {
   saving.value = true
   try {
     // 只提交有值的字段（后端会自动忽略 extra fields）
-    const payload: Record<string, any> = {}
-    const fields = [
+    const payload: Record<string, unknown> = {}
+    const fields: (keyof CompetitorFormData)[] = [
       'brand', 'model', 'market', 'product_type', 'cooling_capacity',
       'cooling_capacity_w', 'heating_capacity_w', 'energy_rating',
       'cooling_w', 'heating_w', 'eer', 'cspf',
@@ -644,7 +684,7 @@ async function handleSave() {
   }
 }
 
-async function handleDelete(item: any) {
+async function handleDelete(item: CompetitorItem) {
   try {
     await ElMessageBox.confirm(`确定删除 ${item.brand} ${item.model}？`, '确认删除', {
       type: 'warning',

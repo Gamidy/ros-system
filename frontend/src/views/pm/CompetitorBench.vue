@@ -88,7 +88,25 @@ interface BenchmarkRow {
   competitors: Record<string, CompetitorEntry>
 }
 
-const competitorData = ref<any[]>([])
+interface MarketOption {
+  code: string
+  name: string
+  is_active?: string
+}
+
+interface CompetitorDataItem {
+  brand: string
+  model?: string
+  is_complete?: boolean
+  [key: string]: unknown
+}
+
+interface BenchmarkApiResponse {
+  competitors?: CompetitorDataItem[]
+  param_names?: Array<{ key: string; label: string; unit: string }>
+}
+
+const competitorData = ref<CompetitorDataItem[]>([])
 const benchmarkData = ref<BenchmarkRow[]>([])
 const loading = ref(false)
 const adoptedKeys = ref<Set<string>>(new Set())
@@ -98,16 +116,16 @@ const allComplete = ref(false)
 const marketOptions = ref<Array<{code: string; name: string}>>([])
 
 // 初始化时加载市场选项（代码→名称映射）
-api.get('/pm/markets/all').then((res: any) => {
+api.get('/pm/markets/all').then((res: { data: MarketOption[] }) => {
   const data = res.data
   if (Array.isArray(data)) {
     marketOptions.value = data
-      .filter((m: any) => m.is_active !== 'false' && /^[A-Z]{2}$/.test(m.code))
-      .map((m: any) => ({ code: m.code, name: m.name }))
+      .filter((m) => m.is_active !== 'false' && /^[A-Z]{2}$/.test(m.code))
+      .map((m) => ({ code: m.code, name: m.name }))
   }
 }).catch(() => {
   // 回退：从知识库加载
-  api.get('/kb/items', { params: { category: 'market' } }).then((res2: any) => {
+  api.get('/kb/items', { params: { category: 'market' } }).then((res2: { data: MarketOption[] }) => {
     const data = res2.data
     if (Array.isArray(data)) marketOptions.value = data
   }).catch(() => {})
@@ -150,11 +168,11 @@ function handleAdopt(row: BenchmarkRow, brand: string) {
 }
 
 /** 将后端返回的 {market, competitors, param_names} 转换为 BenchmarkRow[] */
-function transformBenchmarkData(raw: any): BenchmarkRow[] {
+function transformBenchmarkData(raw: BenchmarkApiResponse): BenchmarkRow[] {
   if (!raw || !raw.param_names || !raw.competitors) return []
 
-  const competitors = raw.competitors as any[]
-  const paramNames = raw.param_names as Array<{ key: string; label: string; unit: string }>
+  const competitors = raw.competitors
+  const paramNames = raw.param_names
 
   return paramNames.map((p) => {
     const row: BenchmarkRow = {
@@ -165,7 +183,7 @@ function transformBenchmarkData(raw: any): BenchmarkRow[] {
     }
 
     for (const c of competitors) {
-      let val: any = c[p.key]
+      let val = c[p.key]
       // 对能效字段做市场适配
       if (val === undefined || val === null) {
         // 如果是EER字段且不存在，尝试用 cspf/iseer/seer
@@ -187,13 +205,13 @@ async function fetchBenchmark(market: string) {
   loading.value = true
   try {
     // 市场代码 → 名称转换
-    const mkt = marketOptions.value.find((m: any) => m.code === market || m.name === market)
+    const mkt = marketOptions.value.find((m) => m.code === market || m.name === market)
     const marketName = mkt ? mkt.name : market
     const res = await api.get('/pm/competitors/benchmark', { params: { market: marketName } })
     competitorData.value = res.data.competitors || []
     benchmarkData.value = transformBenchmarkData(res.data)
     // Check completeness
-    allComplete.value = competitorData.value.every((c: any) => c.is_complete)
+    allComplete.value = competitorData.value.every((c) => c.is_complete)
     adoptedKeys.value = new Set()
   } catch {
     benchmarkData.value = []

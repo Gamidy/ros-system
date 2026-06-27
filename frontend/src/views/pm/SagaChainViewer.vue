@@ -122,9 +122,34 @@ import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
+// ── Types ──
+interface SagaStep {
+  action?: string
+  name?: string
+  status?: string
+  completed_at?: string
+  created_at?: string
+  result?: Record<string, unknown>
+  detail?: Record<string, unknown>
+  error?: string
+  err?: string
+}
+
+interface SagaData {
+  saga_id?: string
+  id?: number | string
+  status?: string
+  started_at?: string
+  created_at?: string
+  completed_at?: string
+  updated_at?: string
+  plan_id?: number | string
+  steps?: SagaStep[]
+}
+
 // ── Data ──
 const sagaId = ref('')
-const sagaData = ref<any>(null)
+const sagaData = ref<SagaData | null>(null)
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -161,7 +186,7 @@ function formatTime(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function stepStatus(step: any): 'wait' | 'process' | 'finish' | 'error' | 'success' {
+function stepStatus(step: SagaStep): 'wait' | 'process' | 'finish' | 'error' | 'success' {
   const s = step.status || 'pending'
   if (s === 'success' || s === 'completed') return 'success'
   if (s === 'failed') return 'error'
@@ -170,7 +195,7 @@ function stepStatus(step: any): 'wait' | 'process' | 'finish' | 'error' | 'succe
   return 'wait'
 }
 
-function stepTagType(step: any): string {
+function stepTagType(step: SagaStep): string {
   const map: Record<string, string> = {
     success: 'success',
     completed: 'success',

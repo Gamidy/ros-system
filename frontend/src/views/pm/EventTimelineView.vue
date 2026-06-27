@@ -139,10 +139,40 @@ import api from '../../api'
 import { initChart, disposeChart, getChartColors } from '../../utils/chart'
 import type { EChartsOption } from 'echarts'
 
+// ── Types ──
+interface Plan {
+  id: number | string
+  name: string
+}
+
+interface TimelineEvent {
+  id: number | string
+  created_at: string
+  event_type: string
+  payload_summary?: string
+  source?: string
+}
+
+interface PieDataItem {
+  name?: string
+  event_type?: string
+  type?: string
+  value?: number
+  count?: number
+}
+
+interface LineDataItem {
+  date?: string
+  day?: string
+  name?: string
+  count?: number
+  value?: number
+}
+
 // ── Data ──
-const plans = ref<any[]>([])
+const plans = ref<Plan[]>([])
 const selectedPlanId = ref<number | string | null>(null)
-const events = ref<any[]>([])
+const events = ref<TimelineEvent[]>([])
 const loading = ref(false)
 const totalEvents = ref(0)
 const currentPage = ref(1)
@@ -153,7 +183,7 @@ const statsLoaded = ref(false)
 const replayingId = ref<number | null>(null)
 const replayDialogVisible = ref(false)
 const replayLoading = ref(false)
-const replayResult = ref<any>(null)
+const replayResult = ref<Record<string, unknown> | null>(null)
 
 // chart refs
 const pieChartRef = ref<HTMLElement>()
@@ -244,9 +274,9 @@ async function fetchStats() {
 }
 
 // ── Charts ──
-function renderPieChart(data: any[]) {
+function renderPieChart(data: PieDataItem[]) {
   if (!pieChartRef.value) return
-  const chartData = data.map((d: any) => ({
+  const chartData = data.map((d: PieDataItem) => ({
     name: d.name || d.event_type || d.type,
     value: d.value || d.count || 0,
   }))
@@ -270,10 +300,10 @@ function renderPieChart(data: any[]) {
   initChart(pieChartRef.value, option)
 }
 
-function renderLineChart(data: any[]) {
+function renderLineChart(data: LineDataItem[]) {
   if (!lineChartRef.value) return
-  const dates = data.map((d: any) => d.date || d.day || d.name)
-  const values = data.map((d: any) => d.count || d.value || 0)
+  const dates = data.map((d: LineDataItem) => d.date || d.day || d.name)
+  const values = data.map((d: LineDataItem) => d.count || d.value || 0)
   const option: EChartsOption = {
     tooltip: { trigger: 'axis' },
     grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
@@ -309,7 +339,7 @@ async function onPlanChange() {
   await Promise.all([fetchTimeline(), fetchStats()])
 }
 
-async function handleReplay(evt: any) {
+async function handleReplay(evt: TimelineEvent) {
   replayingId.value = evt.id
   replayDialogVisible.value = true
   replayLoading.value = true
