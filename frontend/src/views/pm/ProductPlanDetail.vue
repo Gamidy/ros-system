@@ -1,9 +1,10 @@
 <template>
 <div class="plan-detail">
 <div class="detail-header">
-<el-button text @click="$router.push('/product-plans')">← 返回策划列表</el-button>
-<h2>{{ plan?.name || '加载中...' }}</h2>
-<el-tag v-if="plan" :type="stageTagType(plan.status)" size="small">{{ stageLabel(plan.status) }}</el-tag>
+  <el-button text @click="$router.push('/product-plans')">← 返回策划列表</el-button>
+  <h2>{{ plan?.name || '加载中...' }}</h2>
+  <el-tag v-if="plan" :type="stageTagType(plan.status)" size="small">{{ stageLabel(plan.status) }}</el-tag>
+  <el-button v-if="canQuickSubmit" type="warning" size="small" @click="quickSubmit" :loading="submittingQuick">📮 一键提交审批</el-button>
 </div>
 
 <!-- PlanStatusGuide: 5子表完成度引导条 -->
@@ -707,6 +708,7 @@ const approving = ref(false)
 const rejecting = ref(false)
 const withdrawing = ref(false)
 const showApprovalDrawer = ref(false)
+const submittingQuick = ref(false)
 
 // ── 关联项目 ──
 const projectLinks = ref<ProjectLinkInfo[]>([])
@@ -1159,6 +1161,8 @@ const launchDeviationLabel = computed(() => {
 
 // ── 底部审批操作栏 ──
 const canAdvance = computed(() => plan.value && ['draft', 'competitor', 'definition', 'costing', 'tech_input'].includes(plan.value.status))
+/** 是否可以一键提交审批（在项目立项之前的所有阶段都可使用） */
+const canQuickSubmit = computed(() => plan.value && ['draft', 'competitor', 'definition', 'costing', 'tech_input'].includes(plan.value.status))
 const isApprovalStage = computed(() => plan.value?.status === 'project_init')
 const canWithdraw = computed(() => plan.value && !['draft', 'project_init', 'released'].includes(plan.value.status))
 
@@ -1429,6 +1433,90 @@ const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {
 ElMessage.error(_err || '操作失败，请重试')
 }
 finally { submittingApproval.value = false }
+}
+
+/** Tab 中文标签映射（用于校验报错提示） */
+const TAB_LABELS: Record<string, string> = {
+  initiation: '项目概述',
+  market: '市场与客户',
+  techSpec: '技术要求',
+  costingNew: '成本核算',
+  team: '团队',
+}
+
+/**
+ * 一键提交审批 — 自动校验 → 保存 → 推进到 PROJECT_INIT → 提交审批
+ */
+async function quickSubmit() {
+  // 1. 校验所有5个Tab是否已完成
+  const requiredTabs = ['initiation', 'market', 'techSpec', 'costingNew', 'team']
+  const unfinished = requiredTabs.filter(k => tabStatus.value[k] !== 'done')
+  if (unfinished.length > 0) {
+    ElMessage.warning(`以下子表尚未完成填写: ${unfinished.map(k => TAB_LABELS[k] || k).join('、')}`)
+    return
+  }
+
+  // 2. 确认弹窗（复用 buildApprovalConfirmMessage）
+  const msg = buildApprovalConfirmMessage(plan.value?.status || '')
+  try {
+    await ElMessageBox.confirm(msg, '📮 一键提交审批确认', {
+      confirmButtonText: '确认提交',
+      cancelButtonText: '取消',
+      dangerouslyUseHTMLString: true,
+    })
+  } catch {
+    return // 用户取消
+  }
+
+  // 3. 执行推进
+  submittingQuick.value = true
+  try {
+    // 3a. 先保存所有子表表单数据（确保最新编辑内容已落库）
+    const p = initiationForm
+    const initPayload: Record<string, any> = {}
+    if (p.background) initPayload.background_basis = p.background
+    if (p.type) initPayload.product_type = p.type
+    if (p.refrigerant) initPayload.refrigerant = p.refrigerant
+    if (p.capacity) initPayload.capacity_range = p.capacity
+    if (p.voltage) initPayload.voltage_freq = p.voltage
+    if (p.series) initPayload.series_name = p.series
+    if (p.energy) initPayload.energy_rating = p.energy
+    if (p.dev_category) initPayload.dev_category = p.dev_category
+    if (p.origin) initPayload.project_origin = p.origin
+    if (p.duration) initPayload.project_duration = p.duration
+    if (p.ip) initPayload.ip_ownership = p.ip
+    if (p.goals) initPayload.overall_goal = p.goals
+    if (p.deliverables) initPayload.deliverables = p.deliverables
+    if (p.sample_qty) initPayload.sample_qty = p.sample_qty
+    await planAPI.upsertPlanInitiation(planId, initPayload)
+
+    const mp = marketForm
+    const marketPayload: Record<string, any> = {}
+    if (mp.main_capacity) marketPayload.main_capacity = mp.main_capacity
+    if (mp.energy_efficiency) marketPayload.energy_efficiency_req = mp.energy_efficiency
+    if (mp.cert_requirements) marketPayload.cert_requirements = mp.cert_requirements
+    if (mp.target_price) marketPayload.target_price = mp.target_price
+    if (mp.customer_requirements) marketPayload.customer_requirements = mp.customer_requirements
+    await planAPI.upsertPlanMarket(planId, marketPayload)
+
+    await planAPI.upsertPlanTechSpec(planId, techSpecForm)
+
+    // 3b. 推进到 PROJECT_INIT（直接更新阶段，跳过中间步骤）
+    await planAPI.updatePlanStage(planId, 'project_init')
+
+    // 3c. 提交审批
+    await api.post(`/product-plans/${planId}/advance`, { comment: '一键提交审批' })
+
+    ElMessage.success('🎉 一键提交审批成功！')
+    await fetchPlan()
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e
+      ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail
+      : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '一键提交失败，请重试')
+  } finally {
+    submittingQuick.value = false
+  }
 }
 
 onMounted(async () => {
