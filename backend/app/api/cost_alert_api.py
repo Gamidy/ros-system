@@ -126,19 +126,19 @@ def update_rule(
     return rule
 
 
-@router.delete("/{rule_id}", status_code=204)
+@router.delete("/{rule_id}", status_code=200)
 def delete_rule(
     rule_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
-) -> dict:
+):
     """删除成本超标预警规则"""
     rule = db.query(CostAlertRule).filter(CostAlertRule.id == rule_id).first()
     if not rule:
         raise HTTPException(404, "规则不存在")
     db.delete(rule)
     db.commit()
-    return None
+    return {"detail": "删除成功"}
 
 
 # ── 事件查询 & 手动触发 ────────────────────────────────────────────────

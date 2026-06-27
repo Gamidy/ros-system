@@ -7,10 +7,14 @@ Project = 执行层（Execution Layer），
 BOMType 枚举定义在此，供下游 BOM 模型引用。
 """
 import uuid
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, func
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, func, Numeric
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 import enum
+
+
+def uuid4_str() -> str:
+    return str(uuid.uuid4())
 
 
 class ProductPlanStage(str, enum.Enum):
@@ -112,3 +116,25 @@ class Cost(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     product_plan = relationship("ProductPlan", back_populates="costs")
+
+
+class ProductRequirement(Base):
+    """产品需求录入 — 策划链条的起点（P2需求）"""
+    __tablename__ = "product_requirements"
+
+    id = Column(String(36), primary_key=True, default=uuid4_str)
+    market = Column(String(100), nullable=False, comment="目标市场")
+    customer = Column(String(200), nullable=True, comment="客户名称")
+    contact = Column(String(100), nullable=True, comment="联系人")
+    product_type = Column(String(100), nullable=False, comment="产品类型")
+    capacity_target = Column(String(100), nullable=True, comment="目标冷量")
+    price_target = Column(Numeric(12, 2), nullable=True, comment="目标价格")
+    energy_standard = Column(String(50), nullable=True, comment="能效标准")
+    sales_volume_forecast = Column(Integer, nullable=True, comment="年销量预测")
+    notes = Column(Text, nullable=True, comment="补充说明")
+    status = Column(String(20), default="pending", comment="pending待处理/accepted已采纳/converted已转化/rejected已拒绝")
+    reject_reason = Column(String(500), nullable=True, comment="拒绝原因")
+    submitter_name = Column(String(100), nullable=True, comment="提交人姓名")
+    submitter_phone = Column(String(20), nullable=True, comment="提交人电话")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

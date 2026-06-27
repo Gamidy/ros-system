@@ -43,6 +43,8 @@ from app.api import (
     password_reset_api,
     # Event Log 事件类型管理
     event_logs,
+    # P2 产品需求录入
+    product_requirements,
 )
 
 __all__ = [
@@ -77,4 +79,5 @@ __all__ = [
     "ai_plan_api",
     "password_reset_api",
     "event_logs",
+    "product_requirements",
 ]
