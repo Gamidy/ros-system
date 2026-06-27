@@ -222,3 +222,17 @@ export interface KnowledgeItem {
 
 export function listPlanKnowledge(planId: string) { return api.get(`/product-plans/${planId}/knowledge`) }
 export function createKnowledge(data: Record<string, unknown>) { return api.post('/knowledge', data) }
+
+// ── 完整性校验 ──
+export interface ValidationError {
+  field: string
+  message: string
+}
+
+export interface ValidationResult {
+  valid: boolean
+  errors: ValidationError[]
+}
+
+/** 提交策划数据前进行完整性校验 */
+export function validatePlan(data: Record<string, unknown>) { return api.post('/product-plans/validate', data) }

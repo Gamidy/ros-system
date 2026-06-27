@@ -5,6 +5,7 @@ import hmac
 import base64
 import json
 import time
+import threading
 import logging
 from typing import Optional
 from datetime import date, datetime
@@ -18,25 +19,28 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _daily_counters: dict[str, int] = {}
 _last_date: Optional[str] = None
+_counter_lock = threading.Lock()
 
 
 def _check_daily_limit(channel_id: int, limit: int) -> bool:
     """检查是否超限；返回 False 表示已达上限"""
-    global _last_date
-    today = date.today().isoformat()
-    if _last_date != today:
-        _daily_counters.clear()
-        _last_date = today
-    key = f"ch:{channel_id}"
-    if _daily_counters.get(key, 0) >= limit:
-        logger.warning("Channel %s daily limit %d reached", channel_id, limit)
-        return False
-    return True
+    with _counter_lock:
+        global _last_date
+        today = date.today().isoformat()
+        if _last_date != today:
+            _daily_counters.clear()
+            _last_date = today
+        key = f"ch:{channel_id}"
+        if _daily_counters.get(key, 0) >= limit:
+            logger.warning("Channel %s daily limit %d reached", channel_id, limit)
+            return False
+        return True
 
 
-def _increment_counter(channel_id: int):
-    key = f"ch:{channel_id}"
-    _daily_counters[key] = _daily_counters.get(key, 0) + 1
+def _increment_counter(channel_id: int) -> None:
+    with _counter_lock:
+        key = f"ch:{channel_id}"
+        _daily_counters[key] = _daily_counters.get(key, 0) + 1
 
 
 # ---------------------------------------------------------------------------
@@ -57,10 +61,12 @@ class MessageChannel(abc.ABC):
         """发送消息 → {"ok": bool, "msg": str}"""
         ...
 
+    RETRY_DELAYS: list[int] = [1, 3, 9]
+
     def _do_send(self, content: str, headers: dict,
                  payload: dict) -> dict:
-        """执行 HTTP POST，含指数退避重试 (3 次)"""
-        max_retries = 3
+        """执行 HTTP POST，含指数退避重试 (4 次, 1s/3s/9s 三个间隔)"""
+        max_retries = 4
         for attempt in range(1, max_retries + 1):
             try:
                 resp = requests.post(
@@ -83,7 +89,8 @@ class MessageChannel(abc.ABC):
                     self.channel_id, attempt, max_retries, e,
                 )
             if attempt < max_retries:
-                sleep_sec = 2 ** attempt  # 2, 4, 8 秒
+                idx: int = attempt - 1
+                sleep_sec: int = self.RETRY_DELAYS[idx] if idx < len(self.RETRY_DELAYS) else 9
                 time.sleep(sleep_sec)
         return {"ok": False, "msg": "All retries exhausted"}
 

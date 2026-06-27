@@ -298,3 +298,13 @@ from .product_plan_link import (
     ProductPlanProjectLinkCreate,
     ProductPlanProjectLinkUpdate,
 )
+
+# ═══════════════ BI分析看板 ═══════════════
+from .bi import (
+    TrendItem,
+    TrendResponse,
+    FunnelItem,
+    FunnelResponse,
+    DistributionItem,
+    DistributionResponse,
+)

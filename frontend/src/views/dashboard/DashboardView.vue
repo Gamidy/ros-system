@@ -84,6 +84,84 @@
       </div>
     </section>
 
+    <!-- ═══════════ BI多维图表 ═══════════ -->
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div class="section-badge" style="background: var(--c-primary-light, #ecf5ff); color: var(--c-primary, #409eff);">
+          <el-icon :size="16"><TrendCharts /></el-icon>
+        </div>
+        <h2 class="section-title">策划多维分析</h2>
+        <div class="filter-bar">
+          <el-date-picker
+            v-model="biDateRange"
+            type="monthrange"
+            range-separator="至"
+            start-placeholder="开始月份"
+            end-placeholder="结束月份"
+            value-format="YYYY-MM"
+            format="YYYY-MM"
+            :clearable="true"
+            :disabled="biLoading"
+            @change="onBiDateChange"
+            size="default"
+          />
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <!-- 趋势折线图 -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">立项趋势</span>
+          </div>
+          <ChartContainer :loading="biLoading" :isEmpty="biTrendEmpty" height="300">
+            <BiChart
+              type="line"
+              :data="biTrendData"
+              nameKey="month"
+              valueKey="count"
+              :height="300"
+              :showLegend="false"
+              area
+              smooth
+            />
+          </ChartContainer>
+        </div>
+        <!-- 转化漏斗图 -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">转化漏斗</span>
+          </div>
+          <ChartContainer :loading="biLoading" :isEmpty="biFunnelEmpty" height="300">
+            <FunnelChart
+              :data="biFunnelData"
+              :height="300"
+            />
+          </ChartContainer>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <!-- 分布饼图 -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">市场分布</span>
+          </div>
+          <ChartContainer :loading="biLoading" :isEmpty="biDistEmpty" height="300">
+            <BiChart
+              type="pie"
+              :data="biDistData"
+              nameKey="name"
+              valueKey="value"
+              :height="300"
+              donut
+            />
+          </ChartContainer>
+        </div>
+        <div class="chart-card chart-card-empty" />
+      </div>
+    </section>
+
     <!-- ═══════════ 最近策划卡片列表 ═══════════ -->
     <section class="dashboard-section">
       <div class="section-header">
@@ -382,6 +460,9 @@ import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
 import BarChart from '../../components/charts/BarChart.vue'
 import LineChart from '../../components/charts/LineChart.vue'
+import ChartContainer from '../../components/ChartContainer.vue'
+import FunnelChart from '../../components/charts/FunnelChart.vue'
+import BiChart from '../../components/BiChart.vue'
 import type { TableRow, ChartDataPoint } from '@/types/common'
 
 interface PlanNode {
@@ -515,6 +596,7 @@ async function fetchProductPlanSummary() {
     }
   } catch {
     // 产品策划数据接口失败不影响已有面板
+    console.warn('[Dashboard] fetchProductPlanSummary failed, using empty data')
     allPlans.value = []
   } finally {
     planLoading.value = false
@@ -582,6 +664,22 @@ const productStatusData = ref<{ name: string; value: number }[]>([])
 const projectStatusData = ref<{ name: string; value: number }[]>([])
 const phaseProgressData = ref<{ name: string; value: number }[]>([])
 const acTrendData = ref<{ name: string; value: number }[]>([])
+
+// ── BI多维图表数据 ──
+interface BiTrendItem { month: string; count: number }
+interface BiFunnelItem { name: string; value: number }
+interface BiDistItem { name: string; value: number }
+
+const biLoading = ref(false)
+const biDateRange = ref<[string, string] | null>(null)
+
+const biTrendData = ref<BiTrendItem[]>([])
+const biFunnelData = ref<BiFunnelItem[]>([])
+const biDistData = ref<BiDistItem[]>([])
+
+const biTrendEmpty = computed(() => biTrendData.value.length === 0)
+const biFunnelEmpty = computed(() => biFunnelData.value.length === 0)
+const biDistEmpty = computed(() => biDistData.value.length === 0)
 
 const statusMap: Record<string, { type: string; label: string }> = {
   planning: { type: 'info', label: '规划中' },
@@ -656,6 +754,7 @@ async function fetchDashboard() {
     phaseProgressData.value = data.layer4_ac_metrics?.phase_progress ?? []
   } catch {
     // API 请求失败：标记错误状态，不使用硬编码 fallback 数据掩盖真实状态
+    console.warn('[Dashboard] fetchDashboard failed, clearing all data')
     acError.value = true
     acMetrics.value = {}
     phaseProgressData.value = []
@@ -676,17 +775,70 @@ async function fetchTrends() {
     const data = Array.isArray(res.data) ? res.data : []
     trendsData.value = data.map((d: ChartDataPoint) => ({ name: d.date, value: d.value }))
   } catch {
-    trendsData.value = [
-      { name: 'D-30', value: 2 }, { name: 'D-25', value: 3 }, { name: 'D-20', value: 1 },
-      { name: 'D-15', value: 4 }, { name: 'D-10', value: 2 }, { name: 'D-5', value: 5 }, { name: '今天', value: 3 },
-    ]
+    console.warn('[Dashboard] fetchTrends failed, using empty data')
+    trendsData.value = []
   }
+}
+
+// ── BI多维图表数据加载 ──
+
+async function fetchBiTrend(startMonth?: string, endMonth?: string) {
+  try {
+    const params: Record<string, string> = {}
+    if (startMonth) params.start_month = startMonth
+    if (endMonth) params.end_month = endMonth
+    const res = await api.get('/bi/trend', { params })
+    biTrendData.value = (res.data?.items || []) as BiTrendItem[]
+  } catch {
+    console.warn('[Dashboard] fetchBiTrend failed, using empty data')
+    biTrendData.value = []
+  }
+}
+
+async function fetchBiFunnel() {
+  try {
+    const res = await api.get('/bi/funnel')
+    biFunnelData.value = (res.data?.items || []) as BiFunnelItem[]
+  } catch {
+    console.warn('[Dashboard] fetchBiFunnel failed, using empty data')
+    biFunnelData.value = []
+  }
+}
+
+async function fetchBiDistribution() {
+  try {
+    const res = await api.get('/bi/distribution')
+    biDistData.value = (res.data?.items || []) as BiDistItem[]
+  } catch {
+    console.warn('[Dashboard] fetchBiDistribution failed, using empty data')
+    biDistData.value = []
+  }
+}
+
+async function fetchBiCharts() {
+  biLoading.value = true
+  try {
+    const startMonth = biDateRange.value?.[0]
+    const endMonth = biDateRange.value?.[1]
+    await Promise.all([
+      fetchBiTrend(startMonth, endMonth),
+      fetchBiFunnel(),
+      fetchBiDistribution(),
+    ])
+  } finally {
+    biLoading.value = false
+  }
+}
+
+function onBiDateChange() {
+  fetchBiCharts()
 }
 
 function refreshAll() {
   fetchDashboard()
   fetchTrends()
   fetchProductPlanSummary()
+  fetchBiCharts()
 }
 
 function drillDown(key: string) {
@@ -717,6 +869,7 @@ onMounted(() => {
   fetchDashboard()
   fetchTrends()
   fetchProductPlanSummary()
+  fetchBiCharts()
 })
 </script>
 
@@ -952,6 +1105,19 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: var(--c-text-primary);
+}
+
+/* Filter Bar */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Chart Card Empty (spacer) */
+.chart-card-empty {
+  visibility: hidden;
 }
 
 /* Table Section */

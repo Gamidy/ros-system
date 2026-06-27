@@ -2,9 +2,15 @@
 
 全部查询走SQL聚合（避免全表扫描）。
 权限: require_menu("bi-analytics")
+
+索引优化建议:
+  1. product_plans 表: 联合索引 (status, created_at) 加速趋势+漏斗查询
+  2. product_plans 表: 索引 (market) 加速市场分布查询
 """
 from datetime import date, datetime, timedelta
-from typing import Optional
+from typing import Optional, Any
+import json
+import logging
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, text, case
@@ -16,8 +22,56 @@ from app.models.product_plan import ProductPlan, ProductPlanStage, ProductPlanPr
 from app.models.project import Project, ProjectGate
 from app.models.approval import ApprovalRequest, ApprovalRecord
 from app.models.cost_accounting import CostAccountingSheet, SheetStatus
+from app.schemas.bi import TrendItem, TrendResponse, FunnelItem, FunnelResponse, DistributionItem, DistributionResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/bi", tags=["BI分析看板"])
+
+
+# ── Redis缓存辅助（降级安全） ──
+
+_redis_pool: Optional['redis.ConnectionPool'] = None
+
+
+def _redis_client() -> Optional['redis.Redis']:
+    """尝试获取 Redis 连接，失败返回 None 避免影响主流程"""
+    global _redis_pool
+    try:
+        import redis as _redis
+        if _redis_pool is None:
+            _redis_pool = _redis.ConnectionPool(
+                host="127.0.0.1", port=6379, socket_connect_timeout=1, decode_responses=True
+            )
+        return _redis.Redis(connection_pool=_redis_pool)
+    except Exception:
+        return None
+
+
+def _cache_get(key: str) -> Optional[str]:
+    """从 Redis 读取缓存，Redis 不可用时返回 None"""
+    try:
+        r = _redis_client()
+        if r is None:
+            return None
+        val: Optional[str] = r.get(key)
+        return val
+    except Exception:
+        return None
+
+
+def _cache_set(key: str, value: str, ttl: int = 600) -> None:
+    """写入 Redis 缓存，失败静默忽略"""
+    try:
+        r = _redis_client()
+        if r is None:
+            return
+        r.setex(key, ttl, value)
+    except Exception:
+        pass
+
+
+CACHE_TTL = 600  # 10分钟
 
 
 # ═══════════════════════════════════════════
@@ -391,4 +445,96 @@ def bi_cost(
         "project_count": budget_agg.project_count or 0,
     }
 
+    return result
+
+
+# ═══════════════════════════════════════════
+# D3-1: 仪表盘多维图表
+# ═══════════════════════════════════════════
+
+
+@router.get("/trend", response_model=TrendResponse)
+def bi_trend(
+    start_month: Optional[str] = Query(None, description="起始月份 YYYY-MM"),
+    end_month: Optional[str] = Query(None, description="结束月份 YYYY-MM"),
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("bi-analytics")),
+) -> TrendResponse:
+    """立项趋势 — 按月份统计产品策划立项数"""
+    cache_key = f"bi:trend:{start_month or ''}:{end_month or ''}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return TrendResponse.model_validate_json(cached)
+
+    query = (
+        db.query(
+            func.date_format(ProductPlan.created_at, "%Y-%m").label("month"),
+            func.count(ProductPlan.id).label("count"),
+        )
+        .group_by(text("month"))
+        .order_by(text("month"))
+    )
+    if start_month:
+        query = query.where(func.date_format(ProductPlan.created_at, "%Y-%m") >= start_month)
+    if end_month:
+        query = query.where(func.date_format(ProductPlan.created_at, "%Y-%m") <= end_month)
+
+    rows = query.all()
+    items = [TrendItem(month=row.month, count=row.count) for row in rows]
+    result = TrendResponse(items=items)
+    _cache_set(cache_key, result.model_dump_json(), CACHE_TTL)
+    return result
+
+
+@router.get("/funnel", response_model=FunnelResponse)
+def bi_funnel(
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("bi-analytics")),
+) -> FunnelResponse:
+    """转化漏斗 — 各阶段策划数量统计"""
+    cache_key = "bi:funnel"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return FunnelResponse.model_validate_json(cached)
+
+    rows = (
+        db.query(
+            ProductPlan.status,
+            func.count(ProductPlan.id).label("count"),
+        )
+        .group_by(ProductPlan.status)
+        .order_by(func.count(ProductPlan.id).desc())
+        .all()
+    )
+
+    items = [FunnelItem(name=row.status.value if hasattr(row.status, 'value') else str(row.status), value=row.count) for row in rows]
+    result = FunnelResponse(items=items)
+    _cache_set(cache_key, result.model_dump_json(), CACHE_TTL)
+    return result
+
+
+@router.get("/distribution", response_model=DistributionResponse)
+def bi_distribution(
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("bi-analytics")),
+) -> DistributionResponse:
+    """市场分布 — 按市场统计策划数量"""
+    cache_key = "bi:distribution"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return DistributionResponse.model_validate_json(cached)
+
+    rows = (
+        db.query(
+            func.coalesce(ProductPlan.market, "未指定").label("market"),
+            func.count(ProductPlan.id).label("count"),
+        )
+        .group_by(ProductPlan.market)
+        .order_by(func.count(ProductPlan.id).desc())
+        .all()
+    )
+
+    items = [DistributionItem(name=row.market, value=row.count) for row in rows]
+    result = DistributionResponse(items=items)
+    _cache_set(cache_key, result.model_dump_json(), CACHE_TTL)
     return result

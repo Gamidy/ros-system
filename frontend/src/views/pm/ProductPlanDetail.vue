@@ -4,7 +4,20 @@
   <el-button text @click="$router.push('/product-plans')">← 返回策划列表</el-button>
   <h2>{{ plan?.name || '加载中...' }}</h2>
   <el-tag v-if="plan" :type="stageTagType(plan.status)" size="small">{{ stageLabel(plan.status) }}</el-tag>
-  <el-button v-if="canQuickSubmit" type="warning" size="small" @click="quickSubmit" :loading="submittingQuick">📮 一键提交审批</el-button>
+  <el-button v-if="canQuickSubmit" type="warning" size="small" @click="quickSubmit" :loading="submittingQuick" :disabled="validationFailed">📮 一键提交审批</el-button>
+</div>
+
+<!-- ── 校验错误提示 ── -->
+<div v-if="validationFailed" class="validation-errors">
+  <el-alert title="请修正以下问题后再提交" type="error" show-icon :closable="false">
+    <template #default>
+      <ul class="validation-error-list">
+        <li v-for="(err, i) in validationErrors" :key="i">
+          <span class="error-field">{{ err.field }}:</span> {{ err.message }}
+        </li>
+      </ul>
+    </template>
+  </el-alert>
 </div>
 
 <!-- PlanStatusGuide: 5子表完成度引导条 -->
@@ -377,7 +390,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import * as planAPI from '../../api/productPlan'
-import type { TeamMemberPayload, MarketOption } from '../../api/productPlan'
+import type { TeamMemberPayload, MarketOption, ValidationError } from '../../api/productPlan'
 import ReviewPanel from './ReviewPanel.vue'
 import { useSubTableProgress } from '../../composables/useSubTableProgress'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
@@ -629,6 +642,20 @@ const rejecting = ref(false)
 const withdrawing = ref(false)
 const showApprovalDrawer = ref(false)
 const submittingQuick = ref(false)
+
+// ── 完整性校验状态 ──
+const validationErrors = ref<ValidationError[]>([])
+const validationFailed = computed(() => validationErrors.value.length > 0)
+
+/** 监听表单字段变化时自动清除校验错误 */
+watch(
+  () => [editForm.value.name, editForm.value.market, editForm.value.series,
+         initiationForm.background, initiationForm.type,
+         marketForm.main_capacity, marketForm.energy_efficiency,
+         techSpecForm.core_performance, techSpecForm.safety_compliance],
+  () => { validationErrors.value = [] },
+  { deep: true },
+)
 
 // ── 复盘子状态（子组件 ReviewPanel 管理详情，父组件追踪是否存在） ──
 const hasReview = ref(false)
@@ -1194,6 +1221,9 @@ const TAB_LABELS: Record<string, string> = {
  * 一键提交审批 — 自动校验 → 保存 → 推进到 PROJECT_INIT → 提交审批
  */
 async function quickSubmit() {
+  // 0. 清除上次校验结果
+  validationErrors.value = []
+
   // 1. 校验所有5个Tab是否已完成
   const requiredTabs = ['initiation', 'market', 'techSpec', 'costingNew', 'team']
   const unfinished = requiredTabs.filter(k => tabStatus.value[k] !== 'done')
@@ -1202,7 +1232,36 @@ async function quickSubmit() {
     return
   }
 
-  // 2. 确认弹窗（复用 buildApprovalConfirmMessage）
+  // 2. 调用后端完整性校验
+  submittingQuick.value = true
+  try {
+    const validatePayload: Record<string, unknown> = {
+      name: editForm.value.name,
+      market: editForm.value.market,
+      target_cost: totalTargetCost.value,
+      cooling_capacity_w: undefined,
+      heating_capacity_w: undefined,
+      eer: undefined,
+      noise_indoor_db: undefined,
+    }
+    const res = await planAPI.validatePlan(validatePayload)
+    const vr = res.data as { valid: boolean; errors: ValidationError[] }
+    if (!vr.valid) {
+      validationErrors.value = vr.errors
+      submittingQuick.value = false
+      ElMessage.warning('请修正以下问题后再提交')
+      return
+    }
+  } catch (e: unknown) {
+    const _err = e && typeof e === 'object' && 'response' in e
+      ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail
+      : (e instanceof Error ? e.message : null)
+    ElMessage.error(_err || '校验失败，请稍后重试')
+    submittingQuick.value = false
+    return
+  }
+
+  // 3. 确认弹窗（复用 buildApprovalConfirmMessage）
   const msg = buildApprovalConfirmMessage(plan.value?.status || '')
   try {
     await ElMessageBox.confirm(msg, '📮 一键提交审批确认', {
@@ -1211,13 +1270,13 @@ async function quickSubmit() {
       dangerouslyUseHTMLString: true,
     })
   } catch {
+    submittingQuick.value = false
     return // 用户取消
   }
 
-  // 3. 执行推进
-  submittingQuick.value = true
+  // 4. 执行推进
   try {
-    // 3a. 先保存所有子表表单数据（确保最新编辑内容已落库）
+    // 4a. 先保存所有子表表单数据（确保最新编辑内容已落库）
     const p = initiationForm
     const initPayload: InitiationPayload = {}
     if (p.background) initPayload.background_basis = p.background
@@ -1247,10 +1306,10 @@ async function quickSubmit() {
 
     await planAPI.upsertPlanTechSpec(planId, techSpecForm)
 
-    // 3b. 推进到 PROJECT_INIT（直接更新阶段，跳过中间步骤）
+    // 4b. 推进到 PROJECT_INIT（直接更新阶段，跳过中间步骤）
     await planAPI.updatePlanStage(planId, 'project_init')
 
-    // 3c. 提交审批
+    // 4c. 提交审批
     await api.post(`/product-plans/${planId}/advance`, { comment: '一键提交审批' })
 
     ElMessage.success('🎉 一键提交审批成功！')
@@ -1330,4 +1389,9 @@ onMounted(async () => {
 /* 历史明细 */
 .history-costs { margin-top: 16px; }
 .cost-json { margin: 0; font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 160px; overflow-y: auto; background: #f8f9fa; padding: 8px; border-radius: 4px; }
+/* 校验错误 */
+.validation-errors { margin-bottom: 16px; }
+.validation-error-list { margin: 8px 0 0; padding-left: 20px; list-style: disc; }
+.validation-error-list li { font-size: 13px; line-height: 1.8; color: #f56c6c; }
+.validation-error-list .error-field { font-weight: 600; }
 </style>

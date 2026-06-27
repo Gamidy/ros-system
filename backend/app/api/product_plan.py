@@ -33,6 +33,7 @@ from app.services.product_plan_workflow import (
     get_next_action as workflow_next_action,
     STAGE_LABELS,
 )
+from app.services.plan_validator import validate_plan as run_validation
 
 router = APIRouter(prefix="/product-plans", tags=["产品策划"])
 
@@ -87,6 +88,21 @@ class AdvancePlanRequest(BaseModel):
 class SetStageRequest(BaseModel):
     """直接设置阶段请求体"""
     stage: str = Field(..., description="目标阶段值")
+
+
+class PlanValidateRequest(BaseModel):
+    """策划校验请求体 — 提交待校验的策划数据"""
+    name: Optional[str] = None
+    series: Optional[str] = None
+    market: Optional[str] = None
+    competitor_id: Optional[int] = None
+    cost_target: Optional[str] = None
+    performance_target: Optional[str] = None
+    target_cost: Optional[float] = None
+    cooling_capacity_w: Optional[float] = None
+    heating_capacity_w: Optional[float] = None
+    eer: Optional[float] = None
+    noise_indoor_db: Optional[float] = None
 
 
 class PlanUpdate(BaseModel):
@@ -642,6 +658,28 @@ def delete_plan(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"删除策划失败: {str(e)}")
+
+
+# ── 校验端点 ──
+
+
+@router.post("/validate")
+def validate_plan_data(
+    data: PlanValidateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """校验策划数据完整性（提交前调用）
+
+    从数据库读取校验规则配置，对 plan_data 逐条执行。
+    返回 {valid: bool, errors: [{field, message}]}
+    """
+    try:
+        plan_data = data.model_dump(exclude_unset=True)
+        result = run_validation(plan_data, db)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"校验执行失败: {str(e)}")
 
 
 # ── Cost 子资源 ──
