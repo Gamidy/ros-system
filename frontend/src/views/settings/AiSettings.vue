@@ -53,12 +53,12 @@
           </el-row>
           <el-row :gutter="24">
             <el-col :span="12">
-              <el-form-item label="API Base URL" prop="api_base">
+              <el-form-item label="API 基础地址" prop="api_base">
                 <el-input v-model="form.api_base" placeholder="可留空使用官方默认地址" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="API Key" prop="api_key">
+              <el-form-item label="API 密钥" prop="api_key">
                 <el-input
                   v-model="form.api_key"
                   type="password"
@@ -70,7 +70,7 @@
           </el-row>
           <el-row :gutter="24">
             <el-col :span="12">
-              <el-form-item label="Temperature" prop="temperature">
+              <el-form-item label="温度参数" prop="temperature">
                 <el-slider
                   v-model.number="form.temperature"
                   :min="0"

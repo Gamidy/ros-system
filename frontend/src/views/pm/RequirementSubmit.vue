@@ -46,12 +46,7 @@
           <el-col :span="12">
             <el-form-item label="产品类型" prop="product_type">
               <el-select v-model="form.product_type" placeholder="请选择产品类型" style="width:100%">
-                <el-option label="分体空调" value="分体空调" />
-                <el-option label="多联机" value="多联机" />
-                <el-option label="风管机" value="风管机" />
-                <el-option label="单元机" value="单元机" />
-                <el-option label="水冷机组" value="水冷机组" />
-                <el-option label="热泵" value="热泵" />
+                <el-option label="壁挂分体机" value="壁挂分体机" />
               </el-select>
             </el-form-item>
           </el-col>

@@ -66,9 +66,9 @@
           <div style="display:flex;gap:24px;flex-wrap:wrap;">
             <div><b>总分</b>: {{ scoreResult.total_score }}/100</div>
             <div><b>问题项</b>: {{ scoreResult.item_count }}</div>
-            <div><b style="color:#f56c6c">Critical</b>: {{ scoreResult.critical_count }}</div>
-            <div><b style="color:#e6a23c">Major</b>: {{ scoreResult.major_count }}</div>
-            <div><b style="color:#909399">Minor</b>: {{ scoreResult.minor_count }}</div>
+            <div><b style="color:#f56c6c">严重</b>: {{ scoreResult.critical_count }}</div>
+            <div><b style="color:#e6a23c">主要</b>: {{ scoreResult.major_count }}</div>
+            <div><b style="color:#909399">轻微</b>: {{ scoreResult.minor_count }}</div>
           </div>
         </el-card>
 
@@ -76,7 +76,7 @@
         <div v-for="item in currentReport.items" :key="item.id" style="border:1px solid #ebeef5;border-radius:4px;padding:12px;margin-bottom:8px;">
           <div style="display:flex;justify-content:space-between;align-items:start;">
             <div>
-              <el-tag :type="item.severity === 'critical' ? 'danger' : item.severity === 'major' ? 'warning' : 'info'" size="small" style="margin-right:8px;">{{ item.severity }}</el-tag>
+              <el-tag :type="item.severity === 'critical' ? 'danger' : item.severity === 'major' ? 'warning' : 'info'" size="small" style="margin-right:8px;">{{ severityLabel(item.severity) }}</el-tag>
               <el-tag v-if="item.dfm_category" size="small" style="margin-right:8px;">{{ catLabel(item.dfm_category) }}</el-tag>
               <strong>{{ item.issue_desc }}</strong>
             </div>
@@ -135,7 +135,7 @@
             <el-option label="装配DFM" value="assembly" /><el-option label="电气DFM" value="electrical" /><el-option label="模具DFM" value="mold" />
           </el-select></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="等级"><el-select v-model="itemForm.severity" style="width:100%">
-            <el-option label="Critical" value="critical" /><el-option label="Major" value="major" /><el-option label="Minor" value="minor" />
+            <el-option label="严重" value="critical" /><el-option label="主要" value="major" /><el-option label="轻微" value="minor" />
           </el-select></el-form-item></el-col>
         </el-row>
         <el-form-item label="建议方案"><el-input v-model="itemForm.suggestion" type="textarea" :rows="2" /></el-form-item>
@@ -189,6 +189,7 @@ const itemForm = ref<any>({ report_id: 0, issue_desc: '', dfm_category: '', seve
 const itemRules = { issue_desc: [{ required: true, message: '请输入问题描述' }] }
 
 function catLabel(c: string) { const m: Record<string, string> = { structural: '结构', process: '工艺', assembly: '装配', electrical: '电气', mold: '模具' }; return m[c] || c }
+function severityLabel(s: string) { const m: Record<string, string> = { critical: '严重', major: '主要', minor: '轻微' }; return m[s] || s }
 
 async function fetchData() {
   loading.value = true

@@ -226,7 +226,7 @@
               <el-option
                 v-for="m in targetMarkets"
                 :key="m.id"
-                :label="`${m.market_code} — ${m.market_name}`"
+                :label="m.market_name"
                 :value="m.id"
               />
             </el-select>
@@ -234,12 +234,7 @@
           <el-form-item label="产品类型" required>
             <el-select v-model="createForm.product_type" placeholder="请选择产品类型" style="width:100%"
               :disabled="aiGenerating || !!aiDraft">
-              <el-option label="壁挂分体机 (Split Wall)" value="split_wall" />
-              <el-option label="柜机 (Floor Standing)" value="floor_standing" />
-              <el-option label="嵌入式 (Cassette)" value="cassette" />
-              <el-option label="风管机 (Duct)" value="duct" />
-              <el-option label="窗机 (Window)" value="window" />
-              <el-option label="移动空调 (Portable)" value="portable" />
+              <el-option label="壁挂分体机" value="split_wall" />
             </el-select>
           </el-form-item>
           <el-form-item label="产品系列">
@@ -675,7 +670,7 @@ function onMarketChange() {
   // 当市场改变时，自动填充市场名称
   const market = targetMarkets.value.find((m: TargetMarket) => m.id === createForm.value.market_id)
   if (market) {
-    createForm.value.market = market.market_code
+    createForm.value.market = market.market_name  // 存储中文名称
   }
 }
 

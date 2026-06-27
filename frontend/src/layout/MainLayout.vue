@@ -1,13 +1,7 @@
 <template>
-  <div class="claude-layout">
-    <!-- ═══ Mobile Drawer Sidebar (＜768px) ═══ -->
-    <el-drawer
-      v-model="drawerVisible"
-      direction="ltr"
-      :size="280"
-      :with-header="false"
-      class="mobile-drawer"
-    >
+  <div class="claude-layout" :class="{ 'mobile-sidebar-open': drawerVisible }">
+    <!-- ═══ Mobile Push Sidebar (＜768px) ═══ -->
+    <aside class="mobile-sidebar">
       <div class="sidebar-brand" @click="router.push('/dashboard'); drawerVisible = false">
         <div class="brand-mark">
           <span class="brand-icon">R</span>
@@ -40,7 +34,9 @@
           </template>
         </el-menu>
       </nav>
-    </el-drawer>
+    </aside>
+    <!-- Mobile sidebar backdrop -->
+    <div v-if="drawerVisible" class="mobile-backdrop" @click="drawerVisible = false"></div>
 
     <!-- ═══ Desktop Sidebar (≥768px) ═══ -->
     <aside class="claude-sidebar desktop-sidebar" :class="{ collapsed: isCollapse }">
@@ -302,7 +298,7 @@ function handleLogout() {
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: 8px 0;
 }
 
 /* el-menu overrides for sidebar */
@@ -313,27 +309,42 @@ function handleLogout() {
 .sidebar-el-menu:not(.el-menu--collapse) {
   width: 240px;
 }
+
+/* ── First level: group title (el-sub-menu) ── */
+.sidebar-el-menu .el-sub-menu {
+  margin-top: 4px;
+}
+.sidebar-el-menu .el-sub-menu:first-child {
+  margin-top: 0;
+}
 .sidebar-el-menu .el-sub-menu__title {
-  color: var(--c-text-secondary-dark) !important;
-  font-size: 13px;
-  font-weight: 600;
-  height: 44px;
-  line-height: 44px;
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  height: 38px;
+  line-height: 38px;
   padding: 0 16px !important;
   background: transparent !important;
   border-bottom: none !important;
-  transition: background var(--c-transition-fast);
+  cursor: default;
+  transition: none;
 }
 .sidebar-el-menu .el-sub-menu__title:hover {
-  background: var(--c-bg-sidebar-hover) !important;
-  color: var(--c-text-primary-dark) !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  background: transparent !important;
 }
 .sidebar-el-menu .el-sub-menu__title .el-icon {
-  color: var(--c-text-secondary-dark);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 14px;
 }
+
+/* ── Second level: menu items ── */
 .sidebar-el-menu .el-menu-item {
   color: var(--c-text-secondary-dark) !important;
   font-size: 13px;
+  font-weight: 400;
   height: 40px;
   line-height: 40px;
   padding: 0 16px 0 48px !important;
@@ -346,12 +357,15 @@ function handleLogout() {
   color: var(--c-text-primary-dark) !important;
 }
 .sidebar-el-menu .el-menu-item.is-active {
-  color: white !important;
-  background: var(--c-bg-sidebar-active) !important;
+  color: #d97757 !important;
+  background: rgba(217, 119, 87, 0.12) !important;
+  font-weight: 700;
+  border-left: 3px solid #d97757;
+  padding-left: 45px !important;
 }
 .sidebar-el-menu .el-menu-item .el-icon {
   color: inherit;
-  font-size: 16px;
+  font-size: 14px;
 }
 .sidebar-el-menu.el-menu--collapse .el-sub-menu__title {
   padding: 0 14px !important;
@@ -521,26 +535,60 @@ function handleLogout() {
 }
 
 /* ══════════════════════════════════════════
-   Mobile Drawer (el-drawer)
+   Mobile Push Sidebar
    ══════════════════════════════════════════ */
-:deep(.mobile-drawer) {
-  background: var(--c-bg-sidebar) !important;
+.mobile-sidebar {
+  display: none;
 }
-:deep(.mobile-drawer .el-drawer__body) {
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+
+.mobile-backdrop {
+  display: none;
 }
-:deep(.mobile-drawer .sidebar-brand) {
-  flex-shrink: 0;
-}
-:deep(.mobile-drawer .sidebar-nav) {
-  flex: 1;
-  overflow-y: auto;
-}
-:deep(.mobile-drawer .sidebar-el-menu) {
-  width: 100% !important;
+
+@media (max-width: 768px) {
+  .mobile-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100%;
+    z-index: 1001;
+    background: var(--c-bg-sidebar);
+    border-right: 1px solid var(--c-border);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .mobile-sidebar .sidebar-brand {
+    flex-shrink: 0;
+  }
+
+  .mobile-sidebar .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .mobile-sidebar .sidebar-el-menu {
+    width: 100% !important;
+  }
+
+  .mobile-sidebar-open .mobile-sidebar {
+    transform: translateX(0);
+  }
+
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* ══════════════════════════════════════════
@@ -561,8 +609,14 @@ function handleLogout() {
   .claude-main {
     margin-left: 0;
     width: 100%;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     /* 底部安全区适配 — 防止刘海屏/Home Indicator遮挡内容 */
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mobile-sidebar-open .claude-main {
+    margin-left: 260px;
+    width: calc(100% - 260px);
   }
 
   .claude-content {

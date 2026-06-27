@@ -8,7 +8,7 @@
             <span class="brand-mark">R</span>
           </div>
           <h1 class="brand-title">ROS 研发运营系统</h1>
-          <p class="brand-subtitle">R&amp;D Operations System</p>
+          <p class="brand-subtitle">研发运营管理系统</p>
         </div>
         <div class="login-features">
           <div class="feature-item">

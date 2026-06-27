@@ -85,7 +85,7 @@ const router = createRouter({
         {
           path: 'certifications',
           name: 'Certifications',
-          component: () => import('../views/certifications/CertificationsView.vue'),
+          component: () => import('../views/certifications/CertHub.vue'),
           meta: { title: '认证管理' },
         },
         // S2 认证中心路由
@@ -177,7 +177,7 @@ const router = createRouter({
         {
           path: 'changes',
           name: 'Changes',
-          component: () => import('../views/changes/ChangesView.vue'),
+          component: () => import('../views/changes/ChangesHub.vue'),
           meta: { title: '变更管理' },
         },
         {
@@ -332,6 +332,12 @@ const router = createRouter({
           meta: { title: '变更看板', menu: 'changes' },
         },
         // P0-6 安规管理
+        {
+          path: 'safety',
+          name: 'SafetyHub',
+          component: () => import('../views/safety/SafetyHub.vue'),
+          meta: { title: '安规管理', menu: 'safety' },
+        },
         {
           path: 'safety/standards',
           name: 'SafetyStandards',

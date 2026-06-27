@@ -122,7 +122,7 @@
             <div class="card-param-label">{{ row.param_name }}</div>
             <div class="card-values">
               <span class="card-our">{{ displayOurValue(row.param_key) }}</span>
-              <span class="card-vs">vs</span>
+              <span class="card-vs">对比</span>
               <span
                 class="card-their"
                 :class="computedHeatClass(row, brand)"

@@ -22,7 +22,7 @@
               <el-tag v-else type="info" size="small">未配置</el-tag>
             </div>
             <div class="status-row" v-if="channels.wecom.configured">
-              <span class="label">Webhook URL：</span>
+              <span class="label">Webhook 地址：</span>
               <code class="webhook-hint">{{ maskUrl(channels.wecom.webhook_url) }}</code>
             </div>
             <el-button
@@ -57,7 +57,7 @@
               <el-tag v-else type="info" size="small">未配置</el-tag>
             </div>
             <div class="status-row" v-if="channels.dingtalk.configured">
-              <span class="label">Webhook URL：</span>
+              <span class="label">Webhook 地址：</span>
               <code class="webhook-hint">{{ maskUrl(channels.dingtalk.webhook_url) }}</code>
             </div>
             <el-button

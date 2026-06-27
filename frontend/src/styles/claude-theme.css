@@ -5,14 +5,14 @@
 
 /* ── Element Plus CSS Variable Overrides ── */
 :root {
-  /* Primary → Professional Blue */
-  --el-color-primary: #2563eb;
-  --el-color-primary-light-3: #4f85f0;
-  --el-color-primary-light-5: #7ea5f5;
-  --el-color-primary-light-7: #b0c8f9;
-  --el-color-primary-light-8: #cfdefb;
-  --el-color-primary-light-9: #e8f0fe;
-  --el-color-primary-dark-2: #1d4ed8;
+  /* Primary → Terracotta (橙红色) */
+  --el-color-primary: #d97757;
+  --el-color-primary-light-3: #e89b7a;
+  --el-color-primary-light-5: #f0bd9a;
+  --el-color-primary-light-7: #f7d9c4;
+  --el-color-primary-light-8: #fae8db;
+  --el-color-primary-light-9: #fdf3ed;
+  --el-color-primary-dark-2: #c96442;
 
   /* Success → Warm Green */
   --el-color-success: #2d7d5a;
@@ -89,7 +89,7 @@ html, body, #app {
 }
 
 .layout-aside .logo-mini {
-  color: #2563eb;
+  color: #d97757;
   font-size: 22px;
   font-weight: 800;
 }
@@ -131,7 +131,7 @@ html, body, #app {
   transition: color 0.15s;
 }
 .layout-header .collapse-btn:hover {
-  color: #2563eb;
+  color: #d97757;
 }
 
 .layout-header .user-info {
@@ -157,8 +157,8 @@ html, body, #app {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 9999px;
-  background: rgba(37,99,235,0.10);
-  color: #2563eb;
+  background: rgba(217,119,87,0.10);
+  color: #d97757;
   font-weight: 600;
 }
 
@@ -189,11 +189,12 @@ html, body, #app {
 .el-button--primary {
   background: var(--el-color-primary) !important;
   border-color: var(--el-color-primary) !important;
+  color: #ffffff !important;
 }
 .el-button--primary:hover {
   background: var(--el-color-primary-dark-2) !important;
   border-color: var(--el-color-primary-dark-2) !important;
-  box-shadow: 0 4px 16px rgba(37,99,235,0.25) !important;
+  box-shadow: 0 4px 16px rgba(217,119,87,0.25) !important;
   transform: translateY(-1px);
 }
 
@@ -221,7 +222,7 @@ html, body, #app {
 }
 .el-input.is-focus .el-input__wrapper {
   background: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(37,99,235,0.20) !important;
+  box-shadow: 0 0 0 2px rgba(217,119,87,0.20) !important;
 }
 
 .el-textarea__inner {
@@ -232,7 +233,7 @@ html, body, #app {
 }
 .el-textarea__inner:focus {
   background: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(37,99,235,0.20) !important;
+  box-shadow: 0 0 0 2px rgba(217,119,87,0.20) !important;
 }
 
 /* ── Table Override ── */

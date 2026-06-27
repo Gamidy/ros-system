@@ -10,13 +10,15 @@
     <div class="filters-bar">
       <div class="filter-item">
         <label>目标市场</label>
-        <el-select
-          v-model="selectedMarket"
-          placeholder="请选择市场"
+        <el-cascader
+          v-model="selectedMarketPath"
+          :options="marketTree"
+          :props="{ expandTrigger: 'hover', value: 'code', label: 'name', children: 'markets' }"
+          placeholder="请选择大洲 → 国家/区域"
+          clearable
+          style="width:100%"
           @change="onMarketChange"
-        >
-          <el-option v-for="m in markets" :key="m" :label="m" :value="m" />
-        </el-select>
+        />
       </div>
       <div class="filter-item">
         <label>品牌</label>
@@ -118,10 +120,10 @@
       <div class="toolbar-row">
         <span class="toolbar-title">共 {{ allItems.length }} 条竞品记录</span>
         <div class="toolbar-actions">
-          <el-button size="small" @click="checkCompleteness">🔍 校验完整性</el-button>
-          <el-button size="small" @click="downloadTemplate">📥 下载模板</el-button>
+          <el-button size="small" :loading="completenessLoading" @click="checkCompleteness">🔍 校验完整性</el-button>
+          <el-button size="small" :loading="templateLoading" @click="downloadTemplate">📥 下载模板</el-button>
           <el-button size="small" type="success" @click="openImportDialog">📤 导入</el-button>
-          <el-button size="small" type="warning" @click="handleExport">📎 导出</el-button>
+          <el-button size="small" type="warning" :loading="exportLoading" @click="handleExport">📎 导出</el-button>
         </div>
       </div>
 
@@ -144,9 +146,9 @@
               <img :src="item.image_urls[0].url" class="thumb-img" alt="外观" />
             </div>
             <div class="card-actions">
-              <el-button size="small" type="primary" link @click="openDetailDrawer(item)">详情</el-button>
-              <el-button size="small" type="primary" link @click="openEditDialog(item)">编辑</el-button>
-              <el-button size="small" type="danger" link @click="handleDelete(item)">删除</el-button>
+              <el-button size="small" plain @click="openDetailDrawer(item)">详情</el-button>
+              <el-button size="small" plain type="primary" @click="openEditDialog(item)">编辑</el-button>
+              <el-button size="small" plain type="danger" @click="handleDelete(item)">删除</el-button>
             </div>
           </div>
           <div class="card-params">
@@ -639,9 +641,14 @@ interface VersionHistoryItem {
 // ── 市场 & 冷量段选项 ──────────────────────────────────────────────
 const markets = ref<string[]>([])
 const marketOptions = ref<MarketOption[]>([])
+const marketTree = ref<Array<{code: string; name: string; markets: Array<{code: string; name: string}>}>>([])
+const selectedMarketPath = ref<string[]>([])
+const completenessLoading = ref(false)
+const templateLoading = ref(false)
+const exportLoading = ref(false)
 const capacities = ['9000BTU', '12000BTU', '18000BTU', '24000BTU']
 const energyRatings = ['3星', '4星', '5星', 'A+', 'A++', 'A+++']
-const productTypes = ['分体壁挂式', '分体柜式', '窗式', '移动式', '天花式']
+const productTypes = ['壁挂分体机']
 const brandPresets = ['AUX', 'TCL', 'Midea', 'Gree', 'Haier', 'Hisense', 'Chigo']
 
 const selectedMarket = ref('')
@@ -656,13 +663,27 @@ const route = useRoute()
 // ── 市场能效配置（动态从API获取）───────────────────────────────────
 const MARKET_ENERGY_MAP = ref<Record<string, { key: string; label: string }>>({})
 
-// 从API加载市场列表
+// 从API加载市场列表（含区域/大洲信息）
 async function fetchMarkets() {
   try {
-    const res = await api.get('/pm/markets')
-    const data = (res.data || []) as MarketOption[]
-    marketOptions.value = data
+    const res = await api.get('/pm/markets/all')
+    const data = (res.data || []) as Array<{ code: string; name: string; region: string; energy_standard: string; energy_label: string }>
+    marketOptions.value = data.map((m) => ({ code: m.code, name: m.name, energy_standard: m.energy_standard, energy_label: m.energy_label }))
     markets.value = data.map((m) => m.name)
+
+    // 构建大洲 → 国家两级树
+    const regionLabels: Record<string, string> = { SEA: '东南亚', CA: '中亚', SA: '南亚', ME: '中东', GCC: '海湾', AM: '美洲', EU: '欧洲', CIS: '独联体', AF: '非洲' }
+    const groups: Record<string, Array<{code: string; name: string}>> = {}
+    for (const m of data) {
+      if (!m.region) continue
+      const regionName = regionLabels[m.region] || m.region
+      if (!groups[regionName]) groups[regionName] = []
+      groups[regionName].push({ code: m.name, name: m.name })
+    }
+    marketTree.value = Object.entries(groups).map(([name, markets]) => ({
+      code: name, name, markets
+    }))
+
     // 构建能效映射
     const map: Record<string, { key: string; label: string }> = {}
     for (const m of data) {
@@ -960,6 +981,7 @@ async function checkCompleteness() {
     ElMessage.warning('请先选择市场')
     return
   }
+  completenessLoading.value = true
   try {
     const res = await api.get('/pm/competitors/check-completeness', {
       params: { market: selectedMarket.value }
@@ -969,20 +991,30 @@ async function checkCompleteness() {
       ElMessage.success('✅ 所有竞品数据完整！')
     } else {
       const incomplete = data.details.filter((d) => !d.is_complete)
-      ElMessage.warning(`⚠️ 有 ${incomplete.length} 条数据不完整，缺少字段: ${incomplete.map((d) => d.brand).join(', ')}`)
+      const brands = incomplete.map((d) => d.brand).join(', ')
+      ElMessage.warning(`⚠️ 有 ${incomplete.length} 条数据不完整: ${brands}`)
     }
-  } catch {
-    ElMessage.error('校验失败')
+  } catch (e: unknown) {
+    const msg = e && typeof e === 'object' && 'response' in e ? (e as any).response?.data?.detail : null
+    ElMessage.error(msg || '校验失败，请确认后端API可用')
+  } finally {
+    completenessLoading.value = false
   }
 }
 
-function onMarketChange() {
+function onMarketChange(val: string[] | undefined) {
+  if (val && val.length >= 2) {
+    selectedMarket.value = val[1]
+  } else {
+    selectedMarket.value = ''
+    allItems.value = []
+  }
   selectedBrand.value = ''
   selectedCapacity.value = ''
   selectedEnergyRating.value = ''
   selectedProductType.value = ''
   selectedUnitType.value = ''
-  fetchData()
+  if (selectedMarket.value) fetchData()
 }
 
 watch(() => selectedMarket.value, (newMarket) => {
@@ -1002,6 +1034,13 @@ onMounted(async () => {
     selectedMarket.value = market
     form.value.market = market
     form.value.product_type = type
+    // 找到级联路径
+    for (const group of marketTree.value) {
+      if (group.markets.some((m) => m.code === market)) {
+        selectedMarketPath.value = [group.code, market]
+        break
+      }
+    }
     // watch on selectedMarket 会自动触发 fetchData()
   }
 })
@@ -1323,6 +1362,7 @@ async function submitImport() {
 }
 
 async function downloadTemplate() {
+  templateLoading.value = true
   try {
     const res = await api.get('/pm/competitors/template', {
       responseType: 'blob',
@@ -1330,17 +1370,21 @@ async function downloadTemplate() {
     const url = URL.createObjectURL(new Blob([res.data]))
     const a = document.createElement('a')
     a.href = url
-    a.download = 'competitor_import_template.xlsx'
+    a.download = `竞品导入模板${selectedMarket.value ? '_' + selectedMarket.value : ''}.xlsx`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  } catch {
-    ElMessage.error('下载模板失败')
+  } catch (e: unknown) {
+    const msg = e && typeof e === 'object' && 'response' in e ? (e as any).response?.data?.detail : null
+    ElMessage.error(msg || '下载模板失败，请确认后端API可用')
+  } finally {
+    templateLoading.value = false
   }
 }
 
 async function handleExport() {
+  exportLoading.value = true
   try {
     const params: Record<string, string> = {}
     if (selectedMarket.value) params.market = selectedMarket.value
@@ -1348,7 +1392,7 @@ async function handleExport() {
       params,
       responseType: 'blob',
     })
-    const filename = `competitors${selectedMarket.value ? '_' + selectedMarket.value : ''}.xlsx`
+    const filename = `竞品数据${selectedMarket.value ? '_' + selectedMarket.value : ''}.xlsx`
     const url = URL.createObjectURL(new Blob([res.data]))
     const a = document.createElement('a')
     a.href = url
@@ -1358,8 +1402,11 @@ async function handleExport() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     ElMessage.success('导出成功')
-  } catch {
-    ElMessage.error('导出失败')
+  } catch (e: unknown) {
+    const msg = e && typeof e === 'object' && 'response' in e ? (e as any).response?.data?.detail : null
+    ElMessage.error(msg || '导出失败，请确认后端API可用')
+  } finally {
+    exportLoading.value = false
   }
 }
 </script>

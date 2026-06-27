@@ -62,25 +62,25 @@
 
             <!-- Payload 详情 -->
             <div class="edc-section" v-if="evt.payload">
-              <div class="edc-section-title">📦 Payload</div>
+              <div class="edc-section-title">📦 数据载荷</div>
               <pre class="edc-json">{{ JSON.stringify(evt.payload, null, 2) }}</pre>
             </div>
 
             <!-- State Snapshot Diff (before / after) -->
             <div class="edc-section" v-if="evt.state_snapshot">
-              <div class="edc-section-title">📸 State Snapshot</div>
+              <div class="edc-section-title">📸 状态快照</div>
 
               <!-- before & after 并列 -->
               <el-row :gutter="12" v-if="evt.state_snapshot.before || evt.state_snapshot.after">
                 <el-col :span="12" v-if="evt.state_snapshot.before">
                   <div class="snapshot-block">
-                    <div class="snapshot-label before-label">BEFORE</div>
+                    <div class="snapshot-label before-label">变更前</div>
                     <pre class="snapshot-json">{{ JSON.stringify(evt.state_snapshot.before, null, 2) }}</pre>
                   </div>
                 </el-col>
                 <el-col :span="12" v-if="evt.state_snapshot.after">
                   <div class="snapshot-block">
-                    <div class="snapshot-label after-label">AFTER</div>
+                    <div class="snapshot-label after-label">变更后</div>
                     <pre class="snapshot-json">{{ JSON.stringify(evt.state_snapshot.after, null, 2) }}</pre>
                   </div>
                 </el-col>

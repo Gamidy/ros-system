@@ -15,8 +15,7 @@
               <template #header>
                 <div class="market-card-header">
                   <span>
-                    <strong>{{ m.market_code }}</strong>
-                    <span style="margin-left: 8px; color: #666;">{{ m.name || '' }}</span>
+                    <strong>{{ m.name || m.market_code }}</strong>
                   </span>
                   <div>
                     <el-button link type="primary" size="small" @click="openMarketDialog(m)">编辑</el-button>
@@ -26,7 +25,7 @@
               </template>
 
               <el-collapse v-model="activeCollapse" @change="onCollapseChange($event, m)">
-                <el-collapse-item :name="`tests-${m.id}`" title="RequiredTest">
+                <el-collapse-item :name="`tests-${m.id}`" title="测试要求">
                   <div v-if="!m.testItems">点击展开加载...</div>
                   <div v-else>
                     <el-table :data="m.testItems" size="mini" stripe border max-height="200">
@@ -42,7 +41,7 @@
                   </div>
                 </el-collapse-item>
 
-                <el-collapse-item :name="`certs-${m.id}`" title="RequiredCertification">
+                <el-collapse-item :name="`certs-${m.id}`" title="认证要求">
                   <div v-if="!m.certItems">点击展开加载...</div>
                   <div v-else>
                     <el-table :data="m.certItems" size="mini" stripe border max-height="200">
@@ -58,7 +57,7 @@
                   </div>
                 </el-collapse-item>
 
-                <el-collapse-item :name="`standards-${m.id}`" title="RequiredStandard">
+                <el-collapse-item :name="`standards-${m.id}`" title="标准要求">
                   <div v-if="!m.standardItems">点击展开加载...</div>
                   <div v-else>
                     <el-table :data="m.standardItems" size="mini" stripe border max-height="200">
@@ -83,11 +82,8 @@
     <!-- 新建/编辑市场对话框 -->
     <el-dialog v-model="marketDialogVisible" :title="editingMarketId ? '编辑市场' : '新建市场'" width="450">
       <el-form :model="marketForm" label-width="100">
-        <el-form-item label="市场代码" required>
-          <el-input v-model="marketForm.market_code" placeholder="如 EU, VN, CN" />
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="marketForm.name" placeholder="如 欧盟, 越南" />
+        <el-form-item label="名称" required>
+          <el-input v-model="marketForm.name" placeholder="如 欧盟, 越南, 中国" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -194,11 +190,16 @@ function openMarketDialog(row?: TableRow) {
 async function saveMarket() {
   saving.value = true
   try {
+    // 新建时自动用名称作为市场编码
+    const payload = { ...marketForm.value }
+    if (!editingMarketId.value && !payload.market_code) {
+      payload.market_code = payload.name
+    }
     if (editingMarketId.value) {
-      await api.put(`/target-markets/${editingMarketId.value}`, marketForm.value)
+      await api.put(`/target-markets/${editingMarketId.value}`, payload)
       ElMessage.success('更新成功')
     } else {
-      await api.post('/target-markets', marketForm.value)
+      await api.post('/target-markets', payload)
       ElMessage.success('创建成功')
     }
     marketDialogVisible.value = false
