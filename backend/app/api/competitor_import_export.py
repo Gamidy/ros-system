@@ -13,8 +13,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
+try:
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
+    openpyxl = None
 
 from app.core.database import get_db
 from app.core.security import get_current_user
