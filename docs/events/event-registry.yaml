@@ -1,0 +1,94 @@
+# ROS Event Registry
+# 由 Architecture Board 维护
+registry_version: "1.0.0"
+managed_by: "Architecture Board"
+last_updated: "2026-06-30"
+
+events:
+
+  # ---- Planning Capability Events ----
+
+  - event: "plan.created"
+    version: 1
+    display_name: "策划创建"
+    description: "PM 创建新的产品策划时触发"
+    category: "Domain"
+    criticality: "High"
+    replay_required: true
+    persistent: true
+    status: "Certified"
+    schema: "docs/events/plan.created.v1.schema.json"
+    producer: "planning.product_plan_workflow"
+    consumers: ["audit", "notification", "verification"]
+    lifecycle:
+      created: "2026-06-30"
+      certified: "2026-06-30"
+      released: "2026-06-30"
+
+  - event: "plan.stage_advanced"
+    version: 1
+    display_name: "阶段推进"
+    description: "策划从一个研发阶段推进到下一阶段时触发"
+    category: "Domain"
+    criticality: "High"
+    replay_required: true
+    persistent: true
+    status: "Certified"
+    schema: "docs/events/plan.stage_advanced.v1.schema.json"
+    producer: "planning.product_plan_workflow"
+    consumers: ["digital_thread", "dashboard"]
+    lifecycle:
+      created: "2026-06-30"
+      certified: "2026-06-30"
+      released: "2026-06-30"
+
+  - event: "plan.approved"
+    version: 1
+    display_name: "审批通过"
+    description: "策划审批链全部通过时触发，下游触发 Project 创建"
+    category: "Domain"
+    criticality: "Critical"
+    replay_required: true
+    persistent: true
+    status: "Certified"
+    schema: "docs/events/plan.approved.v1.schema.json"
+    producer: "planning.approval_engine"
+    consumers: ["project_management"]
+    lifecycle:
+      created: "2026-06-30"
+      certified: "2026-06-30"
+      released: "2026-06-30"
+
+  - event: "plan.released"
+    version: 1
+    display_name: "策划发布"
+    description: "策划进入 Released 状态时触发，级联创建 Project 和复盘"
+    category: "Domain"
+    criticality: "Critical"
+    replay_required: true
+    persistent: true
+    status: "Certified"
+    schema: "docs/events/plan.released.v1.schema.json"
+    producer: "planning.product_plan_workflow"
+    consumers: ["project_management", "review_closed_loop", "knowledge_base"]
+    lifecycle:
+      created: "2026-06-30"
+      certified: "2026-06-30"
+      released: "2026-06-30"
+
+  - event: "plan.cost_updated"
+    version: 1
+    display_name: "成本更新"
+    description: "策划成本目标或核算发生变更时触发"
+    category: "Domain"
+    criticality: "Medium"
+    replay_required: false
+    persistent: true
+    status: "Certified"
+    schema: "docs/events/plan.cost_updated.v1.schema.json"
+    producer: "planning.costing_module"
+    consumers: ["dashboard", "bi_analytics", "finance"]
+    lifecycle:
+      created: "2026-06-30"
+      certified: "2026-06-30"
+      released: "2026-06-30"

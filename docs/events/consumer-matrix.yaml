@@ -1,0 +1,90 @@
+# ROS Consumer Compatibility Matrix
+# 每个 Event 的 Producer + Consumer 显式声明
+# 由 Architecture Board 维护
+matrix_version: "1.0.0"
+managed_by: "Architecture Board"
+last_updated: "2026-06-30"
+
+consumers:
+
+  # ---- Planning Capability Consumer Matrix ----
+
+  - event: "plan.created"
+    version: 1
+    producer: "planning.product_plan_workflow"
+    consumers:
+      - module: "audit"
+        capability: "audit"
+        contract: "Event Log"
+        status: "active"
+        version_range: ">=1"
+      - module: "notification"
+        capability: "notification_center"
+        contract: "Notify PM"
+        status: "active"
+        version_range: ">=1"
+      - module: "verification"
+        capability: "verification"
+        contract: "Verification Requirement"
+        status: "planned"
+        version_range: ">=1"
+
+  - event: "plan.stage_advanced"
+    version: 1
+    producer: "planning.product_plan_workflow"
+    consumers:
+      - module: "digital_thread"
+        capability: "digital_thread"
+        contract: "Update Digital Thread"
+        status: "active"
+        version_range: ">=1"
+      - module: "dashboard"
+        capability: "dashboard"
+        contract: "Refresh Dashboard"
+        status: "active"
+        version_range: ">=1"
+
+  - event: "plan.approved"
+    version: 1
+    producer: "planning.approval_engine"
+    consumers:
+      - module: "project_management"
+        capability: "projects"
+        contract: "Auto Create Project"
+        status: "active"
+        version_range: ">=1"
+
+  - event: "plan.released"
+    version: 1
+    producer: "planning.product_plan_workflow"
+    consumers:
+      - module: "project_management"
+        capability: "projects"
+        contract: "Link Plan to Project"
+        status: "active"
+        version_range: ">=1"
+      - module: "review_closed_loop"
+        capability: "quality"
+        contract: "Auto Create Review"
+        status: "active"
+        version_range: ">=1"
+      - module: "knowledge_base"
+        capability: "knowledge"
+        contract: "Archive as Lessons Learned"
+        status: "planned"
+        version_range: ">=1"
+
+  - event: "plan.cost_updated"
+    version: 1
+    producer: "planning.costing_module"
+    consumers:
+      - module: "dashboard_and_bi"
+        capability: "bi_analytics"
+        contract: "Update Cost Dashboard & Refresh BI Reports"
+        status: "active"
+        version_range: ">=1"
+      - module: "finance"
+        capability: "finance"
+        contract: "Update Financial Forecast"
+        status: "planned"
+        version_range: ">=1"
