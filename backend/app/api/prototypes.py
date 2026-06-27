@@ -147,7 +147,7 @@ def get_prototype_judgments(
     pid: int,
     db: Session = Depends(get_db),
     _=Depends(require_menu("prototypes")),
-) -> list:
+) -> list[TestResultOut]:
     """该样机的所有 TestResult（判定）"""
     proto = db.query(Prototype).filter(Prototype.id == pid).first()
     if not proto:

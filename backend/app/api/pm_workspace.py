@@ -11,6 +11,7 @@
 from datetime import datetime, date
 import json
 import random
+from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sqlfunc
@@ -72,7 +73,7 @@ def _project_to_dict(p: Project) -> dict:
             tech = plan.tech_spec
             team_list = plan.team_members
 
-    def _v(obj, attr, default=None):
+    def _v(obj, attr, default=None) -> Any:
         """Safe attribute access"""
         return getattr(obj, attr, default) if obj else default
 
@@ -390,7 +391,7 @@ def _apply_project_fields(
     mold_outer: str | None = None,
     # Sheet 5
     team_members: str | None = None,
-):
+) -> None:
     """将非 None 参数写入 Project 对象（基础字段直接写，Sheet1-5 写 ProductPlan 子表）"""
     # ---- 基础 Project 字段 ----
     if name is not None:

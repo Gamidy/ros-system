@@ -334,7 +334,7 @@ def get_report_score(rid: int, db: Session = Depends(get_db),
 
 @router.get("/reports/{rid}/items", response_model=list[DFMReportItemOut])
 def list_report_items(rid: int, db: Session = Depends(get_db),
-                       current_user: User = Depends(get_current_user)) -> list:
+                       current_user: User = Depends(get_current_user)) -> list[DFMReportItemOut]:
     items = db.query(DFMReportItem).filter(
         DFMReportItem.report_id == rid
     ).order_by(DFMReportItem.sort_order, DFMReportItem.id).all()

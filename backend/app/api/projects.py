@@ -104,7 +104,7 @@ def _auto_source_category(source: str | None) -> str | None:
     return SOURCE_CATEGORY_MAP.get(source, None)
 
 
-def _validate_gate_transition(project_id: int, target_code: str, new_status: str, db: Session):
+def _validate_gate_transition(project_id: int, target_code: str, new_status: str, db: Session) -> None:
     """Gate状态流转校验: 前置Gate必须passed才允许当前Gate passed"""
     if new_status != "passed":
         return  # 只校验passed操作
@@ -1010,3 +1010,6 @@ def update_risk(
     db.commit()
     db.refresh(r)
     return r
+
+
+router = project_router  # alias for import compatibility
