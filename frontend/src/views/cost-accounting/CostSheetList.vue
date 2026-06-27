@@ -307,7 +307,7 @@ const query = reactive({
 const loadData = async () => {
   tableLoading.value = true
   try {
-    const params: Record<string, any> = {
+    const params: Record<string, string | number | undefined> = {
       page: query.page,
       size: query.size,
     }
@@ -320,7 +320,7 @@ const loadData = async () => {
     }
     const res = await API.listSheets(params)
     sheetList.value = res.data?.items ?? res.data ?? []
-    total.value = (res.data as any)?.total ?? 0
+    total.value = (res.data as Record<string, unknown>)?.total ?? 0
   } catch (e: unknown) {
     ElMessage.error(e?.response?.data?.detail || e?.message || '加载核算单列表失败')
   } finally {

@@ -72,13 +72,55 @@ import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import api from '../../api'
 import { initChart, disposeChart } from '../../utils/chart'
 import type { EChartsOption } from 'echarts'
+import type { TableRow, ChartDataPoint } from '@/types/common'
+
+interface GapItem {
+  name?: string
+  dimension?: string
+  severity?: string
+  description?: string
+  detail?: string
+  gap?: string
+}
+
+interface PlanItem extends TableRow {
+  plan_id?: number | string
+  plan_name?: string
+  total_score?: number
+  score?: number
+  readiness_level?: string
+  gap_count?: number
+  design_score?: number
+  design?: number
+  process_score?: number
+  process?: number
+  tooling_score?: number
+  tooling?: number
+  supply_score?: number
+  supply?: number
+  name?: string
+  level?: string
+  value?: number
+  count?: number
+  type?: string
+  sort_order?: number
+  _gap_items?: GapItem[]
+  _loading_gap?: boolean
+}
+
+interface RadardDimension {
+  name: string
+  value?: number
+  score?: number
+  max?: number
+}
 
 const loading = ref(false)
-const planList = ref<any[]>([])
+const planList = ref<PlanItem[]>([])
 const radarChartRef = ref<HTMLElement>()
 const barChartRef = ref<HTMLElement>()
 
-function readinessTagType(level: string): string {
+function readinessTagType(level?: string): string {
   const map: Record<string, string> = {
     ready: 'success',
     partial: 'warning',
@@ -89,7 +131,7 @@ function readinessTagType(level: string): string {
     L4: 'primary',
     L5: 'success',
   }
-  return map[level] || 'info'
+  return map[level ?? ''] || 'info'
 }
 
 function progressStatus(score: number): string {
@@ -98,24 +140,24 @@ function progressStatus(score: number): string {
   return 'exception'
 }
 
-function gapTagType(severity: string): string {
+function gapTagType(severity?: string): string {
   const map: Record<string, string> = {
     high: 'danger',
     medium: 'warning',
     low: 'info',
     critical: 'danger',
   }
-  return map[severity?.toLowerCase()] || 'info'
+  return map[severity?.toLowerCase() ?? ''] || 'info'
 }
 
 async function fetchData() {
   loading.value = true
   try {
     const res = await api.get('/api/v2/dashboard/mrc-summary')
-    const data = res.data
-    const items = data?.items || data?.data || data?.records || []
-    planList.value = Array.isArray(items) ? items : Array.isArray(data) ? data : []
-    planList.value.forEach((p: any) => {
+    const data = res.data as Record<string, unknown>
+    const items = (data?.items || data?.data || data?.records || []) as PlanItem[]
+    planList.value = Array.isArray(items) ? items : Array.isArray(data) ? (data as unknown as PlanItem[]) : []
+    planList.value.forEach((p: PlanItem) => {
       p._gap_items = []
       p._loading_gap = false
     })
@@ -130,22 +172,22 @@ async function fetchData() {
 }
 
 // 四维雷达图
-function renderRadarChart(data: any) {
+function renderRadarChart(data: Record<string, unknown>) {
   if (!radarChartRef.value) return
 
   // 尝试从整体数据或首个计划取维度值
-  const dimensions = data?.dimensions || data?.radar_dimensions || []
-  let radarIndicators: any[] = []
-  let seriesData: any[] = []
+  const dimensions = (data?.dimensions || data?.radar_dimensions || []) as RadardDimension[]
+  let radarIndicators: { name: string; max: number }[] = []
+  let seriesData: { value: number[]; name: string }[] = []
 
   if (dimensions.length > 0) {
-    radarIndicators = dimensions.map((d: any) => ({
+    radarIndicators = dimensions.map((d: RadardDimension) => ({
       name: d.name,
       max: d.max ?? 100,
     }))
     seriesData = [{
-      value: dimensions.map((d: any) => d.value ?? d.score ?? 0),
-      name: data?.plan_name || '整体就绪度',
+      value: dimensions.map((d: RadardDimension) => d.value ?? d.score ?? 0),
+      name: (data?.plan_name as string) || '整体就绪度',
     }]
   } else if (planList.value.length > 0) {
     // 从各计划维度聚合
@@ -155,7 +197,7 @@ function renderRadarChart(data: any) {
       { name: '模具就绪度', max: 100 },
       { name: '供应就绪度', max: 100 },
     ]
-    seriesData = planList.value.slice(0, 5).map((p: any) => ({
+    seriesData = planList.value.slice(0, 5).map((p: PlanItem) => ({
       value: [
         (p.design_score ?? p.design ?? 0) * 100,
         (p.process_score ?? p.process ?? 0) * 100,
@@ -196,31 +238,31 @@ function renderRadarChart(data: any) {
 }
 
 // 就绪层级分布柱状图
-function renderBarChart(data: any) {
+function renderBarChart(data: Record<string, unknown>) {
   if (!barChartRef.value) return
-  const levels = data?.level_distribution || data?.readiness_distribution || []
-  let chartData: any[]
+  const levels = (data?.level_distribution || data?.readiness_distribution || []) as ChartDataPoint[]
+  let chartData: ChartDataPoint[]
   if (Array.isArray(levels) && levels.length > 0) {
     chartData = levels
   } else {
-    chartData = planList.value.map((p: any) => ({
+    chartData = planList.value.map((p: PlanItem) => ({
       name: p.plan_name,
       value: (p.total_score ?? p.score ?? 0) * 100,
-    }))
+    } as ChartDataPoint))
   }
   const option: EChartsOption = {
     tooltip: { trigger: 'axis' },
     grid: { left: '3%', right: '4%', bottom: '12%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: chartData.map((d: any) => d.name || d.plan_name || d.level || ''),
+      data: chartData.map((d: ChartDataPoint) => (d.name ?? d.plan_name ?? d.level ?? '') as string),
       axisLabel: { fontSize: 11, rotate: chartData.length > 4 ? 30 : 0 },
     },
     yAxis: { type: 'value', min: 0, max: 100, name: '就绪度' },
     color: ['#409EFF'],
     series: [{
       type: 'bar',
-      data: chartData.map((d: any) => d.value ?? d.count ?? d.score ?? 0),
+      data: chartData.map((d: ChartDataPoint) => d.value ?? d.count ?? d.score ?? 0),
       barWidth: '40%',
       itemStyle: { borderRadius: [4, 4, 0, 0] },
     }],
@@ -228,15 +270,15 @@ function renderBarChart(data: any) {
   initChart(barChartRef.value, option)
 }
 
-async function onExpandChange(row: any, expandedRows: any[]) {
+async function onExpandChange(row: PlanItem, expandedRows: TableRow[]) {
   const expanded = expandedRows.includes(row)
   if (!expanded) return
   if (row._gap_items?.length > 0) return
   row._loading_gap = true
   try {
     const res = await api.get(`/api/v2/dashboard/mrc-detail/${row.plan_id ?? row.id}`)
-    const data = res.data
-    row._gap_items = data?.gaps || data?.gap_items || data?.items || data?.data || []
+    const data = res.data as Record<string, unknown>
+    row._gap_items = (data?.gaps || data?.gap_items || data?.items || data?.data || []) as GapItem[]
   } catch {
     row._gap_items = []
   } finally {

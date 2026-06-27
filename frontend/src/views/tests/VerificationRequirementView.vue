@@ -128,8 +128,9 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../api'
+import type { TableRow } from '@/types/common'
 
-const items = ref<any[]>([])
+const items = ref<TableRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const generating = ref(false)
@@ -141,7 +142,7 @@ const filterSource = ref('')
 const filterStatus = ref('')
 const searchText = ref('')
 
-const form = ref<any>({
+const form = ref<Record<string, unknown>>({
   title: '', category: '', target_value: '', unit: '',
   source_type: '', source_id: '', gate_code: '', remark: ''
 })
@@ -198,7 +199,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: TableRow) {
   if (row) {
     editingId.value = row.id
     form.value = {
@@ -233,7 +234,7 @@ async function save() {
   } finally { saving.value = false }
 }
 
-async function removeItem(row: any) {
+async function removeItem(row: TableRow) {
   try {
     await ElMessageBox.confirm('确定删除此验证需求？', '确认', { type: 'warning' })
     await api.delete(`/verification-requirements/${row.id}`)

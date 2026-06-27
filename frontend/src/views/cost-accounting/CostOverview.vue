@@ -125,6 +125,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { ChartDataPoint } from '@/types/common'
 import BiChart from '../../components/BiChart.vue'
 import api from '../../api/index'
 
@@ -137,14 +138,14 @@ const departments = ref<string[]>([])
 const kpiList = ref<{ key: string; label: string; value: string; color: string; trend?: number }[]>([])
 
 // 部门成本对比
-const deptCostData = ref<any[]>([])
+const deptCostData = ref<ChartDataPoint[]>([])
 const deptCostSeries = ref([
   { name: '预算', key: 'budget' },
   { name: '实际', key: 'actual' },
 ])
 
 // 成本趋势
-const trendData = ref<any[]>([])
+const trendData = ref<ChartDataPoint[]>([])
 const trendSeries = ref([
   { name: '物料成本', key: 'material' },
   { name: '人工成本', key: 'labor' },
@@ -155,7 +156,7 @@ const trendSeries = ref([
 const structureData = ref<{ name: string; value: number }[]>([])
 
 // 明细表格
-const detailData = ref<any[]>([])
+const detailData = ref<ChartDataPoint[]>([])
 
 function formatMoney(val: number | null | undefined): string {
   if (val == null) return '-'
@@ -194,16 +195,16 @@ async function fetchData() {
   }
 }
 
-function parseBudgetData(_data: any) {
+function parseBudgetData(_data: ChartDataPoint) {
   // placeholder for real API response parsing
   useMockData()
 }
 
-function parseDeptData(_data: any) {
+function parseDeptData(_data: ChartDataPoint) {
   useMockData()
 }
 
-function parseBiData(_data: any) {
+function parseBiData(_data: ChartDataPoint) {
   useMockData()
 }
 

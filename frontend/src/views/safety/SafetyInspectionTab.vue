@@ -151,9 +151,10 @@ import { ref, onMounted } from 'vue'
 import { listSafetyInspectionItems, createSafetyInspectionItem, updateSafetyInspectionItem, deleteSafetyInspectionItem } from '../../api/safety'
 import { listSafetyStandards } from '../../api/safety'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 
-const items = ref<any[]>([])
-const standardsList = ref<any[]>([])
+const items = ref<TableRow[]>([])
+const standardsList = ref<TableRow[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -167,7 +168,7 @@ const editingId = ref<number | null>(null)
 const saving = ref(false)
 const formRef = ref<FormInstance>()
 
-const form = ref<any>({
+const form = ref<Record<string, unknown>>({
   standard_id: null, item_code: '', item_name: '', inspection_category: '',
   param_name: '', standard_value_min: null, standard_value_max: null,
   standard_value_nominal: '', unit: '', applicable_product_type: '',
@@ -218,7 +219,7 @@ function showCreate() {
   dialogVisible.value = true
 }
 
-function showEdit(row: any) {
+function showEdit(row: TableRow) {
   isEdit.value = true
   editingId.value = row.id
   form.value = { ...row }
@@ -240,7 +241,7 @@ async function handleSave() {
   } catch { /* */ } finally { saving.value = false }
 }
 
-async function handleDelete(row: any) {
+async function handleDelete(row: TableRow) {
   try {
     await deleteSafetyInspectionItem(row.id)
     fetchData()

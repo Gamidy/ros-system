@@ -61,6 +61,7 @@
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+import type { TableRow } from '@/types/common'
 
 const props = defineProps<{
   testRequestId: number | null
@@ -70,7 +71,7 @@ const emit = defineEmits<{
   (e: 'refresh'): void
 }>()
 
-const executions = ref<any[]>([])
+const executions = ref<TableRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const showCreateDialog = ref(false)
@@ -113,7 +114,7 @@ async function createExecution() {
   } finally { saving.value = false }
 }
 
-async function completeExecution(row: any) {
+async function completeExecution(row: TableRow) {
   try {
     await api.put(`/test-executions/${row.id}/complete`)
     ElMessage.success('已标记完成')
@@ -122,7 +123,7 @@ async function completeExecution(row: any) {
   } catch { /* handled by interceptor */ }
 }
 
-async function abortExecution(row: any) {
+async function abortExecution(row: TableRow) {
   try {
     await api.put(`/test-executions/${row.id}/abort`)
     ElMessage.success('已终止')

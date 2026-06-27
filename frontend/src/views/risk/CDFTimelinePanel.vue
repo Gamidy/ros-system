@@ -71,10 +71,45 @@ import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import api from '../../api'
 import { initChart, disposeChart, getChartColors } from '../../utils/chart'
 import type { EChartsOption } from 'echarts'
+import type { TableRow, ChartDataPoint } from '@/types/common'
+
+interface CertType {
+  name?: string
+  type?: string
+  cert_type?: string
+  count?: number
+}
+
+interface TimelineItem {
+  date?: string
+  phase?: string
+  status?: string
+  cert_type?: string
+  type?: string
+  name?: string
+  description?: string
+  detail?: string
+  sort_order?: number
+  phase_order?: number
+}
+
+interface PlanItem extends TableRow {
+  plan_id?: number | string
+  plan_name?: string
+  target_market?: string
+  required_cert_count?: number
+  mandatory_cert_count?: number
+  estimated_days?: number
+  risk_level?: string
+  cert_types?: CertType[]
+  certifications?: CertType[]
+  _timeline_items?: TimelineItem[]
+  _loading_timeline?: boolean
+}
 
 const loading = ref(false)
-const planList = ref<any[]>([])
-const overviewData = ref<Record<string, any>>({})
+const planList = ref<PlanItem[]>([])
+const overviewData = ref<Record<string, unknown>>({})
 const barChartRef = ref<HTMLElement>()
 
 const overviewStats = computed(() => [
@@ -84,17 +119,17 @@ const overviewStats = computed(() => [
   { label: '高风险计划数', value: overviewData.value?.high_risk_count ?? '-', color: '#f56c6c' },
 ])
 
-function riskTagType(level: string): string {
+function riskTagType(level?: string): string {
   const map: Record<string, string> = {
     high: 'danger',
     medium: 'warning',
     low: 'success',
     critical: 'danger',
   }
-  return map[level?.toLowerCase()] || 'info'
+  return map[level?.toLowerCase() ?? ''] || 'info'
 }
 
-function timelineColor(status: string): string {
+function timelineColor(status?: string): string {
   const map: Record<string, string> = {
     completed: '#67C23A',
     in_progress: '#409EFF',
@@ -102,10 +137,10 @@ function timelineColor(status: string): string {
     delayed: '#E6A23C',
     failed: '#F56C6C',
   }
-  return map[status] || '#909399'
+  return map[status ?? ''] || '#909399'
 }
 
-function timelineTagType(status: string): string {
+function timelineTagType(status?: string): string {
   const map: Record<string, string> = {
     completed: 'success',
     in_progress: 'primary',
@@ -113,18 +148,18 @@ function timelineTagType(status: string): string {
     delayed: 'warning',
     failed: 'danger',
   }
-  return map[status] || 'info'
+  return map[status ?? ''] || 'info'
 }
 
 async function fetchData() {
   loading.value = true
   try {
     const res = await api.get('/api/v2/dashboard/cdf-summary')
-    const data = res.data
-    overviewData.value = data?.overview || data?.summary || data || {}
-    const items = data?.items || data?.data || data?.records || data?.plans || []
-    planList.value = Array.isArray(items) ? items : Array.isArray(data) ? data : []
-    planList.value.forEach((p: any) => {
+    const data = res.data as Record<string, unknown>
+    overviewData.value = (data?.overview || data?.summary || data || {}) as Record<string, unknown>
+    const items = (data?.items || data?.data || data?.records || data?.plans || []) as PlanItem[]
+    planList.value = Array.isArray(items) ? items : Array.isArray(data) ? (data as unknown as PlanItem[]) : []
+    planList.value.forEach((p: PlanItem) => {
       p._timeline_items = []
       p._loading_timeline = false
     })
@@ -138,18 +173,18 @@ async function fetchData() {
   }
 }
 
-function renderBarChart(data: any) {
+function renderBarChart(data: Record<string, unknown>) {
   if (!barChartRef.value) return
-  const certTypes = data?.cert_type_distribution || data?.type_distribution || data?.distribution || []
-  let chartData: any[]
+  const certTypes = (data?.cert_type_distribution || data?.type_distribution || data?.distribution || []) as ChartDataPoint[]
+  let chartData: ChartDataPoint[]
   if (Array.isArray(certTypes) && certTypes.length > 0) {
     chartData = certTypes
   } else {
     // 从各计划聚合
     const agg: Record<string, number> = {}
-    planList.value.forEach((p: any) => {
+    planList.value.forEach((p: PlanItem) => {
       const types = p.cert_types || p.certifications || []
-      ;(Array.isArray(types) ? types : []).forEach((ct: any) => {
+      ;(Array.isArray(types) ? types : []).forEach((ct: CertType) => {
         const name = ct.name || ct.type || ct.cert_type
         if (name) agg[name] = (agg[name] || 0) + (ct.count ?? 1)
       })
@@ -157,8 +192,8 @@ function renderBarChart(data: any) {
     chartData = Object.entries(agg).map(([name, count]) => ({ name, value: count }))
     if (chartData.length === 0) {
       chartData = [
-        { name: '强制认证', value: data?.mandatory_count ?? overviewData.value?.total_mandatory ?? 0 },
-        { name: '自愿认证', value: data?.voluntary_count ?? 0 },
+        { name: '强制认证', value: (data?.mandatory_count as number) ?? (overviewData.value?.total_mandatory as number) ?? 0 },
+        { name: '自愿认证', value: (data?.voluntary_count as number) ?? 0 },
       ].filter(d => d.value > 0)
     }
   }
@@ -167,14 +202,14 @@ function renderBarChart(data: any) {
     grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: chartData.map((d: any) => d.name || d.type || ''),
+      data: chartData.map((d: ChartDataPoint) => (d.name ?? d.type ?? '') as string),
       axisLabel: { fontSize: 11, rotate: chartData.length > 5 ? 30 : 0 },
     },
     yAxis: { type: 'value', minInterval: 1, name: '数量' },
     color: getChartColors(),
     series: [{
       type: 'bar',
-      data: chartData.map((d: any) => d.value ?? d.count ?? 0),
+      data: chartData.map((d: ChartDataPoint) => d.value ?? d.count ?? 0),
       barWidth: '50%',
       itemStyle: { borderRadius: [4, 4, 0, 0] },
     }],
@@ -182,17 +217,17 @@ function renderBarChart(data: any) {
   initChart(barChartRef.value, option)
 }
 
-async function onExpandChange(row: any, expandedRows: any[]) {
+async function onExpandChange(row: PlanItem, expandedRows: TableRow[]) {
   const expanded = expandedRows.includes(row)
   if (!expanded) return
   if (row._timeline_items?.length > 0) return
   row._loading_timeline = true
   try {
     const res = await api.get(`/api/v2/dashboard/cdf-detail/${row.plan_id ?? row.id}`)
-    const data = res.data
-    const items = data?.timeline || data?.items || data?.data || data?.stages || data?.certifications || []
+    const data = res.data as Record<string, unknown>
+    const items = (data?.timeline || data?.items || data?.data || data?.stages || data?.certifications || []) as TimelineItem[]
     row._timeline_items = Array.isArray(items)
-      ? items.sort((a: any, b: any) => (a.sort_order ?? a.phase_order ?? 0) - (b.sort_order ?? b.phase_order ?? 0))
+      ? items.sort((a: TimelineItem, b: TimelineItem) => (a.sort_order ?? a.phase_order ?? 0) - (b.sort_order ?? b.phase_order ?? 0))
       : []
   } catch {
     row._timeline_items = []

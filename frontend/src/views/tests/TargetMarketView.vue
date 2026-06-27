@@ -136,8 +136,9 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../api'
+import type { TableRow } from '@/types/common'
 
-const markets = ref<any[]>([])
+const markets = ref<TableRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const childSaving = ref(false)
@@ -150,14 +151,14 @@ const activeCollapse = ref<string[]>([])
 const childDialogVisible = ref(false)
 const childDialogTitle = ref('')
 const childType = ref<'tests' | 'certs' | 'standards'>('tests')
-const childTargetMarket = ref<any>(null)
-const childForm = ref<any>({})
+const childTargetMarket = ref<TableRow | null>(null)
+const childForm = ref<Record<string, unknown>>({})
 
 async function fetchMarkets() {
   loading.value = true
   try {
     const res = await api.get('/target-markets')
-    markets.value = (res.data || []).map((m: any) => ({
+    markets.value = (res.data || []).map((m: TableRow) => ({
       ...m,
       testItems: null as any[] | null,
       certItems: null as any[] | null,
@@ -166,7 +167,7 @@ async function fetchMarkets() {
   } finally { loading.value = false }
 }
 
-async function onCollapseChange(val: any, market: any) {
+async function onCollapseChange(val: any, market: TableRow) {
   const key = val?.slice(-1)?.[0] || ''
   if (key.startsWith('tests-') && !market.testItems) {
     try { const r = await api.get(`/target-markets/${market.id}/tests`); market.testItems = r.data } catch { market.testItems = [] }
@@ -179,7 +180,7 @@ async function onCollapseChange(val: any, market: any) {
   }
 }
 
-function openMarketDialog(row?: any) {
+function openMarketDialog(row?: TableRow) {
   if (row) {
     editingMarketId.value = row.id
     marketForm.value = { market_code: row.market_code || '', name: row.name || '' }
@@ -205,7 +206,7 @@ async function saveMarket() {
   } finally { saving.value = false }
 }
 
-async function removeMarket(row: any) {
+async function removeMarket(row: TableRow) {
   try {
     await ElMessageBox.confirm('确定删除此市场？', '确认', { type: 'warning' })
     await api.delete(`/target-markets/${row.id}`)
@@ -214,7 +215,7 @@ async function removeMarket(row: any) {
   } catch { /* cancelled */ }
 }
 
-function showAddChildDialog(market: any, type: 'tests' | 'certs' | 'standards') {
+function showAddChildDialog(market: TableRow, type: 'tests' | 'certs' | 'standards') {
   childTargetMarket.value = market
   childType.value = type
   childForm.value = {}
@@ -258,7 +259,7 @@ async function saveChildItem() {
   } finally { childSaving.value = false }
 }
 
-async function removeChildItem(market: any, type: string, itemId: number) {
+async function removeChildItem(market: TableRow, type: string, itemId: number) {
   try {
     await ElMessageBox.confirm('确定删除？', '确认', { type: 'warning' })
     let url = ''

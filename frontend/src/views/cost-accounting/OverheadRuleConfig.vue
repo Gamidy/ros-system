@@ -124,6 +124,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 import {
   listOverheadRules,
   createOverheadRule,
@@ -208,7 +209,7 @@ function showCreate() {
   dialogVisible.value = true
 }
 
-function showEdit(row: any) {
+function showEdit(row: TableRow) {
   isEdit.value = true
   editingId.value = row.id
   form.value = {
@@ -244,7 +245,7 @@ async function handleSave() {
 }
 
 // ── 启用/禁用切换 ──
-async function handleToggle(row: any) {
+async function handleToggle(row: TableRow) {
   const actionLabel = row.is_active === 1 ? '禁用' : '启用'
   try {
     await ElMessageBox.confirm(
@@ -266,7 +267,7 @@ async function handleToggle(row: any) {
 }
 
 // ── 删除 ──
-async function handleDelete(row: any) {
+async function handleDelete(row: TableRow) {
   try {
     await ElMessageBox.confirm(
       `确定要删除规则「${row.rule_name}」吗？此操作不可恢复。`,

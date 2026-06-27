@@ -152,8 +152,9 @@
 import { ref, onMounted } from 'vue'
 import { listSupplierQualifications, createSupplierQualification, updateSupplierQualification, deleteSupplierQualification, createAuditRecord } from '../../api/safety'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 
-const qualifications = ref<any[]>([])
+const qualifications = ref<TableRow[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -172,7 +173,7 @@ const auditFormRef = ref<FormInstance>()
 const auditing = ref(false)
 const currentQualId = ref<number | null>(null)
 
-const form = ref<any>({
+const form = ref<Record<string, unknown>>({
   supplier_id: null, qualification_type: 'ISO9001', cert_no: '',
   issuing_body: '', issue_date: null, expiry_date: null,
   attachments: null, status: 'active', audit_status: 'pending', audit_comment: '',
@@ -183,7 +184,7 @@ const rules = {
   qualification_type: [{ required: true, message: '请选择资质类型', trigger: 'change' }],
 }
 
-const auditForm = ref<any>({
+const auditForm = ref<Record<string, unknown>>({
   qualification_id: null, audit_date: '', auditor: '', result: 'pass',
   findings: '', next_audit_date: null,
 })
@@ -230,7 +231,7 @@ function showCreate() {
   dialogVisible.value = true
 }
 
-function showEdit(row: any) {
+function showEdit(row: TableRow) {
   isEdit.value = true
   editingId.value = row.id
   form.value = { ...row, attachments: null }
@@ -252,14 +253,14 @@ async function handleSave() {
   } catch { /* */ } finally { saving.value = false }
 }
 
-async function handleDelete(row: any) {
+async function handleDelete(row: TableRow) {
   try {
     await deleteSupplierQualification(row.id)
     fetchData()
   } catch { /* */ }
 }
 
-function showAuditDialog(row: any) {
+function showAuditDialog(row: TableRow) {
   currentQualId.value = row.id
   auditForm.value = {
     qualification_id: row.id,

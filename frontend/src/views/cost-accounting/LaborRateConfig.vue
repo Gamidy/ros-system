@@ -79,6 +79,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 import {
   listLaborRates,
   createLaborRate,
@@ -161,7 +162,7 @@ function showCreate() {
   dialogVisible.value = true
 }
 
-function showEdit(row: any) {
+function showEdit(row: TableRow) {
   isEdit.value = true
   editingId.value = row.id
   form.value = {
@@ -194,7 +195,7 @@ async function handleSave() {
   }
 }
 
-async function handleDelete(row: any) {
+async function handleDelete(row: TableRow) {
   try {
     await ElMessageBox.confirm(
       `确定要删除工序「${row.operation_name}」(编码: ${row.operation_code}) 吗？`,

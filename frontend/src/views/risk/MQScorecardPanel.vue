@@ -60,30 +60,50 @@ import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import api from '../../api'
 import { initChart, disposeChart } from '../../utils/chart'
 import type { EChartsOption } from 'echarts'
+import type { TableRow, ChartDataPoint } from '@/types/common'
+
+interface DetailItem {
+  material_code?: string
+  material_name?: string
+  risk_level?: string
+  risk_score?: number
+  suggestion?: string
+}
+
+interface PlanItem extends TableRow {
+  plan_id?: number | string
+  plan_name?: string
+  risk_level?: string
+  risk_score?: number
+  high_risk_count?: number
+  suggestion?: string
+  _detail_items?: DetailItem[]
+  _loading_detail?: boolean
+}
 
 const loading = ref(false)
-const planList = ref<any[]>([])
+const planList = ref<PlanItem[]>([])
 const pieChartRef = ref<HTMLElement>()
 
-function riskTagType(level: string): string {
+function riskTagType(level?: string): string {
   const map: Record<string, string> = {
     high: 'danger',
     medium: 'warning',
     low: 'success',
     critical: 'danger',
   }
-  return map[level?.toLowerCase()] || 'info'
+  return map[level?.toLowerCase() ?? ''] || 'info'
 }
 
 async function fetchData() {
   loading.value = true
   try {
     const res = await api.get('/api/v2/dashboard/mq-summary')
-    const data = res.data
-    const items = data?.items || data?.data || data?.records || []
-    planList.value = Array.isArray(items) ? items : Array.isArray(data) ? data : []
+    const data = res.data as Record<string, unknown>
+    const items = (data?.items || data?.data || data?.records || []) as PlanItem[]
+    planList.value = Array.isArray(items) ? items : Array.isArray(data) ? (data as unknown as PlanItem[]) : []
     // init detail cache
-    planList.value.forEach((p: any) => {
+    planList.value.forEach((p: PlanItem) => {
       p._detail_items = []
       p._loading_detail = false
     })
@@ -97,18 +117,18 @@ async function fetchData() {
 }
 
 // 饼图渲染
-function renderPieChart(data: any) {
+function renderPieChart(data: Record<string, unknown>) {
   if (!pieChartRef.value) return
-  const distribution = data?.distribution || data?.risk_distribution || []
+  const distribution = (data?.distribution || data?.risk_distribution || []) as ChartDataPoint[]
   const chartData = Array.isArray(distribution) && distribution.length > 0
-    ? distribution.map((d: any) => ({
-        name: d.name || d.risk_level || d.type,
-        value: d.value || d.count || 0,
+    ? distribution.map((d: ChartDataPoint) => ({
+        name: (d.name ?? d.risk_level ?? d.type ?? '') as string,
+        value: d.value ?? 0,
       }))
     : [
-        { name: '高风险', value: data?.high_count ?? data?.high_risk_count ?? 0 },
-        { name: '中风险', value: data?.medium_count ?? data?.medium_risk_count ?? 0 },
-        { name: '低风险', value: data?.low_count ?? data?.low_risk_count ?? 0 },
+        { name: '高风险', value: (data?.high_count as number) ?? (data?.high_risk_count as number) ?? 0 },
+        { name: '中风险', value: (data?.medium_count as number) ?? (data?.medium_risk_count as number) ?? 0 },
+        { name: '低风险', value: (data?.low_count as number) ?? (data?.low_risk_count as number) ?? 0 },
       ]
   const option: EChartsOption = {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
@@ -124,22 +144,22 @@ function renderPieChart(data: any) {
         label: { show: true, fontSize: 14, fontWeight: 'bold' },
         itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.2)' },
       },
-      data: chartData.filter((d: any) => d.value > 0),
+      data: chartData.filter((d: ChartDataPoint) => (d.value ?? 0) > 0),
     }],
   }
   initChart(pieChartRef.value, option)
 }
 
 // 展开行 -> 拉取详情
-async function onExpandChange(row: any, expandedRows: any[]) {
+async function onExpandChange(row: PlanItem, expandedRows: TableRow[]) {
   const expanded = expandedRows.includes(row)
   if (!expanded) return
   if (row._detail_items?.length > 0) return
   row._loading_detail = true
   try {
     const res = await api.get(`/api/v2/dashboard/mq-detail/${row.plan_id ?? row.id}`)
-    const data = res.data
-    row._detail_items = data?.items || data?.data || data?.details || data?.materials || []
+    const data = res.data as Record<string, unknown>
+    row._detail_items = (data?.items || data?.data || data?.details || data?.materials || []) as DetailItem[]
   } catch {
     row._detail_items = []
   } finally {

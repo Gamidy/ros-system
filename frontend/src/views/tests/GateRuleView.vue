@@ -176,9 +176,10 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../api'
+import type { TableRow } from '@/types/common'
 
-const rules = ref<any[]>([])
-const projects = ref<any[]>([])
+const rules = ref<TableRow[]>([])
+const projects = ref<TableRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const evaluating = ref(false)
@@ -186,12 +187,12 @@ const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
 const evalProject = ref<number | null>(null)
 const evalGate = ref('')
-const evalResult = ref<any>(null)
+const evalResult = ref<Record<string, unknown> | null>(null)
 
-const form = ref<any>({
+const form = ref<Record<string, unknown>>({
   name: '', product_line: '', customer: '', gate_code: '',
   all_pass: false, auto_block: false, priority: 0,
-  items: [] as any[]
+  items: [] as TableRow[]
 })
 
 const categoryMap: Record<string, string> = {
@@ -222,7 +223,7 @@ async function fetchProjects() {
   } catch { /* optional */ }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: TableRow) {
   if (row) {
     editingId.value = row.id
     form.value = {
@@ -233,7 +234,7 @@ function openDialog(row?: any) {
       all_pass: row.all_pass ?? false,
       auto_block: row.auto_block ?? false,
       priority: row.priority ?? 0,
-      items: (row.items || []).map((i: any) => ({
+      items: (row.items || []).map((i: TableRow) => ({
         required_vr_category: i.required_vr_category || '',
         required_prototype_type: i.required_prototype_type || '',
         is_required: i.is_required ?? true,
@@ -262,7 +263,7 @@ async function save() {
   } finally { saving.value = false }
 }
 
-async function removeRule(row: any) {
+async function removeRule(row: TableRow) {
   try {
     await ElMessageBox.confirm('确定删除此规则？', '确认', { type: 'warning' })
     await api.delete(`/gate-rules/${row.id}`)
@@ -271,7 +272,7 @@ async function removeRule(row: any) {
   } catch { /* cancelled */ }
 }
 
-async function toggleActive(row: any) {
+async function toggleActive(row: TableRow) {
   try {
     if (row.is_active) {
       await api.post(`/gate-rules/${row.id}/deactivate`)

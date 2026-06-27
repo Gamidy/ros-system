@@ -138,8 +138,9 @@
 import { ref, onMounted } from 'vue'
 import { listSafetyStandards, createSafetyStandard, updateSafetyStandard, deleteSafetyStandard, archiveSafetyStandard } from '../../api/safety'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 
-const standards = ref<any[]>([])
+const standards = ref<TableRow[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -153,7 +154,7 @@ const editingId = ref<number | null>(null)
 const saving = ref(false)
 const formRef = ref<FormInstance>()
 
-const form = ref<any>({
+const form = ref<Record<string, unknown>>({
   standard_code: '', standard_name_cn: '', standard_name_en: '', issuing_body: '',
   applicable_market: '', standard_type: 'safety', version: 'V1.0',
   publish_date: null, effective_date: null, abolish_date: null,
@@ -195,7 +196,7 @@ function showCreate() {
   dialogVisible.value = true
 }
 
-function showEdit(row: any) {
+function showEdit(row: TableRow) {
   isEdit.value = true
   editingId.value = row.id
   form.value = { ...row }
@@ -217,14 +218,14 @@ async function handleSave() {
   } catch { /* */ } finally { saving.value = false }
 }
 
-async function handleDelete(row: any) {
+async function handleDelete(row: TableRow) {
   try {
     await deleteSafetyStandard(row.id)
     fetchData()
   } catch { /* */ }
 }
 
-async function handleArchive(row: any) {
+async function handleArchive(row: TableRow) {
   try {
     await archiveSafetyStandard(row.id)
     fetchData()

@@ -175,6 +175,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { TableRow } from '@/types/common'
 import {
   getSheetDetail,
   getVarianceAnalysis,
@@ -213,7 +214,7 @@ const categoryMap: Record<string, string> = {
 const statusMap: Record<string, string> = { draft: '草稿', finalized: '已定稿' }
 const statusTypeMap: Record<string, string> = { draft: 'info', finalized: 'success' }
 const statusLabel = computed(() => statusMap[sheet.value.status as string] || sheet.value.status || '-')
-const statusType = computed(() => (statusTypeMap[sheet.value.status as string] || 'info') as any)
+const statusType = computed(() => statusTypeMap[sheet.value.status as string] || 'info')
 
 // ── 产品策划名称（从 product_plan_id 取） ──
 // 若 sheet 直接携带 product_plan_name 字段则直接使用，否则从 product_plan_id 推断
@@ -307,7 +308,7 @@ const totalCost = computed(() => {
 })
 
 // ── 差异分析指标卡片 ──
-function buildVarianceCards(data: any[]) {
+function buildVarianceCards(data: TableRow[]) {
   if (!Array.isArray(data) || data.length === 0) return []
   let totalTarget = 0
   let totalActual = 0

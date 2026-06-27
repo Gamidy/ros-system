@@ -90,6 +90,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
+import type { TableRow } from '@/types/common'
 import {
   listPeriods,
   createPeriod,
@@ -146,7 +147,7 @@ function statusLabel(status: string): string {
   return statusMap[status] || status || '-'
 }
 
-function statusType(status: string): any {
+function statusType(status: string): string {
   return statusTypeMap[status] || 'info'
 }
 
@@ -206,7 +207,7 @@ async function handleSave() {
 }
 
 // ── 关闭期间 ──
-async function handleClosePeriod(row: any) {
+async function handleClosePeriod(row: TableRow) {
   try {
     await ElMessageBox.confirm(
       `确定要关闭核算期间「${row.period_name}」吗？关闭后将无法进行该期间的核算操作。`,
@@ -227,7 +228,7 @@ async function handleClosePeriod(row: any) {
 }
 
 // ── 删除 ──
-async function handleDelete(row: any) {
+async function handleDelete(row: TableRow) {
   try {
     await ElMessageBox.confirm(
       `确定要删除核算期间「${row.period_name}」吗？此操作不可恢复。`,
