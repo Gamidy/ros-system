@@ -412,14 +412,52 @@ const techSpecVersion = ref(0)
 const teamVersion = ref(0)
 
 async function fetchInitiation() {
-try { const res = await planAPI.getPlanInitiation(planId); if (res.data) { Object.assign(initiationForm, res.data); initiationVersion.value = res.data.version_id ?? 0 } } catch (e: unknown) {
+try { const res = await planAPI.getPlanInitiation(planId); if (res.data) {
+  // 后端字段 → 前端字段映射
+  const data = res.data
+  initiationForm.background = data.background_basis || ''
+  initiationForm.type = data.product_type || ''
+  initiationForm.market = data.target_market || ''
+  initiationForm.refrigerant = data.refrigerant || ''
+  initiationForm.capacity = data.capacity_range || ''
+  initiationForm.voltage = data.voltage_freq || ''
+  initiationForm.series = data.series_name || ''
+  initiationForm.energy = data.energy_rating || ''
+  initiationForm.dev_category = data.dev_category || ''
+  initiationForm.origin = data.project_origin || ''
+  initiationForm.duration = data.project_duration || 0
+  initiationForm.ip = data.ip_ownership || ''
+  initiationForm.goals = data.overall_goal || ''
+  initiationForm.deliverables = data.deliverables || ''
+  initiationForm.sample_qty = data.sample_qty || 0
+  initiationVersion.value = data.version_id ?? 0
+} } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
 }
 async function saveInitiation() {
 savingInitiation.value = true
-try { const res = await planAPI.upsertPlanInitiation(planId, initiationForm); initiationVersion.value = res.data.version_id ?? 0; ElMessage.success('项目概述保存成功'); setSubTableDone('initiation', true) } catch (e: unknown) {
+try {
+  // 前端字段 → 后端字段映射（只发送有值的字段，避免覆盖已有数据）
+  const p = initiationForm
+  const payload: Record<string, any> = {}
+  if (p.background) payload.background_basis = p.background
+  if (p.type) payload.product_type = p.type
+  if (p.market) payload.target_market = p.market
+  if (p.refrigerant) payload.refrigerant = p.refrigerant
+  if (p.capacity) payload.capacity_range = p.capacity
+  if (p.voltage) payload.voltage_freq = p.voltage
+  if (p.series) payload.series_name = p.series
+  if (p.energy) payload.energy_rating = p.energy
+  if (p.dev_category) payload.dev_category = p.dev_category
+  if (p.origin) payload.project_origin = p.origin
+  if (p.duration) payload.project_duration = p.duration
+  if (p.ip) payload.ip_ownership = p.ip
+  if (p.goals) payload.overall_goal = p.goals
+  if (p.deliverables) payload.deliverables = p.deliverables
+  if (p.sample_qty) payload.sample_qty = p.sample_qty
+  const res = await planAPI.upsertPlanInitiation(planId, payload); initiationVersion.value = res.data.version_id ?? 0; ElMessage.success('项目概述保存成功'); setSubTableDone('initiation', true) } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
@@ -431,14 +469,30 @@ const marketForm = reactive({ main_capacity: '', energy_efficiency: '', cert_req
 const savingMarket = ref(false)
 
 async function fetchMarket() {
-try { const res = await planAPI.getPlanMarket(planId); if (res.data) { Object.assign(marketForm, res.data); marketVersion.value = res.data.version_id ?? 0 } } catch (e: unknown) {
+try { const res = await planAPI.getPlanMarket(planId); if (res.data) {
+  const data = res.data
+  marketForm.main_capacity = data.main_capacity || ''
+  marketForm.energy_efficiency = data.energy_efficiency_req || ''
+  marketForm.cert_requirements = data.cert_requirements || ''
+  marketForm.target_price = data.target_price || 0
+  marketForm.customer_requirements = data.customer_requirements || ''
+  marketVersion.value = data.version_id ?? 0
+} } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
 }
 async function saveMarket() {
 savingMarket.value = true
-try { const res = await planAPI.upsertPlanMarket(planId, marketForm); marketVersion.value = res.data.version_id ?? 0; ElMessage.success('市场与客户需求保存成功'); setSubTableDone('market', true) } catch (e: unknown) {
+try {
+  const p = marketForm
+  const payload: Record<string, any> = {}
+  if (p.main_capacity) payload.main_capacity = p.main_capacity
+  if (p.energy_efficiency) payload.energy_efficiency_req = p.energy_efficiency
+  if (p.cert_requirements) payload.cert_requirements = p.cert_requirements
+  if (p.target_price) payload.target_price = p.target_price
+  if (p.customer_requirements) payload.customer_requirements = p.customer_requirements
+  const res = await planAPI.upsertPlanMarket(planId, payload); marketVersion.value = res.data.version_id ?? 0; ElMessage.success('市场与客户需求保存成功'); setSubTableDone('market', true) } catch (e: unknown) {
 const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
 ElMessage.error(_err || '操作失败，请重试')
 }
