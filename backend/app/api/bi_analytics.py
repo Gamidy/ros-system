@@ -151,7 +151,7 @@ def bi_planning(
     if all_durations:
         all_durations.sort()
         n = len(all_durations)
-        def percentile(arr, p):
+        def percentile(arr: list[float], p: float) -> float:
             k = (p / 100.0) * (len(arr) - 1)
             f = int(k)
             c = k - f
