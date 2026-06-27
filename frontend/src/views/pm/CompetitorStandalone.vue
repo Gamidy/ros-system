@@ -19,6 +19,17 @@
         </el-select>
       </div>
       <div class="filter-item">
+        <label>品牌</label>
+        <el-select
+          v-model="selectedBrand"
+          placeholder="全部品牌"
+          clearable
+          @change="fetchData"
+        >
+          <el-option v-for="b in brandPresets" :key="b" :label="b" :value="b" />
+        </el-select>
+      </div>
+      <div class="filter-item">
         <label>冷量段</label>
         <el-select
           v-model="selectedCapacity"
@@ -548,10 +559,12 @@ interface VersionHistoryItem {
 const markets = ref<string[]>([])
 const marketOptions = ref<MarketOption[]>([])
 const capacities = ['9000BTU', '12000BTU', '18000BTU', '24000BTU']
-const energyRatings = ['3星', '4星', '5星']
+const energyRatings = ['3星', '4星', '5星', 'A+', 'A++', 'A+++']
 const productTypes = ['分体壁挂式', '分体柜式', '窗式', '移动式', '天花式']
+const brandPresets = ['AUX', 'TCL', 'Midea', 'Gree', 'Haier', 'Hisense', 'Chigo']
 
 const selectedMarket = ref('')
+const selectedBrand = ref('')
 const selectedCapacity = ref('')
 const selectedEnergyRating = ref('')
 const selectedProductType = ref('')
@@ -576,7 +589,7 @@ async function fetchMarkets() {
     MARKET_ENERGY_MAP.value = map
   } catch {
     // fallback 硬编码（API不可用时）
-    const fallback = ['越南','印度尼西亚','马来西亚','巴基斯坦','乌兹别克斯坦','吉尔吉斯斯坦','塔吉克斯坦','沙特','阿联酋','科威特','巴林','以色列','伊朗','伊拉克','美国','加拿大','墨西哥','哥伦比亚','巴西','阿根廷','俄罗斯','白俄罗斯','乌克兰','英国','阿塞拜疆','南非','阿尔及利亚','尼日利亚']
+    const fallback = ['越南','印度尼西亚','马来西亚','巴基斯坦','乌兹别克斯坦','吉尔吉斯斯坦','塔吉克斯坦','沙特','阿联酋','科威特','巴林','以色列','伊朗','伊拉克','美国','加拿大','墨西哥','哥伦比亚','巴西','阿根廷','俄罗斯','白俄罗斯','乌克兰','英国','阿塞拜疆','南非','阿尔及利亚','尼日利亚','意大利','欧盟']
     markets.value = fallback
   }
 }
@@ -733,6 +746,7 @@ async function fetchData() {
       page: 1,
       page_size: 200,
     }
+    if (selectedBrand.value) params.brand = selectedBrand.value
     if (selectedCapacity.value) params.capacity = selectedCapacity.value
     if (selectedEnergyRating.value) params.energy_rating = selectedEnergyRating.value
     if (selectedProductType.value) params.product_type = selectedProductType.value
@@ -794,6 +808,7 @@ async function checkCompleteness() {
 }
 
 function onMarketChange() {
+  selectedBrand.value = ''
   selectedCapacity.value = ''
   selectedEnergyRating.value = ''
   selectedProductType.value = ''
