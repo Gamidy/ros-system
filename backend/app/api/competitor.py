@@ -37,6 +37,7 @@ class CompetitorCreate(BaseModel):
     indoor_size_mm: Optional[str] = Field(None, max_length=60)
     outdoor_size_mm: Optional[str] = Field(None, max_length=60)
     factory_price: Optional[str] = Field(None, max_length=60)
+    unit_type: Optional[str] = Field(None, max_length=20)
     launch_year: Optional[int] = None
     notes: Optional[str] = None
     extra_fields: Optional[dict] = None
@@ -63,6 +64,7 @@ class CompetitorUpdate(BaseModel):
     indoor_size_mm: Optional[str] = Field(None, max_length=60)
     outdoor_size_mm: Optional[str] = Field(None, max_length=60)
     factory_price: Optional[str] = Field(None, max_length=60)
+    unit_type: Optional[str] = Field(None, max_length=20)
     launch_year: Optional[int] = None
     notes: Optional[str] = None
     extra_fields: Optional[dict] = None
@@ -177,6 +179,7 @@ BASE_PARAM_NAMES = [
     {"key": "indoor_size_mm",     "label": "内机尺寸",       "unit": "mm"},
     {"key": "outdoor_size_mm",    "label": "外机尺寸",       "unit": "mm"},
     {"key": "factory_price",      "label": "出厂价",         "unit": ""},
+    {"key": "unit_type",          "label": "单冷/冷暖",      "unit": ""},
     {"key": "launch_year",        "label": "上市年份",       "unit": ""},
     {"key": "energy_rating",      "label": "能效等级",       "unit": ""},
 ]
@@ -280,6 +283,7 @@ def _serialize(item: CompetitorModel) -> dict:
         "indoor_size_mm": item.indoor_size_mm,
         "outdoor_size_mm": item.outdoor_size_mm,
         "factory_price": item.factory_price,
+        "unit_type": item.unit_type,
         "launch_year": item.launch_year,
         "notes": item.notes,
         "extra_fields": extra,
@@ -305,6 +309,7 @@ TRACKED_FIELDS = [
     "cooling_w", "heating_w", "eer", "cspf",
     "noise_indoor_db", "noise_outdoor_db", "airflow_m3h",
     "indoor_size_mm", "outdoor_size_mm", "factory_price",
+    "unit_type",
     "launch_year", "notes", "extra_fields", "image_urls",
 ]
 
@@ -337,6 +342,7 @@ def _build_snapshot_data(item: CompetitorModel) -> dict:
         "indoor_size_mm": item.indoor_size_mm,
         "outdoor_size_mm": item.outdoor_size_mm,
         "factory_price": item.factory_price,
+        "unit_type": item.unit_type,
         "launch_year": item.launch_year,
         "notes": item.notes,
         "extra_fields": extra,
@@ -547,6 +553,7 @@ def list_competitors(
     capacity: Optional[str] = Query(None, alias="capacity", description="冷量段过滤"),
     energy_rating: Optional[str] = Query(None, description="能效等级过滤"),
     product_type: Optional[str] = Query(None, description="产品类型过滤"),
+    unit_type: Optional[str] = Query(None, description="单冷/冷暖过滤"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=200, description="每页条数"),
     db: Session = Depends(get_db),
@@ -564,6 +571,8 @@ def list_competitors(
         q = q.filter(CompetitorModel.energy_rating == energy_rating)
     if product_type:
         q = q.filter(CompetitorModel.product_type == product_type)
+    if unit_type:
+        q = q.filter(CompetitorModel.unit_type == unit_type)
 
     total = q.count()
     items = q.order_by(CompetitorModel.id.desc()).offset((page - 1) * page_size).limit(page_size).all()

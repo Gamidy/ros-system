@@ -62,6 +62,18 @@
           <el-option v-for="t in productTypes" :key="t" :label="t" :value="t" />
         </el-select>
       </div>
+      <div class="filter-item">
+        <label>单冷/冷暖</label>
+        <el-select
+          v-model="selectedUnitType"
+          placeholder="全部"
+          clearable
+          @change="fetchData"
+        >
+          <el-option label="单冷" value="单冷" />
+          <el-option label="冷暖" value="冷暖" />
+        </el-select>
+      </div>
       <div class="filter-actions">
         <el-button type="primary" @click="openAddDialog" :icon="Plus">
           新增竞品
@@ -219,21 +231,29 @@
           </el-col>
         </el-row>
         <el-row :gutter="16">
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="目标市场" prop="market">
               <el-select v-model="form.market" placeholder="选择市场" style="width:100%">
                 <el-option v-for="m in markets" :key="m" :label="m" :value="m" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="产品类型" prop="product_type">
               <el-select v-model="form.product_type" placeholder="选择类型" style="width:100%">
                 <el-option v-for="t in productTypes" :key="t" :label="t" :value="t" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
+            <el-form-item label="单冷/冷暖" prop="unit_type">
+              <el-select v-model="form.unit_type" placeholder="选择" style="width:100%">
+                <el-option label="单冷" value="单冷" />
+                <el-option label="冷暖" value="冷暖" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
             <el-form-item label="冷量段" prop="cooling_capacity">
               <el-select v-model="form.cooling_capacity" placeholder="选择冷量" style="width:100%">
                 <el-option v-for="c in capacities" :key="c" :label="c" :value="c" />
@@ -589,6 +609,7 @@ interface CompetitorFormData {
   airflow_m3h: number | null
   indoor_size_mm: string
   outdoor_size_mm: string
+  unit_type: string
   launch_year: number | null
   notes: string
   extraFields: Record<string, number | string | null>
@@ -628,6 +649,7 @@ const selectedBrand = ref('')
 const selectedCapacity = ref('')
 const selectedEnergyRating = ref('')
 const selectedProductType = ref('')
+const selectedUnitType = ref('')
 
 const route = useRoute()
 
@@ -671,6 +693,7 @@ const BASE_PARAMS = [
   { key: 'airflow_m3h', label: '循环风量', unit: 'm³/h' },
   { key: 'indoor_size_mm', label: '内机尺寸', unit: 'mm' },
   { key: 'outdoor_size_mm', label: '外机尺寸', unit: 'mm' },
+  { key: 'unit_type', label: '单冷/冷暖', unit: '' },
   { key: 'launch_year', label: '上市年份', unit: '' },
   { key: 'energy_rating', label: '能效等级', unit: '' },
 ]
@@ -893,6 +916,7 @@ async function fetchData() {
     if (selectedCapacity.value) params.capacity = selectedCapacity.value
     if (selectedEnergyRating.value) params.energy_rating = selectedEnergyRating.value
     if (selectedProductType.value) params.product_type = selectedProductType.value
+    if (selectedUnitType.value) params.unit_type = selectedUnitType.value
 
     const res = await api.get('/pm/competitors', { params })
     allItems.value = res.data.items || []
@@ -957,6 +981,7 @@ function onMarketChange() {
   selectedCapacity.value = ''
   selectedEnergyRating.value = ''
   selectedProductType.value = ''
+  selectedUnitType.value = ''
   fetchData()
 }
 
@@ -1008,6 +1033,7 @@ const defaultForm = () => ({
   indoor_size_mm: '',
   outdoor_size_mm: '',
 
+  unit_type: '',
   launch_year: null as number | null,
   notes: '',
   extraFields: {} as Record<string, number | string | null>,
@@ -1069,6 +1095,7 @@ const FIELD_LABEL_MAP: Record<string, string> = {
   airflow_m3h: '循环风量(m³/h)',
   indoor_size_mm: '内机尺寸(mm)',
   outdoor_size_mm: '外机尺寸(mm)',
+  unit_type: '单冷/冷暖',
   launch_year: '上市年份',
   notes: '备注',
 }
@@ -1156,6 +1183,7 @@ function openEditDialog(item: CompetitorItem) {
     airflow_m3h: item.airflow_m3h ?? null,
     indoor_size_mm: item.indoor_size_mm || '',
     outdoor_size_mm: item.outdoor_size_mm || '',
+    unit_type: item.unit_type || '',
 
     launch_year: item.launch_year ?? null,
     notes: item.notes || '',
@@ -1182,7 +1210,7 @@ async function handleSave() {
       'cooling_capacity_w', 'heating_capacity_w', 'energy_rating',
       'cooling_w', 'heating_w', 'eer', 'cspf',
       'noise_indoor_db', 'noise_outdoor_db', 'airflow_m3h',
-      'indoor_size_mm', 'outdoor_size_mm',
+      'indoor_size_mm', 'outdoor_size_mm', 'unit_type',
       'launch_year', 'notes',
     ]
     for (const f of fields) {

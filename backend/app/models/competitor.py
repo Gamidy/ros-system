@@ -33,6 +33,7 @@ class CompetitorModel(Base):
     indoor_size_mm = Column(String(60), nullable=True, comment="内机尺寸(mm)")
     outdoor_size_mm = Column(String(60), nullable=True, comment="外机尺寸(mm)")
     factory_price = Column(String(60), nullable=True, comment="出厂价")
+    unit_type = Column(String(20), nullable=True, comment="单冷/冷暖（cooling_only/heat_pump）")
     launch_year = Column(Integer, nullable=True, comment="上市年份")
     notes = Column(Text, nullable=True, comment="备注")
     source = Column(String(32), nullable=False, default="manual",
