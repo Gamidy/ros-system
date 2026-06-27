@@ -1,9 +1,11 @@
 """驾驶舱仪表盘 API — 多层聚合 + 预警管理"""
 from datetime import date, datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, Any
+import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -11,9 +13,11 @@ from app.core.security import get_current_user, require_menu, require_role
 from app.models.product import Product, Platform, Version
 from app.models.project import Project, ProjectGate
 from app.models.bom import Part
-from app.models.test import TestRequest, TestResult, Certification, QualityIssue
+from app.models.test import TestResult, QualityIssue
 from app.models.alert import Alert, AlertRule
 from app.models.approval import ApprovalRequest  # unified approval engine
+from app.models.product_plan import ProductPlan, ProductPlanStage
+from app.models.cost_accounting import CostAccountingSheet, SheetStatus
 from app.schemas import (
     DashboardSummary,
     DashboardResponse,
@@ -24,7 +28,12 @@ from app.schemas import (
     AlertOut,
     AlertRuleCreate,
     AlertRuleOut,
+    AlertItem,
+    AlertsSummaryResponse,
+    KpiDetailItem,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard", tags=["驾驶舱"])
 
@@ -290,6 +299,143 @@ def dashboard_summary(db: Session = Depends(get_db), _=Depends(require_menu("das
     )
 
 
+# ═══════════════ KPI卡片明细数据钻取 [D3-2] ═══════════════
+
+@router.get("/kpi-detail")
+def get_kpi_detail(
+    type: str = Query(..., description="KPI类型: in_progress / pending / completed / overdue"),
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    """返回KPI卡片对应的明细数据，用于右侧抽屉表格展示"""
+    today = date.today()
+
+    if type == "in_progress":
+        # 进行中策划: status in draft~project_init
+        in_progress_stages = [
+            ProductPlanStage.DRAFT,
+            ProductPlanStage.COMPETITOR,
+            ProductPlanStage.DEFINITION,
+            ProductPlanStage.COSTING,
+            ProductPlanStage.TECH_INPUT,
+            ProductPlanStage.PROJECT_INIT,
+        ]
+        plans = (
+            db.query(ProductPlan)
+            .filter(ProductPlan.status.in_(in_progress_stages))
+            .order_by(ProductPlan.updated_at.desc())
+            .limit(200)
+            .all()
+        )
+        return [
+            {
+                "id": p.id,
+                "name": p.name,
+                "market": p.market,
+                "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                "series": p.series,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+                "type": "plan",
+            }
+            for p in plans
+        ]
+
+    elif type == "pending":
+        # 待审批: ApprovalRequest (proposal type)
+        approvals = (
+            db.query(ApprovalRequest)
+            .filter(
+                ApprovalRequest.status == "pending",
+                ApprovalRequest.request_type == "proposal",
+            )
+            .order_by(ApprovalRequest.created_at.desc())
+            .limit(200)
+            .all()
+        )
+        result = []
+        for a in approvals:
+            name = f"审批#{a.id}"
+            if a.request_data:
+                try:
+                    data = json.loads(a.request_data) if isinstance(a.request_data, str) else a.request_data
+                    name = data.get("title") or data.get("name") or name
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            result.append({
+                "id": a.id,
+                "name": name,
+                "market": None,
+                "status": a.status,
+                "series": None,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "updated_at": None,
+                "type": "approval",
+            })
+        return result
+
+    elif type == "completed":
+        # 本月完成的策划
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        plans = (
+            db.query(ProductPlan)
+            .filter(
+                ProductPlan.status == ProductPlanStage.RELEASED,
+                ProductPlan.updated_at >= month_start,
+            )
+            .order_by(ProductPlan.updated_at.desc())
+            .limit(200)
+            .all()
+        )
+        return [
+            {
+                "id": p.id,
+                "name": p.name,
+                "market": p.market,
+                "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+                "series": p.series,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+                "type": "plan",
+            }
+            for p in plans
+        ]
+
+    elif type == "overdue":
+        # 超期项目
+        projects = (
+            db.query(Project)
+            .filter(
+                Project.is_deleted == False,
+                Project.target_end_date.isnot(None),
+                Project.target_end_date < today,
+                Project.status != "completed",
+            )
+            .order_by(Project.target_end_date)
+            .limit(200)
+            .all()
+        )
+        return [
+            {
+                "id": p.id,
+                "name": p.name,
+                "market": None,
+                "status": p.status,
+                "series": None,
+                "code": p.code,
+                "target_end_date": p.target_end_date.isoformat() if p.target_end_date else None,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+                "type": "project",
+            }
+            for p in projects
+        ]
+
+    else:
+        raise HTTPException(status_code=400, detail=f"未知的KPI类型: {type}")
+
+
 # ═══════════════ 预警管理 ═══════════════
 
 @router.get("/alerts", response_model=list[AlertOut])
@@ -384,3 +530,152 @@ def get_dashboard_trends(
         d = (dt_date.today() - timedelta(days=i)).isoformat()
         result.append({"date": d, "value": data_map.get(d, 0)})
     return result
+
+
+# ═══════════════ D3-3: 仪表盘预警摘要 ═══════════════
+
+TERMINAL_STAGES = {ProductPlanStage.APPROVED, ProductPlanStage.RELEASED}
+OVERDUE_DAYS = 30          # 逾期阈值：超过30天未完成
+STUCK_DAYS = 7              # 滞留阈值：同一阶段停留超过7天
+COST_OVERRUN_RATIO = 1.1    # 成本超标阈值：实际 > 目标 * 1.1
+
+
+@router.get("/alerts-summary", response_model=AlertsSummaryResponse)
+def get_alerts_summary(
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("dashboard")),
+) -> AlertsSummaryResponse:
+    """预警摘要 — 扫描 product_plans 表检测逾期/滞留/超标"""
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    alerts: list[AlertItem] = []
+
+    # ── 1. 全部未终态策划（非 approved / released）──
+    active_plans = (
+        db.query(
+            ProductPlan.id,
+            ProductPlan.name,
+            ProductPlan.status,
+            ProductPlan.created_at,
+            ProductPlan.updated_at,
+        )
+        .filter(~ProductPlan.status.in_(TERMINAL_STAGES))
+        .all()
+    )
+
+    plan_ids = [r.id for r in active_plans]
+    sheet_map: dict[str, tuple[float, float]] = {}
+    if plan_ids:
+        sheet_rows = (
+            db.query(
+                CostAccountingSheet.product_plan_id,
+                CostAccountingSheet.total_cost_actual,
+                CostAccountingSheet.total_cost_target,
+            )
+            .filter(
+                CostAccountingSheet.product_plan_id.in_(plan_ids),
+                CostAccountingSheet.status == SheetStatus.FINALIZED,
+            )
+            .all()
+        )
+        for r in sheet_rows:
+            if r.product_plan_id not in sheet_map:
+                sheet_map[r.product_plan_id] = (r.total_cost_actual or 0, r.total_cost_target or 0)
+
+    for row in active_plans:
+        plan_id: str = row.id
+        plan_name: str = row.name
+        status_val: str = row.status.value if hasattr(row.status, 'value') else str(row.status)
+        created_at: datetime = row.created_at or now
+        updated_at: datetime = row.updated_at or created_at
+
+        days_since_created = (today - created_at.date()).days
+        days_since_updated = (today - updated_at.date()).days
+
+        # ── 逾期检测：创建超过 OVERDUE_DAYS 天且未完成 ──
+        if days_since_created >= OVERDUE_DAYS:
+            alerts.append(AlertItem(
+                type="overdue",
+                plan_id=plan_id,
+                plan_name=plan_name,
+                message=f"策划创建 {days_since_created} 天仍在「{status_val}」阶段，请尽快推进",
+                severity=3,
+                status=status_val,
+                created_at=created_at,
+            ))
+
+        # ── 滞留检测：同一阶段停留超过 STUCK_DAYS 天 ──
+        if days_since_updated >= STUCK_DAYS:
+            is_already_overdue = any(
+                a.plan_id == plan_id and a.type == "overdue" for a in alerts
+            )
+            if not is_already_overdue:
+                alerts.append(AlertItem(
+                    type="stuck",
+                    plan_id=plan_id,
+                    plan_name=plan_name,
+                    message=f"在「{status_val}」阶段停留 {days_since_updated} 天，请关注推动",
+                    severity=1,
+                    status=status_val,
+                    created_at=created_at,
+                ))
+
+    # ── 2. 成本超标检测 ──
+    cost_overrun_rows = (
+        db.query(
+            CostAccountingSheet.product_plan_id,
+            CostAccountingSheet.total_cost_actual,
+            CostAccountingSheet.total_cost_target,
+            CostAccountingSheet.variance_pct,
+            ProductPlan.name,
+            ProductPlan.status,
+            ProductPlan.created_at,
+        )
+        .join(ProductPlan, ProductPlan.id == CostAccountingSheet.product_plan_id)
+        .filter(
+            CostAccountingSheet.status == SheetStatus.FINALIZED,
+            CostAccountingSheet.total_cost_target > 0,
+            CostAccountingSheet.total_cost_actual > CostAccountingSheet.total_cost_target * COST_OVERRUN_RATIO,
+        )
+        .all()
+    )
+
+    for row in cost_overrun_rows:
+        plan_id: str = row.product_plan_id
+        plan_name: str = row.name or "(未命名)"
+        actual = row.total_cost_actual or 0
+        target = row.total_cost_target or 0
+        variance_pct = row.variance_pct or 0
+        status_val: str = row.status.value if hasattr(row.status, 'value') else str(row.status)
+
+        alerts.append(AlertItem(
+            type="cost_overrun",
+            plan_id=plan_id,
+            plan_name=plan_name,
+            message=f"成本超支 {variance_pct:.1f}%（实际 ¥{actual:,.0f} / 目标 ¥{target:,.0f}）",
+            severity=2,
+            status=status_val,
+            created_at=row.created_at,
+        ))
+
+    # ── 3. 去重 + 排序 ──
+    seen: set[tuple[str, str]] = set()
+    deduped: list[AlertItem] = []
+    for a in alerts:
+        key = (a.plan_id, a.type)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(a)
+
+    deduped.sort(key=lambda a: (-a.severity, a.plan_name or ""))
+
+    overdue_count = sum(1 for a in deduped if a.type == "overdue")
+    stuck_count = sum(1 for a in deduped if a.type == "stuck")
+    cost_overrun_count = sum(1 for a in deduped if a.type == "cost_overrun")
+
+    return AlertsSummaryResponse(
+        overdue_count=overdue_count,
+        stuck_count=stuck_count,
+        cost_overrun_count=cost_overrun_count,
+        alerts=deduped,
+    )

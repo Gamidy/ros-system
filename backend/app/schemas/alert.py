@@ -49,8 +49,7 @@ class AlertOut(BaseModel):
     resolved_at: Optional[datetime] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ═══════════════ 通知 ═══════════════
@@ -65,7 +64,12 @@ class NotificationOut(BaseModel):
     is_sent: bool = False
     is_read: bool = False
     sent_at: Optional[datetime] = None
+    read_at: Optional[datetime] = None
     created_at: datetime
+    # 跨渠道已读状态（按渠道）
+    cross_channel_read: Optional[dict[str, Optional[datetime]]] = Field(
+        None,
+        description="各渠道已读时间，如 {\"websocket\": \"2024-01-01T00:00:00Z\", \"email\": null}",
+    )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

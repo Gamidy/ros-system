@@ -179,6 +179,13 @@ from .alert import (
     NotificationOut,
 )
 
+# ═══════════════ 通知已读/未读跨渠道同步 ═══════════════
+from .notification_read import (
+    NotificationReadRequest,
+    NotificationReadOut,
+    NotificationReadStatusOut,
+)
+
 # ═══════════════ 驾驶舱仪表盘 ═══════════════
 from .dashboard import (
     DashboardSummary,
@@ -187,6 +194,9 @@ from .dashboard import (
     Layer2ProjectOps,
     Layer4ACMetrics,
     DashboardResponse,
+    KpiDetailItem,
+    AlertItem,
+    AlertsSummaryResponse,
 )
 
 # ═══════════════ 采购管理 ═══════════════

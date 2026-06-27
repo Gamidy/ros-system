@@ -1,5 +1,6 @@
 """预警/通知管理 API"""
 from datetime import datetime, timezone, date
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from app.models.user import User
 from app.models.alert import Notification, Alert, AlertRule
 from app.models.project import Project
 from app.models.test import TestRequest, Certification
+from app.models.notification_read import NotificationReadStatus, CHANNEL_TYPES
 from app.schemas import NotificationOut, AlertOut, AlertRuleOut
 from app.services.events import bus, EventTypes
 
@@ -18,14 +20,66 @@ router = APIRouter(prefix="", tags=["预警/通知管理"])
 
 # ═══════════════ 通知管理 ═══════════════
 
+
+def _enrich_notification_with_read_status(
+    notif: Notification,
+    current_username: str,
+    db: Session,
+) -> dict:
+    """为单条通知附加跨渠道已读状态
+
+    查询 NotificationReadStatus 表，获取当前用户在所有渠道上的已读标记。
+    """
+    notif_dict = {
+        "id": notif.id,
+        "alert_id": notif.alert_id,
+        "target_user": notif.target_user,
+        "channel": notif.channel,
+        "title": notif.title,
+        "content": notif.content,
+        "is_sent": notif.is_sent,
+        "is_read": notif.is_read,
+        "sent_at": notif.sent_at,
+        "read_at": notif.read_at,
+        "created_at": notif.created_at,
+        "cross_channel_read": None,
+    }
+
+    # 查询跨渠道已读状态
+    read_statuses = (
+        db.query(NotificationReadStatus)
+        .filter(
+            NotificationReadStatus.notification_id == str(notif.id),
+            NotificationReadStatus.user_id == current_username,
+        )
+        .all()
+    )
+
+    if read_statuses:
+        cross_channel: dict[str, Optional[datetime]] = {}
+        for ct in CHANNEL_TYPES:
+            cross_channel[ct] = None
+        for rs in read_statuses:
+            cross_channel[rs.channel_type] = rs.read_at
+        notif_dict["cross_channel_read"] = cross_channel
+
+    return notif_dict
+
+
 @router.get("/notifications", response_model=list[NotificationOut])
 def list_notifications(
     target_user: str = Query("", description="目标用户"),
-    is_read: bool = Query(None, description="是否已读"),
+    is_read: Optional[bool] = Query(None, description="是否已读"),
     channel: str = Query("", description="通知渠道"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     _=Depends(require_menu("alerts")),
-) -> list[NotificationOut]:
+) -> list[dict]:
+    """获取通知列表，含跨渠道已读状态
+
+    返回每个通知在各渠道（websocket/wecom/dingtalk/email）上的已读状态。
+    如果当前用户通过任一渠道已读该通知，cross_channel_read 会包含该渠道的读时间。
+    """
     q = db.query(Notification)
     if target_user:
         q = q.filter(Notification.target_user == target_user)
@@ -33,7 +87,13 @@ def list_notifications(
         q = q.filter(Notification.is_read == is_read)
     if channel:
         q = q.filter(Notification.channel == channel)
-    return q.order_by(Notification.created_at.desc()).limit(200).all()
+    notifications = q.order_by(Notification.created_at.desc()).limit(200).all()
+
+    current_username = str(current_user.username)
+    return [
+        _enrich_notification_with_read_status(n, current_username, db)
+        for n in notifications
+    ]
 
 
 @router.patch("/notifications/{nid}/read")

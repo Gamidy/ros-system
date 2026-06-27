@@ -44,6 +44,7 @@ from app.models.notification_channel import NotificationChannel
 from app.models.notification_log import NotificationLog
 from app.models.user_notification_pref import UserNotificationPref
 from app.models.notification_grouping import NotificationCategory, NotificationDoNotDisturb
+from app.models.notification_read import NotificationReadStatus
 from app.models.ecr_eco import ECRAttachment, ECRRequest, ECO, ECOItem
 from app.models.safety import (
     SafetyStandard, SafetyInspectionItem,
@@ -118,7 +119,7 @@ __all__ = [
     "UserNotificationPref",
     "NotificationCategory",
     "NotificationDoNotDisturb",
-    "ECRAttachment",
+    "NotificationReadStatus",
     "ECRRequest",
     "ECO",
     "ECOItem",

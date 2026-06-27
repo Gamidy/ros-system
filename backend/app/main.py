@@ -29,6 +29,7 @@ from app.api import review_templates
 from app.api import plan_templates
 from app.api import notification_test_api
 from app.api import notification_grouping_api
+from app.api import notification_read_api
 from app.api import competitor_import_export
 from app.api import ws
 from app.models import system_config  # ensure table created
@@ -206,6 +207,9 @@ app.include_router(notification_test_api.router)
 
 # ── D6-3 通知分组 & 免打扰 ──
 app.include_router(notification_grouping_api.router)
+
+# ── D6-4 通知已读/未读跨渠道同步 ──
+app.include_router(notification_read_api.router)
 
 # ── D2-1 策划模板 ──
 app.include_router(plan_templates.router, prefix="/api")

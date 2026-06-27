@@ -11,6 +11,41 @@
           <el-icon :size="18"><Refresh /></el-icon>
           <span>刷新</span>
         </button>
+
+        <!-- ══════ D3-3: 预警Badge ══════ -->
+        <div class="alert-badges" v-if="alertsSummary.total > 0">
+          <el-badge :value="alertsSummary.overdue" :hidden="alertsSummary.overdue === 0" class="alert-badge-item" type="danger">
+            <el-button size="small" class="alert-badge-btn alert-btn-danger" @click="showAlertDrawer = true">
+              <el-icon :size="14"><WarningFilled /></el-icon>
+              <span>逾期</span>
+            </el-button>
+          </el-badge>
+          <el-badge :value="alertsSummary.cost_overrun" :hidden="alertsSummary.cost_overrun === 0" class="alert-badge-item" type="warning">
+            <el-button size="small" class="alert-badge-btn alert-btn-warning" @click="showAlertDrawer = true">
+              <el-icon :size="14"><Coin /></el-icon>
+              <span>超标</span>
+            </el-button>
+          </el-badge>
+          <el-badge :value="alertsSummary.stuck" :hidden="alertsSummary.stuck === 0" class="alert-badge-item" type="warning">
+            <el-button size="small" class="alert-badge-btn alert-btn-warning" @click="showAlertDrawer = true">
+              <el-icon :size="14"><Time /></el-icon>
+              <span>滞留</span>
+            </el-button>
+          </el-badge>
+        </div>
+        <div class="alert-badges" v-else-if="alertsLoading">
+          <el-button size="small" class="alert-badge-btn" disabled>
+            <el-icon :size="14"><Loading /></el-icon>
+            <span>检测中...</span>
+          </el-button>
+        </div>
+        <div class="alert-badges" v-else>
+          <el-button size="small" class="alert-badge-btn alert-btn-safe" @click="showAlertDrawer = true">
+            <el-icon :size="14"><CircleCheck /></el-icon>
+            <span>无异常</span>
+          </el-button>
+        </div>
+
         <el-button type="primary" size="large" @click="goToNewPlan">
           <el-icon class="btn-icon"><Plus /></el-icon>
           新建产品策划
@@ -29,7 +64,7 @@
       </div>
 
       <div class="stats-grid">
-        <div class="stat-card" @click="router.push('/product-plans')">
+        <div class="stat-card" @click="openKpiDrawer('in_progress')">
           <div class="stat-icon" style="background: #409eff12; color: #409eff;">
             <el-icon :size="22"><Folder /></el-icon>
           </div>
@@ -41,7 +76,7 @@
             <el-icon :size="14"><ArrowRight /></el-icon>
           </div>
         </div>
-        <div class="stat-card" @click="router.push('/product-plans')">
+        <div class="stat-card" @click="openKpiDrawer('in_progress')">
           <div class="stat-icon" style="background: #e6a23c12; color: #e6a23c;">
             <el-icon :size="22"><Coin /></el-icon>
           </div>
@@ -57,7 +92,7 @@
             <el-icon :size="14"><ArrowRight /></el-icon>
           </div>
         </div>
-        <div class="stat-card" @click="router.push('/approvals/proposals')">
+        <div class="stat-card" @click="openKpiDrawer('pending')">
           <div class="stat-icon" style="background: #67c23a12; color: #67c23a;">
             <el-icon :size="22"><Clock /></el-icon>
           </div>
@@ -69,7 +104,7 @@
             <el-icon :size="14"><ArrowRight /></el-icon>
           </div>
         </div>
-        <div class="stat-card" @click="router.push('/product-plans')">
+        <div class="stat-card" @click="openKpiDrawer('completed')">
           <div class="stat-icon" style="background: #90939912; color: #909399;">
             <el-icon :size="22"><CircleCheck /></el-icon>
           </div>
@@ -445,6 +480,225 @@
         </div>
       </div>
     </section>
+
+    <!-- ═══════════ D3-3: 预警列表抽屉 ═══════════ -->
+    <el-drawer
+      v-model="showAlertDrawer"
+      title="预警与异常一览"
+      direction="rtl"
+      size="420px"
+      :close-on-press-escape="true"
+      :close-on-click-modal="true"
+    >
+      <template #title>
+        <div class="alert-drawer-title">
+          <el-icon :size="20" color="#e6a23c"><WarningFilled /></el-icon>
+          <span>预警与异常一览</span>
+          <el-tag type="danger" size="small" v-if="alertsSummary.total > 0">
+            {{ alertsSummary.total }} 条
+          </el-tag>
+        </div>
+      </template>
+
+      <div v-if="alertsLoading" class="alert-drawer-loading">
+        <el-icon :size="32" class="is-loading"><Loading /></el-icon>
+        <p>正在检测异常...</p>
+      </div>
+
+      <div v-else-if="alertList.length === 0" class="alert-drawer-empty">
+        <el-icon :size="48" color="#67c23a"><CircleCheckFilled /></el-icon>
+        <p>暂无预警，所有策划运行正常</p>
+      </div>
+
+      <div v-else class="alert-drawer-list">
+        <div class="alert-summary-counts">
+          <div class="alert-count-item">
+            <span class="alert-count-dot danger"></span>
+            <span>逾期</span>
+            <strong>{{ alertsSummary.overdue }}</strong>
+          </div>
+          <div class="alert-count-item">
+            <span class="alert-count-dot warning"></span>
+            <span>超标</span>
+            <strong>{{ alertsSummary.cost_overrun }}</strong>
+          </div>
+          <div class="alert-count-item">
+            <span class="alert-count-dot warning-light"></span>
+            <span>滞留</span>
+            <strong>{{ alertsSummary.stuck }}</strong>
+          </div>
+        </div>
+
+        <div
+          v-for="(alert, idx) in alertList"
+          :key="`${alert.type}-${alert.plan_id}-${idx}`"
+          class="alert-card"
+          :class="`alert-card--${alert.type}`"
+          @click="goToAlertPlan(alert)"
+        >
+          <div class="alert-card-left">
+            <el-tag
+              :type="alertTagType(alert.type)"
+              size="small"
+              effect="dark"
+              class="alert-tag"
+            >
+              {{ alertLabel(alert.type) }}
+            </el-tag>
+            <div class="alert-card-name">{{ alert.plan_name }}</div>
+            <div class="alert-card-message">{{ alert.message }}</div>
+            <div class="alert-card-meta" v-if="alert.status">
+              <span class="alert-stage-tag">{{ alert.status }}</span>
+              <span v-if="alert.created_at" class="alert-time">{{ formatTime(alert.created_at) }}</span>
+            </div>
+          </div>
+          <div class="alert-card-right">
+            <el-icon :size="16"><ArrowRight /></el-icon>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
+
+    <!-- ═══════════════ KPI明细钻取抽屉 [D3-2] ═══════════════ -->
+    <el-drawer
+      v-model="kpiDrawerVisible"
+      :title="kpiDrawerTitle"
+      direction="rtl"
+      size="650px"
+      :close-on-press-escape="true"
+      :close-on-click-modal="false"
+      @close="kpiDrawerVisible = false"
+    >
+      <template #header="{ close }">
+        <div class="kpi-drawer-header">
+          <el-button class="kpi-drawer-close-btn" text @click="close">
+            <el-icon :size="18"><ArrowLeft /></el-icon>
+          </el-button>
+          <span class="kpi-drawer-title">{{ kpiDrawerTitle }}</span>
+        </div>
+      </template>
+
+      <div class="kpi-drawer-body">
+        <div v-if="kpiDrawerLoading" class="kpi-drawer-loading">
+          <el-icon class="is-loading" :size="24"><Loading /></el-icon>
+          <span>加载中...</span>
+        </div>
+
+        <template v-else>
+          <!-- 空状态 -->
+          <div v-if="kpiDrawerData.length === 0" class="kpi-drawer-empty">
+            <el-icon :size="48" color="var(--c-text-tertiary)"><InfoFilled /></el-icon>
+            <p class="empty-title">暂无数据</p>
+          </div>
+
+          <!-- 数据表格 -->
+          <el-table
+            v-else
+            :data="kpiDrawerData"
+            stripe
+            highlight-current-row
+            @row-click="onKpiRowClick"
+            empty-text="暂无数据"
+            style="width: 100%"
+          >
+            <el-table-column prop="name" label="名称" min-width="160" show-overflow-tooltip sortable="custom" />
+            <el-table-column prop="market" label="市场" width="100" sortable="custom">
+              <template #default="{ row }">
+                <span>{{ row.market || '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" sortable="custom">
+              <template #default="{ row }">
+                <el-tag v-if="row.type === 'plan'" :type="stageTagType(row.status)" size="small" effect="plain">
+                  {{ stageLabel(row.status) }}
+                </el-tag>
+                <el-tag v-else-if="row.type === 'project'" :type="statusType(row.status)" size="small" effect="plain">
+                  {{ statusLabel(row.status) }}
+                </el-tag>
+                <el-tag v-else type="info" size="small" effect="plain">
+                  {{ row.status }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="创建时间" width="110" sortable="custom">
+              <template #default="{ row }">
+                <span class="kpi-cell-date">{{ formatDate(row.created_at) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" link size="small" @click.stop="viewKpiDetail(row)">
+                  查看
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </div>
+    </el-drawer>
+
+    <!-- ═══════════════ 二次下钻：策划摘要抽屉 ═══════════════ -->
+    <el-drawer
+      v-model="summaryDrawerVisible"
+      :title="summaryDrawerTitle"
+      direction="rtl"
+      size="500px"
+      @close="summaryDrawerVisible = false"
+    >
+      <template #header="{ close }">
+        <div class="kpi-drawer-header">
+          <el-button class="kpi-drawer-close-btn" text @click="close">
+            <el-icon :size="18"><ArrowLeft /></el-icon>
+          </el-button>
+          <span class="kpi-drawer-title">{{ summaryDrawerTitle }}</span>
+        </div>
+      </template>
+
+      <div v-if="summaryLoading" class="kpi-drawer-loading">
+        <el-icon class="is-loading" :size="24"><Loading /></el-icon>
+        <span>加载中...</span>
+      </div>
+
+      <div v-else-if="!summaryData" class="kpi-drawer-empty">
+        <el-icon :size="48" color="var(--c-text-tertiary)"><InfoFilled /></el-icon>
+        <p class="empty-title">暂无数据</p>
+      </div>
+
+      <div v-else class="summary-content">
+        <div class="summary-field">
+          <span class="summary-label">策划名称</span>
+          <span class="summary-value">{{ summaryData.name }}</span>
+        </div>
+        <div class="summary-field">
+          <span class="summary-label">当前状态</span>
+          <el-tag :type="stageTagType(summaryData.status)" size="small" effect="plain">
+            {{ stageLabel(summaryData.status) }}
+          </el-tag>
+        </div>
+        <div class="summary-field" v-if="summaryData.series">
+          <span class="summary-label">产品系列</span>
+          <span class="summary-value">{{ summaryData.series }}</span>
+        </div>
+        <div class="summary-field" v-if="summaryData.market">
+          <span class="summary-label">目标市场</span>
+          <span class="summary-value">{{ summaryData.market }}</span>
+        </div>
+        <div class="summary-field" v-if="summaryData.created_at">
+          <span class="summary-label">创建时间</span>
+          <span class="summary-value">{{ formatDate(summaryData.created_at) }}</span>
+        </div>
+        <div class="summary-field" v-if="summaryData.updated_at">
+          <span class="summary-label">最近更新</span>
+          <span class="summary-value">{{ formatDate(summaryData.updated_at) }}</span>
+        </div>
+
+        <div class="summary-actions">
+          <el-button type="primary" @click="goToPlanDetail(summaryData)">
+            查看完整详情
+          </el-button>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -456,6 +710,7 @@ import {
   DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh,
   Cpu, InfoFilled, CircleCloseFilled, Plus, Folder, Coin, Clock,
   CircleCheck, List,
+  WarningFilled, CircleCheckFilled, Time, Loading, ArrowLeft,
 } from '@element-plus/icons-vue'
 import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
@@ -506,6 +761,24 @@ interface PenetrationRoot {
       }>
     }>
   }>
+}
+
+// ── D3-3: 预警类型 ──
+interface AlertItemData {
+  type: 'overdue' | 'stuck' | 'cost_overrun'
+  plan_id: string | number
+  plan_name: string
+  message: string
+  severity: number
+  status?: string
+  created_at?: string
+}
+
+interface AlertsSummaryData {
+  overdue_count: number
+  stuck_count: number
+  cost_overrun_count: number
+  alerts: AlertItemData[]
 }
 
 const router = useRouter()
@@ -611,6 +884,73 @@ function goToNewPlan() {
 }
 function goToPlan(plan: PlanNode) {
   router.push(`/product-plans/${plan.id}`)
+}
+
+// ── D3-3: 预警逻辑 ──
+const showAlertDrawer = ref(false)
+const alertsLoading = ref(false)
+const alertList = ref<AlertItemData[]>([])
+const alertsSummary = ref({
+  overdue: 0,
+  stuck: 0,
+  cost_overrun: 0,
+  total: 0,
+})
+
+function alertTagType(type: string): string {
+  const map: Record<string, string> = {
+    overdue: 'danger',
+    cost_overrun: 'warning',
+    stuck: 'warning',
+  }
+  return map[type] || 'info'
+}
+
+function alertLabel(type: string): string {
+  const map: Record<string, string> = {
+    overdue: '逾期',
+    cost_overrun: '超标',
+    stuck: '滞留',
+  }
+  return map[type] || type
+}
+
+function formatTime(ts: string): string {
+  if (!ts) return ''
+  try {
+    const d = new Date(ts)
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${month}-${day}`
+  } catch {
+    return ts.substring(0, 10)
+  }
+}
+
+function goToAlertPlan(alert: AlertItemData): void {
+  showAlertDrawer.value = false
+  router.push(`/product-plans/${alert.plan_id}`)
+}
+
+async function fetchAlertsSummary(): Promise<void> {
+  alertsLoading.value = true
+  try {
+    const res = await api.get('/dashboard/alerts-summary')
+    const data: AlertsSummaryData = res.data
+    alertList.value = data.alerts || []
+    alertsSummary.value = {
+      overdue: data.overdue_count || 0,
+      stuck: data.stuck_count || 0,
+      cost_overrun: data.cost_overrun_count || 0,
+      total: (data.overdue_count || 0) + (data.stuck_count || 0) + (data.cost_overrun_count || 0),
+    }
+  } catch {
+    console.warn('[Dashboard] fetchAlertsSummary failed')
+    alertList.value = []
+    alertsSummary.value = { overdue: 0, stuck: 0, cost_overrun: 0, total: 0 }
+  } finally {
+    alertsLoading.value = false
+  }
 }
 
 // ── 原有L1/L2/L3卡片定义 ──
@@ -877,6 +1217,7 @@ function refreshAll() {
   fetchTrends()
   fetchProductPlanSummary()
   fetchBiCharts()
+  fetchAlertsSummary()
 }
 
 function drillDown(key: string) {
@@ -903,11 +1244,119 @@ function goToProject(row: TableRow) {
   router.push({ path: '/projects', query: { highlight: row.id } })
 }
 
+// ── KPI明细抽屉 [D3-2] ─────────────────────────────
+
+const KPI_LABELS: Record<string, string> = {
+  in_progress: '进行中策划',
+  pending: '待审批',
+  completed: '本月完成数',
+  overdue: '超期项目',
+  all_plans: '全部策划',
+}
+
+const kpiDrawerVisible = ref(false)
+const kpiDrawerTitle = ref('')
+const kpiDrawerLoading = ref(false)
+const kpiDrawerData = ref<KpiDetailItem[]>([])
+
+interface KpiDetailItem {
+  id: string | number
+  name: string
+  market?: string | null
+  status: string
+  series?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  code?: string | null
+  target_end_date?: string | null
+  type: string
+}
+
+const summaryDrawerVisible = ref(false)
+const summaryDrawerTitle = ref('')
+const summaryLoading = ref(false)
+const summaryData = ref<KpiDetailItem | null>(null)
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-'
+  try {
+    const d = new Date(dateStr)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  } catch {
+    return dateStr.substring(0, 10)
+  }
+}
+
+async function openKpiDrawer(type: string) {
+  kpiDrawerTitle.value = KPI_LABELS[type] || type
+  kpiDrawerVisible.value = true
+  kpiDrawerLoading.value = true
+  kpiDrawerData.value = []
+
+  try {
+    const res = await api.get('/dashboard/kpi-detail', { params: { type } })
+    const data = (Array.isArray(res.data) ? res.data : []) as KpiDetailItem[]
+    kpiDrawerData.value = data
+    // Update title with count
+    kpiDrawerTitle.value = `${KPI_LABELS[type] || type} (${data.length})`
+  } catch {
+    console.warn('[Dashboard] kpi-detail fetch failed')
+    kpiDrawerData.value = []
+  } finally {
+    kpiDrawerLoading.value = false
+  }
+}
+
+/** 表格行点击 → 二次下钻 */
+function onKpiRowClick(row: KpiDetailItem) {
+  if (row.type === 'plan') {
+    viewKpiDetail(row)
+  } else if (row.type === 'project') {
+    router.push({ path: '/projects', query: { highlight: row.id } })
+  } else if (row.type === 'approval') {
+    router.push('/approvals/proposals')
+  }
+}
+
+/** 查看策划详情（二次下钻 — 打开策划摘要抽屉） */
+async function viewKpiDetail(row: KpiDetailItem) {
+  if (row.type === 'plan') {
+    // 打开策划摘要抽屉
+    summaryData.value = null
+    summaryDrawerTitle.value = `策划摘要 — ${row.name}`
+    summaryDrawerVisible.value = true
+    summaryLoading.value = true
+
+    try {
+      // 尝试从后端获取策划详情
+      const res = await api.get(`/product-plans/${row.id}`)
+      summaryData.value = (res.data || row) as KpiDetailItem
+    } catch {
+      // 如果获取失败，使用表格中的数据
+      summaryData.value = row
+    } finally {
+      summaryLoading.value = false
+    }
+  } else if (row.type === 'project') {
+    router.push({ path: '/projects', query: { highlight: row.id } })
+  } else if (row.type === 'approval') {
+    router.push('/approvals/proposals')
+  }
+}
+
+/** 从摘要抽屉跳转到完整详情页 */
+function goToPlanDetail(row: KpiDetailItem) {
+  summaryDrawerVisible.value = false
+  kpiDrawerVisible.value = false
+  router.push(`/product-plans/${row.id}`)
+}
+
 onMounted(() => {
   fetchDashboard()
   fetchTrends()
   fetchProductPlanSummary()
   fetchBiCharts()
+  fetchAlertsSummary()
   setupWsDashboardRefresh()
 })
 </script>
@@ -1544,5 +1993,272 @@ onMounted(() => {
     width: 100%;
     justify-content: space-between;
   }
+}
+
+/* ═══════════ D3-3: 预警Badge与抽屉 ═══════════ */
+.alert-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.alert-badge-item {
+  margin-top: 4px;
+}
+.alert-badge-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--c-radius-full);
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-card);
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: all var(--c-transition-fast);
+}
+.alert-badge-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--c-shadow-sm);
+}
+.alert-btn-danger {
+  border-color: #f56c6c;
+  color: #f56c6c;
+  background: #fef0f0;
+}
+.alert-btn-danger:hover {
+  background: #f56c6c;
+  color: #fff;
+}
+.alert-btn-warning {
+  border-color: #e6a23c;
+  color: #e6a23c;
+  background: #fdf6ec;
+}
+.alert-btn-warning:hover {
+  background: #e6a23c;
+  color: #fff;
+}
+.alert-btn-safe {
+  border-color: #67c23a;
+  color: #67c23a;
+  background: #f0f9eb;
+}
+.alert-btn-safe:hover {
+  background: #67c23a;
+  color: #fff;
+}
+
+/* ─── 预警抽屉 ─── */
+.alert-drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 16px;
+}
+.alert-drawer-loading,
+.alert-drawer-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 20px;
+  color: var(--c-text-secondary);
+}
+.alert-drawer-loading p,
+.alert-drawer-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+.alert-summary-counts {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--c-bg-hover);
+  border-radius: var(--c-radius-md);
+}
+.alert-count-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--c-text-secondary);
+}
+.alert-count-item strong {
+  font-size: 16px;
+  color: var(--c-text-primary);
+  margin-left: 2px;
+}
+.alert-count-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.alert-count-dot.danger { background: #f56c6c; }
+.alert-count-dot.warning { background: #e6a23c; }
+.alert-count-dot.warning-light { background: #f3d19a; }
+
+.alert-drawer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.alert-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--c-radius-md);
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-card);
+  cursor: pointer;
+  transition: all var(--c-transition-fast);
+}
+.alert-card:hover {
+  border-color: var(--c-border-dark);
+  box-shadow: var(--c-shadow-sm);
+  transform: translateX(2px);
+}
+.alert-card--overdue {
+  border-left: 3px solid #f56c6c;
+}
+.alert-card--stuck {
+  border-left: 3px solid #e6a23c;
+}
+.alert-card--cost_overrun {
+  border-left: 3px solid #e6a23c;
+}
+.alert-card-left {
+  flex: 1;
+  min-width: 0;
+}
+.alert-tag {
+  margin-bottom: 6px;
+}
+.alert-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.alert-card-message {
+  font-size: 13px;
+  color: var(--c-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+.alert-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.alert-stage-tag {
+  font-size: 11px;
+  color: var(--c-text-tertiary);
+  background: var(--c-bg-hover);
+  padding: 2px 6px;
+  border-radius: var(--c-radius-sm);
+}
+.alert-time {
+  font-size: 11px;
+  color: var(--c-text-tertiary);
+  font-family: var(--c-font-mono);
+}
+.alert-card-right {
+  display: flex;
+  align-items: center;
+  color: var(--c-text-muted);
+  opacity: 0;
+  transition: all var(--c-transition-fast);
+  padding-top: 12px;
+}
+.alert-card:hover .alert-card-right {
+  opacity: 1;
+  color: var(--c-text-tertiary);
+}
+
+/* ─── KPI明细抽屉 [D3-2] ─── */
+.kpi-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.kpi-drawer-close-btn {
+  font-size: 16px;
+  padding: 4px;
+  color: var(--c-text-secondary);
+}
+.kpi-drawer-close-btn:hover {
+  color: var(--c-text-primary);
+}
+.kpi-drawer-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+.kpi-drawer-body {
+  min-height: 200px;
+}
+.kpi-drawer-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px;
+  color: var(--c-text-tertiary);
+  font-size: 14px;
+}
+.kpi-drawer-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 64px 24px;
+  color: var(--c-text-tertiary);
+}
+.kpi-cell-date {
+  font-size: 12px;
+  color: var(--c-text-tertiary);
+  font-family: var(--c-font-mono);
+}
+
+/* ─── 策划摘要内容 ─── */
+.summary-content {
+  padding: 8px 0;
+}
+.summary-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--c-border-light);
+}
+.summary-field:last-of-type {
+  border-bottom: none;
+}
+.summary-label {
+  font-size: 12px;
+  color: var(--c-text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.summary-value {
+  font-size: 15px;
+  color: var(--c-text-primary);
+  font-weight: 500;
+}
+.summary-actions {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--c-border);
 }
 </style>

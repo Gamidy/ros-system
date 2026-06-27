@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 
 
 # ═══════════════ 概览统计 ═══════════════
@@ -64,9 +64,44 @@ class Layer4ACMetrics(BaseModel):
     phase_progress_array: list[dict] = Field(default_factory=list)
 
 
+class KpiDetailItem(BaseModel):
+    """KPI卡片明细数据项"""
+    id: str | int
+    name: str
+    market: Optional[str] = None
+    status: str
+    series: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    code: Optional[str] = None
+    target_end_date: Optional[str] = None
+    type: str = "plan"  # plan / project / approval
+
+
 class DashboardResponse(BaseModel):
     """驾驶舱多层聚合响应"""
     layer1_system_health: Layer1SystemHealth = Field(default_factory=Layer1SystemHealth)
     layer2_project_ops: Layer2ProjectOps = Field(default_factory=Layer2ProjectOps)
     layer3_penetration: Optional[dict] = None
     layer4_ac_metrics: Layer4ACMetrics = Field(default_factory=Layer4ACMetrics)
+
+
+# ═══════════════ D3-3: 预警摘要 ═══════════════
+
+class AlertItem(BaseModel):
+    """预警条目"""
+    type: str  # overdue | stuck | cost_overrun
+    plan_id: str
+    plan_name: str
+    message: str
+    severity: int  # 3=overdue, 2=cost_overrun, 1=stuck
+    status: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AlertsSummaryResponse(BaseModel):
+    """预警摘要响应"""
+    overdue_count: int = 0
+    stuck_count: int = 0
+    cost_overrun_count: int = 0
+    alerts: list[AlertItem] = Field(default_factory=list)
