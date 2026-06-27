@@ -40,7 +40,7 @@ Publisher 必须在 `emit()` 前完成：
 
 | # | 检查项 | 工具 | 失败处理 |
 |:-:|:-------|:-----|:---------|
-| 1 | metadata 完整性（11 字段） | JSON Schema `event-header.schema.json` | Reject + log |
+| 1 | metadata 完整性（10 字段） | JSON Schema `event-header.schema.json` | Reject + log |
 | 2 | event_type 命名合规 | regex `^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$` | Reject + log |
 | 3 | version 类型 | integer ≥ 1 | Reject + log |
 | 4 | payload Schema 合法 | Capability Event Schema | Reject + log |
@@ -220,12 +220,16 @@ DLQ 管理：
 import json, pytest
 from jsonschema import validate, ValidationError
 
-SCHEMAS = {
+# 分层验证：Envelope → Header → Payload
+ENVELOPE_SCHEMA = json.load(open("docs/events/schemas/event-envelope.schema.json"))
+HEADER_SCHEMA   = json.load(open("docs/events/schemas/event-header.schema.json"))
+PLAN_SCHEMAS = {
     "plan.created": json.load(open("docs/events/plan.created.v1.schema.json")),
 }
 
 class TestEventValidation:
-    def test_valid_plan_created(self):
+    def _build_event(self, **overrides) -> dict:
+        """构造一个兼容 D2-2 Envelope 格式的测试事件"""
         event = {
             "metadata": {
                 "identity": {
@@ -245,24 +249,41 @@ class TestEventValidation:
             },
             "payload": {"plan_id": "PP-20260630-0001", "name": "test", "created_by": "pm"}
         }
-        validate(event, SCHEMAS["plan.created"])
-    
-    def test_invalid_missing_event_id(self):
-        event = {
-            "metadata": {
-                "identity": {"event_id": "", "event_type": "plan.created", "version": 1},
-                "context": {
-                    "timestamp": "2026-06-30T23:00:00+08:00",
-                    "source": "planning",
-                    "producer": "planning.test",
-                    "trace_id": "0af7651916cd43dd8448eb211c80319c",
-                    "tenant_id": "default"
-                }
-            },
-            "payload": {"plan_id": "PP-20260630-0001", "name": "test", "created_by": "pm"}
-        }
+        # 应用覆盖
+        import copy
+        result = copy.deepcopy(event)
+        for key, val in overrides.items():
+            keys = key.split(".")
+            target = result
+            for k in keys[:-1]:
+                target = target[k]
+            target[keys[-1]] = val
+        return result
+
+    def _validate_event(self, event: dict) -> None:
+        """分层验证：Envelope → Header → Payload"""
+        # 第 1 层：Envelope 格式（metadata + payload）
+        validate(instance=event, schema=ENVELOPE_SCHEMA)
+        # 第 2 层：Header 字段（metadata 下所有字段）
+        validate(instance=event["metadata"], schema=HEADER_SCHEMA)
+        # 第 3 层：Payload 业务 Schema
+        event_type = event["metadata"]["identity"]["event_type"]
+        if event_type in PLAN_SCHEMAS:
+            validate(instance=event["payload"], schema=PLAN_SCHEMAS[event_type])
+
+    def test_valid_plan_created(self):
+        event = self._build_event()
+        self._validate_event(event)           # 三层验证
+
+    def test_invalid_empty_event_id(self):
+        event = self._build_event(**{"metadata.identity.event_id": ""})
         with pytest.raises(ValidationError):
-            validate(event, SCHEMAS["plan.created"])
+            self._validate_event(event)
+
+    def test_invalid_empty_tenant_id(self):
+        event = self._build_event(**{"metadata.context.tenant_id": ""})
+        with pytest.raises(ValidationError):
+            self._validate_event(event)
 ```
 
 ---

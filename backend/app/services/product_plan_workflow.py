@@ -158,12 +158,13 @@ def create_product_plan(db: Session, data: dict, username: str) -> ProductPlan:
     # D2-2 事件: plan.created
     try:
         from app.services.event_bus import emit as d2_emit
-        d2_emit(
+        event_id = d2_emit(
             "plan.created",
             {"plan_id": plan.id, "name": plan.name, "series": plan.series, "market": plan.market, "created_by": username},
             producer="planning.product_plan_workflow",
             user_id=username,
         )
+        plan._last_event_id = event_id  # 为 advance_stage 的 causation_id 提供因果链
     except Exception as e:
         logger.error("plan.created 事件发射失败: %s", e, exc_info=True)
 
@@ -266,13 +267,14 @@ def advance_stage(db: Session, plan_id: str, username: str, comment: Optional[st
             ProductPlanStage.RELEASED: "plan.released",
         }
         d2_event = d2_event_map.get(target, "plan.stage_advanced")
-        d2_emit(
+        event_id = d2_emit(
             d2_event,
             {"plan_id": plan.id, "name": plan.name, "from_stage": current.value, "to_stage": target.value, "triggered_by": username},
             producer="planning.product_plan_workflow",
             user_id=username,
             causation_id=getattr(plan, "_last_event_id", None),
         )
+        plan._last_event_id = event_id  # 延续因果链
     except Exception as e:
         logger.error("D2-2 阶段事件发射失败: %s", e, exc_info=True)
 

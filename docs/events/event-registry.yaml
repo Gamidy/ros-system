@@ -87,7 +87,8 @@ events:
     status: "Certified"
     schema: "docs/events/plan.cost_updated.v1.schema.json"
     producer: "planning.costing_module"
-    consumers: ["dashboard", "bi_analytics", "finance"]
+    consumers: ["dashboard_and_bi", "finance"]
+    # 对应 Matrix 中的 dashboard_and_bi (bi_analytics) + finance
     lifecycle:
       created: "2026-06-30"
       certified: "2026-06-30"

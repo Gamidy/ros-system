@@ -54,26 +54,42 @@
 
 ---
 
-## 4. 5-Review Gate
+## 4. Phase-by-Phase AI-Z Review Scores
 
-| Review | Status | Evidence |
-|:-------|:-------|:---------|
+| Phase | Deliverables | AI-Z Score | Status |
+|:------|:-------------|:----------:|:------|
+| 2 D2-1 | Event Identity Standard | 8/10 | ✅ PASS |
+| 2 D2-2 | Event Metadata Standard | 7/10 | ✅ PASS |
+| 2 D2-3 | Event Compatibility Rules | 8/10 | ✅ PASS |
+| 2 D2-4 | Event Validation Framework | 8/10 | ✅ PASS |
+| 2 D2-5 | Event Registry | 8/10 | ✅ PASS |
+| 2 D2-6 | Consumer Matrix | 8/10 | ✅ PASS |
+| 2 D2-7 | Replay Certification Report | 7/10 | ✅ PASS (template) |
+| 2 D2-8 | Baseline EC-1.0-BL1 | 7/10 | ✅ PASS |
+| 4 | event_bus.py | 9/10 | ✅ PASS |
+| 4 | product_plan_workflow.py | 7/10 | ✅ PASS |
+| **Average** | | **7.7/10** | **✅ ALL PASS** |
+
+## 5. 综合评分
+
+| 检查项 | 结果 | 证据 |
+|:-------|:-----|:------|
 | Constitution Review | ✅ PASS | §1 above |
 | Architecture Review | ✅ PASS | RFC-2026-001 Approved (98.6) |
 | Security Review | ✅ PASS | No hardcoded secrets, no exec/eval |
 | Data Review | ✅ PASS | Data Contract §1 |
 | AI Review | ✅ PASS (N/A) | No AI in Planning Capability |
+| **AI-Z Review Score** | **≥ 7** | **7.7 avg** (Phase-by-Phase above) |
+| RFC Approval Score | ≥ 90 | 98.6 |
 
----
-
-## 5. Quality Metrics
+## 6. Quality Metrics
 
 | Metric | Target | Actual |
 |:-------|:-------|:-------|
 | Constitution Compliance | 12/12 | 12/12 |
 | Architecture Principles | 6/6 | 6/6 |
 | RFC Approval Score | ≥ 90 | 98.6 |
-| AI-Z Review Score | ≥ 7 | 8 avg |
+| AI-Z Review Score | ≥ 7 | 7.7 avg |
 
 ---
 

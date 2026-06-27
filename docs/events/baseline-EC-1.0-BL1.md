@@ -37,11 +37,11 @@
 | 文件 | Git Commit | 说明 |
 |:-----|:-----------|:------|
 | `docs/events/event-identity-standard.md` | `321f9f4` | 命名/分类/生命周期/版本策略 |
-| `docs/events/event-metadata-standard.md` | `aba94f3` | 11 字段 Header (identity+context) |
+| `docs/events/event-metadata-standard.md` | `aba94f3` | 10 字段 Header (identity+context) |
 | `docs/events/event-compatibility-standard.md` | `e0d92b8` | Consumer Contract / Schema Evolution |
 | `docs/events/event-validation-framework.md` | `d416880` | 双端验证/CI Pipeline/DLQ |
 | `docs/events/event-registry.yaml` | `3882c3a` | 5 事件 (Category/Criticality/Lifecycle) |
-| `docs/events/consumer-matrix.yaml` | `3882c3a` | 12 Consumer 记录 |
+| `docs/events/consumer-matrix.yaml` | `3882c3a` | 11 Consumer 记录 |
 | `docs/events/replay-certification-template.md` | `TBD` | Replay 验证模板 |
 | `docs/events/schemas/event-header.schema.json` | `aba94f3` | Header JSON Schema |
 | `docs/events/schemas/event-envelope.schema.json` | `aba94f3` | Envelope JSON Schema |
