@@ -42,7 +42,7 @@ import { ref, onMounted } from 'vue'
 import api from '../../api'
 
 const loading = ref(false)
-const records = ref<any[]>([])
+const records = ref<Record<string, unknown>[]>([])
 
 const levelTag = (l: string) => {
   const map: Record<string, string> = { critical: 'danger', major: 'warning', minor: 'info', none: 'success' }

@@ -136,6 +136,30 @@ interface ActionItem {
   route: string
 }
 
+/** API 返回的策划数据（product-plan） */
+interface PlanAction {
+  id: number | string
+  name: string
+  status?: string
+  stage?: string
+  deadline?: string
+  target_end_date?: string
+  target_date?: string
+  approval_status?: string
+}
+
+/** API 返回的审批请求数据（approval request） */
+interface ApprovalRequest {
+  id?: number | string
+  request_id?: string
+  status?: string
+  plan_name?: string
+  title?: string
+  plan_id?: number | string
+  deadline?: string
+  created_at?: string
+}
+
 // ── Props ──
 const props = withDefaults(defineProps<{
   title?: string
@@ -155,8 +179,8 @@ defineEmits<{
 const router = useRouter()
 const loading = ref(false)
 const error = ref(false)
-const plans = ref<any[]>([])
-const approvals = ref<any[]>([])
+const plans = ref<PlanAction[]>([])
+const approvals = ref<ApprovalRequest[]>([])
 
 // ── Encouraging messages ──
 const cheerMessages = [
@@ -200,7 +224,7 @@ function computeActions(): ActionItem[] {
   return items
 }
 
-function mapPlanToActions(plan: any): ActionItem[] {
+function mapPlanToActions(plan: PlanAction): ActionItem[] {
   const result: ActionItem[] = []
   const status = plan.status || plan.stage || ''
   const planName = plan.name || '未命名策划'
@@ -284,7 +308,7 @@ function mapPlanToActions(plan: any): ActionItem[] {
   return result
 }
 
-function mapApprovalToAction(approval: any): ActionItem | null {
+function mapApprovalToAction(approval: ApprovalRequest): ActionItem | null {
   if (!approval) return null
   // Only show pending approvals as actionable items
   if (approval.status === 'pending' || approval.status === 'submitted') {

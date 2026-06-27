@@ -65,15 +65,15 @@ import { useRoute } from 'vue-router'
 import api from '../../api'
 
 const route = useRoute()
-const cert = ref<any>({})
-const versions = ref<any[]>([])
+const cert = ref<Record<string, unknown>>({})
+const versions = ref<Record<string, unknown>[]>([])
 const loading = ref(false)
 const loadingVersions = ref(false)
 
 const statusMap: Record<string, string> = { active: '有效', expired: '过期', suspended: '暂停', revoked: '注销' }
 const statusTypeMap: Record<string, string> = { active: 'success', expired: 'info', suspended: 'warning', revoked: 'danger' }
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string) { return (statusTypeMap[s] || 'info') as string }
 
 function certTagType(t: string) { const map: Record<string, string> = { CE: 'danger', CB: 'warning', UL: 'primary', SAA: 'success' }; return map[t] || 'info' }
 

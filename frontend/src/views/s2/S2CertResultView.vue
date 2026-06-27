@@ -63,7 +63,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
-const items = ref<any[]>([])
+const items = ref<Record<string, unknown>[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -72,9 +72,9 @@ const editingId = ref<number | null>(null)
 const statusMap: Record<string, string> = { draft: '草稿', submitted: '已提交', testing: '测试中', passed: '通过', failed: '失败', expired: '过期' }
 const statusTypeMap: Record<string, string> = { draft: 'info', submitted: 'primary', testing: 'warning', passed: 'success', failed: 'danger', expired: 'info' }
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string) { return (statusTypeMap[s] || 'info') as string }
 
-const form = ref<any>({ cert_execution_id: 1, result_date: null, summary: '', attachments: '' })
+const form = ref<Record<string, unknown>>({ cert_execution_id: 1, result_date: null, summary: '', attachments: '' })
 
 function formatDate(d: string) { if (!d) return ''; return d.slice(0, 10) }
 
@@ -86,7 +86,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: Record<string, unknown>) {
   if (row) {
     editingId.value = row.id
     form.value = { cert_execution_id: row.cert_execution_id, result_date: row.result_date || null, summary: row.summary || '', attachments: row.attachments || '' }
@@ -112,7 +112,7 @@ async function save() {
   } finally { saving.value = false }
 }
 
-async function transitionStatus(row: any, newStatus: string) {
+async function transitionStatus(row: Record<string, unknown>, newStatus: string) {
   try {
     await api.patch(`/s2/certification-results/${row.id}/status`, { status: newStatus })
     ElMessage.success(`状态已更新为: ${statusLabel(newStatus)}`)

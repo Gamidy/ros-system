@@ -75,8 +75,8 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
-const items = ref<any[]>([])
-const prototypes = ref<any[]>([])
+const items = ref<Record<string, unknown>[]>([])
+const prototypes = ref<Record<string, unknown>[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -85,9 +85,9 @@ const editingId = ref<number | null>(null)
 const statusMap: Record<string, string> = { pending: '待提交', preparing: '准备中', submitted: '已提交', testing: '测试中', passed: '通过', failed: '失败' }
 const statusTypeMap: Record<string, string> = { pending: 'info', preparing: 'warning', submitted: 'primary', testing: 'warning', passed: 'success', failed: 'danger' }
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string) { return (statusTypeMap[s] || 'info') as string }
 
-const form = ref<any>({ cert_project_id: 1, prototype_id: null, cert_type: 'CE', submitted_date: null, remark: '' })
+const form = ref<Record<string, unknown>>({ cert_project_id: 1, prototype_id: null, cert_type: 'CE', submitted_date: null, remark: '' })
 
 function certTagType(t: string) { const map: Record<string, string> = { CE: 'danger', CB: 'warning', UL: 'primary', SAA: 'success' }; return map[t] || 'info' }
 function formatDate(d: string) { if (!d) return ''; return d.slice(0, 10) }
@@ -107,7 +107,7 @@ async function fetchPrototypes() {
   } catch { /* ignore */ }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: Record<string, unknown>) {
   if (row) {
     editingId.value = row.id
     form.value = { cert_project_id: row.cert_project_id, prototype_id: row.prototype_id, cert_type: row.cert_type, submitted_date: row.submitted_date || null, remark: row.remark || '' }

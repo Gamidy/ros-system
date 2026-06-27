@@ -114,7 +114,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../api'
 
-const items = ref<any[]>([])
+const items = ref<Record<string, unknown>[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -122,7 +122,7 @@ const editingId = ref<number | null>(null)
 const filterGate = ref('')
 const filterCertType = ref('')
 
-const form = ref<any>({ name: '', gate_code: 'M6', cert_type: 'CE', target_market_id: 0, is_required: true, auto_block: false, priority: 100 })
+const form = ref<Record<string, unknown>>({ name: '', gate_code: 'M6', cert_type: 'CE', target_market_id: 0, is_required: true, auto_block: false, priority: 100 })
 
 function certTagType(t: string) { const map: Record<string, string> = { CE: 'danger', CB: 'warning', UL: 'primary', SAA: 'success' }; return map[t] || 'info' }
 
@@ -138,7 +138,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: Record<string, unknown>) {
   if (row) {
     editingId.value = row.id
     form.value = { name: row.name, gate_code: row.gate_code, cert_type: row.cert_type, target_market_id: row.target_market_id || 0, is_required: row.is_required, auto_block: row.auto_block, priority: row.priority }
@@ -166,7 +166,7 @@ async function save() {
   } finally { saving.value = false }
 }
 
-async function removeItem(row: any) {
+async function removeItem(row: Record<string, unknown>) {
   try {
     await ElMessageBox.confirm('确定删除此门禁规则？', '确认', { type: 'warning' })
     await api.delete(`/s2/gate-rules/${row.id}`)

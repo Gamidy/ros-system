@@ -98,7 +98,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
-const items = ref<any[]>([])
+const items = ref<Record<string, unknown>[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -115,9 +115,9 @@ const statusTypeMap: Record<string, string> = {
   failed: 'danger', on_hold: 'warning', cancelled: 'info',
 }
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string) { return (statusTypeMap[s] || 'info') as string }
 
-const form = ref<any>({
+const form = ref<Record<string, unknown>>({
   name: '', project_id: 1, target_market_id: 1,
   cert_types_arr: [], planned_start_date: null, planned_end_date: null, remark: '',
 })
@@ -149,7 +149,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: Record<string, unknown>) {
   if (row) {
     editingId.value = row.id
     form.value = {

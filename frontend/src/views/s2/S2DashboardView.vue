@@ -68,7 +68,7 @@ import { ref, onMounted } from 'vue'
 import api from '../../api'
 
 const stats = ref({ total: 0, in_progress: 0, completed: 0, expiring_soon: 0 })
-const gateRules = ref<any[]>([])
+const gateRules = ref<Record<string, unknown>[]>([])
 const loadingGate = ref(false)
 
 async function fetchStats() {
@@ -76,8 +76,8 @@ async function fetchStats() {
     const res = await api.get('/s2/certification-projects')
     const items = res.data || []
     const total = items.length
-    const in_progress = items.filter((i: any) => i.status === 'in_progress').length
-    const completed = items.filter((i: any) => i.status === 'completed').length
+    const in_progress = items.filter((i: Record<string, unknown>) => i.status === 'in_progress').length
+    const completed = items.filter((i: Record<string, unknown>) => i.status === 'completed').length
     stats.value = { total, in_progress, completed, expiring_soon: 0 }
   } catch { /* ignore */ }
 }

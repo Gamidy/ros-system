@@ -69,9 +69,9 @@ import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const genLoading = ref(false)
-const requirements = ref<any[]>([])
+const requirements = ref<Record<string, unknown>[]>([])
 const detailVisible = ref(false)
-const currentDetail = ref<any>(null)
+const currentDetail = ref<Record<string, unknown> | null>(null)
 
 const certTypeTag = (type: string) => {
   const map: Record<string, string> = { CE: 'success', CB: 'primary', UL: 'warning', SAA: 'info', RoHS: 'danger', REACH: '' }
@@ -102,14 +102,14 @@ const triggerGenerate = async () => {
     await api.post('/api/s2/certification-requirements/generate')
     ElMessage.success('认证需求生成完成')
     await fetchData()
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.detail || '生成失败')
+  } catch (e: unknown) {
+    ElMessage.error(((e as { response?: { data?: { detail?: string } } })?.response?.data?.detail) || '生成失败')
   } finally {
     genLoading.value = false
   }
 }
 
-const viewDetail = async (row: any) => {
+const viewDetail = async (row: Record<string, unknown>) => {
   try {
     const { data } = await api.get(`/api/s2/certification-requirements/${row.id}`)
     currentDetail.value = data

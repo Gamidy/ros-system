@@ -80,14 +80,14 @@ import { useRoute } from 'vue-router'
 import api from '../../api'
 
 const route = useRoute()
-const project = ref<any>({})
+const project = ref<Record<string, unknown>>({})
 const loading = ref(false)
 const activeTab = ref('samples')
-const samples = ref<any[]>([])
+const samples = ref<Record<string, unknown>[]>([])
 const loadingSamples = ref(false)
-const executions = ref<any[]>([])
+const executions = ref<Record<string, unknown>[]>([])
 const loadingExec = ref(false)
-const results = ref<any[]>([])
+const results = ref<Record<string, unknown>[]>([])
 const loadingResults = ref(false)
 
 const parsedCertTypes = computed(() => {
@@ -99,22 +99,22 @@ const parsedCertTypes = computed(() => {
 const statusMap: Record<string, string> = { planning: '计划中', in_progress: '进行中', completed: '已完成', failed: '失败', on_hold: '暂停', cancelled: '已取消' }
 const statusTypeMap: Record<string, string> = { planning: 'info', in_progress: 'primary', completed: 'success', failed: 'danger', on_hold: 'warning', cancelled: 'info' }
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string) { return (statusTypeMap[s] || 'info') as string }
 
 const sampleStatusMap: Record<string, string> = { pending: '待提交', preparing: '准备中', submitted: '已提交', testing: '测试中', passed: '通过', failed: '失败' }
 const sampleStatusTypeMap: Record<string, string> = { pending: 'info', preparing: 'warning', submitted: 'primary', testing: 'warning', passed: 'success', failed: 'danger' }
 function sampleStatusLabel(s: string) { return sampleStatusMap[s] || s }
-function sampleStatusType(s: string) { return (sampleStatusTypeMap[s] || 'info') as any }
+function sampleStatusType(s: string) { return (sampleStatusTypeMap[s] || 'info') as string }
 
 const execStatusMap: Record<string, string> = { pending: '待开始', in_progress: '进行中', completed: '已完成', failed: '失败' }
 const execStatusTypeMap: Record<string, string> = { pending: 'info', in_progress: 'primary', completed: 'success', failed: 'danger' }
 function execStatusLabel(s: string) { return execStatusMap[s] || s }
-function execStatusType(s: string) { return (execStatusTypeMap[s] || 'info') as any }
+function execStatusType(s: string) { return (execStatusTypeMap[s] || 'info') as string }
 
 const resultStatusMap: Record<string, string> = { draft: '草稿', submitted: '已提交', testing: '测试中', passed: '通过', failed: '失败', expired: '过期' }
 const resultStatusTypeMap: Record<string, string> = { draft: 'info', submitted: 'primary', testing: 'warning', passed: 'success', failed: 'danger', expired: 'info' }
 function resultStatusLabel(s: string) { return resultStatusMap[s] || s }
-function resultStatusType(s: string) { return (resultStatusTypeMap[s] || 'info') as any }
+function resultStatusType(s: string) { return (resultStatusTypeMap[s] || 'info') as string }
 
 function certTagType(t: string) { const map: Record<string, string> = { CE: 'danger', CB: 'warning', UL: 'primary', SAA: 'success' }; return map[t] || 'info' }
 
@@ -141,8 +141,8 @@ async function fetchExecutions() {
     const all = res.data || []
     // Filter by sample ids belonging to this project
     if (samples.value.length) {
-      const sampleIds = new Set(samples.value.map((s: any) => s.id))
-      executions.value = all.filter((e: any) => sampleIds.has(e.cert_sample_id))
+      const sampleIds = new Set(samples.value.map((s: Record<string, unknown>) => s.id))
+      executions.value = all.filter((e: Record<string, unknown>) => sampleIds.has(e.cert_sample_id))
     } else {
       executions.value = []
     }
@@ -155,8 +155,8 @@ async function fetchResults() {
     const res = await api.get('/s2/certification-results')
     const all = res.data || []
     if (executions.value.length) {
-      const execIds = new Set(executions.value.map((e: any) => e.id))
-      results.value = all.filter((r: any) => execIds.has(r.cert_execution_id))
+      const execIds = new Set(executions.value.map((e: Record<string, unknown>) => e.id))
+      results.value = all.filter((r: Record<string, unknown>) => execIds.has(r.cert_execution_id))
     } else {
       results.value = []
     }

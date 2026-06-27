@@ -73,7 +73,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../api'
 
-const items = ref<any[]>([])
+const items = ref<Record<string, unknown>[]>([])
 const loading = ref(false)
 const filterType = ref('')
 const filterStatus = ref('')
@@ -82,7 +82,7 @@ const searchNo = ref('')
 const statusMap: Record<string, string> = { active: '有效', expired: '过期', suspended: '暂停', revoked: '注销' }
 const statusTypeMap: Record<string, string> = { active: 'success', expired: 'info', suspended: 'warning', revoked: 'danger' }
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string) { return (statusTypeMap[s] || 'info') as string }
 
 function certTagType(t: string) { const map: Record<string, string> = { CE: 'danger', CB: 'warning', UL: 'primary', SAA: 'success' }; return map[t] || 'info' }
 
@@ -107,7 +107,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-async function renew(row: any) {
+async function renew(row: Record<string, unknown>) {
   try {
     const { value } = await ElMessageBox.prompt('请输入新的到期日期 (YYYY-MM-DD)', '续证', {
       inputPattern: /^\d{4}-\d{2}-\d{2}$/,
@@ -119,7 +119,7 @@ async function renew(row: any) {
   } catch { /* cancelled */ }
 }
 
-async function suspend(row: any) {
+async function suspend(row: Record<string, unknown>) {
   try {
     await ElMessageBox.confirm(`确定暂停证书 ${row.cert_no}？`, '确认', { type: 'warning' })
     await api.post(`/s2/certificates/${row.id}/suspend`)
@@ -128,7 +128,7 @@ async function suspend(row: any) {
   } catch { /* cancelled */ }
 }
 
-async function revoke(row: any) {
+async function revoke(row: Record<string, unknown>) {
   try {
     await ElMessageBox.confirm(`确定撤销证书 ${row.cert_no}？此操作不可逆！`, '确认', { type: 'warning', confirmButtonText: '确认撤销', confirmButtonClass: 'el-button--danger' })
     await api.post(`/s2/certificates/${row.id}/revoke`)

@@ -69,7 +69,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 
-const items = ref<any[]>([])
+const items = ref<Record<string, unknown>[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -78,9 +78,9 @@ const editingId = ref<number | null>(null)
 const statusMap: Record<string, string> = { pending: '待开始', in_progress: '进行中', completed: '已完成', failed: '失败' }
 const statusTypeMap: Record<string, string> = { pending: 'info', in_progress: 'primary', completed: 'success', failed: 'danger' }
 function statusLabel(s: string) { return statusMap[s] || s }
-function statusType(s: string) { return (statusTypeMap[s] || 'info') as any }
+function statusType(s: string) { return (statusTypeMap[s] || 'info') as string }
 
-const form = ref<any>({ cert_sample_id: 1, lab: '', agency: '', start_date: null, end_date: null, result_summary: '' })
+const form = ref<Record<string, unknown>>({ cert_sample_id: 1, lab: '', agency: '', start_date: null, end_date: null, result_summary: '' })
 
 async function fetchData() {
   loading.value = true
@@ -90,7 +90,7 @@ async function fetchData() {
   } finally { loading.value = false }
 }
 
-function openDialog(row?: any) {
+function openDialog(row?: Record<string, unknown>) {
   if (row) {
     editingId.value = row.id
     form.value = { cert_sample_id: row.cert_sample_id, lab: row.lab || '', agency: row.agency || '', start_date: row.start_date || null, end_date: row.end_date || null, result_summary: row.result_summary || '' }

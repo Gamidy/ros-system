@@ -22,7 +22,7 @@ type ChartType = 'bar' | 'line' | 'pie'
 
 const props = withDefaults(defineProps<{
   type: ChartType
-  data: any[]
+  data: Record<string, unknown>[]
   /** 柱状图/折线图: xAxis 维度字段名; 饼图: name 字段名 */
   nameKey?: string
   /** 柱状图/折线图: series 值字段名; 饼图: value 字段名 */
@@ -83,7 +83,7 @@ function buildOption(): EChartsOption {
         type: 'pie',
         radius: props.donut ? ['40%', '70%'] : '70%',
         center: ['50%', '50%'],
-        data: (props.data || []).map((d: any) => ({
+        data: (props.data || []).map((d: Record<string, unknown>) => ({
           name: d[props.nameKey],
           value: d[props.valueKey],
         })),
@@ -130,14 +130,14 @@ function buildOption(): EChartsOption {
       grid: props.title ? { ...grid, top: 56 } : grid,
       xAxis: {
         type: props.horizontal ? 'value' : 'category',
-        data: props.horizontal ? undefined : (props.data || []).map((d: any) => d[props.nameKey]),
+        data: props.horizontal ? undefined : (props.data || []).map((d: Record<string, unknown>) => d[props.nameKey]),
         axisLine: { lineStyle: { color: '#e0e0e0' } },
         axisLabel: { color: '#86868b', fontSize: 12 },
         splitLine: { show: !!props.horizontal, lineStyle: { color: '#f0f0f0' } },
       },
       yAxis: {
         type: props.horizontal ? 'category' : 'value',
-        data: props.horizontal ? (props.data || []).map((d: any) => d[props.nameKey]) : undefined,
+        data: props.horizontal ? (props.data || []).map((d: Record<string, unknown>) => d[props.nameKey]) : undefined,
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: { color: '#86868b', fontSize: 12 },
@@ -146,7 +146,7 @@ function buildOption(): EChartsOption {
       series: props.series.map((s, i) => ({
         type: props.type,
         name: s.name,
-        data: (props.data || []).map((d: any) => d[s.key]),
+        data: (props.data || []).map((d: Record<string, unknown>) => d[s.key]),
         smooth: props.type === 'line' ? (props.smooth ?? true) : undefined,
         symbol: props.type === 'line' ? 'circle' : undefined,
         symbolSize: props.type === 'line' ? 6 : undefined,
@@ -193,14 +193,14 @@ function buildOption(): EChartsOption {
     grid,
     xAxis: {
       type: props.horizontal ? 'value' : 'category',
-      data: props.horizontal ? undefined : (props.data || []).map((d: any) => d[props.nameKey]),
+      data: props.horizontal ? undefined : (props.data || []).map((d: Record<string, unknown>) => d[props.nameKey]),
       axisLine: { lineStyle: { color: '#e0e0e0' } },
       axisLabel: { color: '#86868b', fontSize: 12 },
       splitLine: { show: !!props.horizontal, lineStyle: { color: '#f0f0f0' } },
     },
     yAxis: {
       type: props.horizontal ? 'category' : 'value',
-      data: props.horizontal ? (props.data || []).map((d: any) => d[props.nameKey]) : undefined,
+      data: props.horizontal ? (props.data || []).map((d: Record<string, unknown>) => d[props.nameKey]) : undefined,
       axisLine: { show: false },
       axisTick: { show: false },
       axisLabel: { color: '#86868b', fontSize: 12 },
@@ -208,7 +208,7 @@ function buildOption(): EChartsOption {
     },
     series: [{
       type: props.type,
-      data: (props.data || []).map((d: any) => d[props.valueKey]),
+      data: (props.data || []).map((d: Record<string, unknown>) => d[props.valueKey]),
       smooth: props.type === 'line' ? (props.smooth ?? true) : undefined,
       symbol: props.type === 'line' ? 'circle' : undefined,
       symbolSize: props.type === 'line' ? 6 : undefined,
