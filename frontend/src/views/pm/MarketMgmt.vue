@@ -574,7 +574,7 @@ const standardItems = ref<StandardItem[]>([])
 const stdEditVisible = ref(false)
 const editingStdId = ref<number | null>(null)
 const savingStd = ref(false)
-const stdForm = ref<any>({ standard_code: '', standard_name: '', is_core: true })
+const stdForm = ref<StandardForm>({ standard_code: '', standard_name: '', is_core: true })
 
 const REGION_LABELS: Record<string, string> = {
   SEA: '东南亚', CA: '中亚', SA: '南亚',
@@ -610,7 +610,7 @@ async function fetchMarkets() {
   try {
     const res = await api.get('/pm/markets/all')
     markets.value = res.data || []
-  } catch {
+  } catch (e: unknown) {
     ElMessage.error('加载市场列表失败')
   }
 }
@@ -710,7 +710,7 @@ async function fetchCertifications() {
   try {
     const res = await api.get(`/pm/markets/${certMarketCode.value}/certifications`)
     certifications.value = res.data || []
-  } catch {
+  } catch (e: unknown) {
     ElMessage.error('加载认证要求失败')
   }
 }
@@ -780,7 +780,7 @@ async function fetchCompressors() {
   try {
     const res = await api.get(`/pm/markets/${compMarketCode.value}/compressors`)
     compressors.value = res.data || []
-  } catch {
+  } catch (e: unknown) {
     ElMessage.error('加载元器件信息失败')
   }
 }
@@ -858,7 +858,7 @@ async function openStandardConfig(item: MarketItem) {
   try {
     targetMarketId.value = await ensureTargetMarket(item.code)
     await Promise.all([fetchTests(), fetchStandards()])
-  } catch {
+  } catch (e: unknown) {
     ElMessage.error('加载标准配置失败')
   }
 }
@@ -870,7 +870,7 @@ async function fetchTests() {
   try {
     const res = await api.get(`/target-markets/${targetMarketId.value}/tests`)
     testItems.value = res.data || []
-  } catch {
+  } catch (e: unknown) {
     ElMessage.error('加载测试要求失败')
   }
 }
@@ -930,7 +930,7 @@ async function fetchStandards() {
   try {
     const res = await api.get(`/target-markets/${targetMarketId.value}/standards`)
     standardItems.value = res.data || []
-  } catch {
+  } catch (e: unknown) {
     ElMessage.error('加载标准要求失败')
   }
 }

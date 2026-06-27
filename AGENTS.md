@@ -62,3 +62,15 @@
 - 无 exec()/eval() 在生产代码中
 - SECRET_KEY 通过 .env 注入
 - Token黑名单机制支持登出
+
+## 变更记录
+
+### 2026-06-27
+- MarketMgmt.vue: 新增筛选栏(区域/状态/搜索) + 标准配置弹窗(测试要求+标准要求)
+- 目标市场配置(TargetMarketView)合并入市场管理，移除独立路由
+- 新增市场弹窗: 取消market_code输入(自动用名称生成)、取消refrigerant_charge字段
+- "压缩机"→"关键元器件的特殊要求" 全局文案替换
+- 全局主题色: #d97757(橙红)→#2563eb(深蓝)，导航选中态保留橙红点缀
+- 类型约束: ref<any>全部替换为具体类型接口(MarketForm/CertForm/CompressorForm/TestForm/StandardForm)
+- 错误处理: 所有catch块加(e: unknown)参数
+- backend: target_markets.py 新增GET/PUT端点 for tests+standards
