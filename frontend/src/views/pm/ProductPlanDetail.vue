@@ -76,7 +76,7 @@
   </template>
 <el-form :model="marketForm" label-width="180" size="small">
 <el-form-item label="主要容量"><el-input v-model="marketForm.main_capacity" /></el-form-item>
-<el-form-item label="能效要求"><el-input v-model="marketForm.energy_efficiency" /></el-form-item>
+<el-form-item label="能效要求"><el-input v-model="marketForm.energy_efficiency" /><div v-if="marketEnergyMap[editForm.market]" class="energy-standard-hint">当前市场标准: {{ marketEnergyMap[editForm.market]?.label }} ({{ marketEnergyMap[editForm.market]?.key }})</div></el-form-item>
 <el-form-item label="认证要求"><el-input v-model="marketForm.cert_requirements" type="textarea" :rows="2" /></el-form-item>
 <el-form-item label="目标价格"><el-input-number v-model="marketForm.target_price" :min="0" :precision="2" style="width:200px" /></el-form-item>
 <el-form-item label="客户需求"><el-input v-model="marketForm.customer_requirements" type="textarea" :rows="3" /></el-form-item>
@@ -173,7 +173,7 @@
 <h3 class="step-title">🎯 市场与客户</h3>
 <el-form label-width="90" size="small">
 <el-form-item label="主要容量"><el-input v-model="marketForm.main_capacity" /></el-form-item>
-<el-form-item label="能效要求"><el-input v-model="marketForm.energy_efficiency" /></el-form-item>
+<el-form-item label="能效要求"><el-input v-model="marketForm.energy_efficiency" /><div v-if="marketEnergyMap[editForm.market]" class="energy-standard-hint">当前市场标准: {{ marketEnergyMap[editForm.market]?.label }} ({{ marketEnergyMap[editForm.market]?.key }})</div></el-form-item>
 <el-form-item label="认证要求"><el-input v-model="marketForm.cert_requirements" type="textarea" :rows="2" /></el-form-item>
 <el-form-item label="目标价格"><el-input-number v-model="marketForm.target_price" :min="0" :precision="2" style="width:100%" /></el-form-item>
 <el-form-item label="客户需求"><el-input v-model="marketForm.customer_requirements" type="textarea" :rows="3" /></el-form-item>
@@ -849,6 +849,7 @@ onMounted(async () => {
 .team-card-name { font-weight: 600; font-size: 14px; }
 .team-card-detail { font-size: 12px; color: #909399; margin-bottom: 6px; }
 .team-card-actions { display: flex; gap: 8px; }
+.energy-standard-hint { font-size: 12px; color: #909399; margin-top: 4px; padding: 2px 8px; background: #f5f7fa; border-radius: 3px; display: inline-block; }
 /* Approval Drawer */
 .approval-drawer-mobile :deep(.el-drawer__body) { padding: 0; overflow: hidden; }
 .drawer-body { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
