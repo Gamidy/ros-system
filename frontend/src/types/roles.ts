@@ -176,6 +176,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/alerts', title: '预警体系', icon: WarningFilled },
       { path: '/quality', title: '质量问题', icon: WarnTriangleFilled },
       { path: '/quality/8d-reports', title: '8D报告', icon: WarnTriangleFilled },
+      { path: '/quality/iqc', title: '来料检验IQC', icon: WarnTriangleFilled },
       { path: '/monitor/events', title: '事件监控', icon: DataAnalysis },
     ]
   },
@@ -195,6 +196,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/prototypes',     title: '样机管理',       icon: Cpu },
   { path: '/quality',        title: '质量问题',       icon: WarnTriangleFilled },
   { path: '/quality/8d-reports', title: '8D报告',     icon: WarnTriangleFilled },
+  { path: '/quality/iqc', title: '来料检验IQC', icon: WarnTriangleFilled },
   { path: '/changes',        title: '变更管理',       icon: Refresh },
   { path: '/ecr',            title: 'ECR变更请求',    icon: Document },
   { path: '/eco',            title: 'ECO变更指令',    icon: Document },
@@ -205,6 +207,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/purchases/quality-dashboard', title: '质检看板', icon: DataAnalysis },
   // Batch-16 采购退货
   { path: '/purchases/returns', title: '采购退货', icon: ShoppingCart },
+  { path: '/purchase/rfqs', title: '询比价管理', icon: ShoppingCart },
   // Batch-12 库存管理
   { path: '/inventory', title: '库存总览', icon: DataAnalysis },
   { path: '/inventory/warehouses', title: '仓库管理', icon: OfficeBuilding },
@@ -241,6 +244,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/outsource/partners',  title: '外协厂商',        icon: ShoppingCart },
   { path: '/outsource/orders',    title: '外协订单',        icon: List },
   { path: '/outsource/quality-records', title: '外协质检',  icon: Document },
+  // P0 工艺管理
+  { path: '/process', title: '工艺管理', icon: Document },
   // S2 认证中心
   { path: '/s2/dashboard',    title: '认证中心',     icon: Stamp },
   { path: '/s2/requirements', title: '认证需求',     icon: Document },

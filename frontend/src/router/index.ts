@@ -217,6 +217,12 @@ const router = createRouter({
           meta: { title: '8D报告', menu: 'quality' },
         },
         {
+          path: 'quality/iqc',
+          name: 'IQC',
+          component: () => import('../views/quality/IQCView.vue'),
+          meta: { title: '来料检验IQC', menu: 'quality' },
+        },
+        {
           path: 'changes',
           name: 'Changes',
           component: () => import('../views/changes/ChangesHub.vue'),
@@ -299,6 +305,18 @@ const router = createRouter({
           name: 'InventoryAlerts',
           component: () => import('../views/inventory/InventoryAlertView.vue'),
           meta: { title: '库存预警', menu: 'inventory' },
+        },
+        {
+          path: 'purchase/rfqs',
+          name: 'RFQ',
+          component: () => import('../views/purchase/RFQView.vue'),
+          meta: { title: '询比价管理', menu: 'purchases' },
+        },
+        {
+          path: 'process',
+          name: 'Process',
+          component: () => import('../views/process/ProcessView.vue'),
+          meta: { title: '工艺管理', menu: 'process' },
         },
         {
           path: 'inventory/replenishments',
