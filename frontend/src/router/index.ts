@@ -450,6 +450,12 @@ const router = createRouter({
           component: () => import('../views/bi/CostAnalytics.vue'),
           meta: { title: 'BI成本分析', menu: 'bi' },
         },
+        {
+          path: 'bi',
+          name: 'BiAnalytics',
+          component: () => import('../views/bi/BIAnalyticsView.vue'),
+          meta: { title: 'BI分析仪表盘', menu: 'bi' },
+        },
         // D4-3 复盘看板
         {
           path: 'review/dashboard',
@@ -516,6 +522,13 @@ const router = createRouter({
           name: 'StandardManage',
           component: () => import('../views/admin/StandardManage.vue'),
           meta: { title: '标准配置', roles: ['admin'] },
+        },
+        // 知识库
+        {
+          path: 'knowledge',
+          name: 'KnowledgeView',
+          component: () => import('../views/knowledge/KnowledgeView.vue'),
+          meta: { title: '知识库' },
         },
       ],
     },

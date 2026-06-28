@@ -143,6 +143,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     children: [
       { path: '/standards', title: '标准列表', icon: Document },
       { path: '/admin/standards', title: '标准配置', icon: Setting },
+      { path: '/knowledge', title: '知识库', icon: Document },
     ]
   },
   {
@@ -230,6 +231,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/pm/requirements',        title: '需求管理', icon: Document },
   { path: '/pm/requirements/submit', title: '需求录入', icon: Edit },
   { path: '/review/dashboard',       title: '复盘看板', icon: DataAnalysis },
+  // 知识库
+  { path: '/knowledge',               title: '知识库',   icon: Document },
 ]
 
 /**

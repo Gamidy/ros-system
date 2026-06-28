@@ -61,16 +61,26 @@
           <el-button v-if="currentReport.status !== 'draft'" size="small" @click="editReport">编辑报告</el-button>
         </div>
 
-        <!-- 评分概览 -->
-        <el-card v-if="scoreResult" style="margin-bottom:12px;">
-          <div style="display:flex;gap:24px;flex-wrap:wrap;">
-            <div><b>总分</b>: {{ scoreResult.total_score }}/100</div>
-            <div><b>问题项</b>: {{ scoreResult.item_count }}</div>
-            <div><b style="color:#f56c6c">严重</b>: {{ scoreResult.critical_count }}</div>
-            <div><b style="color:#e6a23c">主要</b>: {{ scoreResult.major_count }}</div>
-            <div><b style="color:#909399">轻微</b>: {{ scoreResult.minor_count }}</div>
-          </div>
-        </el-card>
+        <!-- 评分概览 + 雷达图 -->
+        <el-row :gutter="12" style="margin-bottom:12px;">
+          <el-col :span="14">
+            <el-card v-if="scoreResult">
+              <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                <div><b>总分</b>: {{ scoreResult.total_score }}/100</div>
+                <div><b>问题项</b>: {{ scoreResult.item_count }}</div>
+                <div><b style="color:#f56c6c">严重</b>: {{ scoreResult.critical_count }}</div>
+                <div><b style="color:#e6a23c">主要</b>: {{ scoreResult.major_count }}</div>
+                <div><b style="color:#909399">轻微</b>: {{ scoreResult.minor_count }}</div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="10">
+            <el-card v-if="currentReport">
+              <template #header>DFM评分雷达</template>
+              <div ref="radarRef" style="width:300px;height:300px;margin:0 auto;" />
+            </el-card>
+          </el-col>
+        </el-row>
 
         <!-- 问题项列表 -->
         <div v-for="item in currentReport.items" :key="item.id" style="border:1px solid #ebeef5;border-radius:4px;padding:12px;margin-bottom:8px;">
@@ -153,13 +163,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import {
   listDFMReports, getDFMReport, createDFMReport, updateDFMReport, deleteDFMReport,
   getDFMReportScore, createDFMReportItem, updateDFMReportItem, deleteDFMReportItem
 } from '../../api/manufacturability'
 import type { FormInstance } from 'element-plus'
 import type { TableRow } from '@/types/common'
+import { echarts } from '../../utils/chart'
+import type { EChartsType, EChartsOption } from 'echarts'
 
 const reports = ref<any[]>([])
 const total = ref(0)
@@ -187,6 +199,61 @@ const reportRules = { title: [{ required: true, message: '请输入报告标题'
 
 const itemForm = ref<any>({ report_id: 0, issue_desc: '', dfm_category: '', severity: 'major', suggestion: '', responsible_person: '', sort_order: 0 })
 const itemRules = { issue_desc: [{ required: true, message: '请输入问题描述' }] }
+
+const radarRef = ref<HTMLElement>()
+let radarChartInstance: EChartsType | null = null
+
+function computeRadarData() {
+  const items = currentReport.value?.items || []
+  const catScores: Record<string, { count: number; critical: number; major: number; minor: number }> = {}
+  items.forEach((it: any) => {
+    const cat = it.dfm_category || 'other'
+    if (!catScores[cat]) catScores[cat] = { count: 0, critical: 0, major: 0, minor: 0 }
+    catScores[cat].count++
+    if (it.severity === 'critical') catScores[cat].critical++
+    else if (it.severity === 'major') catScores[cat].major++
+    else if (it.severity === 'minor') catScores[cat].minor++
+  })
+  const catLabelMap: Record<string, string> = { structural: '结构DFM', process: '工艺DFM', assembly: '装配DFM', electrical: '电气DFM', mold: '模具DFM' }
+  const dimensions = ['structural', 'process', 'assembly', 'electrical', 'mold']
+  return dimensions.map(cat => {
+    const s = catScores[cat] || { count: 0, critical: 0, major: 0, minor: 0 }
+    // 100 base minus penalties: critical=-20, major=-10, minor=-5
+    let score = 100 - s.critical * 20 - s.major * 10 - s.minor * 5
+    if (s.count === 0) score = 100
+    return { name: catLabelMap[cat] || cat, value: Math.max(0, Math.min(100, score)) }
+  })
+}
+
+function renderRadarChart() {
+  if (!radarRef.value) return
+  if (radarChartInstance) { radarChartInstance.dispose(); radarChartInstance = null }
+  const data = computeRadarData()
+  const option: EChartsOption = {
+    radar: {
+      indicator: data.map(d => ({ name: d.name, max: 100 })),
+      shape: 'circle',
+      splitNumber: 4,
+      axisName: { color: '#1d1d1f', fontSize: 11 },
+      splitArea: { areaStyle: { color: ['rgba(0,122,255,0.02)', 'rgba(0,122,255,0.05)'] } },
+      axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } },
+      splitLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } },
+    },
+    series: [{
+      type: 'radar',
+      data: [{ value: data.map(d => d.value), name: 'DFM评分', areaStyle: { color: 'rgba(0,122,255,0.25)' }, lineStyle: { color: '#007AFF', width: 2 }, itemStyle: { color: '#007AFF' } }],
+      symbol: 'circle',
+      symbolSize: 6,
+    }],
+    tooltip: { trigger: 'item' as const },
+  }
+  radarChartInstance = echarts.init(radarRef.value)
+  radarChartInstance.setOption(option)
+}
+
+watch(() => currentReport.value, () => {
+  nextTick(() => renderRadarChart())
+})
 
 function catLabel(c: string) { const m: Record<string, string> = { structural: '结构', process: '工艺', assembly: '装配', electrical: '电气', mold: '模具' }; return m[c] || c }
 function severityLabel(s: string) { const m: Record<string, string> = { critical: '严重', major: '主要', minor: '轻微' }; return m[s] || s }

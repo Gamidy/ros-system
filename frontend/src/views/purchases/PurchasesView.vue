@@ -8,7 +8,25 @@
         <div style="margin-bottom: 16px;">
           <el-button type="primary" @click="showCreateDialog = true">新建采购订单</el-button>
         </div>
-        <el-table :data="orders" stripe border max-height="520" v-loading="loading">
+      <!-- 订单状态流转 -->
+      <el-card v-if="selectedOrder" shadow="never" style="margin-bottom:16px;border:1px solid #e8e8ed;border-radius:8px;">
+        <template #header>
+          <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;">
+            <span>订单状态</span>
+            <el-tag size="small" :type="statusType(selectedOrder.status)">{{ statusLabel(selectedOrder.status) }}</el-tag>
+            <span style="font-weight:400;color:#86868b;font-size:13px;">{{ selectedOrder.order_no }}</span>
+            <el-button text size="small" style="margin-left:auto;" @click="selectedOrder=null">关闭</el-button>
+          </div>
+        </template>
+        <el-steps :active="orderStep(selectedOrder.status)" align-center finish-status="success" process-status="process" style="padding:8px 0 16px;">
+          <el-step title="待审批" description="提交审批" />
+          <el-step title="已批准" description="审批通过" />
+          <el-step title="生产中" description="开始生产" />
+          <el-step title="已发货" description="发货中" />
+          <el-step title="已收货" description="已完成" />
+        </el-steps>
+      </el-card>
+        <el-table :data="orders" stripe border max-height="520" v-loading="loading" highlight-current-row @row-click="onOrderSelect">
           <el-table-column prop="order_no" label="订单编号" width="200" />
           <el-table-column prop="supplier_name" label="供应商" width="160" />
           <el-table-column prop="total_amount" label="总金额(元)" width="120">
@@ -119,6 +137,7 @@ interface NewOrderDto {
 }
 
 const activeTab = ref('orders')
+const selectedOrder = ref<OrderDto | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const orders = ref<OrderDto[]>([])
@@ -130,6 +149,13 @@ const showSupplierDialog = ref(false)
 
 const newOrder = ref<NewOrderDto>({ supplier_code: '', remark: '', items: [{ part_no: '', part_name: '', quantity: 1, unit_price: 0 }] })
 
+function onOrderSelect(row: OrderDto) {
+  selectedOrder.value = row
+}
+function orderStep(status: string): number {
+  const m: Record<string, number> = { pending_approval: 0, approved: 1, ordered: 2, received: 4 }
+  return m[status] ?? -1
+}
 function statusType(s: string) {
   const m: Record<string, string> = { draft: 'info', pending_approval: 'warning', approved: 'primary', ordered: 'success', received: '', cancelled: 'danger' }
   return m[s] || 'info'
