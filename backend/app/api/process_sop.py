@@ -23,7 +23,7 @@ def _sop_out(s: SOP) -> dict:
     }
 
 
-@router.get("")
+@router.get("/sops")
 def list_sop(
     product_model: str | None = None,
     status: str | None = None,
@@ -37,14 +37,14 @@ def list_sop(
     return [_sop_out(s) for s in q.order_by(SOP.id.desc()).limit(100).all()]
 
 
-@router.get("/{sid}")
+@router.get("/sops/{sid}")
 def get_sop(sid: int, db: Session = Depends(get_db)):
     s = db.query(SOP).filter(SOP.id == sid).first()
     if not s: raise HTTPException(404, "SOP不存在")
     return _sop_out(s)
 
 
-@router.post("")
+@router.post("/sops")
 def create_sop(data: dict, db: Session = Depends(get_db)):
     s = SOP(**{k: v for k, v in data.items() if k != "id"})
     if not s.code: s.code = f"SOP-{s.id or 0}"
@@ -52,7 +52,7 @@ def create_sop(data: dict, db: Session = Depends(get_db)):
     return _sop_out(s)
 
 
-@router.put("/{sid}")
+@router.put("/sops/{sid}")
 def update_sop(sid: int, data: dict, db: Session = Depends(get_db)):
     s = db.query(SOP).filter(SOP.id == sid).first()
     if not s: raise HTTPException(404, "SOP不存在")
@@ -62,7 +62,7 @@ def update_sop(sid: int, data: dict, db: Session = Depends(get_db)):
     return _sop_out(s)
 
 
-@router.delete("/{sid}")
+@router.delete("/sops/{sid}")
 def delete_sop(sid: int, db: Session = Depends(get_db)):
     s = db.query(SOP).filter(SOP.id == sid).first()
     if not s: raise HTTPException(404, "SOP不存在")
