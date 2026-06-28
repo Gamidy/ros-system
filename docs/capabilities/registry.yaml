@@ -210,13 +210,14 @@ capabilities:
       - "docs/events/cert.execution.completed.v1.schema.json"
       - "docs/events/cert.result.passed.v1.schema.json"
       - "docs/events/cert.certificate.issued.v1.schema.json"
-    status: "implemented"
+    status: "released"
     rfc: "RFC-2026-005"
     approval_score: 92.0
+    released_at: "2026-07-01"
     phase:
-      current: 5
+      current: 7
       total: 7
-      description: "Phase 1-2 完成, Phase 4 代码已更新"
+      description: "已发布（Phase 7/7）"
     baselines: []
     owner:
       business_owner: "Quality Director"
