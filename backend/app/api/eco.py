@@ -395,6 +395,79 @@ def verify_eco(
     return _eco_to_out(eco, db)
 
 
+# ── ECO成本重算联动 ──────────────────────────────────────
+
+
+def _trigger_cost_recalc_on_eco(eco: ECO, db: Session) -> None:
+    """ECO生效后自动触发冷量联动成本重算（非阻断）
+
+    从ECR的affected_products 字段获取产品策划ID列表，
+    对每个产品策划调用 run_capacity_recalculation。
+    """
+    if not eco.ecr_id:
+        logger.info("ECO %s: 无关联ECR，跳过成本重算", eco.id)
+        return
+
+    import json
+    ecr = eco.ecr
+    if not ecr or not ecr.affected_products:
+        logger.info("ECO %s: ECR %s 无 affected_products，跳过成本重算", eco.id, eco.ecr_id)
+        return
+
+    # 解析产品策划ID列表
+    products = ecr.affected_products
+    if isinstance(products, str):
+        try:
+            products = json.loads(products)
+        except (json.JSONDecodeError, TypeError):
+            logger.warning("ECO %s: affected_products 解析失败: %s", eco.id, products)
+            return
+
+    if not isinstance(products, list):
+        products = [products]
+
+    plan_ids: list[str] = []
+    for p in products:
+        if isinstance(p, dict):
+            pid = p.get("product_plan_id") or p.get("id")
+            if pid:
+                plan_ids.append(str(pid))
+        elif isinstance(p, (int, str)):
+            plan_ids.append(str(p))
+
+    if not plan_ids:
+        logger.info("ECO %s: 未找到有效的产品策划ID，跳过成本重算", eco.id)
+        return
+
+    # 获取用户名
+    user_name = None
+    if hasattr(eco, 'creator') and eco.creator:
+        user_name = getattr(eco.creator, 'name', None) or getattr(eco.creator, 'username', None)
+
+    # 对每个产品策划触发重算
+    from app.services.capacity_recalc_service import run_capacity_recalculation
+    success_count = 0
+    for pid in set(plan_ids):  # 去重
+        try:
+            result = run_capacity_recalculation(
+                product_plan_id=pid,
+                trigger_source="eco",
+                user_name=user_name,
+                db=db,
+            )
+            logger.info("ECO %s: 产品策划 %s 成本重算完成, 效率评分=%s",
+                        eco.id, pid, result.get("result", {}).get("cost_efficiency_score", "N/A"))
+            success_count += 1
+        except Exception as e:
+            logger.warning("ECO %s: 产品策划 %s 成本重算失败(跳过): %s", eco.id, pid, e)
+
+    if success_count > 0:
+        # 刷新ECO以持久化变更
+        db.flush()
+
+    logger.info("ECO %s: 成本重算联动完成, 成功=%d/总=%d", eco.id, success_count, len(set(plan_ids)))
+
+
 @router.post("/{eco_id}/effective", response_model=ECOOut)
 def effective_eco(
     eco_id: int,
@@ -425,6 +498,12 @@ def effective_eco(
         logger.info("ECO %s: BOM 更新任务已投递到 Celery 队列", eco_id)
     except Exception as e:
         logger.warning("ECO %s: BOM 更新任务投递失败（Celery 可能未运行）: %s", eco_id, e)
+
+    # ── 自动触发冷量联动成本重算（非阻断） ──
+    try:
+        _trigger_cost_recalc_on_eco(eco, db)
+    except Exception as e:
+        logger.warning("ECO %s: 成本重算触发失败(非阻断): %s", eco_id, e)
 
     db.commit()
     db.refresh(eco)

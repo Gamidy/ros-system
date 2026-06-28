@@ -204,6 +204,66 @@
 
       <!-- ⬇ BOM Impact: 变更影响传播 ⬇ -->
       <BOMImpactView v-if="eco.ecr_id" :ecr-id="eco.ecr_id" />
+
+      <!-- ═══════ ECO成本重算联动 ═══════ -->
+      <el-card v-if="eco.status === 'effective' || eco.status === 'closed'" shadow="never" style="margin-top:16px">
+        <template #header>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>
+              <el-icon style="vertical-align:-2px;margin-right:4px;color:#409eff"><Connection /></el-icon>
+              冷量联动成本重算
+            </span>
+            <el-button size="small" text @click="showCostRecalc = !showCostRecalc">
+              {{ showCostRecalc ? '收起' : '展开' }}
+            </el-button>
+          </div>
+        </template>
+        <template v-if="showCostRecalc">
+          <el-alert
+            type="success"
+            :closable="false"
+            show-icon
+            style="margin-bottom:12px"
+          >
+            <template #title>
+              ECO生效自动触发成本重算 — 关联产品策划量算完成
+            </template>
+            <template #default>
+              当ECO生效时，系统自动对ECR中标记的受影响产品策划执行冷量联动成本重算。
+              可在 <el-button link type="primary" @click="$router.push('/cost-accounting/sheets')">成本核算 → 冷量联动重算</el-button> 中查看详细结果。
+            </template>
+          </el-alert>
+
+          <!-- 重算结果摘要 -->
+          <div v-if="recalcResults.length > 0">
+            <el-table :data="recalcResults" stripe size="small" style="width:100%">
+              <el-table-column prop="product_plan_name" label="产品策划" min-width="160" />
+              <el-table-column prop="capacity_key" label="冷量段" width="80" align="center" />
+              <el-table-column prop="baseline_material_cost" label="基准成本(元)" width="120" align="right">
+                <template #default="{ row }">¥{{ (row.baseline_material_cost ?? 0).toFixed(2) }}</template>
+              </el-table-column>
+              <el-table-column prop="actual_bom_cost" label="实际成本(元)" width="120" align="right">
+                <template #default="{ row }">¥{{ (row.actual_bom_cost ?? 0).toFixed(2) }}</template>
+              </el-table-column>
+              <el-table-column prop="variance_pct" label="差异率" width="90" align="right">
+                <template #default="{ row }">
+                  <el-tag :type="(row.variance_pct ?? 0) > 10 ? 'danger' : (row.variance_pct ?? 0) > 0 ? 'warning' : 'success'" size="small">
+                    {{ (row.variance_pct ?? 0).toFixed(1) }}%
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="cost_efficiency_score" label="效率评分" width="90" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="(row.cost_efficiency_score ?? 100) >= 80 ? 'success' : (row.cost_efficiency_score ?? 100) >= 60 ? 'warning' : 'danger'" size="small">
+                    {{ (row.cost_efficiency_score ?? 0).toFixed(0) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          <el-empty v-else description="暂无重算记录（需先在BTU段配置中设置冷量段单价并手动触发重算）" :image-size="50" />
+        </template>
+      </el-card>
     </template>
 
     <!-- ═══════ 编辑基本信息 Dialog ═══════ -->
@@ -234,7 +294,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, Connection } from '@element-plus/icons-vue'
 import {
   fetchECO,
   deleteECO,
@@ -303,6 +363,21 @@ const eco = ref<ECODetailOut | null>(null)
 const items = ref<ECOItemOut[]>([])
 const itemsLoading = ref(false)
 
+// ── 成本重算联动 ──
+const showCostRecalc = ref(true)
+const recalcResults = ref<any[]>([])
+
+async function loadRecalcResults() {
+  if (!eco.value || !eco.value.ecr_id) return
+  try {
+    const { listRecalcResults } = await import('../../api/costAccounting')
+    const res = await listRecalcResults({ trigger_source: 'eco', limit: 20 })
+    recalcResults.value = (res as any).data?.items ?? (res as any).data ?? []
+  } catch {
+    recalcResults.value = []
+  }
+}
+
 // ── 明细项编辑状态 ──
 const canEditItems = computed(() => eco.value && (eco.value.status === 'draft' || eco.value.status === 'implementing'))
 const editingItemIndex = ref<number | null>(null)
@@ -327,6 +402,9 @@ async function fetchDetail() {
     const res = await fetchECO(ecoId.value)
     eco.value = res
     items.value = res.items || []
+    if (res.status === 'effective' || res.status === 'closed') {
+      loadRecalcResults()
+    }
   } finally {
     loading.value = false
   }
