@@ -21,6 +21,9 @@ from app.api import safety
 from app.api import manufacturability
 from app.api import outsource
 from app.api import cost_accounting
+from app.api import cost_accounting_export
+from app.api import cost_accounting_analysis
+from app.api import cost_accounting_sheets
 from app.api import bi_analytics
 from app.api import user_notification_api
 from app.api import ai_plan_api
@@ -154,6 +157,9 @@ app.include_router(safety.router)
 app.include_router(manufacturability.router)
 app.include_router(outsource.router)
 app.include_router(cost_accounting.router)
+app.include_router(cost_accounting_export.router)
+app.include_router(cost_accounting_analysis.router)
+app.include_router(cost_accounting_sheets.router)
 # ── 冷量联动成本重算 ──
 app.include_router(cost_recalculation.router)
 app.include_router(bi_analytics.router)

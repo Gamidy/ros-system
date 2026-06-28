@@ -105,14 +105,14 @@ def delete_impact_rule(
     rule_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "quality_engineer")),
-) -> ActionResponse:
+) -> dict:
     """删除变更影响规则"""
     rule = db.query(ChangeImpactRule).filter(ChangeImpactRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="规则不存在")
     db.delete(rule)
     db.commit()
-    return {"success": True, "message": "删除成功"}
+    return {"id": rule_id, "success": True, "message": "删除成功"}
 
 
 # ═══════════════ 记录查询（只读）═══════════════

@@ -1,4 +1,4 @@
-"""成本核算系统 API — 期间/费率/分摊/核算单/差异分析/导出"""
+"""成本核算系统 — 期间/费率/分摊/核算单CRUD"""
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel, Field
@@ -26,10 +26,9 @@ router = APIRouter(prefix="/api/cost-accounting", tags=["cost-accounting"])
 
 _PERIOD_DEP = Depends(require_menu("cost-accounting"))
 
-
-# ════════════════════════════════════════
+# ═══════════
 # Schemas
-# ════════════════════════════════════════
+# ═══════════
 
 class PeriodCreate(BaseModel):
     period_name: str
@@ -100,10 +99,9 @@ class VarianceOut(BaseModel):
     overhead_variance: float; overhead_variance_pct: float
     total_variance: float; total_variance_pct: float
 
-
-# ════════════════════════════════════════
+# ═══════════
 # 核算期间管理
-# ════════════════════════════════════════
+# ═══════════
 
 @router.get("/periods", response_model=List[PeriodOut])
 def list_periods(db: Session = Depends(get_db), _=_PERIOD_DEP) -> List[PeriodOut]:
@@ -136,10 +134,9 @@ def close_period(pid: int, db: Session = Depends(get_db), _=_PERIOD_DEP) -> Peri
     if p.status == PeriodStatus.CLOSED.value: raise HTTPException(400, "期间已关闭")
     p.status = PeriodStatus.CLOSED.value; db.commit(); db.refresh(p); return p
 
-
-# ════════════════════════════════════════
+# ═══════════
 # 工时费率配置
-# ════════════════════════════════════════
+# ═══════════
 
 @router.get("/labor-rates", response_model=List[LaborRateOut])
 def list_labor_rates(db: Session = Depends(get_db), _=_PERIOD_DEP) -> list:
@@ -163,10 +160,9 @@ def delete_labor_rate(rid: int, db: Session = Depends(get_db), _=_PERIOD_DEP) ->
     if not r: raise HTTPException(404, "费率不存在")
     db.delete(r); db.commit(); return {"ok": True}
 
-
-# ════════════════════════════════════════
+# ═══════════
 # 产品人工成本
-# ════════════════════════════════════════
+# ═══════════
 
 @router.get("/product/{plan_id}/labor-costs", response_model=List[LaborCostOut])
 def list_product_labor(plan_id: str, period_id: int = Query(...), db: Session = Depends(get_db), _=_PERIOD_DEP) -> list:
@@ -218,10 +214,9 @@ def calculate_labor(plan_id: str, period_id: int = Query(...), db: Session = Dep
     db.commit()
     return {"ok": True, "updated": updated}
 
-
-# ════════════════════════════════════════
+# ═══════════
 # 间接费分摊规则
-# ════════════════════════════════════════
+# ═══════════
 
 @router.get("/overhead-rules", response_model=List[OverheadRuleOut])
 def list_overhead_rules(db: Session = Depends(get_db), _=_PERIOD_DEP) -> list:
@@ -256,10 +251,9 @@ def toggle_overhead_rule(rid: int, db: Session = Depends(get_db), _=_PERIOD_DEP)
     r.is_active = 0 if r.is_active else 1
     db.commit(); return {"ok": True, "is_active": r.is_active}
 
-
-# ════════════════════════════════════════
+# ═══════════
 # 产品间接费分摊
-# ════════════════════════════════════════
+# ═══════════
 
 @router.get("/product/{plan_id}/overhead-costs", response_model=List[OverheadCostOut])
 def list_product_overhead(plan_id: str, period_id: int = Query(...), db: Session = Depends(get_db), _=_PERIOD_DEP) -> list:
@@ -338,10 +332,9 @@ def allocate_overhead(plan_id: str, period_id: int = Query(...), db: Session = D
     db.commit()
     return {"ok": True, "rules_used": len(rules), "allocated_count": len(created)}
 
-
-# ════════════════════════════════════════
+# ═══════════
 # 增强物料成本视图
-# ════════════════════════════════════════
+# ═══════════
 
 @router.get("/material-costs/enhanced/{bom_id}")
 def get_enhanced_material_costs(bom_id: int, cost_type: str = Query("actual"), db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
@@ -401,580 +394,3 @@ def get_enhanced_material_costs(bom_id: int, cost_type: str = Query("actual"), d
         "top_items": top_items, "tree": tree,
     }
 
-
-# ════════════════════════════════════════
-# 成本核算单（核心）
-# ════════════════════════════════════════
-
-def _gen_sheet_no() -> str:
-    dt = date.today().strftime("%Y%m%d")
-    rand = ''.join(random.choices(string.digits, k=3))
-    return f"CAS-{dt}-{rand}"
-
-@router.post("/sheets/generate")
-def generate_sheet(
-    product_plan_id: str = Body(...), period_id: int = Body(...),
-    bom_id: Optional[int] = Body(None),
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
-) -> dict:
-    """自动生成成本核算单 — 聚合料/工/费三大要素"""
-    # 验证产品和期间
-    plan = db.query(ProductPlan).filter(ProductPlan.id == product_plan_id).first()
-    if not plan: raise HTTPException(404, "产品策划不存在")
-    period = db.query(CostAccountingPeriod).filter(CostAccountingPeriod.id == period_id).first()
-    if not period: raise HTTPException(404, "核算期间不存在")
-    if period.status == PeriodStatus.CLOSED.value: raise HTTPException(400, "已关闭期间不能生成核算单")
-
-    # 检查是否已存在
-    existing = db.query(CostAccountingSheet).filter(
-        CostAccountingSheet.product_plan_id == product_plan_id,
-        CostAccountingSheet.period_id == period_id,
-    ).first()
-    if existing:
-        raise HTTPException(400, f"该产品在该期间已有核算单({existing.sheet_no})，请使用重新核算")
-
-    # 1. 物料成本 — 通过Project→product_code→BOM链路（从 project_links 获取 primary project_id）
-    material_actual = 0.0
-    material_target = 0.0
-    primary_project_id = None
-    for link in (plan.project_links or []):
-        if link.link_type == 'primary':
-            primary_project_id = link.project_id
-            break
-    if primary_project_id:
-        from app.models.project import Project
-        project = db.query(Project).filter(Project.id == primary_project_id).first()
-        if project and project.product_code:
-            from app.models.bom import BOM
-            bom = db.query(BOM).filter(BOM.product_code == project.product_code)
-            if bom_id: bom = bom.filter(BOM.id == bom_id)
-            else: bom = bom.order_by(desc(BOM.created_at)).first()
-            if isinstance(bom, type(db.query(BOM))): bom = bom.first()
-            if not bom and bom_id:
-                bom = db.query(BOM).filter(BOM.id == bom_id).first()
-            if bom:
-                from app.api.bom import get_bom_cost_summary
-                try:
-                    summary = get_bom_cost_summary(bom.id, db)
-                    if isinstance(summary, dict):
-                        material_actual = float(summary.get("total_cost", 0))
-                except Exception as e:
-                    logger.warning(f"获取BOM成本摘要失败: {e}")
-                    pass
-
-    # 解析目标成本
-    if plan.cost_target:
-        import json
-        try:
-            ct = json.loads(plan.cost_target) if isinstance(plan.cost_target, str) else plan.cost_target
-            material_target = float(ct.get("target", 0)) if isinstance(ct, dict) else 0
-        except (json.JSONDecodeError, TypeError, ValueError):
-            material_target = 0
-
-    # 2. 人工成本
-    labor_records = db.query(ProductLaborCost).filter(
-        ProductLaborCost.product_plan_id == product_plan_id,
-        ProductLaborCost.period_id == period_id,
-    ).all()
-    labor_actual = round(sum(r.total_amount for r in labor_records), 2)
-
-    # 3. 制造费用分摊
-    overhead_records = db.query(ProductOverheadCost).filter(
-        ProductOverheadCost.product_plan_id == product_plan_id,
-        ProductOverheadCost.period_id == period_id,
-    ).all()
-    overhead_actual = round(sum(r.allocation_amount for r in overhead_records), 2)
-
-    # 4. 计算汇总
-    total_actual = round(material_actual + labor_actual + overhead_actual, 2)
-    total_target = material_target  # 简化：目标成本只用物料目标
-    variance = round(total_actual - total_target, 2)
-    variance_pct = round(variance / total_target * 100, 2) if total_target else 0
-
-    # 5. 创建核算单
-    sheet = CostAccountingSheet(
-        sheet_no=_gen_sheet_no(),
-        product_plan_id=product_plan_id, period_id=period_id,
-        material_cost_actual=material_actual, material_cost_target=material_target,
-        labor_cost_actual=labor_actual, labor_cost_target=0,
-        overhead_cost_actual=overhead_actual, overhead_cost_target=0,
-        total_cost_actual=total_actual, total_cost_target=total_target,
-        variance_amount=variance, variance_pct=variance_pct,
-        created_by=current_user.username,
-    )
-    db.add(sheet)
-    db.flush()  # 获取 ID
-
-    # 6. 创建明细行
-    items = []
-    # 物料明细
-    if material_actual > 0:
-        items.append(CostAccountingItem(
-            sheet_id=sheet.id, cost_category=CostCategory.MATERIAL.value,
-            item_name="BOM物料成本合计", target_amount=material_target,
-            actual_amount=material_actual,
-            variance=round(material_actual - material_target, 2),
-            source_type="bom",
-        ))
-    # 人工明细
-    for lr in labor_records:
-        items.append(CostAccountingItem(
-            sheet_id=sheet.id, cost_category=CostCategory.LABOR.value,
-            item_name=lr.operation_name, target_amount=0,
-            actual_amount=lr.total_amount, variance=lr.total_amount,
-            source_type="labor_record", source_id=lr.id,
-        ))
-    # 费用明细
-    for oc in overhead_records:
-        rule = db.query(OverheadAllocationRule).filter(OverheadAllocationRule.id == oc.rule_id).first()
-        items.append(CostAccountingItem(
-            sheet_id=sheet.id, cost_category=CostCategory.OVERHEAD.value,
-            item_name=rule.rule_name if rule else "制造费用分摊",
-            target_amount=0, actual_amount=oc.allocation_amount,
-            variance=oc.allocation_amount,
-            source_type="overhead_rule", source_id=oc.id,
-        ))
-
-    for it in items: db.add(it)
-    db.commit()
-    db.refresh(sheet)
-    return {"ok": True, "sheet_id": sheet.id, "sheet_no": sheet.sheet_no}
-
-@router.get("/sheets", response_model=List[SheetOut])
-def list_sheets(
-    plan_id: Optional[str] = Query(None), period_id: Optional[int] = Query(None),
-    status: Optional[str] = Query(None), page: int = Query(1), size: int = Query(20),
-    db: Session = Depends(get_db), _=_PERIOD_DEP,
-) -> list:
-    q = db.query(CostAccountingSheet)
-    if plan_id: q = q.filter(CostAccountingSheet.product_plan_id == plan_id)
-    if period_id: q = q.filter(CostAccountingSheet.period_id == period_id)
-    if status: q = q.filter(CostAccountingSheet.status == status)
-    total = q.count()
-    sheets = q.order_by(desc(CostAccountingSheet.created_at)).offset((page-1)*size).limit(size).all()
-    # eager load items
-    result = []
-    for s in sheets:
-        s_dict = s.__dict__
-        items_list = db.query(CostAccountingItem).filter(CostAccountingItem.sheet_id == s.id).all()
-        s_dict["items"] = items_list
-        result.append(s_dict)
-    return result
-
-@router.get("/sheets/{sid}", response_model=SheetOut)
-def get_sheet_detail(sid: int, db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
-    s = db.query(CostAccountingSheet).filter(CostAccountingSheet.id == sid).first()
-    if not s: raise HTTPException(404, "核算单不存在")
-    items_list = db.query(CostAccountingItem).filter(CostAccountingItem.sheet_id == s.id).all()
-    s.items = items_list
-    return s
-
-@router.post("/sheets/{sid}/finalize")
-def finalize_sheet(sid: int, db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
-    s = db.query(CostAccountingSheet).filter(CostAccountingSheet.id == sid).first()
-    if not s: raise HTTPException(404, "核算单不存在")
-    if s.status == SheetStatus.FINALIZED.value:
-        raise HTTPException(400, "核算单已定稿")
-    s.status = SheetStatus.FINALIZED.value; db.commit(); return {"ok": True}
-
-@router.post("/sheets/{sid}/recalculate")
-def recalculate_sheet(sid: int, db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
-    """重新核算 — 重新聚合料工费数据"""
-    s = db.query(CostAccountingSheet).filter(CostAccountingSheet.id == sid).first()
-    if not s: raise HTTPException(404, "核算单不存在")
-    if s.status == SheetStatus.FINALIZED.value:
-        raise HTTPException(400, "已定稿核算单不可重新核算")
-    # 重新聚合（简化版：重新计算人工和费用，物料保持不变）
-    labor_records = db.query(ProductLaborCost).filter(
-        ProductLaborCost.product_plan_id == s.product_plan_id,
-        ProductLaborCost.period_id == s.period_id,
-    ).all()
-    overhead_records = db.query(ProductOverheadCost).filter(
-        ProductOverheadCost.product_plan_id == s.product_plan_id,
-        ProductOverheadCost.period_id == s.period_id,
-    ).all()
-    s.labor_cost_actual = round(sum(r.total_amount for r in labor_records), 2)
-    s.overhead_cost_actual = round(sum(r.allocation_amount for r in overhead_records), 2)
-    s.total_cost_actual = round(s.material_cost_actual + s.labor_cost_actual + s.overhead_cost_actual, 2)
-    s.variance_amount = round(s.total_cost_actual - s.total_cost_target, 2)
-    s.variance_pct = round(s.variance_amount / s.total_cost_target * 100, 2) if s.total_cost_target else 0
-    # 更新明细
-    db.query(CostAccountingItem).filter(CostAccountingItem.sheet_id == s.id).delete()
-    items = []
-    # 物料明细（保留原有值）
-    if s.material_cost_actual > 0:
-        items.append(CostAccountingItem(sheet_id=s.id, cost_category=CostCategory.MATERIAL.value,
-            item_name="BOM物料成本合计", target_amount=s.material_cost_target,
-            actual_amount=s.material_cost_actual,
-            variance=round(s.material_cost_actual - s.material_cost_target, 2),
-            source_type="bom"))
-    # 人工明细
-    if s.labor_cost_actual > 0:
-        for lr in labor_records:
-            items.append(CostAccountingItem(sheet_id=s.id, cost_category=CostCategory.LABOR.value,
-                item_name=lr.operation_name, actual_amount=lr.total_amount, variance=lr.total_amount,
-                source_type="labor_record", source_id=lr.id))
-    if s.overhead_cost_actual > 0:
-        for oc in overhead_records:
-            items.append(CostAccountingItem(sheet_id=s.id, cost_category=CostCategory.OVERHEAD.value,
-                item_name=f"分摊({oc.rule_id})", actual_amount=oc.allocation_amount,
-                variance=oc.allocation_amount, source_type="overhead_rule", source_id=oc.id))
-    for it in items: db.add(it)
-    db.commit()
-    return {"ok": True, "sheet_id": s.id}
-
-@router.delete("/sheets/{sid}")
-def delete_sheet(sid: int, db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
-    s = db.query(CostAccountingSheet).filter(CostAccountingSheet.id == sid).first()
-    if not s: raise HTTPException(404, "核算单不存在")
-    if s.status == SheetStatus.FINALIZED.value: raise HTTPException(400, "已定稿核算单不可删除")
-    db.delete(s); db.commit(); return {"ok": True}
-
-
-# ════════════════════════════════════════
-# 成本差异分析
-# ════════════════════════════════════════
-
-@router.get("/analysis/variance")
-def get_variance_analysis(plan_id: str, period_id: int = Query(...), db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
-    sheet = db.query(CostAccountingSheet).filter(
-        CostAccountingSheet.product_plan_id == plan_id,
-        CostAccountingSheet.period_id == period_id,
-    ).first()
-    if not sheet: raise HTTPException(404, "该产品在该期间无核算单")
-    return {
-        "sheet_id": sheet.id, "sheet_no": sheet.sheet_no,
-        "material": {"actual": sheet.material_cost_actual, "target": sheet.material_cost_target,
-                      "variance": sheet.material_cost_actual - sheet.material_cost_target,
-                      "variance_pct": round((sheet.material_cost_actual - sheet.material_cost_target) / sheet.material_cost_target * 100, 2) if sheet.material_cost_target else 0},
-        "labor": {"actual": sheet.labor_cost_actual, "target": sheet.labor_cost_target,
-                  "variance": sheet.labor_cost_actual - sheet.labor_cost_target,
-                  "variance_pct": round((sheet.labor_cost_actual - sheet.labor_cost_target) / sheet.labor_cost_target * 100, 2) if sheet.labor_cost_target else 0},
-        "overhead": {"actual": sheet.overhead_cost_actual, "target": sheet.overhead_cost_target,
-                     "variance": sheet.overhead_cost_actual - sheet.overhead_cost_target,
-                     "variance_pct": round((sheet.overhead_cost_actual - sheet.overhead_cost_target) / sheet.overhead_cost_target * 100, 2) if sheet.overhead_cost_target else 0},
-        "total": {"actual": sheet.total_cost_actual, "target": sheet.total_cost_target,
-                  "variance": sheet.variance_amount, "variance_pct": sheet.variance_pct},
-    }
-
-@router.get("/analysis/detail")
-def get_variance_detail(plan_id: str, period_id: int = Query(...), db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
-    sheet = db.query(CostAccountingSheet).filter(
-        CostAccountingSheet.product_plan_id == plan_id,
-        CostAccountingSheet.period_id == period_id,
-    ).first()
-    if not sheet: raise HTTPException(404, "核算单不存在")
-    items = db.query(CostAccountingItem).filter(CostAccountingItem.sheet_id == sheet.id).all()
-    return {"sheet_no": sheet.sheet_no, "items": [
-        {"id": i.id, "category": i.cost_category, "name": i.item_name,
-         "target": i.target_amount, "actual": i.actual_amount,
-         "variance": i.variance, "variance_pct": i.variance_pct}
-        for i in items
-    ]}
-
-@router.get("/analysis/trend")
-def get_cost_trend(plan_id: str, limit: int = Query(6), db: Session = Depends(get_db), _=_PERIOD_DEP) -> list:
-    sheets = db.query(CostAccountingSheet).filter(
-        CostAccountingSheet.product_plan_id == plan_id,
-    ).order_by(CostAccountingSheet.period_id).limit(limit).all()
-    return [
-        {"period_id": s.period_id, "sheet_no": s.sheet_no, "status": s.status,
-         "material_actual": s.material_cost_actual, "labor_actual": s.labor_cost_actual,
-         "overhead_actual": s.overhead_cost_actual, "total_actual": s.total_cost_actual,
-         "total_target": s.total_cost_target, "variance_pct": s.variance_pct}
-        for s in sheets
-    ]
-
-
-# ════════════════════════════════════════
-# 报告导出（CSV / Excel）
-# ════════════════════════════════════════
-
-@router.get("/reports/export/csv")
-def export_csv(sheet_id: int = Query(...), db: Session = Depends(get_db), _=_PERIOD_DEP) -> dict:
-    s = db.query(CostAccountingSheet).filter(CostAccountingSheet.id == sheet_id).first()
-    if not s: raise HTTPException(404, "核算单不存在")
-    items = db.query(CostAccountingItem).filter(CostAccountingItem.sheet_id == s.id).all()
-    import csv, io
-    output = io.StringIO()
-    w = csv.writer(output)
-    w.writerow(["核算单", s.sheet_no, "", "", "", ""])
-    w.writerow(["成本类别", "项目名称", "目标金额", "实际金额", "差异", "差异率%"])
-    w.writerow(["物料成本", "BOM物料合计", s.material_cost_target, s.material_cost_actual,
-                 s.material_cost_actual - s.material_cost_target, ""])
-    for i in items:
-        w.writerow([i.cost_category, i.item_name, i.target_amount, i.actual_amount, i.variance, i.variance_pct])
-    w.writerow(["合计", "", s.total_cost_target, s.total_cost_actual, s.variance_amount, s.variance_pct])
-    from fastapi.responses import StreamingResponse
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={s.sheet_no}.csv"},
-    )
-
-
-@router.get("/reports/export/excel")
-def export_excel(
-    period_id: Optional[int] = Query(None, description="筛选期间ID"),
-    status: Optional[str] = Query(None, description="筛选状态: draft/finalized"),
-    sheet_ids: Optional[str] = Query(None, description="指定核算单ID列表，逗号分隔"),
-    plan_id: Optional[str] = Query(None, description="筛选产品策划ID"),
-    db: Session = Depends(get_db),
-    _=_PERIOD_DEP,
-) -> Any:
-    """批量导出核算单为Excel（.xlsx）
-
-    支持按期间/状态筛选，或按ID列表导出。
-    每个核算单为Excel中的一个sheet，含明细项。
-    自动按差异率排序，差异率为负时标红。
-    """
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
-    from fastapi.responses import StreamingResponse
-    import io
-    from datetime import datetime
-
-    # ── 1. 查询核算单 ──
-    from sqlalchemy.orm import joinedload
-    query = db.query(CostAccountingSheet).options(
-        joinedload(CostAccountingSheet.product_plan),
-        joinedload(CostAccountingSheet.period),
-    ).order_by(CostAccountingSheet.period_id, CostAccountingSheet.id)
-
-    if sheet_ids:
-        ids = [int(x.strip()) for x in sheet_ids.split(",") if x.strip().isdigit()]
-        if not ids:
-            raise HTTPException(400, "sheet_ids 参数格式无效，请提供逗号分隔的数字ID列表")
-        query = query.filter(CostAccountingSheet.id.in_(ids))
-    else:
-        if period_id:
-            query = query.filter(CostAccountingSheet.period_id == period_id)
-        if status:
-            query = query.filter(CostAccountingSheet.status == status)
-        if plan_id:
-            query = query.filter(CostAccountingSheet.product_plan_id == plan_id)
-
-    sheets = query.all()
-    if not sheets:
-        raise HTTPException(404, "没有符合条件的核算单")
-
-    # ── 2. 批量获取明细 ──
-    sheet_ids_list = [s.id for s in sheets]
-    items_map: dict[int, list[CostAccountingItem]] = {sid: [] for sid in sheet_ids_list}
-    all_items = (
-        db.query(CostAccountingItem)
-        .filter(CostAccountingItem.sheet_id.in_(sheet_ids_list))
-        .order_by(CostAccountingItem.sheet_id, CostAccountingItem.cost_category)
-        .all()
-    )
-    for item in all_items:
-        items_map.setdefault(item.sheet_id, []).append(item)
-
-    # ── 3. 构建 Excel ──
-    wb = openpyxl.Workbook()
-    # 删除默认sheet，后面按需创建
-    wb.remove(wb.active)
-
-    # 样式定义
-    header_font = Font(name="微软雅黑", bold=True, size=11, color="FFFFFF")
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    data_align_right = Alignment(horizontal="right", vertical="center")
-    data_align_left = Alignment(horizontal="left", vertical="center")
-    data_align_center = Alignment(horizontal="center", vertical="center")
-    thin_border = Border(
-        left=Side(style="thin", color="D9D9D9"),
-        right=Side(style="thin", color="D9D9D9"),
-        top=Side(style="thin", color="D9D9D9"),
-        bottom=Side(style="thin", color="D9D9D9"),
-    )
-    title_font = Font(name="微软雅黑", bold=True, size=14, color="1F4E79")
-    subtitle_font = Font(name="微软雅黑", size=10, color="595959")
-    red_font = Font(name="微软雅黑", color="FF0000")
-    total_fill = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="solid")
-    total_font = Font(name="微软雅黑", bold=True, size=11)
-    cat_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
-
-    categories_cn = {
-        "material": "物料成本",
-        "labor": "人工成本",
-        "overhead": "制造费用",
-    }
-
-    for idx, sheet in enumerate(sheets):
-        # 获取策划名称
-        plan_name = ""
-        if sheet.product_plan:
-            plan_name = sheet.product_plan.name or ""
-
-        sheet_name = f"{sheet.sheet_no[-8:]}" if len(sheet.sheet_no) > 8 else f"Sheet{idx+1}"
-        if len(sheet_name) > 31:
-            sheet_name = sheet_name[:31]
-
-        ws = wb.create_sheet(title=sheet_name)
-
-        # ── 标题行 ──
-        ws.merge_cells("A1:F1")
-        title_cell = ws["A1"]
-        title_cell.value = f"成本核算单 — {sheet.sheet_no}"
-        title_cell.font = title_font
-        title_cell.alignment = Alignment(horizontal="left", vertical="center")
-        ws.row_dimensions[1].height = 30
-
-        # 副标题
-        ws.merge_cells("A2:F2")
-        sub = ws["A2"]
-        period_name = sheet.period.period_name if sheet.period else f"期间#{sheet.period_id}"
-        sub.value = f"{plan_name}  |  期间: {period_name}  |  状态: {'已定稿' if sheet.status == 'finalized' else '草稿'}  |  导出时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        sub.font = subtitle_font
-        ws.row_dimensions[2].height = 22
-
-        # ── 汇总表头 ──
-        headers = ["成本类别", "项目名称", "目标金额(元)", "实际金额(元)", "差异(元)", "差异率(%)"]
-        for col_idx, h in enumerate(headers, 1):
-            cell = ws.cell(row=4, column=col_idx, value=h)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = header_align
-            cell.border = thin_border
-        ws.row_dimensions[4].height = 24
-
-        # ── 成本概要行 ──
-        row = 5
-        summary_rows = [
-            ("物料成本", "BOM物料合计", sheet.material_cost_target, sheet.material_cost_actual,
-             sheet.material_cost_actual - sheet.material_cost_target,
-             round((sheet.material_cost_actual - sheet.material_cost_target) / sheet.material_cost_target * 100, 2)
-             if sheet.material_cost_target else 0),
-            ("人工成本", "人工工时合计", sheet.labor_cost_target, sheet.labor_cost_actual,
-             sheet.labor_cost_actual - sheet.labor_cost_target,
-             round((sheet.labor_cost_actual - sheet.labor_cost_target) / sheet.labor_cost_target * 100, 2)
-             if sheet.labor_cost_target else 0),
-            ("制造费用", "分摊费用合计", sheet.overhead_cost_target, sheet.overhead_cost_actual,
-             sheet.overhead_cost_actual - sheet.overhead_cost_target,
-             round((sheet.overhead_cost_actual - sheet.overhead_cost_target) / sheet.overhead_cost_target * 100, 2)
-             if sheet.overhead_cost_target else 0),
-        ]
-        for cat_name, item_name, target_val, actual_val, variance_val, variance_pct_val in summary_rows:
-            cat_cell = ws.cell(row=row, column=1, value=cat_name)
-            cat_cell.font = Font(name="微软雅黑", bold=True)
-            cat_cell.fill = cat_fill
-            cat_cell.alignment = data_align_center
-            cat_cell.border = thin_border
-
-            ws.cell(row=row, column=2, value=item_name).border = thin_border
-            for col_idx, val in [(3, target_val), (4, actual_val), (5, variance_val)]:
-                c = ws.cell(row=row, column=col_idx, value=val)
-                c.number_format = '#,##0.00'
-                c.alignment = data_align_right
-                c.border = thin_border
-                if col_idx == 5 and val < 0:
-                    c.font = red_font
-
-            pct_cell = ws.cell(row=row, column=6, value=variance_pct_val / 100 if variance_pct_val else 0)
-            pct_cell.number_format = '0.00%'
-            pct_cell.alignment = data_align_right
-            pct_cell.border = thin_border
-            if variance_pct_val < 0:
-                pct_cell.font = red_font
-
-            row += 1
-
-        # ── 明细项 ──
-        if items_map.get(sheet.id):
-            # 添加空行分隔
-            row += 1
-            detail_header = ws.cell(row=row, column=1, value="明细项")
-            detail_header.font = Font(name="微软雅黑", bold=True, size=10)
-            ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
-            row += 1
-
-            detail_headers = ["成本类别", "明细项名称", "目标金额(元)", "实际金额(元)", "差异(元)", "差异率(%)"]
-            for col_idx, h in enumerate(detail_headers, 1):
-                cell = ws.cell(row=row, column=col_idx, value=h)
-                cell.font = header_font
-                cell.fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
-                cell.alignment = header_align
-                cell.border = thin_border
-            row += 1
-
-            for item in items_map[sheet.id]:
-                cat_label = categories_cn.get(item.cost_category, item.cost_category)
-                ws.cell(row=row, column=1, value=cat_label).border = thin_border
-                ws.cell(row=row, column=2, value=item.item_name).border = thin_border
-
-                for col_idx, val in [(3, item.target_amount), (4, item.actual_amount), (5, item.variance)]:
-                    c = ws.cell(row=row, column=col_idx, value=val or 0)
-                    c.number_format = '#,##0.00'
-                    c.alignment = data_align_right
-                    c.border = thin_border
-                    if col_idx == 5 and (val or 0) < 0:
-                        c.font = red_font
-
-                pct_val = (item.variance_pct or 0) / 100
-                pct_cell = ws.cell(row=row, column=6, value=pct_val)
-                pct_cell.number_format = '0.00%'
-                pct_cell.alignment = data_align_right
-                pct_cell.border = thin_border
-                if (item.variance_pct or 0) < 0:
-                    pct_cell.font = red_font
-
-                row += 1
-
-        # ── 合计行 ──
-        row += 1
-        total_cells = [
-            ws.cell(row=row, column=1, value="合计"),
-            ws.cell(row=row, column=2, value=""),
-        ]
-        total_cells[0].font = total_font
-        total_cells[0].fill = total_fill
-        total_cells[0].alignment = data_align_center
-        total_cells[0].border = thin_border
-        ws.cell(row=row, column=2).border = thin_border
-
-        for col_idx, val in [(3, sheet.total_cost_target), (4, sheet.total_cost_actual), (5, sheet.variance_amount)]:
-            c = ws.cell(row=row, column=col_idx, value=val or 0)
-            c.font = total_font
-            c.fill = total_fill
-            c.number_format = '#,##0.00'
-            c.alignment = data_align_right
-            c.border = thin_border
-            if col_idx == 5 and (val or 0) < 0:
-                c.font = Font(name="微软雅黑", bold=True, color="FF0000")
-
-        pct_final = (sheet.variance_pct or 0) / 100
-        pct_c = ws.cell(row=row, column=6, value=pct_final)
-        pct_c.font = total_font
-        pct_c.fill = total_fill
-        pct_c.number_format = '0.00%'
-        pct_c.alignment = data_align_right
-        pct_c.border = thin_border
-        if (sheet.variance_pct or 0) < 0:
-            pct_c.font = Font(name="微软雅黑", bold=True, color="FF0000")
-
-        # ── 列宽 ──
-        ws.column_dimensions["A"].width = 14
-        ws.column_dimensions["B"].width = 28
-        ws.column_dimensions["C"].width = 16
-        ws.column_dimensions["D"].width = 16
-        ws.column_dimensions["E"].width = 16
-        ws.column_dimensions["F"].width = 14
-
-        # 打印设置
-        ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
-        ws.page_setup.fitToWidth = 1
-        ws.page_setup.fitToHeight = 0
-        ws.page_setup.orientation = "landscape"
-
-    # ── 4. 输出 ──
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-
-    filename = f"成本核算_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    return StreamingResponse(
-        iter([buf.getvalue()]),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
