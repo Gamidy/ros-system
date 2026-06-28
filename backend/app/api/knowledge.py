@@ -181,12 +181,12 @@ def update_knowledge(
     return item
 
 
-@router.delete("/items/{item_id}", status_code=204)
+@router.delete("/items/{item_id}")
 def delete_knowledge(
     item_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> None:
+) -> dict:
     """删除知识库条目（需登录）"""
     item = db.query(KnowledgeItem).filter(KnowledgeItem.id == item_id).first()
     if not item:
@@ -200,6 +200,7 @@ def delete_knowledge(
         producer="knowledge.service",
         user_id=current_user.username,
     )
+    return {"ok": True, "id": item_id}
 
 
 @router.get("/categories")
