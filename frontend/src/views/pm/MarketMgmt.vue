@@ -500,7 +500,7 @@ function openAddDialog() {
   form.value = {
     code: '', name: '', region: '',
     energy_standard: 'eer', energy_label: 'EER', energy_unit: 'W/W',
-    energy_standard_detail: null, national_standard: null,
+    energy_standard_detail: null, national_standard: null, min_voltage: null,
     voltage_freq: null, cooling_max_temp: null, heating_min_temp: null,
     structure_type: null, main_selling_model: null,
     refrigerant: null,

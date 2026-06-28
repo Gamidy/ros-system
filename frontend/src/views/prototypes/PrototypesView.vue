@@ -213,7 +213,7 @@ async function fetchProjects() {
 
 function openDialog(row?: TableRow) {
   if (row) {
-    editingId.value = row.id
+    editingId.value = row.id as number
     form.value = {
       product_code: row.product_code || '',
       project_code: row.project_code || '',
@@ -222,6 +222,7 @@ function openDialog(row?: TableRow) {
       proto_type: row.proto_type || '',
       stage: row.stage || null,
       quantity: row.quantity ?? 1,
+      min_voltage: null,
       remark: row.remark || '',
     }
   } else {
@@ -253,7 +254,7 @@ async function save() {
 }
 
 async function upgradeVersion(row: TableRow) {
-  upgradingId.value = row.id
+  upgradingId.value = row.id as number
   try {
     await api.post(`/prototypes/${row.id}/upgrade`)
     ElMessage.success('版本升级成功')

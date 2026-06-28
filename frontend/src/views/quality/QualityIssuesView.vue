@@ -173,7 +173,7 @@ async function fetchData() {
 
 function openDialog(row?: Record<string, unknown>) {
   if (row) {
-    editingId.value = row.id
+    editingId.value = Number(row.id) ?? null
     form.value = { ...row }
   } else {
     editingId.value = null

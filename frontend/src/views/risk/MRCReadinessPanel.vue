@@ -182,7 +182,7 @@ function renderRadarChart(data: Record<string, unknown>) {
 
   if (dimensions.length > 0) {
     radarIndicators = dimensions.map((d: RadardDimension) => ({
-      name: d.name,
+      name: d.name ?? '',
       max: d.max ?? 100,
     }))
     seriesData = [{
