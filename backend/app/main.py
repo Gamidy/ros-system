@@ -43,6 +43,7 @@ from app.api import ws
 from app.api import standard_query_api, standard_admin_api
 from app.api import ci_v2, event_graph, cost_recalculation
 from app.api import quality_8d_report
+from app.api import quality_iqc, purchase_rfq, process_sop
 from app.api import inventory
 from app.api import inventory_count
 from app.api import inventory_alert
@@ -197,6 +198,9 @@ app.include_router(purchase_return.router, prefix="/api")
 
 # ── 8D报告管理 (质量工程师P0) ──
 app.include_router(quality_8d_report.router)
+app.include_router(quality_iqc.router, prefix="/api")
+app.include_router(purchase_rfq.router, prefix="/api")
+app.include_router(process_sop.router, prefix="/api")
 app.include_router(knowledge.router)
 app.include_router(knowledge_base.router, prefix="/api")
 app.include_router(pm_workspace.router, prefix="/api")
