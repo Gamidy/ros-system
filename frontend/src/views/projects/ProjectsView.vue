@@ -197,8 +197,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+
+const router = useRouter()
 
 const tab = ref('projects')
 const programs = ref<any[]>([])
@@ -263,31 +266,19 @@ async function saveProject() {
 }
 
 async function openProjectDetail(row: Record<string, unknown>) {
-  try {
-    const [pd, g, t, r] = await Promise.all([
-      api.get(`/projects/${row.id}`),
-      api.get(`/projects/${row.id}/gates`),
-      api.get(`/projects/${row.id}/tasks`),
-      api.get(`/projects/${row.id}/risks`)
-    ])
-    detailProject.value = pd.data
-    detailGates.value = (g.data || []).sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a.seq as number) - (b.seq as number)).map((g: Record<string, unknown>) => ({...g, _newStatus: ''}))
-    detailTasks.value = t.data || []
-    detailRisks.value = r.data || []
-    showDetailDialog.value = true
-  } catch {}
+  router.push(`/projects/${row.id}`)
 }
 
 async function updateGate(gateId: number, status: string) {
-  try { await api.patch(`/projects/gates/${gateId}`, { status }); ElMessage.success('Gate更新'); await openProjectDetail(detailProject.value!) } catch {}
+  try { await api.patch(`/projects/gates/${gateId}`, { status }); ElMessage.success('Gate更新') } catch {}
 }
 
 async function saveTask() {
-  try { await api.post(`/projects/${detailProject.value.id}/tasks`, taskForm.value); ElMessage.success('任务创建'); showTaskDialog.value = false; await openProjectDetail(detailProject.value) } catch {}
+  try { await api.post(`/projects/${detailProject.value.id}/tasks`, taskForm.value); ElMessage.success('任务创建'); showTaskDialog.value = false } catch {}
 }
 
 async function saveRisk() {
-  try { await api.post(`/projects/${detailProject.value.id}/risks`, riskForm.value); ElMessage.success('风险记录'); showRiskDialog.value = false; await openProjectDetail(detailProject.value) } catch {}
+  try { await api.post(`/projects/${detailProject.value.id}/risks`, riskForm.value); ElMessage.success('风险记录'); showRiskDialog.value = false } catch {}
 }
 
 onMounted(fetchAll)

@@ -1013,3 +1013,127 @@ def update_risk(
 
 
 router = project_router  # alias for import compatibility
+
+
+# ══════════════════════════════════════════════════════════════
+# 项目仪表盘统计
+# ══════════════════════════════════════════════════════════════
+
+
+@project_router.get("/dashboard/overview")
+def project_dashboard_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """项目仪表盘概览: 按等级/状态/来源统计"""
+    from sqlalchemy import func as sa_func
+
+    total = db.query(Project).filter(Project.is_deleted == False).count()
+    by_class = db.query(
+        Project.project_class, sa_func.count(Project.id)
+    ).filter(Project.is_deleted == False).group_by(Project.project_class).all()
+    by_status = db.query(
+        Project.status, sa_func.count(Project.id)
+    ).filter(Project.is_deleted == False).group_by(Project.status).all()
+    by_source = db.query(
+        Project.source, sa_func.count(Project.id)
+    ).filter(Project.is_deleted == False).group_by(Project.source).all()
+
+    # 项目健康: 已超期 + 高风险项目
+    today = date.today()
+    overdue = db.query(Project).filter(
+        Project.is_deleted == False,
+        Project.target_end_date.isnot(None),
+        Project.target_end_date < today,
+        Project.status.in_(["planning", "running"]),
+    ).count()
+
+    high_risk = db.query(Risk).filter(
+        Risk.risk_level == "A",
+        Risk.status.in_(["open", "monitoring"]),
+    ).count()
+
+    # Gate 统计
+    total_gates = db.query(ProjectGate).count()
+    passed_gates = db.query(ProjectGate).filter(ProjectGate.status == "passed").count()
+
+    return {
+        "total_projects": total,
+        "by_class": {r[0]: r[1] for r in by_class},
+        "by_status": {r[0]: r[1] for r in by_status},
+        "by_source": {r[0]: r[1] for r in by_source},
+        "overdue_count": overdue,
+        "high_risk_count": high_risk,
+        "gate_progress": {
+            "total": total_gates,
+            "passed": passed_gates,
+            "rate": round(passed_gates / total_gates * 100, 1) if total_gates > 0 else 0,
+        },
+    }
+
+
+@project_router.get("/{pid}/dashboard")
+def project_detail_dashboard(
+    pid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("projects")),
+):
+    """单个项目详情看板数据"""
+    from sqlalchemy import func as sa_func
+
+    p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
+    if not p:
+        raise HTTPException(404, "项目不存在")
+
+    # Gate 进度
+    gates = db.query(ProjectGate).filter(ProjectGate.project_id == pid).order_by(ProjectGate.seq).all()
+    gate_progress = {
+        "total": len(gates),
+        "passed": sum(1 for g in gates if g.status == "passed"),
+        "items": [{"code": g.gate_code, "name": g.gate_name, "status": g.status, "seq": g.seq} for g in gates],
+    }
+
+    # 任务统计
+    tasks = db.query(Task).filter(Task.project_id == pid).all()
+    task_stats = {
+        "total": len(tasks),
+        "todo": sum(1 for t in tasks if t.status == "todo"),
+        "in_progress": sum(1 for t in tasks if t.status == "in_progress"),
+        "done": sum(1 for t in tasks if t.status == "done"),
+        "blocked": sum(1 for t in tasks if t.status == "blocked"),
+    }
+
+    # 里程碑
+    milestones = db.query(Milestone).filter(Milestone.project_id == pid).order_by(Milestone.planned_date).all()
+    milestone_stats = {
+        "total": len(milestones),
+        "achieved": sum(1 for m in milestones if m.status == "achieved"),
+        "delayed": sum(1 for m in milestones if m.status == "delayed"),
+    }
+
+    # 风险
+    risks = db.query(Risk).filter(Risk.project_id == pid).all()
+    risk_stats = {
+        "total": len(risks),
+        "open": sum(1 for r in risks if r.status == "open"),
+        "a_level": sum(1 for r in risks if r.risk_level == "A"),
+    }
+
+    # 超期判断
+    today = date.today()
+    is_overdue = bool(
+        p.target_end_date and p.target_end_date < today and p.status in ("planning", "running")
+    )
+
+    return {
+        "gate_progress": gate_progress,
+        "task_stats": task_stats,
+        "milestone_stats": milestone_stats,
+        "risk_stats": risk_stats,
+        "is_overdue": is_overdue,
+        "days_remaining": (p.target_end_date - today).days if p.target_end_date else None,
+        "health": "overdue" if is_overdue else (
+            "at_risk" if risk_stats["a_level"] > 0 or task_stats["blocked"] > 0 else "on_track"
+        ),
+    }
