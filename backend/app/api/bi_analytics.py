@@ -675,35 +675,29 @@ def bi_dashboard(
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
 ):
-    """BI分析仪表盘 — 一次性聚合所有看板数据
-
-    返回:
-      kpi: 策划总数/审批通过率/成本超标数
-      planning_trend: 按月策划趋势
-      cost_overrun_top5: 超标最严重的5条预警
-    """
-    from app.models.cost_alert_rule import AlertEvent
-    from sqlalchemy import func as sa_func, text as sa_text
+    """BI分析仪表盘 — 用原生SQL聚合（避免ORM lazy loading问题）"""
+    import json
+    from sqlalchemy import text as sa_text
 
     cache_key = "bi:dashboard"
     cached = _cache_get(cache_key)
     if cached is not None:
-        import json
         return json.loads(cached)
 
-    # ── 1. KPI ──
-    total_plans = db.query(sa_func.count(ProductPlan.id)).scalar() or 0
-    completed_plans = db.query(sa_func.count(ProductPlan.id)).filter(
-        ProductPlan.status.in_([
-            ProductPlanStage.APPROVED,
-            ProductPlanStage.RELEASED,
-        ])
-    ).scalar() or 0
+    # ── 1. KPI: 原生SQL直接查询 ──
+    total_plans = db.execute(sa_text(
+        "SELECT COUNT(*) FROM product_plans"
+    )).scalar() or 0
+
+    completed_plans = db.execute(sa_text(
+        "SELECT COUNT(*) FROM product_plans WHERE status IN ('approved', 'released')"
+    )).scalar() or 0
+
     approval_rate = round(completed_plans / total_plans, 3) if total_plans > 0 else 0
 
-    cost_overrun_count = db.query(sa_func.count(AlertEvent.id)).filter(
-        AlertEvent.is_resolved == False
-    ).scalar() or 0
+    cost_overrun_count = db.execute(sa_text(
+        "SELECT COUNT(*) FROM alert_events WHERE is_resolved = 0"
+    )).scalar() or 0
 
     kpi = {
         "total_plans": total_plans,
@@ -712,44 +706,27 @@ def bi_dashboard(
     }
 
     # ── 2. 策划月度趋势 ──
-    trend_rows = (
-        db.query(
-            sa_func.date_format(ProductPlan.created_at, "%Y-%m").label("month"),
-            sa_func.count(ProductPlan.id).label("count"),
-        )
-        .group_by(sa_text("month"))
-        .order_by(sa_text("month"))
-        .limit(12)
-        .all()
-    )
-    planning_trend = [
-        {"month": row.month, "count": row.count}
-        for row in trend_rows
-    ]
+    trend_rows = db.execute(sa_text(
+        "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count "
+        "FROM product_plans GROUP BY month ORDER BY month LIMIT 12"
+    )).fetchall()
+    planning_trend = [{"month": row[0], "count": row[1]} for row in trend_rows]
 
     # ── 3. 成本超标 Top5 ──
-    alert_rows = (
-        db.query(
-            AlertEvent.plan_name,
-            AlertEvent.target_amount,
-            AlertEvent.actual_amount,
-            AlertEvent.variance_amount,
-            AlertEvent.variance_pct,
-            AlertEvent.alert_level,
-        )
-        .filter(AlertEvent.is_resolved == False)
-        .order_by(sa_func.abs(AlertEvent.variance_pct).desc())
-        .limit(5)
-        .all()
-    )
+    alert_rows = db.execute(sa_text(
+        "SELECT plan_name, target_amount, actual_amount, "
+        "variance_amount, variance_pct, alert_level "
+        "FROM alert_events WHERE is_resolved = 0 "
+        "ORDER BY ABS(variance_pct) DESC LIMIT 5"
+    )).fetchall()
     cost_overrun_top5 = [
         {
-            "project_name": row.plan_name or "未知项目",
-            "budget": float(row.target_amount or 0),
-            "actual": float(row.actual_amount or 0),
-            "overrun_rate": float(row.variance_pct or 0) / 100,
-            "overrun_amount": float(row.variance_amount or 0),
-            "alert_level": row.alert_level,
+            "project_name": row[0] or "未知项目",
+            "budget": float(row[1] or 0),
+            "actual": float(row[2] or 0),
+            "overrun_rate": float(row[4] or 0) / 100,
+            "overrun_amount": float(row[3] or 0),
+            "alert_level": row[5] or "warning",
         }
         for row in alert_rows
     ]
@@ -760,5 +737,5 @@ def bi_dashboard(
         "cost_overrun_top5": cost_overrun_top5,
     }
 
-    _cache_set(cache_key, json.dumps(result), CACHE_TTL)
+    _cache_set(cache_key, json.dumps(result, ensure_ascii=False), CACHE_TTL)
     return result
