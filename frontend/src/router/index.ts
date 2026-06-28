@@ -65,6 +65,12 @@ const router = createRouter({
           meta: { title: '项目详情', menu: 'projects' },
         },
         {
+          path: 'projects/:id/gantt',
+          name: 'ProjectGantt',
+          component: () => import('../views/projects/ProjectGanttView.vue'),
+          meta: { title: '项目甘特图', menu: 'projects' },
+        },
+        {
           path: 'tests',
           name: 'Tests',
           component: () => import('../views/tests/TestsView.vue'),

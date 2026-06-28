@@ -10,6 +10,10 @@
         <el-button text @click="router.push('/projects')">← 返回项目列表</el-button>
         <el-divider direction="vertical" />
         <span class="breadcrumb-current">{{ project?.code }} {{ project?.name }}</span>
+        <div style="flex:1" />
+        <el-button size="small" type="primary" plain @click="router.push('/projects/' + pid + '/gantt')">
+          <el-icon style="margin-right:4px"><View /></el-icon>甘特图
+        </el-button>
       </div>
 
       <!-- 1. Project Header Card -->
@@ -259,7 +263,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { CircleCheckFilled, WarningFilled, CircleCloseFilled, Clock, Monitor, Check, Warning, MoreFilled } from '@element-plus/icons-vue'
+import { CircleCheckFilled, WarningFilled, CircleCloseFilled, Clock, Monitor, Check, Warning, MoreFilled, View } from '@element-plus/icons-vue'
 import api from '../../api'
 
 const route = useRoute()
