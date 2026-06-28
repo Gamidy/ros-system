@@ -1,0 +1,382 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Safety Compliance Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-007
+# Approval Score: 94.0/100
+
+capability:
+  id: "safety"
+  name: "Safety Compliance"
+  display_name: "安规管理中心"
+  description: >
+    管理空调产品安规合规的全生命周期能力。
+    包含安全标准库管理、安规检测项配置、批量导入、
+    供应商安规资质认证与审核、资质到期预警等核心业务能力。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 94.0
+  rfc_number: "RFC-2026-007"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "Quality Director"
+  technical_owner: "Safety Compliance Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "quality_engineer"
+  backup_role: "certification_engineer"
+  stewardship_level: "exclusive"  # exclusive | shared | read-only
+
+lifecycle:
+  states:
+    - draft
+    - active             # 标准生效中
+    - monitoring         # 合规监控中
+    - alerting           # 预警触发
+    - review             # 合规评审
+    - qualified          # 供应商已认证
+    - expired            # 资质过期
+    - archived           # 已归档
+  initial_state: "draft"
+  terminal_states: ["archived"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── 安全标准库 ──
+    - method: GET
+      path: /api/safety/standards
+      description: 安全标准库分页列表（可按关键词/类型/状态/市场筛选）
+      response: "SafetyStandardListOut"
+      auth: "require_menu('safety-standards')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/safety/standards/{sid}
+      description: 获取安全标准详情（含关联检测项）
+      response: "SafetyStandardOut"
+      auth: "require_menu('safety-standards')"
+      sla_ms: 200
+
+    - method: POST
+      path: /api/safety/standards
+      description: 创建安全标准
+      request: "SafetyStandardCreate"
+      response: "SafetyStandardOut"
+      auth: "admin | quality_engineer | certification_engineer"
+      sla_ms: 500
+
+    - method: PUT
+      path: /api/safety/standards/{sid}
+      description: 更新安全标准
+      request: "SafetyStandardUpdate"
+      response: "SafetyStandardOut"
+      auth: "admin | quality_engineer | certification_engineer"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /api/safety/standards/{sid}
+      description: 删除安全标准（物理删除，仅admin）
+      response: "{ ok: bool }"
+      auth: "admin"
+      sla_ms: 300
+
+    - method: PUT
+      path: /api/safety/standards/{sid}/archive
+      description: 归档安全标准（软删除 → obsolete）
+      response: "SafetyStandardOut"
+      auth: "admin | quality_engineer | certification_engineer"
+      sla_ms: 300
+      idempotency: true
+
+    # ── 安规检测项 ──
+    - method: GET
+      path: /api/safety/inspection-items
+      description: 安规检测项分页列表（可按标准/类别/关键词/状态筛选）
+      response: "SafetyInspectionItemListOut"
+      auth: "require_menu('safety-inspection-items')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/safety/inspection-items/{iid}
+      description: 获取安规检测项详情
+      response: "SafetyInspectionItemOut"
+      auth: "require_menu('safety-inspection-items')"
+      sla_ms: 200
+
+    - method: POST
+      path: /api/safety/inspection-items
+      description: 创建安规检测项
+      request: "SafetyInspectionItemCreate"
+      response: "SafetyInspectionItemOut"
+      auth: "admin | quality_engineer | certification_engineer"
+      sla_ms: 500
+
+    - method: PUT
+      path: /api/safety/inspection-items/{iid}
+      description: 更新安规检测项
+      request: "SafetyInspectionItemUpdate"
+      response: "SafetyInspectionItemOut"
+      auth: "admin | quality_engineer | certification_engineer"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /api/safety/inspection-items/{iid}
+      description: 删除安规检测项（仅admin）
+      response: "{ ok: bool }"
+      auth: "admin"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/safety/inspection-items/batch
+      description: 批量导入安规检测项（按standard_id+item_code去重）
+      request: "list[SafetyInspectionItemCreate]"
+      response: "{ ok: bool, created: int }"
+      auth: "admin | quality_engineer"
+      sla_ms: 1000
+      idempotency: true
+
+    # ── 供应商安规资质 ──
+    - method: GET
+      path: /api/safety/supplier-qualifications
+      description: 供应商安规资质列表（可按供应商/类型/状态/到期预警天数筛选）
+      response: "SupplierSafetyQualificationListOut"
+      auth: "require_menu('safety-supplier-qualifications')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/safety/supplier-qualifications/{qid}
+      description: 获取供应商安规资质详情（含审核记录）
+      response: "SupplierSafetyQualificationOut"
+      auth: "require_menu('safety-supplier-qualifications')"
+      sla_ms: 200
+
+    - method: POST
+      path: /api/safety/supplier-qualifications
+      description: 创建供应商安规资质（按supplier_id+qualification_type去重）
+      request: "SupplierSafetyQualificationCreate"
+      response: "SupplierSafetyQualificationOut"
+      auth: "admin | procurement | quality_engineer"
+      sla_ms: 500
+
+    - method: PUT
+      path: /api/safety/supplier-qualifications/{qid}
+      description: 更新供应商安规资质
+      request: "SupplierSafetyQualificationUpdate"
+      response: "SupplierSafetyQualificationOut"
+      auth: "admin | procurement | quality_engineer"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /api/safety/supplier-qualifications/{qid}
+      description: 删除供应商安规资质（仅admin）
+      response: "{ ok: bool }"
+      auth: "admin"
+      sla_ms: 300
+
+    # ── 供应商安规审核记录 ──
+    - method: GET
+      path: /api/safety/supplier-qualifications/{qid}/audit-records
+      description: 获取供应商安规审核记录列表
+      response: "list[SafetyAuditRecordOut]"
+      auth: "require_menu('safety-supplier-qualifications')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/safety/audit-records
+      description: 创建安规审核记录（自动更新资质审核状态）
+      request: "SafetyAuditRecordCreate"
+      response: "SafetyAuditRecordOut"
+      auth: "admin | quality_engineer"
+      sla_ms: 500
+
+    # ── 安规预警 ──
+    - method: GET
+      path: /api/safety/alerts
+      description: 获取安规预警信息（标准废止/资质到期/资质过期）
+      response: "SafetyAlertListOut"
+      auth: "require_menu('safety-alerts')"
+      sla_ms: 300
+
+  events_published:
+    - "safety.standard.updated"          # 标准创建/更新/归档时
+    - "safety.inspection.completed"      # 安规检查完成时
+    - "safety.alert.triggered"           # 预警触发（资质到期/标准废止）
+    - "safety.supplier.qualified"        # 供应商安规资质认证通过时
+
+  events_subscribed:
+    - "supplier.status_changed"          # 供应商状态变更 → 触发资质重审
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "SafetyStandard"                   # 安全标准库
+    - "SafetyInspectionItem"             # 安规检测项
+    - "SupplierSafetyQualification"      # 供应商安规资质
+    - "SupplierSafetyAuditRecord"        # 供应商安规审核记录
+
+  workflows:
+    - "standard_lifecycle"               # 标准创建→生效→归档
+    - "inspection_management"            # 检测项CRUD+批量导入
+    - "supplier_qualification"           # 供应商资质认证→审核→到期
+    - "safety_alerting"                  # 资质到期预警+标准废止通知
+
+  views:
+    - "SafetyHub"                        # 安规管理中心（一体化入口）
+    - "SafetyStandardView"               # 安全标准库视图
+    - "SafetyInspectionView"             # 安规检测项视图
+    - "SupplierQualificationView"        # 供应商安规资质视图
+    - "SafetyAlertView"                  # 安规预警视图
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "purchase"
+      entities: ["Supplier"]
+      contract: "docs/capabilities/purchase.capability.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"                     # JWT认证
+    - "event_bus"                        # 事件总线
+    - "notification_center"              # 通知中心（预警通知）
+    - "document_service"                 # 证书附件管理
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "SafetyAlertNotification"  # 预警触发 → 通知相关角色
+      trigger: "safety.alert.triggered"
+      consumer: "notification_center"
+
+    - entity: "SupplierQualificationStatus"  # 供应商资质通过 → 同步采购资质
+      trigger: "safety.supplier.qualified"
+      consumer: "purchase"
+
+    - entity: "StandardChangeImpact"     # 标准更新 → 影响分析
+      trigger: "safety.standard.updated"
+      consumer: "change_management"
+
+  knowledge:
+    - "standard_template"                # 安全标准模板沉淀
+    - "inspection_checklist"             # 安规检查清单库
+    - "safety_lessons_learned"           # 安规经验教训 → 知识库
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+    - "notification_center"
+
+  soft_dependencies:
+    - "purchase"                         # 供应商数据可选依赖
+    - "document_service"                 # 附件管理可选
+    - "ai_router"                        # AI辅助安规合规检查可选
+
+  downstream_consumers:
+    - capability: "notification_center"
+      consumes: ["SafetyAlertNotification"]
+    - capability: "purchase"
+      consumes: ["SupplierQualificationStatus"]
+    - capability: "change_management"
+      consumes: ["StandardChangeImpact"]
+    - capability: "knowledge_base"
+      consumes: ["safety_lessons_learned"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "SafetyStandard.*"
+    - "SafetyInspectionItem.*"
+    - "SupplierSafetyQualification.*"
+    - "SupplierSafetyAuditRecord.*"
+
+  shared_read:
+    - "SafetyStandard": ["dashboard", "bi_analytics", "verification", "planning"]
+    - "SafetyInspectionItem": ["dashboard", "bi_analytics", "verification"]
+    - "SupplierSafetyQualification": ["dashboard", "bi_analytics", "purchase"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  standard_archive:
+    strategy: "state_check"              # 当前状态校验
+  supplier_qualification_create:
+    strategy: "business_key"             # supplier_id+qualification_type 去重
+  batch_import:
+    strategy: "business_key"             # standard_id+item_code 去重
+  audit_record_create:
+    strategy: "state_check"              # 当前资质审核状态校验
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有数据无需迁移。新增字段均有默认值。
+    废弃字段通过 AliasChoices 兼容旧数据。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Supplier Qualification Coverage"
+    description: "关键供应商安规资质覆盖率"
+    target: "≥ 95%"
+    data_source: "SupplierSafetyQualification"
+
+  - name: "Standard Active Rate"
+    description: "活跃标准占比（active/total）"
+    target: "≥ 90%"
+    data_source: "SafetyStandard"
+
+  - name: "Alert MTTR"
+    description: "安规预警平均响应处理时间"
+    target: "≤ 7 天"
+    data_source: "Alert Event Log"
+
+  - name: "Qualification Expiry Alert Coverage"
+    description: "资质到期前30天通知覆盖率"
+    target: "100%"
+    data_source: "Notification Log"
+
+  - name: "Inspection Item Accuracy"
+    description: "安规检测项参数准确率（与实际偏差率）"
+    target: "≥ 99%"
+    data_source: "Audit Sample"
+
+  - name: "Safety API P95"
+    description: "安规管理 API P95 延迟"
+    target: "< 300ms"
+    data_source: "APM Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation Compliance + Event Bus 接入 + SafetyHub 一体化"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "AI 辅助安规合规检查 + 自动标准变更影响分析"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "跨市场安规标准自动对标 + 供应商资质自动审核"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主安规合规（AI 主导安规评审，人工抽查）"
+    target: "2028+"
+    status: "vision"

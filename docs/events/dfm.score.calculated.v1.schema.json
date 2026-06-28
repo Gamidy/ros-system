@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/events/dfm.score.calculated.v1.schema.json",
+  "title": "DFM评分完成事件",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "definitions": {
+    "metadata": {
+      "type": "object",
+      "required": ["identity", "context"],
+      "properties": {
+        "identity": {
+          "type": "object",
+          "required": ["event_id", "event_type", "version"],
+          "properties": {
+            "event_id": {"type": "string", "format": "uuid"},
+            "event_type": {"type": "string", "const": "dfm.score.calculated"},
+            "version": {"type": "integer", "const": 1}
+          }
+        },
+        "context": {
+          "type": "object",
+          "required": ["timestamp", "source", "producer", "trace_id", "tenant_id"],
+          "properties": {
+            "timestamp": {"type": "string", "format": "date-time"},
+            "source": {"type": "string", "const": "manufacturability"},
+            "producer": {"type": "string"},
+            "correlation_id": {"type": "string"},
+            "causation_id": {"type": "string"},
+            "trace_id": {"type": "string"},
+            "tenant_id": {"type": "string"},
+            "user_id": {"type": "string"}
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "metadata": {"$ref": "#/definitions/metadata"},
+    "payload": {
+      "type": "object",
+      "required": ["report_id", "total_score", "pass_threshold", "result"],
+      "properties": {
+        "report_id": {"type": "string"},
+        "total_score": {"type": "number"},
+        "pass_threshold": {"type": "number"},
+        "result": {"type": "string", "enum": ["pass", "fail"]},
+        "critical_issues_count": {"type": "integer"}
+      }
+    }
+  }
+}

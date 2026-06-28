@@ -233,3 +233,156 @@ capabilities:
       - "Certificate Renewal Rate"
       - "Gate Pass Rate"
       - "Change Impact Assessment Rate"
+
+  approval_engine:
+    id: "approval_engine"
+    name: "Approval Engine"
+    display_name: "审批引擎"
+    contract_file: "docs/capabilities/approval-engine.capability.yaml"
+    event_schemas:
+      - "docs/events/approval.requested.v1.schema.json"
+      - "docs/events/approval.step_completed.v1.schema.json"
+      - "docs/events/approval.completed.v1.schema.json"
+      - "docs/events/approval.rejected.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-003"
+    approval_score: 96.5
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "System Admin"
+      technical_owner: "Platform Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "planning"
+      - "purchases"
+    kpis:
+      - "Approval Cycle Time"
+      - "Approval Pass Rate"
+      - "Auto-Expiry Rate"
+      - "API P95 Latency"
+      - "Chain Coverage"
+
+  competitor_analysis:
+    id: "competitor_analysis"
+    name: "Competitor Analysis"
+    display_name: "竞品分析"
+    contract_file: "docs/capabilities/competitor-analysis.capability.yaml"
+    event_schemas:
+      - "docs/events/competitor.created.v1.schema.json"
+      - "docs/events/competitor.updated.v1.schema.json"
+      - "docs/events/competitor.crawl_completed.v1.schema.json"
+      - "docs/events/competitor.imported.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-006"
+    approval_score: 93.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "PM Director"
+      technical_owner: "Competitor Analysis Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "planning"
+    kpis:
+      - "Data Completeness Rate"
+      - "Crawl Success Rate"
+      - "Import Throughput"
+      - "Competitor Coverage"
+      - "Benchmark API P95"
+
+  safety:
+    id: "safety"
+    name: "Safety Compliance"
+    display_name: "安规管理"
+    contract_file: "docs/capabilities/safety.capability.yaml"
+    event_schemas:
+      - "docs/events/safety.standard.updated.v1.schema.json"
+      - "docs/events/safety.inspection.completed.v1.schema.json"
+      - "docs/events/safety.alert.triggered.v1.schema.json"
+      - "docs/events/safety.supplier.qualified.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-007"
+    approval_score: 92.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "Quality Director"
+      technical_owner: "Certification Team Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "dashboard"
+      - "purchases"
+    kpis:
+      - "Supplier Qualification Rate"
+      - "Active Standard Rate"
+      - "Alert MTTR"
+      - "Notification Coverage"
+
+  purchases:
+    id: "purchases"
+    name: "Purchasing & Supply Chain"
+    display_name: "采购管理（含外协）"
+    contract_file: "docs/capabilities/purchases.capability.yaml"
+    event_schemas:
+      - "docs/events/purchase.order.created.v1.schema.json"
+      - "docs/events/purchase.order.approved.v1.schema.json"
+      - "docs/events/purchase.order.status_changed.v1.schema.json"
+      - "docs/events/outsource.partner.evaluated.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-003"
+    approval_score: 91.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "Procurement Director"
+      technical_owner: "Supply Chain Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities:
+      - "manufacturability"
+    kpis:
+      - "On-Time Delivery Rate"
+      - "Supplier Pass Rate"
+      - "Partner Eval Coverage"
+      - "Cost Savings Rate"
+      - "API P95 Latency"
+
+  manufacturability:
+    id: "manufacturability"
+    name: "Manufacturability (DFM)"
+    display_name: "可制造性分析"
+    contract_file: "docs/capabilities/manufacturability.capability.yaml"
+    event_schemas:
+      - "docs/events/dfm.report.created.v1.schema.json"
+      - "docs/events/dfm.score.calculated.v1.schema.json"
+      - "docs/events/dfm.issue.identified.v1.schema.json"
+    status: "implemented"
+    rfc: "RFC-2026-008"
+    approval_score: 93.0
+    phase:
+      current: 5
+      total: 7
+      description: "Phase 1-4 完成, Phase 5 合规审查中"
+    baselines: []
+    owner:
+      business_owner: "Process Manager"
+      technical_owner: "Manufacturing Engineering Lead"
+      architecture_owner: "Architecture Board"
+    downstream_capabilities: []
+    kpis:
+      - "DFM Coverage Rate"
+      - "DFM Pass Rate"
+      - "Issue Closure Rate"
+      - "DFM API P95"

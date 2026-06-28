@@ -1,0 +1,194 @@
+# ROS Capability Contract
+# ─────────────────────
+# 可制造性分析 (DFM) Capability
+# Architecture Board 批准后冻结
+
+capability:
+  id: "manufacturability"
+  name: "Manufacturability (DFM)"
+  display_name: "可制造性分析"
+  description: >
+    提供 DFM（Design for Manufacturing）分析能力，在产品设计阶段评估可制造性。
+    包含 DFM 检查清单管理、检查项评分权重配置、自动评分引擎和 DFM 分析报告生成。
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 93.0
+  rfc_number: "RFC-2026-008"
+
+owner:
+  business_owner: "Process Manager"
+  technical_owner: "Manufacturing Engineering Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "process_manager"
+  backup_role: "admin"
+  stewardship_level: "exclusive"
+
+lifecycle:
+  states:
+    - draft
+    - active
+    - archived
+  initial_state: "draft"
+  terminal_states: ["archived"]
+
+interface:
+  rest:
+    - method: GET
+      path: "/api/manufacturability/checklist-items"
+      description: DFM 检查项列表（按类别筛选）
+      response: "list[dict]"
+      auth: "require_menu('manufacturability')"
+      sla_ms: 200
+    - method: POST
+      path: "/api/manufacturability/checklist-items"
+      description: 创建 DFM 检查项
+      response: "dict"
+      auth: "process_manager | admin"
+      sla_ms: 200
+    - method: PUT
+      path: "/api/manufacturability/checklist-items/{item_id}"
+      description: 更新 DFM 检查项
+      response: "dict"
+      auth: "process_manager | admin"
+      sla_ms: 200
+    - method: DELETE
+      path: "/api/manufacturability/checklist-items/{item_id}"
+      description: 删除 DFM 检查项
+      response: "dict"
+      auth: "process_manager | admin"
+      sla_ms: 200
+    - method: GET
+      path: "/api/manufacturability/checklist-weights"
+      description: 检查项评分权重列表
+      response: "list[dict]"
+      auth: "require_menu('manufacturability')"
+      sla_ms: 200
+    - method: POST
+      path: "/api/manufacturability/checklist-weights"
+      description: 设置检查项评分权重
+      response: "dict"
+      auth: "process_manager | admin"
+      sla_ms: 200
+    - method: POST
+      path: "/api/manufacturability/auto-score"
+      description: 自动评分（关联检查项+权重）
+      response: "dict"
+      auth: "require_menu('manufacturability')"
+      sla_ms: 500
+    - method: POST
+      path: "/api/manufacturability/reports"
+      description: 创建 DFM 分析报告
+      response: "dict"
+      auth: "require_menu('manufacturability')"
+      sla_ms: 500
+    - method: GET
+      path: "/api/manufacturability/reports/{report_id}"
+      description: 获取 DFM 报告详情
+      response: "dict"
+      auth: "require_menu('manufacturability')"
+      sla_ms: 200
+
+  events_published:
+    - "dfm.report.created"           # DFM 报告创建时
+    - "dfm.score.calculated"         # 自动评分完成时
+    - "dfm.issue.identified"         # 发现严重 DFM 问题时
+
+  events_subscribed: []
+
+provides:
+  entities:
+    - "DFMChecklistItem"             # DFM 检查项
+    - "DFMChecklistWeight"           # 检查项评分权重
+    - "DFMReport"                    # DFM 分析报告
+  workflows:
+    - "dfm_analysis"                 # DFM 分析流程（检查→评分→报告）
+    - "dfm_issue_management"         # DFM 问题跟踪
+  views:
+    - "DFMReportTab"                 # DFM 报告 Tab 页
+
+consumes:
+  upstream:
+    - capability: "project_management"
+      entities: ["Project"]
+      contract: "docs/capabilities/project-management.capability.yaml"
+      dependency_level: "soft"
+      status: "pending"
+  infrastructure:
+    - "auth_service"
+    - "event_bus"
+    - "notification_center"
+
+produces:
+  artifacts:
+    - entity: "DFMReport"
+      trigger: "dfm.score.calculated"
+      consumer: "project_management"
+    - entity: "DFMIssue"
+      trigger: "dfm.issue.identified"
+      consumer: "project_management"
+  knowledge:
+    - "dfm_best_practices"           # DFM 最佳实践沉淀
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+  soft_dependencies:
+    - "project_management"
+  downstream_consumers:
+    - capability: "project_management"
+      consumes: ["DFMReport", "DFMIssue"]
+
+data_ownership:
+  exclusive_write:
+    - "DFMChecklistItem.*"
+    - "DFMChecklistWeight.*"
+    - "DFMReport.*"
+  shared_read:
+    - "DFMReport": ["project_management", "dashboard"]
+
+idempotency:
+  report_creation:
+    strategy: "business_key"
+  score_calculation:
+    strategy: "idempotent_flag"
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+
+kpis:
+  - name: "DFM Coverage Rate"
+    description: "DFM 分析覆盖的项目比例"
+    target: "≥ 90%"
+    data_source: "DFM Report Log"
+  - name: "DFM Pass Rate"
+    description: "DFM 自动评分通过率"
+    target: "≥ 80%"
+    data_source: "Auto Score Record"
+  - name: "Issue Closure Rate"
+    description: "DFM 发现问题的关闭率"
+    target: "≥ 85%"
+    data_source: "Issue Tracker"
+  - name: "DFM API P95"
+    description: "DFM API P95 延迟"
+    target: "< 300ms"
+    data_source: "APM Metrics"
+
+evolution:
+  v1:
+    description: "Foundation — DFM 清单+评分+报告"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "AI 辅助 DFM 检查项推荐"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "DFM 自动生成优化建议"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主 DFM（AI 主导评估）"
+    target: "2028+"
+    status: "vision"

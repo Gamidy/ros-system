@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:safety:event:safety.supplier.qualified:v1",
+  "title": "Safety Supplier Qualified Event",
+  "description": "Emitted when a supplier is qualified in the safety system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "safety.supplier.qualified",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "safety",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Supplier qualification data payload.",
+      "required": ["supplier_id", "qualification_type", "certified_body", "expiry_date"],
+      "additionalProperties": false,
+      "properties": {
+        "supplier_id": {
+          "type": "string",
+          "description": "Unique identifier of the qualified supplier."
+        },
+        "qualification_type": {
+          "type": "string",
+          "description": "Type of qualification awarded (e.g., safety_compliance, quality_certified, approved_vendor)."
+        },
+        "certified_body": {
+          "type": "string",
+          "description": "Name or identifier of the certifying body that issued the qualification."
+        },
+        "expiry_date": {
+          "type": "string",
+          "format": "date",
+          "description": "ISO 8601 date when the qualification expires."
+        },
+        "supplier_name": {
+          "type": "string",
+          "description": "Full name of the qualified supplier."
+        },
+        "qualification_date": {
+          "type": "string",
+          "format": "date",
+          "description": "ISO 8601 date when the qualification was granted."
+        },
+        "qualified_by": {
+          "type": "string",
+          "description": "Identifier of the user or system that performed the qualification."
+        },
+        "scope": {
+          "type": "string",
+          "description": "Scope or coverage description of the supplier qualification."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "suspended", "expired", "revoked"],
+          "description": "Current status of the supplier qualification."
+        }
+      }
+    }
+  }
+}

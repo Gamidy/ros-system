@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:competitor_analysis:event:competitor.created:v1",
+  "title": "Competitor Created Event",
+  "description": "Emitted when a new competitor record is created in the competitor_analysis system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "competitor.created",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "competitor_analysis",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Competitor creation data payload.",
+      "required": ["competitor_id", "brand", "model", "market", "product_type"],
+      "additionalProperties": false,
+      "properties": {
+        "competitor_id": {
+          "type": "string",
+          "description": "Unique identifier of the competitor record."
+        },
+        "brand": {
+          "type": "string",
+          "description": "Brand name of the competitor product."
+        },
+        "model": {
+          "type": "string",
+          "description": "Model name or number of the competitor product."
+        },
+        "market": {
+          "type": "string",
+          "description": "Target market code or region where the competitor operates."
+        },
+        "product_type": {
+          "type": "string",
+          "description": "Category or type of the competitor product (e.g., AC unit, heat pump)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description or notes about the competitor entry."
+        },
+        "specifications": {
+          "type": "object",
+          "description": "Optional key-value map of product specifications.",
+          "additionalProperties": { "type": "string" }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the record was created."
+        }
+      }
+    }
+  }
+}

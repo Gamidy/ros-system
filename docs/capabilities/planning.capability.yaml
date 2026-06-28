@@ -134,7 +134,7 @@ consumes:
 
     - capability: "competitor_analysis"
       entities: ["CompetitorModel", "CompetitorVersion"]
-      contract: "docs/capabilities/competitor-analysis.yaml"
+      contract: "docs/capabilities/competitor-analysis.capability.yaml"
       dependency_level: "soft"
       status: "pending"
 

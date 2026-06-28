@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:safety:event:safety.inspection.completed:v1",
+  "title": "Safety Inspection Completed Event",
+  "description": "Emitted when a safety inspection is completed in the safety system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "safety.inspection.completed",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "safety",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Safety inspection completion data payload.",
+      "required": ["inspection_id", "item_name", "result", "completed_at"],
+      "additionalProperties": false,
+      "properties": {
+        "inspection_id": {
+          "type": "string",
+          "description": "Unique identifier of the inspection record."
+        },
+        "item_name": {
+          "type": "string",
+          "description": "Name of the inspection item or subject."
+        },
+        "result": {
+          "type": "string",
+          "enum": ["pass", "fail", "conditional_pass", "not_applicable"],
+          "description": "Outcome result of the inspection."
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the inspection was completed."
+        },
+        "inspection_type": {
+          "type": "string",
+          "description": "Type of inspection conducted (e.g., routine, random, scheduled, re-inspection)."
+        },
+        "inspector": {
+          "type": "string",
+          "description": "Name or identifier of the inspector who performed the inspection."
+        },
+        "remarks": {
+          "type": "string",
+          "description": "Additional remarks or notes from the inspection."
+        },
+        "non_conformance_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of non-conformance items identified during inspection."
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Identifier of the associated project, if applicable."
+        }
+      }
+    }
+  }
+}

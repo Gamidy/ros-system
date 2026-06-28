@@ -1,0 +1,447 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Purchases Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-003
+# Approval Score: — (待审批)
+
+capability:
+  id: "purchases"
+  name: "Purchasing & Outsourcing"
+  display_name: "采购管理中心（含外协）"
+  description: >
+    管理空调产品研发与生产所需的采购全生命周期流程。
+    包含供应商管理、采购订单管理、外协厂商管理、外协订单管理、
+    外协质检、外协送样申请等核心业务能力，支撑研发与生产物料的
+    及时供应与质量管控。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 0
+  rfc_number: "RFC-2026-003"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "procurement_director"
+  technical_owner: "Procurement Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "procurement"
+  backup_role: "admin"
+  stewardship_level: "exclusive"  # exclusive | shared | read-only
+
+lifecycle:
+  states:
+    - draft
+    - pending_approval     # 待审批
+    - approved             # 已审批
+    - ordered              # 已下单
+    - received             # 已收货
+    - cancelled            # 已取消
+  initial_state: "draft"
+  terminal_states: ["received", "cancelled"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── 供应商管理 ──
+    - method: GET
+      path: /api/purchases/suppliers
+      description: 供应商列表（关键词/状态筛选）
+      response: "list[SupplierOut]"
+      auth: "require_menu('purchases')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/purchases/suppliers
+      description: 创建供应商（code 全局唯一）
+      request: "SupplierCreate"
+      response: "SupplierOut"
+      auth: "require_role('admin', 'general_manager', 'procurement')"
+      sla_ms: 200
+
+    # ── 采购订单 CRUD ──
+    - method: GET
+      path: /api/purchases/orders
+      description: 采购订单列表（status/supplier/requester/日期筛选）
+      response: "list[PurchaseOrderOut]"
+      auth: "require_menu('purchases')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/purchases/orders
+      description: 创建采购订单（自动生成单号 PO-YYYYMMDD-XXXX）
+      request: "PurchaseOrderCreate"
+      response: "PurchaseOrderOut"
+      auth: "require_role('admin', 'general_manager', 'procurement')"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/purchases/orders/{order_id}
+      description: 采购订单详情（含 items）
+      response: "PurchaseOrderDetailOut"
+      auth: "require_menu('purchases')"
+      sla_ms: 200
+
+    - method: PATCH
+      path: /api/purchases/orders/{order_id}
+      description: 更新订单状态（含状态流转校验）
+      request: "PurchaseOrderStatusUpdate"
+      response: "PurchaseOrderOut"
+      auth: "require_role('admin', 'general_manager', 'procurement')"
+      idempotency: true
+      sla_ms: 300
+
+    # ── 订单行管理 ──
+    - method: POST
+      path: /api/purchases/orders/{order_id}/items
+      description: 添加订单明细行
+      request: "PurchaseOrderItemCreate"
+      response: "PurchaseOrderItemOut"
+      auth: "require_role('admin', 'general_manager', 'procurement')"
+      sla_ms: 200
+
+    - method: PATCH
+      path: /api/purchases/orders/{order_id}/items/{item_id}
+      description: 更新订单明细行（自动重算小计与总额）
+      request: "PurchaseOrderItemUpdate"
+      response: "PurchaseOrderItemOut"
+      auth: "require_role('admin', 'general_manager', 'procurement')"
+      sla_ms: 200
+
+    # ── 采购仪表盘 ──
+    - method: GET
+      path: /api/purchases/dashboard
+      description: 采购仪表盘（待审批数、本月采购额、状态分布等）
+      response: "PurchaseDashboardOut"
+      auth: "require_menu('purchases')"
+      sla_ms: 500
+
+    # ── 外协送样申请 ──
+    - method: GET
+      path: /api/purchases/outsource-requests
+      description: 外协送样申请列表（status/product_code 筛选）
+      response: "list[OutsourceRequestOut]"
+      auth: "require_menu('purchases')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/purchases/outsource-requests
+      description: 创建外协送样申请（自动生成 OS-YYYYMMDD-XXXX）
+      request: "OutsourceRequestCreate"
+      response: "OutsourceRequestOut"
+      auth: "require_role('admin', 'general_manager', 'rd_director', 'product_manager', 'procurement')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/purchases/outsource-requests/{req_id}
+      description: 外协送样申请详情
+      response: "OutsourceRequestOut"
+      auth: "require_menu('purchases')"
+      sla_ms: 200
+
+    - method: PATCH
+      path: /api/purchases/outsource-requests/{req_id}
+      description: 更新外协送样申请（状态/交期/说明）
+      request: "OutsourceRequestUpdate"
+      response: "OutsourceRequestOut"
+      auth: "require_role('admin', 'general_manager', 'rd_director', 'product_manager', 'procurement')"
+      sla_ms: 300
+
+    # ── 外协厂商 CRUD ──
+    - method: GET
+      path: /api/outsource/partners
+      description: 外协厂商列表（分页 + 类型/关键词/状态筛选）
+      response: "OutsourcePartnerListOut"
+      auth: "require_menu('outsource-partners')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/outsource/partners/{pid}
+      description: 外协厂商详情（含订单数统计）
+      response: "OutsourcePartnerOut"
+      auth: "require_menu('outsource-partners')"
+      sla_ms: 200
+
+    - method: POST
+      path: /api/outsource/partners
+      description: 创建外协厂商
+      request: "OutsourcePartnerCreate"
+      response: "OutsourcePartnerOut"
+      auth: "require_role('admin', 'procurement', 'rd_director')"
+      sla_ms: 200
+
+    - method: PUT
+      path: /api/outsource/partners/{pid}
+      description: 更新外协厂商信息
+      request: "OutsourcePartnerUpdate"
+      response: "OutsourcePartnerOut"
+      auth: "require_role('admin', 'procurement', 'rd_director')"
+      sla_ms: 200
+
+    - method: DELETE
+      path: /api/outsource/partners/{pid}
+      description: 删除外协厂商
+      auth: "require_role('admin')"
+      sla_ms: 200
+
+    # ── 外协订单 CRUD ──
+    - method: GET
+      path: /api/outsource/orders
+      description: 外协订单列表（分页 + partner/project/status/type 筛选）
+      response: "OutsourceOrderListOut"
+      auth: "require_menu('outsource-orders')"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/outsource/orders/{oid}
+      description: 外协订单详情（含 partner/items/质检统计）
+      response: "OutsourceOrderOut"
+      auth: "require_menu('outsource-orders')"
+      sla_ms: 200
+
+    - method: POST
+      path: /api/outsource/orders
+      description: 创建外协订单（自动生成 OS-YYYYMMDD-XXXX）
+      request: "OutsourceOrderCreate"
+      response: "OutsourceOrderOut"
+      auth: "require_role('admin', 'procurement', 'rd_director', 'structural_engineer', 'systems_engineer')"
+      sla_ms: 500
+
+    - method: PUT
+      path: /api/outsource/orders/{oid}
+      description: 更新外协订单
+      request: "OutsourceOrderUpdate"
+      response: "OutsourceOrderOut"
+      auth: "require_role('admin', 'procurement', 'rd_director')"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /api/outsource/orders/{oid}
+      description: 删除外协订单
+      auth: "require_role('admin')"
+      sla_ms: 200
+
+    # ── 外协质检 CRUD ──
+    - method: GET
+      path: /api/outsource/quality-records
+      description: 外协质检记录列表（分页 + order/inspect_type/result 筛选）
+      response: "OutsourceQualityRecordListOut"
+      auth: "require_menu('outsource-quality')"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/outsource/quality-records
+      description: 创建外协质检记录
+      request: "OutsourceQualityRecordCreate"
+      response: "OutsourceQualityRecordOut"
+      auth: "require_role('admin', 'quality_engineer', 'procurement')"
+      sla_ms: 200
+
+    - method: PUT
+      path: /api/outsource/quality-records/{qid}
+      description: 更新外协质检记录
+      request: "OutsourceQualityRecordUpdate"
+      response: "OutsourceQualityRecordOut"
+      auth: "require_role('admin', 'quality_engineer')"
+      sla_ms: 200
+
+    - method: DELETE
+      path: /api/outsource/quality-records/{qid}
+      description: 删除外协质检记录
+      auth: "require_role('admin')"
+      sla_ms: 200
+
+  events_published:
+    - "purchase.order.created"          # 采购订单创建时
+    - "purchase.order.approved"         # 采购订单审批通过时
+    - "purchase.order.status_changed"   # 采购订单状态变更时
+    - "outsource.partner.evaluated"     # 外协厂商评估完成时
+
+  events_subscribed:
+    - "project.status_changed"          # 项目状态变更 → 关联采购需求更新
+    - "bom.released"                    # BOM 发布 → 触发采购需求
+    - "alert.triggered"                 # 预警触发 → 采购异常通知
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    # 采购管理
+    - "Supplier"                # 供应商主数据
+    - "PurchaseOrder"           # 采购订单
+    - "PurchaseOrderItem"       # 采购订单明细
+    # 外协送样
+    - "OutsourceRequest"        # 外协送样申请
+    # 外协管理
+    - "OutsourcePartner"        # 外协厂商
+    - "OutsourceOrder"          # 外协订单
+    - "OutsourceOrderItem"      # 外协订单明细
+    - "OutsourceQualityRecord"  # 外协质检记录
+    - "OutsourceQualityFile"    # 质检附件
+
+  workflows:
+    - "purchase_order_flow"     # 草稿→待审批→审批→已下单→已收货→已取消
+    - "outsource_request_flow"  # 外协送样申请（pending→approved/rejected→completed）
+    - "outsource_order_flow"    # 外协订单（draft→pending→in_progress→delivered→closed）
+    - "outsource_quality_check" # 外协质检（来料/过程/终检）
+
+  views:
+    - "PurchasesView"                # 采购管理主页（订单+供应商+仪表盘）
+    - "OutsourcePartnerTab"          # 外协厂商管理
+    - "OutsourceOrderTab"            # 外协订单管理
+    - "OutsourceQualityTab"          # 外协质检管理
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "project_management"
+      entities: ["Project"]
+      contract: "docs/capabilities/project-management.capability.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+    - capability: "bom_management"
+      entities: ["BOM", "Part"]
+      contract: "docs/capabilities/bom-management.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"              # JWT 认证 + RBAC 权限
+    - "event_bus"                 # 事件总线
+    - "notification_center"       # 通知中心（审批提醒、到货通知）
+    - "alerts_engine"             # 预警引擎
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "PurchaseOrder"      # 订单审批通过 → 触发采购执行
+      trigger: "purchase.order.approved"
+      consumer: "inventory_management"
+
+    - entity: "OutsourceQualityRecord"  # 外协到货 → 自动创建质检任务
+      trigger: "outsource.order.delivered"
+      consumer: "quality_management"
+
+  knowledge:
+    - "supplier_evaluation"        # 供应商评估数据沉淀
+    - "outsource_partner_eval"     # 外协厂商评估数据
+    - "purchase_price_trend"       # 采购价格趋势分析
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+
+  soft_dependencies:
+    - "project_management"        # 外协订单可关联项目
+    - "bom_management"            # 采购物料关联 BOM
+    - "inventory_management"      # 到货入库对接
+    - "quality_management"        # 外协质检对接
+
+  downstream_consumers:
+    - capability: "inventory_management"
+      consumes: ["PurchaseOrder"]
+    - capability: "quality_management"
+      consumes: ["OutsourceQualityRecord", "OutsourceQualityFile"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "Supplier.*"
+    - "PurchaseOrder.*"
+    - "PurchaseOrderItem.*"
+    - "OutsourceRequest.*"
+    - "OutsourcePartner.*"
+    - "OutsourceOrder.*"
+    - "OutsourceOrderItem.*"
+    - "OutsourceQualityRecord.*"
+    - "OutsourceQualityFile.*"
+
+  shared_read:
+    - "Supplier": ["project_management", "dashboard", "bi_analytics"]
+    - "PurchaseOrder": ["dashboard", "bi_analytics", "finance"]
+    - "OutsourceOrder": ["project_management", "quality_management"]
+    - "OutsourceQualityRecord": ["quality_management"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  supplier_creation:
+    strategy: "business_key"     # code 全局唯一去重
+  order_creation:
+    strategy: "business_key"     # order_no 全局唯一
+  order_status_update:
+    strategy: "state_check"      # 当前状态 + 允许流转表校验
+  outsource_request_creation:
+    strategy: "business_key"     # request_no 全局唯一
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有数据无需迁移。新增字段均有默认值。
+    废弃字段通过 AliasChoices 兼容旧数据。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "采购订单创建到审批周期"
+    description: "采购订单创建到审批完成的平均天数"
+    target: "≤ 3 天"
+    data_source: "Event Log"
+
+  - name: "采购订单准时交付率"
+    description: "按需求日期准时到货的订单比例"
+    target: "≥ 90%"
+    data_source: "PurchaseOrder"
+
+  - name: "外协订单一次合格率"
+    description: "外协到货一次质检通过的比例"
+    target: "≥ 95%"
+    data_source: "OutsourceQualityRecord"
+
+  - name: "供应商评估覆盖率"
+    description: "有评估记录的活跃供应商比例"
+    target: "≥ 80%"
+    data_source: "Supplier"
+
+  - name: "采购成本节约率"
+    description: "同比采购单价下降幅度"
+    target: "≥ 5%"
+    data_source: "Purchase Order History"
+
+  - name: "订单创建 API P95 延迟"
+    description: "创建采购订单 API P95 延迟"
+    target: "< 500ms"
+    data_source: "APM Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation: 供应商/采购订单/外协管理 + Event Bus 接入"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "智能采购预测 + 供应商自动评分 + 价格趋势分析"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "AI 辅助合同条款审核 + 自动询比价 + 区块链溯源"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主采购（AI 主导下单，人工审计）"
+    target: "2028+"
+    status: "vision"

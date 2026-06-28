@@ -1,0 +1,353 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Competitor Analysis Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# 实现文件:
+#   backend/app/api/competitor.py          (957行) — 竞品 CRUD + 对标 + 生成策划
+#   backend/app/api/competitor_bench.py     (66行)  — 对标查询
+#   backend/app/api/competitor_crawl_admin.py (268行) — 爬取管理
+#   backend/app/api/competitor_import_export.py (350行) — 导入导出
+#   backend/app/models/competitor.py         (46行)  — 竞品档案模型
+#   backend/app/models/competitor_version.py (25行)  — 版本快照模型
+#   backend/app/models/competitor_crawl.py   (72行)  — 爬取日志模型
+#   backend/app/models/competitor_search_term.py (65行) — 搜索词配置模型
+#   frontend/src/views/pm/CompetitorBench.vue       — 竞品对标页
+#   frontend/src/views/pm/CompetitorStandalone.vue  — 独立竞品库
+#   frontend/src/components/competitor/HeatmapCompare.vue — 热力图对比
+
+capability:
+  id: "competitor_analysis"
+  name: "Competitor Analysis"
+  display_name: "竞品分析中心"
+  description: >
+    管理空调竞品参数的全生命周期：人工录入与自动爬取采集、市场差异化能效参数适配、
+    竞品对标分析（表格+热力图）、版本快照追踪历史变更、Excel 批量导入导出，
+    并支持从对标结果一键生成产品策划。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 95.0
+  rfc_number: "RFC-2026-002"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "PM Director"
+  technical_owner: "Competitor Team Lead"
+  architecture_owner: "Architecture Board"
+  primary_role: "product_manager"
+  backup_role: "admin"
+  stewardship_level: "exclusive"
+
+lifecycle:
+  states:
+    - draft
+    - active
+    - deprecated
+  initial_state: "active"
+  terminal_states: ["deprecated"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── competitor.py ──
+    - method: GET
+      path: /pm/competitors
+      description: 竞品列表（分页+市场/品牌/冷量/能效/产品类型/单冷冷暖多条件交叉过滤）
+      response: "{ total, page, page_size, items, param_names, param_configs }"
+      auth: "require_menu('competitors')"
+      sla_ms: 300
+
+    - method: GET
+      path: /pm/competitors/{cid}
+      description: 获取单条竞品详情（含市场适配的能效值与完整性状态）
+      response: "CompetitorDetail"
+      auth: "require_menu('competitors')"
+      sla_ms: 200
+
+    - method: POST
+      path: /pm/competitors
+      description: 新增竞品记录
+      request: "CompetitorCreate"
+      response: "CompetitorDetail"
+      auth: "admin | product_manager"
+      sla_ms: 300
+
+    - method: PUT
+      path: /pm/competitors/{cid}
+      description: 更新竞品记录（自动创建版本快照，记录变更字段 diff）
+      request: "CompetitorUpdate"
+      response: "CompetitorDetail"
+      auth: "admin | product_manager"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /pm/competitors/{cid}
+      description: 删除竞品记录（级联删除关联版本快照）
+      response: "{ detail }"
+      auth: "admin | product_manager"
+      sla_ms: 200
+
+    - method: POST
+      path: /pm/competitors/{cid}/snapshot
+      description: 手动记录竞品参数快照（对比上版计算 diff）
+      response: "{ id, competitor_id, changed_fields, changed_by, created_at }"
+      auth: "admin | product_manager"
+      sla_ms: 300
+
+    - method: GET
+      path: /pm/competitors/{cid}/history
+      description: 查看竞品的历史版本变更记录（含完整快照数据）
+      response: "{ competitor_id, competitor, total, versions }"
+      auth: "require_menu('competitors')"
+      sla_ms: 300
+
+    - method: GET
+      path: /pm/competitors/check-completeness
+      description: 检查指定市场所有竞品数据的完整性（字段缺失统计）
+      response: "{ market, all_complete, total, details }"
+      auth: "require_menu('competitors')"
+      sla_ms: 500
+
+    - method: GET
+      path: /pm/competitors/benchmark
+      description: 对标查询——返回指定市场下所有竞品对比数据（无需登录，供公开访问）
+      response: "{ market, competitors, param_names }"
+      auth: "none"
+      sla_ms: 300
+
+    - method: POST
+      path: /pm/create-plan-from-benchmark
+      description: 从竞品对标数据生成产品策划书（自动填充 target 参数+策划名称）
+      request: "CreatePlanFromBenchmark"
+      response: "{ plan_id, plan_name, message, params_count }"
+      auth: "admin | product_manager"
+      sla_ms: 1000
+
+    # ── competitor_crawl_admin.py ──
+    - method: POST
+      path: /api/pm/crawls/run
+      description: 触发指定市场+品牌的批量爬取采集
+      request: "RunCrawlRequest"
+      response: "{ crawl_id, market_code, brand, status, message }"
+      auth: "admin | product_manager"
+      sla_ms: 5000
+
+    - method: GET
+      path: /api/pm/crawls/logs
+      description: 分页查询爬取日志
+      response: "{ total, page, page_size, items }"
+      auth: "admin | product_manager"
+      sla_ms: 300
+
+    - method: GET
+      path: /api/pm/crawls/search-terms
+      description: 分页查询搜索词配置
+      response: "{ total, page, page_size, items }"
+      auth: "admin | product_manager"
+      sla_ms: 300
+
+    - method: POST
+      path: /api/pm/crawls/search-terms
+      description: 新增搜索词（支持多语言）
+      request: "SearchTermCreate"
+      response: "{ id, message }"
+      auth: "admin | product_manager"
+      sla_ms: 300
+
+    - method: DELETE
+      path: /api/pm/crawls/search-terms/{id}
+      description: 删除搜索词
+      response: "{ detail }"
+      auth: "admin | product_manager"
+      sla_ms: 200
+
+    # ── competitor_import_export.py ──
+    - method: POST
+      path: /api/pm/competitors/import
+      description: 上传 Excel/CSV 文件并批量导入竞品数据
+      request: "multipart/form-data (UploadFile)"
+      response: "{ imported, skipped, errors, total }"
+      auth: "admin | product_manager"
+      sla_ms: 10000
+
+    - method: GET
+      path: /api/pm/competitors/template
+      description: 下载 Excel 导入模板（含列定义与字段提示）
+      response: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      auth: "admin | product_manager"
+      sla_ms: 500
+
+    - method: GET
+      path: /api/pm/competitors/export
+      description: 按市场导出竞品数据为 Excel
+      response: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      auth: "admin | product_manager"
+      sla_ms: 3000
+
+  events_published:
+    - "competitor.created"             # 新增竞品时
+    - "competitor.updated"             # 更新竞品参数时（含自动快照）
+    - "competitor.crawl_completed"     # 自动爬取完成（含结果摘要）
+    - "competitor.imported"            # Excel 批量导入完成
+
+  events_subscribed:
+    - "standard.updated"               # 能效标准变更 → 刷新市场适配参数
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "CompetitorModel"              # 核心竞品档案
+    - "CompetitorVersion"            # 版本快照（变更追踪）
+    - "CompetitorCrawl"              # 爬取任务日志
+    - "CompetitorSearchTerm"         # 搜索词配置
+
+  workflows:
+    - "competitive_benchmarking"     # 对标分析：市场筛选 → 参数对比 → 热力图
+    - "auto_crawl"                   # 自动爬取：搜索词 → 搜索引擎 → 解析入库
+    - "batch_import"                 # 批量导入：Excel/CSV → 校验 → 入库
+    - "plan_from_benchmark"          # 对标生成策划：采纳参数 → 创建策划书
+
+  views:
+    - "CompetitorBench"              # 竞品对标（表格+热力图双模式）
+    - "CompetitorStandalone"         # 独立竞品参数库
+    - "HeatmapCompare"               # 热力图对比组件
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "market_knowledge"
+      entities: ["Market", "EnergyStandard", "MarketParamConfig"]
+      contract: "docs/capabilities/market-knowledge.yaml"
+      dependency_level: "hard"
+      status: "pending"
+
+    - capability: "planning"
+      entities: ["ProductPlan", "ProductPlanTechSpec"]
+      contract: "docs/capabilities/planning.capability.yaml"
+      dependency_level: "soft"
+      status: "pending"
+
+  infrastructure:
+    - "auth_service"              # JWT认证
+    - "event_bus"                 # 事件总线（4个发布事件）
+    - "notification_center"       # 爬取完成通知
+    - "ai_router"                 # AI 辅助参数解析（爬取场景）
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "ProductPlan"           # create-plan-from-benchmark → 自动创建策划
+      trigger: "benchmark_to_plan"
+      consumer: "planning"
+
+    - entity: "CompetitorVersion"     # PUT/DELETE → 自动创建版本快照
+      trigger: "competitor.updated"
+      consumer: "change_audit"
+
+  knowledge:
+    - "benchmark_templates"           # 对标参数模板沉淀
+    - "market_energy_mapping"         # 市场→能效指标映射知识
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+
+  soft_dependencies:
+    - "planning"                      # 生成策划（可选）
+    - "market_knowledge"              # 市场能效标准（可选，有 fallback 字典）
+
+  downstream_consumers:
+    - capability: "planning"
+      consumes: ["CompetitorModel", "benchmark_data"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "CompetitorModel.*"
+    - "CompetitorVersion.*"
+    - "CompetitorCrawl.*"
+    - "CompetitorSearchTerm.*"
+
+  shared_read:
+    - "CompetitorModel": ["planning", "dashboard", "bi_analytics"]
+    - "CompetitorVersion": ["change_audit"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  competitor_creation:
+    strategy: "business_key"          # brand+model+market 去重
+  competitor_update:
+    strategy: "version_check"         # 乐观锁（快照 diff 检测并发冲突）
+  crawl_trigger:
+    strategy: "state_check"           # 同一 market+brand 不允许并行运行
+  batch_import:
+    strategy: "transaction_batch"     # 全量事务，单条失败不影响整体
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有数据无需迁移。新增字段均有默认值。
+    extra_fields 使用 JSON 类型，欧盟专有参数（SCOP/PDC/PDH等）
+    通过 extra_fields 动态扩展，不依赖 schema 变更。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Data Completeness Rate"
+    description: "竞品数据完整性达标率（字段缺失越少越好）"
+    target: "≥ 85%"
+    data_source: "check-completeness API"
+
+  - name: "Crawl Success Rate"
+    description: "自动爬取任务成功率"
+    target: "≥ 80%"
+    data_source: "Crawl Logs"
+
+  - name: "Import Throughput"
+    description: "Excel 导入平均吞吐（行/秒）"
+    target: "≥ 50 行/秒"
+    data_source: "Import Logs"
+
+  - name: "Competitor Coverage"
+    description: "各市场追踪的竞品型号数量"
+    target: "≥ 10 型号/市场"
+    data_source: "竞品库统计"
+
+  - name: "Benchmarking P95 Latency"
+    description: "对标查询 API P95 延迟"
+    target: "< 300ms"
+    data_source: "APM Metrics"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation: CRUD + 对标 + 版本快照 + 导入导出 + 爬取"
+    target: "2026 H2"
+    status: "current"
+  v2:
+    description: "AI 自动参数提取 + 竞品趋势分析 + 批量对标报告"
+    target: "2027 H1"
+    status: "planned"
+  v3:
+    description: "自动竞品监控告警（参数变动提醒）+ 价格走势预测"
+    target: "2027 H2"
+    status: "planned"
+  v4:
+    description: "L3 自主竞品情报（AI 主动搜索+自动对标报告）"
+    target: "2028+"
+    status: "vision"

@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:competitor_analysis:event:competitor.imported:v1",
+  "title": "Competitor Imported Event",
+  "description": "Emitted when competitor data is imported in bulk into the competitor_analysis system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "competitor.imported",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "competitor_analysis",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Import job results payload.",
+      "required": ["import_id", "total_rows", "success_count", "fail_count"],
+      "additionalProperties": false,
+      "properties": {
+        "import_id": {
+          "type": "string",
+          "description": "Unique identifier for the import job."
+        },
+        "total_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of rows in the import source."
+        },
+        "success_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of rows successfully imported."
+        },
+        "fail_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of rows that failed to import."
+        },
+        "source_file": {
+          "type": "string",
+          "description": "Optional filename or path of the import source."
+        },
+        "imported_by": {
+          "type": "string",
+          "description": "Identifier of the user or system that initiated the import."
+        },
+        "error_details": {
+          "type": "array",
+          "description": "Optional list of error details for failed rows.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "row_index": {
+                "type": "integer",
+                "description": "Index of the failed row in the source."
+              },
+              "error_message": {
+                "type": "string",
+                "description": "Description of the failure reason."
+              }
+            },
+            "required": ["row_index", "error_message"]
+          }
+        },
+        "imported_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the import completed."
+        }
+      }
+    }
+  }
+}

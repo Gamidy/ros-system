@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:competitor_analysis:event:competitor.updated:v1",
+  "title": "Competitor Updated Event",
+  "description": "Emitted when an existing competitor record is updated in the competitor_analysis system.",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "competitor.updated",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "competitor_analysis",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Competitor update data payload.",
+      "required": ["competitor_id", "changed_fields"],
+      "additionalProperties": false,
+      "properties": {
+        "competitor_id": {
+          "type": "string",
+          "description": "Unique identifier of the competitor record that was updated."
+        },
+        "changed_fields": {
+          "type": "array",
+          "description": "List of field names that were modified in this update.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "previous_values": {
+          "type": "object",
+          "description": "Optional key-value map of the previous values before the update.",
+          "additionalProperties": {}
+        },
+        "new_values": {
+          "type": "object",
+          "description": "Optional key-value map of the new values after the update.",
+          "additionalProperties": {}
+        },
+        "updated_by": {
+          "type": "string",
+          "description": "Identifier of the user or system that performed the update."
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the update occurred."
+        }
+      }
+    }
+  }
+}
