@@ -125,6 +125,7 @@ def list_impact_records(
     impact_level: str = Query("", description="影响等级过滤 critical/major/minor/none"),
     source_type: str = Query("", description="来源类型过滤 ecr/eco/prototype"),
     prototype_id: int = Query(0, description="按样机筛选"),
+    ecr_id: int = Query(0, description="按ECR筛选"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("cert-change-impact")),
 ) -> dict:
@@ -142,6 +143,8 @@ def list_impact_records(
     elif source_type == "prototype":
         q = q.filter(ChangeImpactRecord.prototype_id.isnot(None),
                      ChangeImpactRecord.ecr_id.is_(None))
+    if ecr_id > 0:
+        q = q.filter(ChangeImpactRecord.ecr_id == ecr_id)
 
     total = q.count()
     items = (

@@ -157,3 +157,39 @@ export function fetchCausationChain(aggregateType: 'ecr' | 'eco', aggregateId: n
   return api.get(`/api/v2/event-graph/${aggregateType}/${aggregateId}/causation`)
     .then(res => res.data as EventChainItem[])
 }
+
+// ── BOM Impact — 变更影响记录 ────────────────────────
+
+export interface ImpactRecordItem {
+  id: number
+  ecr_id: number | null
+  prototype_id: number | null
+  changed_part: string
+  matched_rule_id: number | null
+  impact_level: string
+  affected_cert_types: string
+  analysis_detail: string | null
+  created_at: string
+  matched_rule?: { name: string } | null
+}
+
+export interface ImpactRecordListResponse {
+  total: number
+  page: number
+  page_size: number
+  items: ImpactRecordItem[]
+}
+
+/**
+ * 获取变更影响记录列表
+ * GET /api/s2/change-impact/records
+ */
+export function fetchImpactRecords(params: {
+  ecr_id?: number
+  prototype_id?: number
+  impact_level?: string
+  page?: number
+  page_size?: number
+}): Promise<ImpactRecordListResponse> {
+  return api.get('/api/s2/change-impact/records', { params }).then(res => res.data as ImpactRecordListResponse)
+}

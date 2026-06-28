@@ -201,6 +201,9 @@
 
       <!-- ⬇ Digital Thread: 事件链 ⬇ -->
       <EventChainView ref="eventChainRef" aggregate-type="eco" :aggregate-id="ecoId" />
+
+      <!-- ⬇ BOM Impact: 变更影响传播 ⬇ -->
+      <BOMImpactView v-if="eco.ecr_id" :ecr-id="eco.ecr_id" />
     </template>
 
     <!-- ═══════ 编辑基本信息 Dialog ═══════ -->
@@ -250,6 +253,8 @@ import {
 } from '../../api/eco'
 // === Digital Thread ===
 import EventChainView from './components/EventChainView.vue'
+// === BOM Impact ===
+import BOMImpactView from './components/BOMImpactView.vue'
 
 const route = useRoute()
 const router = useRouter()
