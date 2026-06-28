@@ -53,6 +53,43 @@ class Inventory(Base):
     warehouse = relationship("Warehouse", lazy="joined")
 
 
+class ReplenishmentSuggestion(Base):
+    """补货建议"""
+    __tablename__ = "replenishment_suggestions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False, comment="仓库ID")
+    part_no = Column(String(50), nullable=False, index=True, comment="物料编码")
+    part_name = Column(String(200), nullable=True, comment="物料名称")
+    spec = Column(String(500), nullable=True, comment="规格型号")
+    unit = Column(String(20), default="个")
+    # 库存状态
+    current_qty = Column(Float, default=0.0, comment="当前库存量")
+    reorder_point = Column(Float, default=0.0, comment="再订货点")
+    min_stock = Column(Float, default=0.0, comment="最低库存线")
+    avg_daily_usage = Column(Float, default=0.0, comment="日均消耗量")
+    # 补货建议
+    suggested_qty = Column(Float, default=0.0, comment="建议补货数量")
+    lead_time_days = Column(Integer, default=7, comment="采购提前期(天)")
+    expected_arrival = Column(DateTime, nullable=True, comment="预计到货日期")
+    unit_cost = Column(Float, default=0.0, comment="单价")
+    total_cost = Column(Float, default=0.0, comment="预计总金额")
+    # 状态
+    status = Column(String(20), default="pending", comment="pending/approved/purchased/cancelled")
+    source = Column(String(20), default="auto", comment="auto(自动生成)/manual(手动创建)")
+    remark = Column(Text, nullable=True, comment="备注")
+    # 操作信息
+    operator = Column(String(100), nullable=True, comment="操作人")
+    approved_by = Column(String(100), nullable=True, comment="审批人")
+    approved_at = Column(DateTime, nullable=True, comment="审批时间")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    warehouse = relationship("Warehouse", lazy="joined")
+
+
 class InventoryTransaction(Base):
     """库存流水 — 每笔出入库/调整都有记录"""
     __tablename__ = "inventory_transactions"

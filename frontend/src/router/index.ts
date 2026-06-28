@@ -241,6 +241,18 @@ const router = createRouter({
           meta: { title: '盘点管理', menu: 'inventory' },
         },
         {
+          path: 'inventory/alerts',
+          name: 'InventoryAlerts',
+          component: () => import('../views/inventory/InventoryAlertView.vue'),
+          meta: { title: '库存预警', menu: 'inventory' },
+        },
+        {
+          path: 'inventory/replenishments',
+          name: 'InventoryReplenishments',
+          component: () => import('../views/inventory/ReplenishmentView.vue'),
+          meta: { title: '补货建议', menu: 'inventory' },
+        },
+        {
           path: 'mm',
           name: 'ModuleManager',
           component: () => import('../views/mm/ModuleManagerView.vue'),

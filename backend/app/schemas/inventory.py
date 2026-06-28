@@ -127,6 +127,78 @@ class InventoryTransactionOut(BaseModel):
     class Config: from_attributes = True
 
 
+class ReplenishmentSuggestionCreate(BaseModel):
+    """创建补货建议"""
+    warehouse_id: int
+    part_no: str
+    part_name: Optional[str] = None
+    spec: Optional[str] = None
+    unit: str = "个"
+    current_qty: float = 0.0
+    reorder_point: float = 0.0
+    min_stock: float = 0.0
+    avg_daily_usage: float = 0.0
+    suggested_qty: float = 0.0
+    lead_time_days: int = 7
+    unit_cost: float = 0.0
+    remark: Optional[str] = None
+    operator: Optional[str] = None
+
+
+class ReplenishmentSuggestionUpdate(BaseModel):
+    suggested_qty: Optional[float] = None
+    lead_time_days: Optional[int] = None
+    unit_cost: Optional[float] = None
+    remark: Optional[str] = None
+
+
+class ReplenishmentSuggestionOut(BaseModel):
+    id: int
+    warehouse_id: int
+    warehouse_name: Optional[str] = None
+    part_no: str
+    part_name: Optional[str] = None
+    spec: Optional[str] = None
+    unit: str
+    current_qty: float
+    reorder_point: float
+    min_stock: float
+    avg_daily_usage: float
+    suggested_qty: float
+    lead_time_days: int
+    expected_arrival: Optional[datetime] = None
+    unit_cost: float
+    total_cost: float
+    status: str
+    source: str
+    remark: Optional[str] = None
+    operator: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    class Config: from_attributes = True
+
+
+class ReplenishmentStatsOut(BaseModel):
+    """补货统计"""
+    pending_count: int = 0
+    approved_count: int = 0
+    purchased_count: int = 0
+    total_suggested_qty: float = 0.0
+    total_cost: float = 0.0
+    urgent_count: int = 0  # qty <= min_stock 的条数
+
+
+class InventoryAlertCheckResult(BaseModel):
+    """库存检查结果"""
+    total_checked: int
+    low_stock_count: int
+    reorder_count: int
+    alerts_created: int
+    items: list[dict] = []
+
+
 class InventoryTransactionFilter(BaseModel):
     warehouse_id: Optional[int] = None
     part_no: Optional[str] = None
