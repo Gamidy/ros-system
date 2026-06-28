@@ -213,3 +213,18 @@ class ProjectTemplate(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class TimeEntry(Base):
+    """任务工时记录"""
+    __tablename__ = "time_entries"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    user_name = Column(String(50), nullable=True, comment="记录人")
+    hours = Column(Integer, default=0, comment="工时(小时)")
+    entry_date = Column(Date, nullable=False, comment="工作日期")
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    task = relationship("Task", backref="time_entries")

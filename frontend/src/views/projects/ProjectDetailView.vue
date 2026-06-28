@@ -140,7 +140,12 @@
             <TaskCalendarTab :pid="pid" />
           </el-tab-pane>
 
-          <!-- Tab 6: Milestones -->
+          <!-- Tab 6: 工时 -->
+          <el-tab-pane label="工时" name="time">
+            <TimeLogTab :pid="pid" />
+          </el-tab-pane>
+
+          <!-- Tab 7: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
               <el-statistic title="总数" :value="msStats.total" />
@@ -294,6 +299,7 @@ import TaskKanbanTab from './TaskKanbanTab.vue'
 import WBSTreeTab from './WBSTreeTab.vue'
 import TaskDepTab from './TaskDepTab.vue'
 import TaskCalendarTab from './TaskCalendarTab.vue'
+import TimeLogTab from './TimeLogTab.vue'
 
 const route = useRoute()
 const router = useRouter()
