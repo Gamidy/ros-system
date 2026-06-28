@@ -90,6 +90,7 @@ import api from '../../api/index'
 
 const dateRange = ref<string[]>([])
 const loading = ref(false)
+const error = ref('')
 
 // KPI 卡片
 const kpiList = ref<{ key: string; label: string; value: string; color: string; unit?: string }[]>([])
@@ -104,67 +105,48 @@ const costOverrunList = ref<{
   actual: number
   overrun_rate: number
   overrun_amount: number
+  alert_level?: string
 }[]>([])
 
 async function fetchData() {
   loading.value = true
+  error.value = ''
   try {
-    const params: Record<string, string> = {}
-    if (dateRange.value?.length === 2) {
-      params.start_date = dateRange.value[0]
-      params.end_date = dateRange.value[1]
-    }
-
-    const [kpiRes, trendRes, costRes] = await Promise.all([
-      api.get('/bi/analytics/kpi', { params }),
-      api.get('/bi/analytics/planning-trend', { params }),
-      api.get('/bi/analytics/cost-overrun-top5', { params }),
-    ])
+    const res = await api.get('/bi/dashboard')
+    const data = (res as any).data || res
 
     // KPI
-    const kpiRaw = (kpiRes.data as Record<string, unknown>) || {}
+    const kpi = data.kpi || {}
     kpiList.value = [
-      { key: 'total_plans', label: '策划总数', value: String(kpiRaw.total_plans ?? 0), color: '#007AFF' },
-      { key: 'approval_rate', label: '审批通过率', value: (Number(kpiRaw.approval_rate) != null ? (Number(kpiRaw.approval_rate) * 100).toFixed(1) : '-') + '%', color: '#34C759' },
-      { key: 'cost_overrun', label: '成本超标数', value: String(kpiRaw.cost_overrun_count ?? 0), color: '#FF3B30', unit: '项' },
+      { key: 'total_plans', label: '策划总数', value: String(kpi.total_plans ?? 0), color: '#007AFF' },
+      { key: 'approval_rate', label: '审批通过率', value: (kpi.approval_rate != null ? (kpi.approval_rate * 100).toFixed(1) : '-') + '%', color: '#34C759' },
+      { key: 'cost_overrun', label: '成本超标数', value: String(kpi.cost_overrun_count ?? 0), color: '#FF3B30', unit: '项' },
     ]
 
     // 趋势
-    trendData.value = (trendRes.data as Record<string, unknown>[])?.map((d: Record<string, unknown>) => ({
-      date: String(d.date || d.month || ''),
-      count: Number(d.count ?? d.total ?? 0),
-    })) || []
+    const trend = data.planning_trend || []
+    trendData.value = trend.map((d: Record<string, any>) => ({
+      date: String(d.month || ''),
+      count: Number(d.count ?? 0),
+    }))
 
     // 成本超标
-    costOverrunList.value = (costRes.data as Record<string, unknown>[])?.map((d: Record<string, unknown>) => ({
-      project_name: String(d.project_name || d.project || ''),
+    const alerts = data.cost_overrun_top5 || []
+    costOverrunList.value = alerts.map((d: Record<string, any>) => ({
+      project_name: String(d.project_name || '未知'),
       budget: Number(d.budget ?? 0),
       actual: Number(d.actual ?? 0),
-      overrun_rate: Number(d.overrun_rate ?? d.rate ?? 0),
-      overrun_amount: Number(d.overrun_amount ?? d.gap ?? 0),
-    })) || []
+      overrun_rate: Number(d.overrun_rate ?? 0),
+      overrun_amount: Number(d.overrun_amount ?? 0),
+      alert_level: String(d.alert_level || 'warning'),
+    }))
   } catch (e: unknown) {
-    // 兜底模拟数据
+    error.value = '数据加载失败，请稍后重试'
+    console.error('Dashboard加载失败', e)
     kpiList.value = [
-      { key: 'total_plans', label: '策划总数', value: '156', color: '#007AFF' },
-      { key: 'approval_rate', label: '审批通过率', value: '87.5%', color: '#34C759' },
-      { key: 'cost_overrun', label: '成本超标数', value: '8', color: '#FF3B30', unit: '项' },
-    ]
-    trendData.value = [
-      { date: '01月', count: 18 },
-      { date: '02月', count: 22 },
-      { date: '03月', count: 15 },
-      { date: '04月', count: 28 },
-      { date: '05月', count: 24 },
-      { date: '06月', count: 31 },
-      { date: '07月', count: 26 },
-    ]
-    costOverrunList.value = [
-      { project_name: '高效变频压缩机开发', budget: 500000, actual: 628000, overrun_rate: 0.256, overrun_amount: 128000 },
-      { project_name: '智能温控模块升级', budget: 280000, actual: 352000, overrun_rate: 0.257, overrun_amount: 72000 },
-      { project_name: '超薄室内机设计', budget: 420000, actual: 510000, overrun_rate: 0.214, overrun_amount: 90000 },
-      { project_name: '新风系统集成项目', budget: 360000, actual: 435000, overrun_rate: 0.208, overrun_amount: 75000 },
-      { project_name: 'R32冷媒适配改造', budget: 190000, actual: 226000, overrun_rate: 0.189, overrun_amount: 36000 },
+      { key: 'total_plans', label: '策划总数', value: '-', color: '#007AFF' },
+      { key: 'approval_rate', label: '审批通过率', value: '-', color: '#34C759' },
+      { key: 'cost_overrun', label: '成本超标数', value: '-', color: '#FF3B30', unit: '项' },
     ]
   } finally {
     loading.value = false

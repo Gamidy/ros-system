@@ -664,3 +664,101 @@ def bi_cost_efficiency(
 
     _cache_set(cache_key, json.dumps(result), CACHE_TTL)
     return result
+
+
+# ═══════════════════════════════════════════
+# Dashboard 聚合（BI看板主数据）
+# ═══════════════════════════════════════════
+
+@router.get("/dashboard")
+def bi_dashboard(
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("bi-analytics")),
+):
+    """BI分析仪表盘 — 一次性聚合所有看板数据
+
+    返回:
+      kpi: 策划总数/审批通过率/成本超标数
+      planning_trend: 按月策划趋势
+      cost_overrun_top5: 超标最严重的5条预警
+    """
+    from app.models.cost_alert_rule import AlertEvent
+    from sqlalchemy import func as sa_func, text as sa_text
+
+    cache_key = "bi:dashboard"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        import json
+        return json.loads(cached)
+
+    # ── 1. KPI ──
+    total_plans = db.query(sa_func.count(ProductPlan.id)).scalar() or 0
+    completed_plans = db.query(sa_func.count(ProductPlan.id)).filter(
+        ProductPlan.status.in_([
+            ProductPlanStage.APPROVED,
+            ProductPlanStage.RELEASED,
+        ])
+    ).scalar() or 0
+    approval_rate = round(completed_plans / total_plans, 3) if total_plans > 0 else 0
+
+    cost_overrun_count = db.query(sa_func.count(AlertEvent.id)).filter(
+        AlertEvent.is_resolved == False
+    ).scalar() or 0
+
+    kpi = {
+        "total_plans": total_plans,
+        "approval_rate": approval_rate,
+        "cost_overrun_count": cost_overrun_count,
+    }
+
+    # ── 2. 策划月度趋势 ──
+    trend_rows = (
+        db.query(
+            sa_func.date_format(ProductPlan.created_at, "%Y-%m").label("month"),
+            sa_func.count(ProductPlan.id).label("count"),
+        )
+        .group_by(sa_text("month"))
+        .order_by(sa_text("month"))
+        .limit(12)
+        .all()
+    )
+    planning_trend = [
+        {"month": row.month, "count": row.count}
+        for row in trend_rows
+    ]
+
+    # ── 3. 成本超标 Top5 ──
+    alert_rows = (
+        db.query(
+            AlertEvent.plan_name,
+            AlertEvent.target_amount,
+            AlertEvent.actual_amount,
+            AlertEvent.variance_amount,
+            AlertEvent.variance_pct,
+            AlertEvent.alert_level,
+        )
+        .filter(AlertEvent.is_resolved == False)
+        .order_by(sa_func.abs(AlertEvent.variance_pct).desc())
+        .limit(5)
+        .all()
+    )
+    cost_overrun_top5 = [
+        {
+            "project_name": row.plan_name or "未知项目",
+            "budget": float(row.target_amount or 0),
+            "actual": float(row.actual_amount or 0),
+            "overrun_rate": float(row.variance_pct or 0) / 100,
+            "overrun_amount": float(row.variance_amount or 0),
+            "alert_level": row.alert_level,
+        }
+        for row in alert_rows
+    ]
+
+    result = {
+        "kpi": kpi,
+        "planning_trend": planning_trend,
+        "cost_overrun_top5": cost_overrun_top5,
+    }
+
+    _cache_set(cache_key, json.dumps(result), CACHE_TTL)
+    return result
