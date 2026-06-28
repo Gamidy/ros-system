@@ -1,7 +1,7 @@
 <template>
   <div class="compare-page">
     <div class="page-header">
-      <h2>{{ $t ? '项目对比' : '项目对比' }}</h2>
+      <h2>项目对比</h2>
       <div class="header-actions">
         <el-select v-model="selectedIds" multiple placeholder="选择项目对比(2-4个)" style="width:360px" filterable @change="onSelectChange">
           <el-option v-for="p in allProjects" :key="p.id" :label="`${p.code} ${p.name}`" :value="p.id" />

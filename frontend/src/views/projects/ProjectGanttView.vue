@@ -360,40 +360,42 @@ function renderChart() {
         encode: { x: 1, y: 0 },
       },
       // Dependency arrows
-      ...(data.dependencies && data.dependencies.length > 0 ? [{
-        type: 'lines',
-        name: '依赖关系',
-        data: data.dependencies
-          .filter((d: GanttDep) => {
-            const fromIdx = tasks.findIndex((t: GanttTask) => t.id === d.depends_on_task_id)
-            const toIdx = tasks.findIndex((t: GanttTask) => t.id === d.task_id)
-            return fromIdx >= 0 && toIdx >= 0
-          })
-          .map((d: GanttDep) => {
-            const fromTask = tasks.find((t: GanttTask) => t.id === d.depends_on_task_id)!
-            const toTask = tasks.find((t: GanttTask) => t.id === d.task_id)!
-            const fromEnd = fromTask.end_date ? new Date(fromTask.end_date).getTime() : new Date(fromTask.start_date || '').getTime() + 86400000
-            const toStart = toTask.start_date ? new Date(toTask.start_date).getTime() : new Date(toTask.end_date || '').getTime() - 86400000
-            const fromIdx = tasks.findIndex((t: GanttTask) => t.id === d.depends_on_task_id)
-            const toIdx = tasks.findIndex((t: GanttTask) => t.id === d.task_id)
-            return {
-              coords: [
-                [fromEnd, fromIdx],
-                [toStart, toIdx],
-              ],
-            }
-          }),
-        coordinateSystem: 'cartesian2d',
-        lineStyle: {
-          color: '#e6a23c',
-          width: 1.5,
-          type: 'dashed',
-          curveness: 0.3,
-        },
-        symbol: ['none', 'arrow'],
-        symbolSize: 8,
-        z: 5,
-      }] : []),
+      ...((data.dependencies && data.dependencies.length > 0
+        ? [{
+            type: 'lines' as const,
+            name: '依赖关系',
+            data: data.dependencies
+              .filter((d: GanttDep) => {
+                const fromIdx = tasks.findIndex((t: GanttTask) => t.id === d.depends_on_task_id)
+                const toIdx = tasks.findIndex((t: GanttTask) => t.id === d.task_id)
+                return fromIdx >= 0 && toIdx >= 0
+              })
+              .map((d: GanttDep) => {
+                const fromTask = tasks.find((t: GanttTask) => t.id === d.depends_on_task_id)!
+                const toTask = tasks.find((t: GanttTask) => t.id === d.task_id)!
+                const fromEnd = fromTask.end_date ? new Date(fromTask.end_date).getTime() : new Date(fromTask.start_date || '').getTime() + 86400000
+                const toStart = toTask.start_date ? new Date(toTask.start_date).getTime() : new Date(toTask.end_date || '').getTime() - 86400000
+                const fromIdx = tasks.findIndex((t: GanttTask) => t.id === d.depends_on_task_id)
+                const toIdx = tasks.findIndex((t: GanttTask) => t.id === d.task_id)
+                return {
+                  coords: [
+                    [fromEnd, fromIdx],
+                    [toStart, toIdx],
+                  ] as [number, number][],
+                }
+              }),
+            coordinateSystem: 'cartesian2d' as const,
+            lineStyle: {
+              color: '#e6a23c',
+              width: 1.5,
+              type: 'dashed' as const,
+              curveness: 0.3,
+            },
+            symbol: ['none', 'arrow'] as [string, string],
+            symbolSize: 8,
+            z: 5,
+          } as any] as any
+        : []) as any),
     ],
   }
 
