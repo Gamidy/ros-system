@@ -9,6 +9,8 @@ from app.models.quality_8d_report import EightDReport
 from app.models.quality_iqc import IQCRecord, IQCItem
 from app.models.purchase_rfq import RFQ, RFQQuotation
 from app.models.process_sop import SOP, ProcessRoute
+from app.models.quality_complaint import CustomerComplaint
+from app.models.purchase_supplier_eval import SupplierEvaluation
 from app.models.test import TestRequest, TestResult, MQVerification, Certification, Prototype, QualityIssue, ECR, ECN
 from app.models.alert import AlertRule, Alert, Notification
 from app.models.webhook import WebhookDeliveryLog

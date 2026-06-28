@@ -206,9 +206,9 @@ const router = createRouter({
         },
         {
           path: 'quality',
-          name: 'QualityIssues',
-          component: () => import('../views/quality/QualityIssuesView.vue'),
-          meta: { title: '质量问题' },
+          name: 'QualityDashboard',
+          component: () => import('../views/quality/QualityDashboard.vue'),
+          meta: { title: '质量工作台', menu: 'quality' },
         },
         {
           path: 'quality/8d-reports',
@@ -221,6 +221,12 @@ const router = createRouter({
           name: 'IQC',
           component: () => import('../views/quality/IQCView.vue'),
           meta: { title: '来料检验IQC', menu: 'quality' },
+        },
+        {
+          path: 'quality/complaints',
+          name: 'Complaints',
+          component: () => import('../views/quality/ComplaintView.vue'),
+          meta: { title: '客户投诉', menu: 'quality' },
         },
         {
           path: 'changes',

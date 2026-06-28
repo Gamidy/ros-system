@@ -197,6 +197,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/quality',        title: '质量问题',       icon: WarnTriangleFilled },
   { path: '/quality/8d-reports', title: '8D报告',     icon: WarnTriangleFilled },
   { path: '/quality/iqc', title: '来料检验IQC', icon: WarnTriangleFilled },
+  { path: '/quality/complaints', title: '客户投诉', icon: WarnTriangleFilled },
   { path: '/changes',        title: '变更管理',       icon: Refresh },
   { path: '/ecr',            title: 'ECR变更请求',    icon: Document },
   { path: '/eco',            title: 'ECO变更指令',    icon: Document },
