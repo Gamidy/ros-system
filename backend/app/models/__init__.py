@@ -80,6 +80,7 @@ from app.models.standard import StandardRegion, StandardCategory, Standard, Stan
 from app.models.competitor_crawl import CompetitorCrawl
 from app.models.competitor_search_term import CompetitorSearchTerm
 from app.models.market_param_config import MarketParamConfig
+from app.models.ci_v2_feedback import PredictionOutcome, ModelWeightSnapshot
 
 __all__ = [
     "User",
@@ -184,4 +185,6 @@ __all__ = [
     "CompetitorCrawl",
     "CompetitorSearchTerm",
     "MarketParamConfig",
+    "PredictionOutcome",
+    "ModelWeightSnapshot",
 ]

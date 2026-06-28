@@ -320,3 +320,24 @@ from .bi import (
     DistributionItem,
     DistributionResponse,
 )
+
+# ═══════════════════════════════════════════════════
+# CIE v2.0 — Risk Engine / Impact Graph / Feedback
+# ═══════════════════════════════════════════════════
+from .ci_v2 import (
+    RiskLevelEnum,
+    RecommendationEnum,
+    SignalInput,
+    RiskAssessmentOut,
+    ImpactNode,
+    ImpactEdge,
+    ImpactGraphOut,
+    RipplePath,
+    ApprovalAdvisorAction,
+    ApprovalRecommendation,
+    RiskAssessmentApiResponse,
+    ACTUAL_OUTCOME_CHOICES,
+    PredictionOutcomeCreate,
+    PredictionOutcomeOut,
+    ModelWeightsOut,
+)

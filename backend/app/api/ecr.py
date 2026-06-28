@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -14,6 +15,8 @@ from app.core.enums import ECRStatus, ECRType, ECRUrgency, ECOStatus
 from app.core.permissions import require_menu
 from app.core.security import get_current_user
 from app.models.approval import ApprovalRequest
+from app.models.ci_v2_impact import ImpactGraphSnapshot
+from app.models.ci_v2_risk import RiskAssessment
 from app.models.ecr_eco import ECRAttachment, ECRRequest, ECO
 from app.models.user import User
 from app.schemas import (
@@ -25,6 +28,9 @@ from app.schemas import (
     ECRSummaryOut,
     ECRUpdate,
 )
+from app.services.events import bus, EventTypes
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ecr", tags=["ECR"])
 
@@ -253,6 +259,14 @@ def get_ecr(
 
     att_count = _get_attachment_count(db, ecr_id)
 
+    # CIE v2.0: 查询关联风险评估和影响图
+    ci_risk = db.query(RiskAssessment).filter(
+        RiskAssessment.ecr_id == ecr_id
+    ).order_by(RiskAssessment.created_at.desc()).first()
+    ci_graph = db.query(ImpactGraphSnapshot).filter(
+        ImpactGraphSnapshot.ecr_id == ecr_id
+    ).order_by(ImpactGraphSnapshot.created_at.desc()).first()
+
     return ECRDetailOut(
         id=ecr.id,
         code=ecr.code,
@@ -280,6 +294,11 @@ def get_ecr(
         eco_code=eco_code,
         eco_id=eco_id,
         eco_status=eco_status,
+        risk_assessment_id=ci_risk.id if ci_risk else None,
+        risk_score=float(ci_risk.risk_score) if ci_risk else None,
+        risk_level=ci_risk.risk_level if ci_risk else None,
+        impact_graph_id=ci_graph.id if ci_graph else None,
+        ripple_score=float(ci_graph.ripple_score) if ci_graph else None,
     )
 
 
@@ -397,6 +416,15 @@ def submit_ecr(
     db.commit()
     db.refresh(ecr)
 
+    # === CIE v2.0 Hook: 提交时自动触发风险评分 (非阻断) ===
+    try:
+        from app.services.ai.risk_engine import RiskEngine
+        risk_engine = RiskEngine()
+        risk_engine.assess_for_ecr(db=db, ecr_id=ecr.id)
+        logger.info("ECR %s (%s) 提交后自动风险评分完成", ecr.id, ecr.code)
+    except Exception as e:
+        logger.warning("ECR %s 风险评分触发失败 (非致命): %s", ecr.id, e)
+
     att_count = _get_attachment_count(db, ecr.id)
     out = _ecr_to_out_full(ecr, att_count)
     return out
@@ -489,6 +517,16 @@ def approve_ecr(
     db.commit()
     db.refresh(ecr)
 
+    # === CIE v2.0 Hook: emit 审批通过事件 (供FeedbackLoop记录) ===
+    try:
+        bus.emit_async(
+            EventTypes.ECR_APPROVED,
+            ecr_id=ecr.id,
+            risk_score=None,  # 可在 handler 中补充
+        )
+    except Exception as e:
+        logger.warning("emit ECR_APPROVED 失败 (非致命): %s", e)
+
     att_count = _get_attachment_count(db, ecr.id)
     out = _ecr_to_out_full(ecr, att_count)
     return out
@@ -525,6 +563,16 @@ def reject_ecr(
 
     db.commit()
     db.refresh(ecr)
+
+    # === CIE v2.0 Hook: emit 驳回事件 (供FeedbackLoop记录) ===
+    try:
+        bus.emit_async(
+            EventTypes.ECR_REJECTED,
+            ecr_id=ecr.id,
+            rejection_reason=ecr.rejection_reason,
+        )
+    except Exception as e:
+        logger.warning("emit ECR_REJECTED 失败 (非致命): %s", e)
 
     att_count = _get_attachment_count(db, ecr.id)
     out = _ecr_to_out_full(ecr, att_count)

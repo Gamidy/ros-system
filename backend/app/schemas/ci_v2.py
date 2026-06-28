@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ════════════════════════════════════════════════════
@@ -143,5 +143,50 @@ class RiskAssessmentApiResponse(BaseModel):
     risk_level: str
     risk_vector: dict
     mitigation_suggestions: list[str]
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ════════════════════════════════════════════════════
+# M4 — Feedback Loop Schema
+# ════════════════════════════════════════════════════
+
+ACTUAL_OUTCOME_CHOICES = ["approved", "rejected", "bom_success", "bom_failure", "cancelled"]
+
+
+class PredictionOutcomeCreate(BaseModel):
+    """反馈提交入参"""
+    ecr_id: int
+    actual_outcome: str  # 会在 validator 中检查
+    outcome_detail: Optional[dict] = None
+
+    @field_validator("actual_outcome")
+    @classmethod
+    def validate_outcome(cls, v: str) -> str:
+        if v not in ACTUAL_OUTCOME_CHOICES:
+            raise ValueError(f"actual_outcome 必须是 {ACTUAL_OUTCOME_CHOICES} 之一, 收到: {v}")
+        return v
+
+
+class PredictionOutcomeOut(BaseModel):
+    """反馈记录输出"""
+    id: int
+    ecr_id: int
+    risk_score: float
+    risk_level: str
+    predicted_action: Optional[str] = None
+    actual_outcome: str
+    outcome_detail: Optional[dict] = None
+    recorded_at: datetime
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ModelWeightsOut(BaseModel):
+    """权重参数版本输出"""
+    version_id: str
+    weights: dict
+    sample_count: int
+    is_active: bool
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)

@@ -84,6 +84,8 @@ class EventTypes:
 
     # ── ECR/ECO Events — 工程变更控制 ──
     ECO_ROLLBACK_REQUIRED = "eco.rollback_required"
+    ECR_APPROVED = "ecr.approved"
+    ECR_REJECTED = "ecr.rejected"
 
     # ── 事件版本映射 ──
     _VERSIONS: Dict[str, str] = {
@@ -104,6 +106,8 @@ class EventTypes:
         APPROVAL_COMPLETED: "v1",
         APPROVAL_REJECTED: "v1",
         ECO_ROLLBACK_REQUIRED: "v1",
+        ECR_APPROVED: "v1",
+        ECR_REJECTED: "v1",
     }
 
     @classmethod

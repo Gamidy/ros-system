@@ -76,6 +76,13 @@ class ECRDetailOut(ECROut):
     eco_id: Optional[int] = None
     eco_status: Optional[str] = None
 
+    # === CIE v2.0 扩展字段 (Optional, 向后兼容) ===
+    risk_assessment_id: Optional[int] = None
+    risk_score: Optional[float] = None
+    risk_level: Optional[str] = None
+    impact_graph_id: Optional[int] = None
+    ripple_score: Optional[float] = None
+
 
 class ECRSummaryOut(BaseModel):
     """ECR简要信息（用于ECO关联展示）"""

@@ -37,6 +37,7 @@ from app.api import market_param_config
 from app.api import competitor_crawl_admin
 from app.api import ws
 from app.api import standard_query_api, standard_admin_api
+from app.api import ci_v2
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -192,6 +193,9 @@ app.include_router(pm_proposal_api.router, prefix="/api")
 app.include_router(rd_panel.router, prefix="/api")
 app.include_router(state_machine_api.router, prefix="/api")
 app.include_router(risk_dashboard.router)
+
+# ── CI v2.0 变更智能评估系统 ──
+app.include_router(ci_v2.router)
 
 # ── Phase 6 S3 — ECR/ECO 工程变更控制 ──
 app.include_router(ecr.router)
