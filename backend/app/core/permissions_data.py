@@ -96,6 +96,8 @@ ALL_MENUS = [
     # D5-5 — 移动端底部导航
     "notifications",           # 通知中心
     "profile",                 # 个人中心
+    # Batch-12 — 库存管理
+    "inventory",               # 库存管理
 ]
 
 # 角色 → 菜单 映射表
@@ -119,6 +121,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'safety-standards', 'safety-inspection-items', 'safety-supplier-qual', 'safety-alerts',
         # S4 成本核算
         'cost-accounting',
+        # Batch-12 库存管理
+        'inventory',
         # D1 BI分析看板
         'bi-analytics',
         # P1-T5 事件监控面板
@@ -217,6 +221,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'cert-executions', 'cert-results', 'cert-change-impact', 'certificates', 'cert-gate-rules',
         # P0-7 外协管理
         'outsource-partners', 'outsource-orders', 'outsource-quality',
+        # Batch-12 库存管理
+        'inventory',
         # D5-5 移动端导航
         'notifications', 'profile',
     ],
@@ -325,6 +331,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "projects", "purchases", "alerts", "approvals",
         # S4 成本核算
         "cost-accounting",
+        # Batch-12 库存管理
+        "inventory",
         # D1 BI分析看板
         "bi-analytics",
         # D5-5 移动端导航
@@ -341,6 +349,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "bom", "purchases", "alerts", "approvals", "projects",
         "products", "prototypes", "tests",
         "verification-requirements", "test-executions",
+        # Batch-12 库存管理
+        "inventory",
         # D5-5 移动端导航
         'notifications', 'profile',
     ],
@@ -438,6 +448,8 @@ MENU_PATH_MAP: dict[str, str] = {
     # D5-5 移动端导航
     "notifications": "/notifications",
     "profile": "/profile",
+    # Batch-12 — 库存管理
+    "inventory": "/inventory",
 }
 
 # API路径 → 菜单名映射（用于 require_menu 权限校验）
@@ -454,6 +466,7 @@ API_MENU_MAP: dict[str, str] = {
     "certifications/ecns": "changes",
     "approval": "approvals",
     "purchases": "purchases",
+    "inventory": "inventory",
     "dashboard": "dashboard",
     "prototypes": "prototypes",
     "verification-requirements": "verification-requirements",

@@ -211,6 +211,24 @@ const router = createRouter({
           meta: { title: '采购收货', menu: 'purchases' },
         },
         {
+          path: 'inventory',
+          name: 'Inventory',
+          component: () => import('../views/inventory/InventoryListView.vue'),
+          meta: { title: '库存总览', menu: 'inventory' },
+        },
+        {
+          path: 'inventory/warehouses',
+          name: 'InventoryWarehouses',
+          component: () => import('../views/inventory/WarehouseListView.vue'),
+          meta: { title: '仓库管理', menu: 'inventory' },
+        },
+        {
+          path: 'inventory/transactions',
+          name: 'InventoryTransactions',
+          component: () => import('../views/inventory/InventoryTransactionView.vue'),
+          meta: { title: '库存流水', menu: 'inventory' },
+        },
+        {
           path: 'mm',
           name: 'ModuleManager',
           component: () => import('../views/mm/ModuleManagerView.vue'),
