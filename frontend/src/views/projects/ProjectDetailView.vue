@@ -14,6 +14,9 @@
         <el-button size="small" type="primary" plain @click="router.push('/projects/' + pid + '/gantt')">
           <el-icon style="margin-right:4px"><View /></el-icon>甘特图
         </el-button>
+        <el-button size="small" @click="exportProject">
+          <el-icon style="margin-right:4px"><Download /></el-icon>导出
+        </el-button>
       </div>
 
       <!-- 1. Project Header Card -->
@@ -158,6 +161,11 @@
           <!-- Tab 9a: 项目复盘 -->
           <el-tab-pane label="复盘" name="review">
             <ProjectReviewTab :pid="pid" />
+          </el-tab-pane>
+
+          <!-- Tab 9b: 跨模块联动 -->
+          <el-tab-pane label="跨模块" name="cross-module">
+            <CrossModuleTab :pid="pid" />
           </el-tab-pane>
 
           <!-- Tab 9: Milestones -->
@@ -308,7 +316,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { CircleCheckFilled, WarningFilled, CircleCloseFilled, Clock, Monitor, Check, Warning, MoreFilled, View } from '@element-plus/icons-vue'
+import { CircleCheckFilled, WarningFilled, CircleCloseFilled, Clock, Monitor, Check, Warning, MoreFilled, View, Download } from '@element-plus/icons-vue'
 import api from '../../api'
 import TaskKanbanTab from './TaskKanbanTab.vue'
 import WBSTreeTab from './WBSTreeTab.vue'
@@ -318,6 +326,7 @@ import TimeLogTab from './TimeLogTab.vue'
 import BudgetTab from './BudgetTab.vue'
 import GateReportTab from './GateReportTab.vue'
 import ProjectReviewTab from './ProjectReviewTab.vue'
+import CrossModuleTab from './CrossModuleTab.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -449,6 +458,22 @@ async function saveRisk() {
 async function updateRisk(r: any, s: string) {
   try { await api.patch(`/projects/${pid.value}/risks/${r.id}`, null, { params: { status: s } }); ElMessage.success('风险已更新'); await fetchAll() }
   catch (e: any) { ElMessage.error(e?.response?.data?.detail || '更新风险失败') }
+}
+
+async function exportProject() {
+  try {
+    const r = await api.get(`/projects/${pid.value}/export`)
+    const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `project-${pid.value}-export.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (e: unknown) {
+    ElMessage.error('导出失败')
+  }
 }
 
 onMounted(fetchAll)

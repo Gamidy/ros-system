@@ -9,6 +9,8 @@ from app.core.security import get_current_user, require_role
 from app.core.permissions import require_menu
 from app.models.user import User
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk, TaskDependency
+from app.models.bom import BOM
+from app.models.product import Product
 from app.services.state_machine import assert_transition
 from app.schemas import (
     ProgramCreate, ProgramOut, ProjectCreate, ProjectUpdate, ProjectOut, TaskCreate, RiskCreate,
@@ -1361,4 +1363,98 @@ def compare_projects(data: CompareRequest, db: Session = Depends(get_db)):
     return {
         "projects": result_projects,
         "gates": list(all_gates.values()),
+    }
+
+
+# ═══════════════ 跨模块联动 ═══════════════
+
+@project_router.get("/{pid}/cross-module")
+def project_cross_module(pid: int, db: Session = Depends(get_db)):
+    """返回项目关联的跨模块数据: 产品/BOM/认证/采购/ECR"""
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(404, "项目不存在")
+
+    result: dict = {}
+
+    # 关联产品
+    if p.product_code:
+        product = db.query(Product).filter(Product.code == p.product_code).first()
+        if product:
+            result["product"] = {
+                "id": product.id, "code": product.code, "name": product.name,
+                "status": product.status, "category": product.category,
+            }
+            # BOM
+            boms = db.query(BOM).filter(BOM.product_id == product.id).all()
+            result["boms"] = [{"id": b.id, "name": b.name, "bom_type": b.bom_type, "status": b.status} for b in boms]
+
+    # 认证
+    try:
+        from app.models.test import Certification
+        certs = db.query(Certification).filter(
+            Certification.project_id == pid
+        ).order_by(Certification.created_at.desc()).limit(10).all()
+        result["certifications"] = [{"id": c.id, "name": c.cert_name, "type": c.cert_type, "status": c.status} for c in certs]
+    except Exception:
+        result["certifications"] = []
+
+    # ECR/ECO
+    try:
+        from app.models.test import ECR
+        ecrs = db.query(ECR).filter(ECR.project_id == pid).order_by(ECR.created_at.desc()).limit(10).all()
+        result["ecrs"] = [{"id": e.id, "title": e.title, "status": e.status, "created_at": str(e.created_at.date()) if e.created_at else None} for e in ecrs]
+    except Exception:
+        result["ecrs"] = []
+
+    # 工时统计
+    from app.models.project import TimeEntry
+    entries = db.query(TimeEntry).join(Task).filter(Task.project_id == pid).all()
+    total_hours = sum(e.hours or 0 for e in entries)
+    result["total_hours"] = total_hours
+    result["time_entries_count"] = len(entries)
+
+    # 评论数
+    from app.models.project import TaskComment
+    comments_count = db.query(TaskComment).join(Task).filter(Task.project_id == pid).count()
+    result["comments_count"] = comments_count
+
+    return result
+
+
+# ═══════════════ 项目导出 ═══════════════
+
+@project_router.get("/{pid}/export")
+def project_export(pid: int, db: Session = Depends(get_db)):
+    """导出项目完整数据(JSON)"""
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(404, "项目不存在")
+
+    tasks = db.query(Task).filter(Task.project_id == pid).all()
+    milestones = db.query(Milestone).filter(Milestone.project_id == pid).all()
+    gates = db.query(ProjectGate).filter(ProjectGate.project_id == pid).order_by(ProjectGate.seq).all()
+    risks = db.query(Risk).filter(Risk.project_id == pid).all()
+
+    return {
+        "project": {
+            "code": p.code, "name": p.name, "project_class": p.project_class,
+            "source": p.source, "status": p.status, "owner": p.owner,
+            "product_code": p.product_code, "budget": p.budget,
+            "start_date": str(p.start_date) if p.start_date else None,
+            "target_end_date": str(p.target_end_date) if p.target_end_date else None,
+            "actual_end_date": str(p.actual_end_date) if p.actual_end_date else None,
+            "description": p.description,
+        },
+        "gates": [{"code": g.gate_code, "name": g.gate_name, "status": g.status,
+                    "planned_date": str(g.planned_date) if g.planned_date else None,
+                    "actual_date": str(g.actual_date) if g.actual_date else None} for g in gates],
+        "milestones": [{"name": m.name, "status": m.status, "planned_date": str(m.planned_date) if m.planned_date else None,
+                         "actual_date": str(m.actual_date) if m.actual_date else None} for m in milestones],
+        "tasks": [{"title": t.title, "assignee": t.assignee, "status": t.status,
+                    "priority": t.priority, "planned_date": str(t.planned_date) if t.planned_date else None,
+                    "due_date": str(t.due_date) if t.due_date else None} for t in tasks],
+        "risks": [{"title": r.title, "risk_level": r.risk_level, "status": r.status,
+                    "probability": r.probability, "impact": r.impact} for r in risks],
+        "exported_at": str(datetime.now()),
     }
