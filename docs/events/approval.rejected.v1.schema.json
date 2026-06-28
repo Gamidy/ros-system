@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:approval:event:approval.rejected:v1",
+  "title": "Approval Rejected",
+  "description": "审批驳回时触发（任意步骤驳回即整单驳回）",
+  "type": "object",
+  "required": ["metadata", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Event metadata conforming to D2-2 Event Metadata Standard (10-field fixed template).",
+      "required": ["identity", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Event identity fields.",
+          "required": ["event_id", "event_type", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Globally unique identifier for the event instance."
+            },
+            "event_type": {
+              "const": "approval.rejected",
+              "description": "Event type identifier."
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the event schema."
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "description": "Event context fields.",
+          "required": ["timestamp", "source", "producer", "correlation_id", "causation_id", "trace_id", "tenant_id", "user_id"],
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 UTC timestamp when the event was produced."
+            },
+            "source": {
+              "const": "approval",
+              "description": "Origin system or service that produced the event."
+            },
+            "producer": {
+              "type": "string",
+              "description": "Specific component or service instance that produced the event."
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Identifier used to correlate related events across multiple systems."
+            },
+            "causation_id": {
+              "type": "string",
+              "description": "Identifier of the event that caused this event (e.g., the parent command)."
+            },
+            "trace_id": {
+              "type": "string",
+              "description": "Distributed tracing correlation identifier."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "Tenant or organization namespace the event belongs to."
+            },
+            "user_id": {
+              "type": "string",
+              "description": "Identifier of the user who triggered the event."
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Approval rejection data payload for a fully rejected request.",
+      "required": ["request_id", "chain_id", "reject_step", "reject_reason", "rejecter_id", "rejected_at", "business_type", "business_id"],
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "description": "Unique identifier of the approval request."
+        },
+        "chain_id": {
+          "type": "string",
+          "description": "Identifier of the approval chain definition."
+        },
+        "chain_name": {
+          "type": "string",
+          "description": "Display name of the approval chain."
+        },
+        "reject_step": {
+          "type": "string",
+          "description": "Identifier of the step where the rejection occurred."
+        },
+        "reject_step_name": {
+          "type": "string",
+          "description": "Display name of the step where the rejection occurred."
+        },
+        "reject_reason": {
+          "type": "string",
+          "description": "Reason provided for the rejection."
+        },
+        "rejecter_id": {
+          "type": "string",
+          "description": "Identifier of the user who rejected the request."
+        },
+        "rejecter_name": {
+          "type": "string",
+          "description": "Display name of the user who rejected the request."
+        },
+        "rejected_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the rejection occurred."
+        },
+        "business_type": {
+          "type": "string",
+          "description": "Type of business entity that was rejected."
+        },
+        "business_id": {
+          "type": "string",
+          "description": "Identifier of the business entity that was rejected."
+        },
+        "is_final": {
+          "type": "boolean",
+          "description": "Whether this is a final rejection (request cannot be resubmitted) or a provisional rejection (request can be re-submitted)."
+        }
+      }
+    }
+  }
+}
