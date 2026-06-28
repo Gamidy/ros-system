@@ -1,0 +1,289 @@
+# ROS Capability Contract
+# ─────────────────────
+# 本文件是 Approval Engine Capability 的权威契约定义。
+# Architecture Board 批准后冻结，任何 Interface 变更需重新评审。
+#
+# Reference RFC: RFC-2026-003
+# Approval Score: 96.5/100
+
+capability:
+  id: "approval_engine"
+  name: "Approval Engine"
+  display_name: "审批引擎"
+  description: >
+    横切审批基础设施，提供审批链定义（ApprovalChain）、审批步骤
+    （ApprovalStep）、审批请求提交（ApprovalRequest）及审批记录
+    （ApprovalRecord）的完整生命周期管理。支持 sequential（顺序）、
+    parallel（并行）两种审批模式，作为 ROS 所有业务模块（产品策划、
+    ECR变更、采购申请、账号注册等）的统一审批中枢。
+
+  version: "1.0.0"
+  approved_by: "Architecture Board"
+  approval_score: 96.5
+  rfc_number: "RFC-2026-003"
+
+# ── 所有者与生命周期 ──────────────────────
+
+owner:
+  business_owner: "Admin"
+  technical_owner: "Admin"
+  architecture_owner: "Architecture Board"
+  primary_role: "admin"
+  backup_role: "general_manager"
+  stewardship_level: "exclusive"  # exclusive | shared | read-only
+
+lifecycle:
+  states:
+    - active
+    - deprecated
+    - retired
+  initial_state: "active"
+  terminal_states: ["retired"]
+
+# ── Interface — 对外暴露的 API 契约 ──────
+
+interface:
+  rest:
+    # ── 审批链管理 ──
+    - method: GET
+      path: /approval/chains
+      description: 列出所有审批链（含步骤，自动初始化默认链）
+      response: "ApprovalChainOut[]"
+      auth: "require_menu('approvals')"
+      sla_ms: 200
+
+    - method: POST
+      path: /approval/chains
+      description: 创建审批链（名称+编码+步骤列表）
+      request: "ApprovalChainCreate"
+      response: "ApprovalChainOut"
+      auth: "admin | general_manager"
+      idempotency: true
+      sla_ms: 300
+
+    - method: GET
+      path: /approval/chains/{chain_id}
+      description: 获取审批链详情
+      response: "ApprovalChainOut"
+      auth: "require_menu('approvals')"
+      sla_ms: 200
+
+    # ── 审批请求 ──
+    - method: POST
+      path: /approval/requests
+      description: 提交审批请求（指定审批链 + 请求信息）
+      request: "ApprovalRequestCreate"
+      response: "ApprovalRequestOut"
+      auth: "admin | general_manager | rd_director | module_manager | procurement_director | process_manager | project_admin"
+      sla_ms: 300
+
+    - method: GET
+      path: /approval/requests
+      description: 审批请求列表（支持 status/requester 筛选，默认当前用户）
+      response: "ApprovalRequestOut[]"
+      auth: "require_menu('approvals')"
+      sla_ms: 300
+
+    - method: GET
+      path: /approval/requests/pending
+      description: 待当前用户审批的请求列表（按角色自动匹配）
+      response: "ApprovalRequestOut[]"
+      auth: "require_menu('approvals')"
+      sla_ms: 300
+
+    - method: GET
+      path: /approval/requests/{request_id}
+      description: 审批请求详情（含步骤 + 审批记录）
+      response: "ApprovalRequestOut"
+      auth: "require_menu('approvals')"
+      sla_ms: 200
+
+    - method: POST
+      path: /approval/requests/{request_id}/approve
+      description: 审批通过当前步骤（支持 sequential / parallel 模式）
+      request: "ApprovalDecision"
+      response: "ApprovalRequestOut"
+      auth: "admin | general_manager | rd_director | module_manager | procurement_director | process_manager | project_admin"
+      idempotency: true
+      sla_ms: 500
+
+    - method: POST
+      path: /approval/requests/{request_id}/reject
+      description: 驳回审批（请求进入 rejected 终态）
+      request: "ApprovalDecision"
+      response: "ApprovalRequestOut"
+      auth: "admin | general_manager | rd_director | module_manager | procurement_director | process_manager | project_admin"
+      idempotency: true
+      sla_ms: 500
+
+  events_published:
+    - "approval.requested"           # 审批请求提交时
+    - "approval.step_completed"      # 单步审批完成（sequential/parallel 分支合并）
+    - "approval.completed"           # 全链审批全部通过
+    - "approval.rejected"            # 审批驳回
+
+  events_subscribed:
+    - "plan.project_init_done"       # 产品策划立项完成 → 创建审批请求
+    - "plan.approved"                # 产品策划审批完成 → 触发 Saga
+
+# ── Provides — 本 Capability 提供什么 ──────
+
+provides:
+  entities:
+    - "ApprovalChain"               # 审批链定义（名称/编码/步骤集合）
+    - "ApprovalStep"                # 审批步骤（序号/角色/类型: sequential/parallel）
+    - "ApprovalRequest"             # 审批请求（含状态/当前步骤/并行元数据）
+    - "ApprovalRecord"              # 审批记录（审批人/决策/意见/时间）
+
+  workflows:
+    - "sequential_approval"          # 顺序审批: 按步骤逐一审批，任意一步驳回则整单驳回
+    - "parallel_approval"            # 并行审批: 多角色同步审批，全部通过后进入下一步
+    - "chain_configuration"          # 审批链配置: 创建/编辑审批链及步骤
+
+  views:
+    - "ApprovalsView"                # 审批工作台（我的审批/审批历史/审批链配置）
+
+  default_chains:
+    - "account_register"             # 账号申请审批: 个人→研发总监
+    - "ecr"                          # ECR变更审批: 工程师→模块经理→研发总监
+    - "proposal"                     # 立项审批（并行）: 产品经理→并行审批(4角色)→研发总监终审
+    - "purchase"                     # 采购审批: 采购→模块经理→总经理
+    - "PLAN_APPROVAL"                # 产品策划审批（并行）: 研发总监+产品经理+系统工程师+品质工程师并行→研发总监终审
+
+# ── Consumes — 本 Capability 依赖什么 ──────
+
+consumes:
+  upstream:
+    - capability: "auth_service"
+      entities: ["User"]
+      contract: "N/A"
+      dependency_level: "hard"
+      status: "active"
+
+  infrastructure:
+    - "auth_service"                 # JWT认证 + RBAC权限
+    - "event_bus"                    # 事件总线（approval.* 事件发布/订阅）
+    - "notification_center"          # 审批结果通知推送
+    - "database"                     # MariaDB 持久化
+
+# ── Produces — 本 Capability 产出什么 ──────
+
+produces:
+  artifacts:
+    - entity: "ApprovalRecord"       # 每步审批产生审批记录
+      trigger: "approval.step_completed"
+      consumer: "notification_center"
+
+    - entity: "ApprovalRequest"      # 审批完成/驳回的请求状态变更
+      trigger: "approval.completed"
+      consumer: "product_planning"    # → ProductPlan APPROVED + 创建 Project
+
+    - entity: "ApprovalRequest"      # 审批驳回 → 回退业务对象状态
+      trigger: "approval.rejected"
+      consumer: "product_planning"    # → ProductPlan 回退 DEFINITION
+
+  knowledge:
+    - "approval_history"             # 审批历史沉淀 → 后续可用于审批效率分析
+
+# ── Dependencies — 模块级依赖图 ──────
+
+dependencies:
+  critical_path:
+    - "auth_service"
+    - "event_bus"
+    - "database"
+
+  soft_dependencies:
+    - "notification_center"          # 通知推送可选（不影响审批流程主链路）
+
+  downstream_consumers:
+    - capability: "planning"
+      consumes: ["ApprovalRequest", "approval.approved", "approval.rejected"]
+    - capability: "ecm"
+      consumes: ["ApprovalRequest", "approval.completed"]
+    - capability: "procurement"
+      consumes: ["ApprovalRequest", "approval.completed"]
+
+# ── 数据所有权声明（Constitution 第一条）───────
+
+data_ownership:
+  exclusive_write:
+    - "ApprovalChain.*"
+    - "ApprovalStep.*"
+    - "ApprovalRequest.*"
+    - "ApprovalRecord.*"
+
+  shared_read:
+    - "ApprovalChain": ["*"]
+    - "ApprovalRequest": ["*/pending", "*/history"]
+    - "ApprovalRecord": ["*"]
+
+# ── 幂等性与一致性声明（Constitution 第八条）───────
+
+idempotency:
+  chain_creation:
+    strategy: "business_key"         # code 唯一性约束
+  request_submission:
+    strategy: "request_id"           # 关联业务记录幂等
+  approval_decision:
+    strategy: "state_check + role_check"  # 状态校验 (pending) + 角色校验 + 同人防重复
+  parallel_vote:
+    strategy: "step_meta_merge"      # decisions 快照累加，单角色单票
+
+# ── 版本兼容性声明 ──────
+
+compatibility:
+  schema_version: "1.0.0"
+  backward_compatible: true
+  migration_path: >
+    已有审批数据无需迁移。新增字段均有默认值。
+    步骤类型字段 (step_type) 默认 sequential 兼容旧数据。
+    step_meta 字段为 JSON 可空，向前兼容。
+
+# ── KPIs ──────
+
+kpis:
+  - name: "Approval Cycle Time"
+    description: "请求提交到审批完成（通过/驳回）的 P95 时间"
+    target: "≤ 24 小时"
+    data_source: "Event Log / Approval Record"
+
+  - name: "Approval Pass Rate"
+    description: "审批一次通过率"
+    target: "≥ 80%"
+    data_source: "Approval Request Status"
+
+  - name: "Pending Auto-Expiry Rate"
+    description: "超时未审批自动过期占比"
+    target: "≤ 5%"
+    data_source: "Event Log"
+
+  - name: "API P95 Latency"
+    description: "审批决策 API P95 延迟"
+    target: "< 500ms"
+    data_source: "APM Metrics"
+
+  - name: "Default Chain Coverage"
+    description: "默认审批链涵盖的核心业务场景数"
+    target: "≥ 5 条默认链"
+    data_source: "Approval Chain Table"
+
+# ── Evolution Roadmap ──────
+
+evolution:
+  v1:
+    description: "Foundation: 顺序审批 + 并行审批 + 审批链管理 + 事件集成"
+    target: "2026 H1"
+    status: "current"
+  v2:
+    description: "OR 审批模式（任一审批人通过即可）+ 审批自动过期 + 审批人代理"
+    target: "2026 H2"
+    status: "planned"
+  v3:
+    description: "条件分支审批链 + 动态审批人路由 + 审批效率仪表盘"
+    target: "2027 H1"
+    status: "planned"
+  v4:
+    description: "AI 辅助决策建议 + 自动审批（低风险场景）+ 多语言审批模板"
+    target: "2027 H2"
+    status: "vision"

@@ -169,6 +169,20 @@ def submit_approval_request(
     db.add(request)
     db.commit()
     db.refresh(request)
+
+    # emit: approval.requested
+    try:
+        from app.services.event_bus import emit as d2_emit
+        d2_emit(
+            "approval.requested",
+            {"request_id": request.id, "chain_id": request.chain_id,
+             "request_type": request.request_type, "title": request.title,
+             "requester": request.requester},
+            producer="approval_engine.service",
+        )
+    except Exception as e:
+        logger.error("approval.requested 发射失败: %s", e)
+
     return _request_to_out(request, db)
 
 
@@ -454,8 +468,22 @@ def _advance_to_next_step(req: ApprovalRequest, db: Session):
     ).first()
     if next_step:
         req.current_step = next_step.seq
+        step_status = "advanced"
     else:
         req.status = "approved"
+        step_status = "completed"
+
+    # emit: approval.step_completed
+    try:
+        from app.services.event_bus import emit as d2_emit
+        d2_emit(
+            "approval.step_completed",
+            {"request_id": req.id, "step_seq": req.current_step,
+             "step_status": step_status, "chain_id": req.chain_id},
+            producer="approval_engine.service",
+        )
+    except Exception as e:
+        logger.error("approval.step_completed 发射失败: %s", e)
 
 
 def _get_step_meta(req: ApprovalRequest, step_seq: int) -> dict | None:
