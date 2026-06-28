@@ -10,6 +10,7 @@
 """
 from datetime import datetime, date
 import json
+import logging
 import random
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
@@ -32,8 +33,13 @@ from app.api.pm_proposal_utils import (
     inject_cooling_capacity_to_core_performance,
     generate_labor_costs_json,
     get_cert_costs_from_compliance,
+    get_cert_standards_by_market,
+    get_team_role_template_by_project_type,
+    get_user_workload,
     generate_project_name,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pm", tags=["产品经理工作台"])
 
@@ -1334,4 +1340,161 @@ def withdraw_proposal(
         "id": req.id,
         "status": req.status,
         "message": "审批已撤回",
+    }
+
+
+# ══════════════════════════════════════════════════════════════
+# t3 — 安全合规标准动态加载 (按 target_market)
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/safety-compliance-standards")
+def get_safety_compliance_standards(
+    target_market: str = Query(..., description="目标市场名称"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+) -> dict:
+    """按 target_market 从 cert_standards 表加载安全合规标准。
+    
+    返回不定行数，每行包含:
+    - standard: 标准名称
+    - key_requirement: 关键要求
+    - verification_method: 验证方式
+    - cert_cycle: 认证周期
+    - sort_order: 排序
+    """
+    if not target_market or not target_market.strip():
+        raise HTTPException(status_code=400, detail="target_market 不能为空")
+    
+    standards = get_cert_standards_by_market(target_market.strip(), db)
+    return {"data": standards, "total": len(standards)}
+
+
+# ══════════════════════════════════════════════════════════════
+# t3 — 认证费用自动生成 (从 Tab3 safety_compliance JSON)
+# ══════════════════════════════════════════════════════════════
+
+@router.post("/cert-costs-from-compliance")
+def get_cert_costs_endpoint(
+    safety_compliance_json: str = Body(..., description="Tab3 安全合规 JSON 字符串"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+) -> dict:
+    """从 Tab3 safety_compliance JSON 解析标准名，匹配 cert_cost 配置生成费用行。
+    
+    从 system_config 读取 cert_cost 配置作为费用映射；
+    若未配置则使用内置默认映射。
+    
+    返回:
+        [{cert_name, cert_body, cost_wan, remark}]
+    """
+    # 读取 cert_cost 配置
+    cert_cost_row = db.query(SystemConfig).filter(SystemConfig.key == "cert_cost").first()
+    cert_cost_config = None
+    if cert_cost_row:
+        try:
+            cert_cost_config = json.loads(cert_cost_row.value)
+        except (json.JSONDecodeError, TypeError):
+            cert_cost_config = None
+    
+    costs = get_cert_costs_from_compliance(
+        safety_compliance_json=safety_compliance_json,
+        cert_cost_config=cert_cost_config,
+    )
+    return {"data": costs, "total": len(costs)}
+
+
+# ══════════════════════════════════════════════════════════════
+# t3 — 团队角色模板加载 (按 project_type)
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/team-role-templates")
+def get_team_role_templates_endpoint(
+    project_type: str = Query(..., description="项目类型: 全新开发/改型/引用"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+) -> dict:
+    """按 project_type 返回预设团队角色模板。
+    
+    返回:
+        [{role_name, headcount, responsibility_default, seq}]
+    """
+    if not project_type or not project_type.strip():
+        raise HTTPException(status_code=400, detail="project_type 不能为空")
+    
+    templates = get_team_role_template_by_project_type(project_type.strip(), db)
+    return {"data": templates, "total": len(templates)}
+
+
+# ══════════════════════════════════════════════════════════════
+# t3 — 人员工作负载查询
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/user-workload")
+def get_user_workload_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+) -> dict:
+    """返回所有用户当前参与的项目数及负载率。
+    
+    统计规则:
+    - 作为项目 owner 或 leader_id 计入 1 个项目
+    - 负载率 = min(项目数 × 10%, 100%)
+    
+    返回:
+        {user_id: {username, full_name, role, project_count, load_rate}}
+    """
+    workload = get_user_workload(db)
+    return {"data": workload, "total": len(workload)}
+
+
+# ══════════════════════════════════════════════════════════════
+# t3 — 团队摘要统计
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/team-summary")
+def get_team_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("product_manager")),
+) -> dict:
+    """团队摘要统计: 总人数/已分配/未分配/各角色人数。
+    
+    统计规则:
+    - 总人数: 所有 active 用户
+    - 已分配: 作为任一 active 项目 owner 或 leader 的用户数
+    - 未分配: active 用户 - 已分配用户
+    - 各角色: 按 role 分组统计
+    """
+    users = db.query(User).filter(User.is_active == True).all()
+    active_projects = (
+        db.query(Project)
+        .filter(Project.status.notin_(["completed", "cancelled"]))
+        .all()
+    )
+
+    # 收集被分配到项目的用户
+    assigned_usernames: set[str] = set()
+    for proj in active_projects:
+        if proj.owner:
+            assigned_usernames.add(proj.owner)
+        if proj.leader_id:
+            for u in users:
+                if u.id == proj.leader_id:
+                    assigned_usernames.add(u.username)
+                    break
+
+    total_count = len(users)
+    assigned_count = sum(1 for u in users if u.username in assigned_usernames)
+    unassigned_count = total_count - assigned_count
+
+    # 按角色统计
+    role_counts: dict[str, int] = {}
+    for u in users:
+        role = u.role or "unknown"
+        role_counts[role] = role_counts.get(role, 0) + 1
+
+    return {
+        "total_users": total_count,
+        "assigned_users": assigned_count,
+        "unassigned_users": unassigned_count,
+        "role_distribution": role_counts,
     }
