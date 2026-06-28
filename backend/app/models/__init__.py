@@ -127,6 +127,7 @@ __all__ = [
     "NotificationCategory",
     "NotificationDoNotDisturb",
     "NotificationReadStatus",
+    "ECRAttachment",
     "ECRRequest",
     "ECO",
     "ECOItem",

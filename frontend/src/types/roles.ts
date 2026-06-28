@@ -104,6 +104,8 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/projects', title: '项目管理', icon: Folder },
       { path: '/prototypes', title: '样机管理', icon: Cpu },
       { path: '/changes', title: '变更管理', icon: Refresh },
+      { path: '/ecr', title: 'ECR变更请求', icon: Document },
+      { path: '/eco', title: 'ECO变更指令', icon: Document },
       { path: '/dfm/checklist', title: 'DFM检查项', icon: Document },
       { path: '/dfm/reports', title: 'DFM分析报告', icon: DataAnalysis },
     ]
@@ -175,6 +177,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/prototypes',     title: '样机管理',       icon: Cpu },
   { path: '/quality',        title: '质量问题',       icon: WarnTriangleFilled },
   { path: '/changes',        title: '变更管理',       icon: Refresh },
+  { path: '/ecr',            title: 'ECR变更请求',    icon: Document },
+  { path: '/eco',            title: 'ECO变更指令',    icon: Document },
   { path: '/approvals',      title: '审批管理',       icon: Select },
   // P0-6 采购
   { path: '/purchases',      title: '采购管理',       icon: ShoppingCart },
