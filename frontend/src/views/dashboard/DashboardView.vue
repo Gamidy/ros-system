@@ -150,7 +150,7 @@
             <span class="chart-title">立项趋势</span>
           </div>
           <LazyLoad :enabled="isMobile" :placeholderHeight="150">
-            <ChartContainer :loading="biLoading" :isEmpty="biTrendEmpty" height="300">
+            <ChartContainer :loading="biLoading" :isEmpty="biTrendEmpty" :height="300">
               <BiChart
                 type="line"
                 :data="biTrendData"
@@ -170,7 +170,7 @@
             <span class="chart-title">转化漏斗</span>
           </div>
           <LazyLoad :enabled="isMobile" :placeholderHeight="150">
-            <ChartContainer :loading="biLoading" :isEmpty="biFunnelEmpty" height="300">
+            <ChartContainer :loading="biLoading" :isEmpty="biFunnelEmpty" :height="300">
               <FunnelChart
                 :data="biFunnelData"
                 :height="300"
@@ -187,7 +187,7 @@
             <span class="chart-title">市场分布</span>
           </div>
           <LazyLoad :enabled="isMobile" :placeholderHeight="150">
-            <ChartContainer :loading="biLoading" :isEmpty="biDistEmpty" height="300">
+            <ChartContainer :loading="biLoading" :isEmpty="biDistEmpty" :height="300">
               <BiChart
                 type="pie"
                 :data="biDistData"
@@ -228,8 +228,8 @@
           <div class="plan-card-left">
             <div class="plan-card-name">{{ plan.name }}</div>
             <div class="plan-card-meta">
-              <el-tag :type="stageTagType(plan.status)" size="small" effect="plain">
-                {{ stageLabel(plan.status) }}
+              <el-tag :type="stageTagType(plan.status ?? '')" size="small" effect="plain">
+                {{ stageLabel(plan.status ?? '') }}
               </el-tag>
               <span v-if="plan.series" class="plan-card-series">{{ plan.series }}</span>
               <span v-if="plan.market" class="plan-card-market">{{ plan.market }}</span>
@@ -390,8 +390,8 @@
               <div class="project-name">{{ project.name }}</div>
             </div>
             <div class="project-meta">
-              <span class="project-status" :class="statusType(project.status)">
-                {{ statusLabel(project.status) }}
+              <span class="project-status" :class="statusType(String(project.status ?? ''))">
+                {{ statusLabel(String(project.status ?? '')) }}
               </span>
               <span class="project-date">{{ project.target_end_date }}</span>
             </div>
@@ -995,7 +995,7 @@ import {
   DataAnalysis, TrendCharts, Search, Connection, ArrowRight, Refresh,
   Cpu, InfoFilled, CircleCloseFilled, Plus, Folder, Coin, Clock,
   CircleCheck, List,
-  WarningFilled, CircleCheckFilled, Timer, Loading, ArrowLeft, Close,
+  WarningFilled, CircleCheckFilled, Loading, ArrowLeft, Close,
 } from '@element-plus/icons-vue'
 import api from '../../api'
 import PieChart from '../../components/charts/PieChart.vue'
@@ -1015,6 +1015,10 @@ interface PlanNode {
   name?: string
   status?: string
   phase?: string
+  series?: string
+  market?: string
+  updated_at?: string
+  created_at?: string
   products?: ProductNode[]
 }
 interface ProductNode {
@@ -1107,6 +1111,9 @@ const fullscreenChart = ref<FullscreenChartConfig>({
   title: '',
   variant: '',
 })
+const fullscreenHeight = ref<number>(400)
+const currentBarData = ref<{ name: string; value: number }[]>([])
+const currentLineData = ref<{ name: string; value: number }[]>([])
 
 function openFullscreen(title: string, variant: string): void {
   fullscreenChart.value = { visible: true, title, variant }
@@ -1173,16 +1180,16 @@ async function fetchProductPlanSummary() {
     // 获取前100条数据用于仪表盘统计
     const res = await api.get('/product-plans', { params: { page: 1, page_size: 100 } })
     const items: TableRow[] = res.data.items || []
-    allPlans.value = items
+    allPlans.value = items as unknown as PlanNode[]
 
     // 计算KPI
     const inProgressStages = ['draft', 'competitor', 'definition', 'costing', 'tech_input', 'project_init']
-    const inProgress = items.filter(p => inProgressStages.includes(p.status)).length
+    const inProgress = items.filter(p => inProgressStages.includes(String(p.status))).length
 
     // 按阶段分布
     const stageDistribution: Record<string, number> = {}
     items.forEach(p => {
-      const s = p.status || 'draft'
+      const s = String(p.status || 'draft')
       stageDistribution[s] = (stageDistribution[s] || 0) + 1
     })
 
@@ -1191,7 +1198,7 @@ async function fetchProductPlanSummary() {
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     const monthlyCompleted = items.filter(p => {
       if (p.status !== 'released') return false
-      const updated = (p.updated_at || p.created_at || '').substring(0, 7)
+      const updated = String(p.updated_at || p.created_at || '').substring(0, 7)
       return updated === thisMonth
     }).length
 
@@ -1442,11 +1449,11 @@ const penetrationTreeData = computed(() => {
   const p = penetrationData.value
   return {
     name: p.project_name || '项目',
-    children: (p.products || []).map((prod: ProductNode) => ({
+    children: (p.products || []).map((prod: PenetrationRoot['products'][0]) => ({
       name: prod.name || '产品',
-      children: (prod.versions || []).map((ver: VersionNode) => ({
+      children: (prod.versions || []).map((ver: PenetrationRoot['products'][0]['versions'][0]) => ({
         name: ver.version_no || '版本',
-        children: (ver.boms || []).map((bom: BomNode) => ({
+        children: (ver.boms || []).map((bom: PenetrationRoot['products'][0]['versions'][0]['boms'][0]) => ({
           name: bom.bom_no || 'BOM',
         })),
       })),
@@ -1458,8 +1465,8 @@ const penetrationChains = computed(() => {
   if (!penetrationData.value) return []
   const chains: ChainLink[][] = []
   const p = penetrationData.value
-  ;(p.products || []).forEach((prod: ProductNode) => {
-    ;(prod.versions || []).forEach((ver: VersionNode) => {
+  ;(p.products || []).forEach((prod: PenetrationRoot['products'][0]) => {
+    ;(prod.versions || []).forEach((ver: PenetrationRoot['products'][0]['versions'][0]) => {
       chains.push([
         { label: p.project_name || '项目', type: 'primary' },
         { label: prod.name || '产品', type: 'success' },
@@ -1508,7 +1515,7 @@ async function fetchTrends() {
   try {
     const res = await api.get('/dashboard/trends')
     const data = Array.isArray(res.data) ? res.data : []
-    trendsData.value = data.map((d: ChartDataPoint) => ({ name: d.date, value: d.value }))
+    trendsData.value = data.map((d: ChartDataPoint) => ({ name: String(d.date ?? ''), value: Number(d.value) ?? 0 }))
   } catch {
     console.warn('[Dashboard] fetchTrends failed, using empty data')
     trendsData.value = []

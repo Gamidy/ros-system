@@ -239,6 +239,25 @@ def list_pending_approval_requests(
     return result
 
 
+@router.get("/requests/my-history", response_model=list[ApprovalRequestOut])
+def list_my_approval_history(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_menu("approvals")),
+) -> list[ApprovalRequestOut]:
+    """查看我的审批历史（已审批完成的请求列表）"""
+    my_ids = (
+        db.query(ApprovalRecord.request_id)
+        .filter(ApprovalRecord.approver == current_user.username)
+        .distinct()
+        .subquery()
+    )
+    q = db.query(ApprovalRequest).filter(ApprovalRequest.id.in_(my_ids))
+    q = q.order_by(ApprovalRequest.updated_at.desc()).offset(skip).limit(limit)
+    return [_request_to_out(r, db) for r in q.all()]
+
+
 @router.get("/requests/{request_id}", response_model=ApprovalRequestOut)
 def get_approval_request(
     request_id: int,
@@ -456,6 +475,34 @@ def _make_decision(
         )
     except Exception as e:
         logger.exception("审批事件发射失败: %s", e)
+
+    # ── 发射 event_bus 审批事件（按照任务要求补充）──
+    try:
+        from app.services import event_bus
+        if action == "approved":
+            event_bus.emit(
+                "approval.step_completed",
+                {"request_id": req.id, "step_id": step_id, "decision": "approved",
+                 "approver": current_user.username, "comment": decision.comment or ""},
+                producer="approval_engine.service",
+            )
+            if req.status == "approved":
+                event_bus.emit(
+                    "approval.completed",
+                    {"request_id": req.id, "chain_id": req.chain_id,
+                     "request_type": req.request_type, "title": req.title,
+                     "requester": req.requester},
+                    producer="approval_engine.service",
+                )
+        elif action == "rejected":
+            event_bus.emit(
+                "approval.rejected",
+                {"request_id": req.id, "reject_reason": decision.comment or "",
+                 "step_id": step_id, "approver": current_user.username},
+                producer="approval_engine.service",
+            )
+    except Exception as e:
+        logger.error("approval event_bus 发射失败: %s", e)
 
     return _request_to_out(req, db)
 

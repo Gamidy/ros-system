@@ -161,7 +161,7 @@ async function fetchData() {
     const { data } = await listPeriods()
     items.value = Array.isArray(data) ? data : data?.items ?? []
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '加载核算期间失败')
+    ElMessage.error((e as any)?.message || '加载核算期间失败')
   } finally {
     loading.value = false
   }
@@ -200,7 +200,7 @@ async function handleSave() {
     dialogVisible.value = false
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '创建失败')
+    ElMessage.error((e as any)?.message || '创建失败')
   } finally {
     saving.value = false
   }
@@ -219,11 +219,11 @@ async function handleClosePeriod(row: TableRow) {
   }
 
   try {
-    await closePeriod(row.id)
+    await closePeriod(Number(row.id) ?? 0)
     ElMessage.success('期间已关闭')
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '关闭失败')
+    ElMessage.error((e as any)?.message || '关闭失败')
   }
 }
 
@@ -240,11 +240,11 @@ async function handleDelete(row: TableRow) {
   }
 
   try {
-    await deletePeriod(row.id)
+    await deletePeriod(Number(row.id) ?? 0)
     ElMessage.success('删除成功')
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '删除失败')
+    ElMessage.error((e as any)?.message || '删除失败')
   }
 }
 

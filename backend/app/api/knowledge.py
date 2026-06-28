@@ -1,4 +1,5 @@
 """知识库API — CRUD + 全文搜索 + 富文本内容"""
+from __future__ import annotations
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -229,3 +230,91 @@ def get_team_members(
         }
         for u in users
     ]
+
+
+# ── 全文搜索 Schema ──
+
+class KnowledgeSearchResult(BaseModel):
+    """搜索结果分页"""
+    total: int
+    page: int
+    size: int
+    items: list[KnowledgeOut]
+
+
+# ── 全文搜索端点 ──
+
+@router.get("/items/search", response_model=KnowledgeSearchResult)
+def search_knowledge(
+    q: str = Query(..., description="搜索关键词"),
+    category: Optional[str] = Query(None, description="按分类筛选"),
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页条数"),
+    db: Session = Depends(get_db),
+) -> KnowledgeSearchResult:
+    """全文搜索知识条目（基于 ILIKE 模糊匹配）"""
+    query = db.query(KnowledgeItem)
+
+    if category:
+        query = query.filter(KnowledgeItem.category == category)
+
+    like = f"%{q}%"
+    query = query.filter(
+        or_(
+            KnowledgeItem.name.ilike(like),
+            KnowledgeItem.content.ilike(like),
+            KnowledgeItem.tags.ilike(like),
+            KnowledgeItem.code.ilike(like),
+        )
+    )
+
+    total = query.count()
+    items = (
+        query.order_by(KnowledgeItem.updated_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    return KnowledgeSearchResult(total=total, page=page, size=size, items=items)
+
+
+# ── 分类树接口 ──
+
+@router.get("/categories/tree")
+def get_category_tree(db: Session = Depends(get_db)) -> list[dict]:
+    """返回分类树（支持 / 层级分隔嵌套）"""
+    rows = db.query(KnowledgeItem.category).distinct().all()
+    categories = sorted(set(r[0] for r in rows if r[0]))
+
+    # 以 / 为分隔符构建嵌套树
+    tree: dict[str, dict] = {}
+
+    for cat in categories:
+        parts = [p.strip() for p in cat.split("/")]
+        current_level = tree
+        parent_id: str | None = None
+        for i, part in enumerate(parts):
+            if not part:
+                continue
+            if part not in current_level:
+                node_id = "/".join(parts[: i + 1])
+                current_level[part] = {
+                    "id": node_id,
+                    "name": part,
+                    "parent_id": parent_id,
+                    "children": {},
+                }
+            parent_id = current_level[part]["id"]
+            current_level = current_level[part]["children"]
+
+    def _flatten(node: dict) -> dict:
+        children = [_flatten(v) for v in node["children"].values()]
+        return {
+            "id": node["id"],
+            "name": node["name"],
+            "parent_id": node["parent_id"],
+            "children": children,
+        }
+
+    return [_flatten(v) for v in tree.values()]

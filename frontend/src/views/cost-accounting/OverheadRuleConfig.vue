@@ -168,7 +168,7 @@ async function fetchData() {
     const { data } = await listOverheadRules()
     items.value = Array.isArray(data) ? data : data?.items ?? []
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '加载分摊规则失败')
+    ElMessage.error((e as any)?.message || '加载分摊规则失败')
   } finally {
     loading.value = false
   }
@@ -211,13 +211,13 @@ function showCreate() {
 
 function showEdit(row: TableRow) {
   isEdit.value = true
-  editingId.value = row.id
+  editingId.value = Number(row.id) ?? null
   form.value = {
-    rule_name: row.rule_name,
-    allocation_base: row.allocation_base,
-    allocation_rate: row.allocation_rate,
-    priority: row.priority,
-    description: row.description ?? '',
+    rule_name: String(row.rule_name ?? ''),
+    allocation_base: String(row.allocation_base ?? ''),
+    allocation_rate: Number(row.allocation_rate) ?? 0,
+    priority: Number(row.priority) ?? 1,
+    description: String(row.description ?? ''),
   }
   dialogVisible.value = true
 }
@@ -238,7 +238,7 @@ async function handleSave() {
     dialogVisible.value = false
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '操作失败')
+    ElMessage.error((e as any)?.message || '操作失败')
   } finally {
     saving.value = false
   }
@@ -258,11 +258,11 @@ async function handleToggle(row: TableRow) {
   }
 
   try {
-    await toggleOverheadRule(row.id)
+    await toggleOverheadRule(Number(row.id) ?? 0)
     ElMessage.success(`${actionLabel}成功`)
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || `${actionLabel}失败`)
+    ElMessage.error((e as any)?.message || `${actionLabel}失败`)
   }
 }
 

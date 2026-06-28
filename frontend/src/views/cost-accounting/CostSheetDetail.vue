@@ -320,7 +320,7 @@ function buildVarianceCards(data: TableRow[]) {
     totalTarget += t
     totalActual += a
     const v = a - t
-    if (v > maxVariance) { maxVariance = v; maxItem = r.name || '' }
+    if (v > maxVariance) { maxVariance = v; maxItem = String(r.name ?? '') }
   }
   return [
     { label: '目标总成本', value: totalTarget.toFixed(2), type: 'target' },
@@ -349,7 +349,7 @@ async function fetchSheet() {
       loadStructure()
     }
   } catch (e: unknown) {
-    ElMessage.error(e?.response?.data?.detail || e?.message || '加载核算单详情失败')
+    ElMessage.error((e as any)?.response?.data?.detail || (e as any)?.message || '加载核算单详情失败')
   } finally {
     loading.value = false
   }

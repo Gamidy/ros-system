@@ -424,7 +424,7 @@ const loadAnalysis = async () => {
     )
     analysisResult.value = res.data ?? res
   } catch (e: unknown) {
-    errorMsg.value = e?.response?.data?.detail || e?.message || '加载差异分析失败'
+    errorMsg.value = (e as any)?.response?.data?.detail || (e as any)?.message || '加载差异分析失败'
     ElMessage.error(errorMsg.value)
     return
   } finally {
@@ -457,7 +457,7 @@ const loadTrend = async () => {
     const res = await API.getCostTrend(String(selectedPlanId.value), 6)
     trendData.value = res.data?.items ?? res.data ?? res ?? []
   } catch (e: unknown) {
-    ElMessage.error(e?.response?.data?.detail || e?.message || '加载趋势数据失败')
+    ElMessage.error((e as any)?.response?.data?.detail || (e as any)?.message || '加载趋势数据失败')
     trendData.value = []
   } finally {
     trendLoading.value = false

@@ -130,7 +130,7 @@ async function fetchData() {
     const { data } = await listLaborRates()
     items.value = Array.isArray(data) ? data : data?.items ?? []
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '加载工时费率失败')
+    ElMessage.error((e as any)?.message || '加载工时费率失败')
   } finally {
     loading.value = false
   }
@@ -164,11 +164,11 @@ function showCreate() {
 
 function showEdit(row: TableRow) {
   isEdit.value = true
-  editingId.value = row.id
+  editingId.value = Number(row.id) ?? null
   form.value = {
-    operation_code: row.operation_code,
-    operation_name: row.operation_name,
-    hourly_rate: row.hourly_rate,
+    operation_code: String(row.operation_code ?? ''),
+    operation_name: String(row.operation_name ?? ''),
+    hourly_rate: Number(row.hourly_rate) ?? 0,
   }
   dialogVisible.value = true
 }
@@ -189,7 +189,7 @@ async function handleSave() {
     dialogVisible.value = false
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '操作失败')
+    ElMessage.error((e as any)?.message || '操作失败')
   } finally {
     saving.value = false
   }
@@ -207,11 +207,11 @@ async function handleDelete(row: TableRow) {
   }
 
   try {
-    await deleteLaborRate(row.id)
+    await deleteLaborRate(Number(row.id) ?? 0)
     ElMessage.success('删除成功')
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '删除失败')
+    ElMessage.error((e as any)?.message || '删除失败')
   }
 }
 
