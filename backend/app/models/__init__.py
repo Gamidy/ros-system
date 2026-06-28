@@ -25,6 +25,7 @@ from app.models.trial_qty_config import TrialQtyConfig
 from app.models.annual_plan import AnnualPlan
 from app.models.product_plan import ProductPlan, Cost, ProductPlanProjectLink, ProductPlanStage, CostType, BOMType, ProductRequirement, ProductPlanReview, ProductPlanHistory
 from app.models.event_log import EventLog
+from app.models.event_store import EventStore
 from app.models.verification_requirement import VerificationRequirement
 from app.models.test_execution import TestExecution
 from app.models.gate_rule import GateRule, GateRuleItem, GateEvalRecord
@@ -187,4 +188,5 @@ __all__ = [
     "MarketParamConfig",
     "PredictionOutcome",
     "ModelWeightSnapshot",
+    "EventStore",
 ]

@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -39,6 +40,26 @@ router = APIRouter(prefix="/api/ecr", tags=["ECR"])
 ALLOWED_ATTACHMENT_TYPES = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg", ".zip", ".rar"}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads", "ecr")
+
+
+# ── EventStore 辅助 ──────────────────────────────────────────────
+
+
+def _record_event_store(db, event_type, aggregate_type, aggregate_id, event_data=None, correlation_id=None):
+    """非阻断记录事件到 EventStore"""
+    try:
+        from app.services.event_store_service import EventStoreService
+        EventStoreService.record(
+            db=db,
+            event_type=event_type,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            correlation_id=correlation_id,
+            event_data=event_data or {},
+            producer=f"{aggregate_type}.api",
+        )
+    except Exception as e:
+        logger.warning("EventStore record 失败 (%s/%s#%s): %s", event_type, aggregate_type, aggregate_id, e)
 
 
 # ── 辅助函数 ─────────────────────────────────────────────────────────
@@ -425,6 +446,12 @@ def submit_ecr(
     except Exception as e:
         logger.warning("ECR %s 风险评分触发失败 (非致命): %s", ecr.id, e)
 
+    # ── EventStore 记录 ──
+    correlation_id = str(uuid.uuid4())
+    _record_event_store(db, "ecr.submitted", "ecr", ecr.id,
+                        event_data={"code": ecr.code, "title": ecr.title},
+                        correlation_id=correlation_id)
+
     att_count = _get_attachment_count(db, ecr.id)
     out = _ecr_to_out_full(ecr, att_count)
     return out
@@ -482,6 +509,10 @@ def review_ecr(
     db.commit()
     db.refresh(ecr)
 
+    # ── EventStore 记录 ──
+    _record_event_store(db, "ecr.reviewing", "ecr", ecr.id,
+                        event_data={"code": ecr.code})
+
     att_count = _get_attachment_count(db, ecr.id)
     out = _ecr_to_out_full(ecr, att_count)
     return out
@@ -526,6 +557,10 @@ def approve_ecr(
         )
     except Exception as e:
         logger.warning("emit ECR_APPROVED 失败 (非致命): %s", e)
+
+    # ── EventStore 记录 ──
+    _record_event_store(db, "ecr.approved", "ecr", ecr.id,
+                        event_data={"code": ecr.code})
 
     att_count = _get_attachment_count(db, ecr.id)
     out = _ecr_to_out_full(ecr, att_count)
@@ -573,6 +608,10 @@ def reject_ecr(
         )
     except Exception as e:
         logger.warning("emit ECR_REJECTED 失败 (非致命): %s", e)
+
+    # ── EventStore 记录 ──
+    _record_event_store(db, "ecr.rejected", "ecr", ecr.id,
+                        event_data={"code": ecr.code, "reason": ecr.rejection_reason})
 
     att_count = _get_attachment_count(db, ecr.id)
     out = _ecr_to_out_full(ecr, att_count)
@@ -634,6 +673,10 @@ def convert_ecr(
     ).order_by(ECRAttachment.created_at.desc()).all()
 
     att_count = _get_attachment_count(db, ecr.id)
+
+    # ── EventStore 记录 ──
+    _record_event_store(db, "ecr.converted", "ecr", ecr.id,
+                        event_data={"code": ecr.code, "eco_code": eco_code})
 
     return ECRDetailOut(
         id=ecr.id,

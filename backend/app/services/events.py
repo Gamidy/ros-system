@@ -86,6 +86,13 @@ class EventTypes:
     ECO_ROLLBACK_REQUIRED = "eco.rollback_required"
     ECR_APPROVED = "ecr.approved"
     ECR_REJECTED = "ecr.rejected"
+    ECR_SUBMITTED = "ecr.submitted"
+    ECR_REVIEWING = "ecr.reviewing"
+    ECR_CONVERTED = "ecr.converted"
+    ECO_IMPLEMENTING = "eco.implementing"
+    ECO_VERIFIED = "eco.verified"
+    ECO_EFFECTIVE = "eco.effective"
+    ECO_CLOSED = "eco.closed"
 
     # ── 事件版本映射 ──
     _VERSIONS: Dict[str, str] = {
@@ -108,6 +115,13 @@ class EventTypes:
         ECO_ROLLBACK_REQUIRED: "v1",
         ECR_APPROVED: "v1",
         ECR_REJECTED: "v1",
+        ECR_SUBMITTED: "v1",
+        ECR_REVIEWING: "v1",
+        ECR_CONVERTED: "v1",
+        ECO_IMPLEMENTING: "v1",
+        ECO_VERIFIED: "v1",
+        ECO_EFFECTIVE: "v1",
+        ECO_CLOSED: "v1",
     }
 
     @classmethod

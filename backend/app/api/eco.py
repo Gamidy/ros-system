@@ -1,4 +1,6 @@
 """ECO API模块 — 工程变更指令 CRUD + 状态转换 + 明细项管理 + 变更看板"""
+import logging
+import uuid
 from datetime import date, datetime, timezone
 from typing import Optional
 
@@ -19,6 +21,28 @@ from app.schemas import (
 )
 
 router = APIRouter(prefix="/api/eco", tags=["ECO"])
+
+logger = logging.getLogger(__name__)
+
+
+# ── EventStore 辅助 ──────────────────────────────────────────────
+
+
+def _record_event_store(db, event_type, aggregate_type, aggregate_id, event_data=None, correlation_id=None):
+    """非阻断记录事件到 EventStore"""
+    try:
+        from app.services.event_store_service import EventStoreService
+        EventStoreService.record(
+            db=db,
+            event_type=event_type,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            correlation_id=correlation_id,
+            event_data=event_data or {},
+            producer=f"{aggregate_type}.api",
+        )
+    except Exception as e:
+        logger.warning("EventStore record 失败 (%s/%s#%s): %s", event_type, aggregate_type, aggregate_id, e)
 
 
 # ══════════════════════════════════════════════════
@@ -338,6 +362,11 @@ def implement_eco(
     eco.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(eco)
+
+    # ── EventStore 记录 ──
+    _record_event_store(db, "eco.implementing", "eco", eco.id,
+                        event_data={"code": eco.code, "title": eco.title})
+
     return _eco_to_out(eco, db)
 
 
@@ -358,6 +387,11 @@ def verify_eco(
     eco.updated_at = now
     db.commit()
     db.refresh(eco)
+
+    # ── EventStore 记录 ──
+    _record_event_store(db, "eco.verified", "eco", eco.id,
+                        event_data={"code": eco.code})
+
     return _eco_to_out(eco, db)
 
 
@@ -384,6 +418,11 @@ def effective_eco(
 
     db.commit()
     db.refresh(eco)
+
+    # ── EventStore 记录 ──
+    _record_event_store(db, "eco.effective", "eco", eco.id,
+                        event_data={"code": eco.code})
+
     return _eco_to_out(eco, db)
 
 
@@ -443,6 +482,11 @@ def close_eco(
     eco.updated_at = now
     db.commit()
     db.refresh(eco)
+
+    # ── EventStore 记录 ──
+    _record_event_store(db, "eco.closed", "eco", eco.id,
+                        event_data={"code": eco.code})
+
     return _eco_to_out(eco, db)
 
 
