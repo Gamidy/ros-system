@@ -215,6 +215,14 @@ const router = createRouter({
           name: 'Proposals',
           component: () => import('../views/pm/ProposalsView.vue'),
           meta: { title: '提案管理', menu: 'proposals' },
+          children: [
+            {
+              path: 'new',
+              name: 'NewProposal',
+              component: () => import('../views/pm/proposal/ProductProposalForm.vue'),
+              meta: { title: '产品立项', menu: 'proposals' },
+            },
+          ],
         },
         {
           path: 'planning/calendar',
