@@ -9,7 +9,8 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
+from datetime import datetime
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
@@ -40,8 +41,12 @@ class PlanTemplateOut(BaseModel):
     description: Optional[str] = None
     preset_fields: dict
     is_active: bool
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_dt(self, v: Optional[datetime]) -> Optional[str]:
+        return v.isoformat() if v else None
 
     class Config:
         from_attributes = True
