@@ -62,12 +62,20 @@ def _check_ecr_exists(db: Session, ecr_id: int) -> ECRRequest:
 
 def _check_status_transition(current: str, target: str) -> None:
     """检查状态转换是否合法"""
+    # 终端状态保护：REJECTED 和 CONVERTED 不可再变更
+    TERMINAL_STATES = {ECRStatus.REJECTED.value, ECRStatus.CONVERTED.value}
+    if current in TERMINAL_STATES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"终端状态 {current} 不可再变更（Board 裁决: 必须新建 ECR）",
+        )
+
     valid_transitions = {
         ECRStatus.DRAFT.value: [ECRStatus.SUBMITTED.value],
         ECRStatus.SUBMITTED.value: [ECRStatus.DRAFT.value, ECRStatus.REVIEWING.value],
         ECRStatus.REVIEWING.value: [ECRStatus.APPROVED.value, ECRStatus.REJECTED.value],
         ECRStatus.APPROVED.value: [ECRStatus.CONVERTED.value],
-        ECRStatus.REJECTED.value: [ECRStatus.DRAFT.value],
+        ECRStatus.REJECTED.value: [],  # 终端状态，Board裁决不可再提交
         ECRStatus.CONVERTED.value: [],
     }
     allowed = valid_transitions.get(current, [])

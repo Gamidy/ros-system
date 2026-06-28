@@ -210,6 +210,7 @@ class ECOStatus(str, Enum):
     VERIFIED = "verified"
     EFFECTIVE = "effective"
     CLOSED = "closed"
+    ROLLBACK_REQUIRED = "rollback_required"  # BOM更新失败，需要人工干预回滚
     CANCELLED = "cancelled"
 
 

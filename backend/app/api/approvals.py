@@ -37,11 +37,11 @@ DEFAULT_CHAINS = [
     {
         "name": "ECR审批",
         "code": "ecr",
-        "description": "工程变更请求审批流程",
+        "description": "工程变更请求审批流程（Architecture Board 标准3级审批）",
         "steps": [
-            {"seq": 1, "role": "工程师", "name": "工程师提交"},
-            {"seq": 2, "role": "模块经理", "name": "模块经理审批"},
-            {"seq": 3, "role": "研发总监", "name": "研发总监审批"},
+            {"seq": 1, "role": "模块经理", "name": "模块经理审批", "step_type": "sequential"},
+            {"seq": 2, "role": "研发总监", "name": "研发总监审批", "step_type": "sequential"},
+            {"seq": 3, "role": "品质工程师", "name": "品质工程师审批", "step_type": "sequential"},
         ],
     },
     {

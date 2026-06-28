@@ -367,14 +367,62 @@ def effective_eco(
     db: Session = Depends(get_db),
     _=Depends(require_menu("changes")),
 ) -> ECOOut:
-    """生效: VERIFIED → EFFECTIVE（预留BOM联动接口）"""
+    """生效: VERIFIED → EFFECTIVE，触发 BOM 更新（Celery 异步重试队列）
+    Board 裁决: BOM Update → Retry(3次) → ROLLBACK_REQUIRED"""
     eco = _get_eco_or_404(db, eco_id)
     _check_status(eco, [ECOStatus.VERIFIED.value], "生效")
     eco.status = ECOStatus.EFFECTIVE.value
     eco.updated_at = datetime.now(timezone.utc)
-    # TODO: BOM联动 — eco_bom_service.on_eco_effective(eco.id)
+
+    # ── BOM 联动: 触发 Celery 异步重试任务 ──
+    try:
+        from app.workers.bom_worker import eco_effective_bom_update
+        eco_effective_bom_update.delay(eco_id)
+        logger.info("ECO %s: BOM 更新任务已投递到 Celery 队列", eco_id)
+    except Exception as e:
+        logger.warning("ECO %s: BOM 更新任务投递失败（Celery 可能未运行）: %s", eco_id, e)
+
     db.commit()
     db.refresh(eco)
+    return _eco_to_out(eco, db)
+
+
+@router.post("/{eco_id}/rollback", response_model=ECOOut)
+def rollback_eco(
+    eco_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("changes")),
+) -> ECOOut:
+    """回滚: EFFECTIVE → ROLLBACK_REQUIRED（Board 裁决 BOM更新失败补偿状态）
+    触发 Saga 补偿: revert BOM → notify engineering"""
+    eco = _get_eco_or_404(db, eco_id)
+    _check_status(eco, [ECOStatus.EFFECTIVE.value], "回滚")
+
+    # ── Saga 补偿 ──
+    try:
+        from app.services.eco_bom_service import rollback_bom_update
+        rollback_bom_update(eco_id)
+    except Exception as e:
+        logger.error("ECO %s: Saga 补偿失败: %s", eco_id, e)
+
+    eco.status = ECOStatus.ROLLBACK_REQUIRED.value
+    eco.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(eco)
+
+    # emit event
+    try:
+        from app.services.events import bus, EventTypes
+        bus.emit(
+            EventTypes.ECO_ROLLBACK_REQUIRED,
+            eco_id=eco.id,
+            eco_code=eco.code,
+            title=eco.title,
+        )
+    except Exception as e:
+        logger.warning("emit eco.rollback_required 失败: %s", e)
+
     return _eco_to_out(eco, db)
 
 

@@ -178,7 +178,7 @@ const router = createRouter({
           path: 'changes',
           name: 'Changes',
           component: () => import('../views/changes/ChangesHub.vue'),
-          meta: { title: '变更管理' },
+          meta: { title: '变更管理 - 已废弃', deprecated: true, redirect: '/ecr' },
         },
         {
           path: 'approvals',
@@ -544,6 +544,11 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, _from, next) => {
+  // ── Deprecated 路由自动重定向 ──
+  if (to.meta.deprecated && to.meta.redirect) {
+    return next(to.meta.redirect as string)
+  }
+
   const token = localStorage.getItem('token')
   const isPublic = to.meta.public === true
   if (!token) {

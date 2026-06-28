@@ -19,7 +19,7 @@ celery_app = Celery(
     "ros_worker",
     broker=BROKER_URL,
     backend=RESULT_BACKEND,
-    include=["app.workers.plan_worker", "app.workers.approval_reminder_worker"],
+    include=["app.workers.plan_worker", "app.workers.approval_reminder_worker", "app.workers.bom_worker"],
 )
 
 # ── 队列定义 ──
