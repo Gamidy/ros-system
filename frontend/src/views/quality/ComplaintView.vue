@@ -23,7 +23,7 @@
       <el-table-column prop="title" label="投诉标题" min-width="160" />
       <el-table-column prop="customer_name" label="客户" width="120" />
       <el-table-column label="严重程度" width="80">
-        <template #default="{row}"><el-tag :type="sevTag(row.severity)" size="small">{{ {critical:'紧急',high:'高',medium:'中',low:'低'}[row.severity] || row.severity }}</el-tag></template>
+        <template #default="{row}"><el-tag :type="sevTag(row.severity as string)" size="small">{{ ({ critical:'紧急', high:'高', medium:'中', low:'低' } as any)[row.severity as string] || row.severity }}</el-tag></template>
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{row}"><el-tag :type="statusTag(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag></template>

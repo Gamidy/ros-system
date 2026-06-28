@@ -64,9 +64,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
 import api from '../../api'
-import { initChart, disposeChart } from '../../utils/chart'
+import { initChart } from '../../utils/chart'
 
 const stats = ref({ pendingIqc: 0, openComplaints: 0, active8d: 0, qualityRate: 100 })
 const pendingIqc = ref<any[]>([])

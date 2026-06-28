@@ -89,10 +89,13 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/proposals', title: '提案管理', icon: Edit },
       { path: '/planning/calendar', title: '年度规划日历', icon: DataAnalysis },
       { path: '/competitor-bench', title: '竞品对标', icon: DataAnalysis },
+      { path: '/pm/crawl-admin', title: '竞品爬虫管理', icon: DataAnalysis },
       { path: '/market-mgmt', title: '市场管理', icon: Stamp },
       { path: '/pm/requirements', title: '需求管理', icon: Document },
       { path: '/pm/requirements/submit', title: '需求录入', icon: Edit },
       { path: '/review/dashboard', title: '复盘看板', icon: DataAnalysis },
+      { path: '/pm/review-templates', title: '复盘模板', icon: DataAnalysis },
+      { path: '/pm/plan-templates', title: '计划模板', icon: CopyDocument },
     ]
   },
   {
@@ -129,6 +132,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     children: [
       { path: '/purchases', title: '采购订单', icon: ShoppingCart },
       { path: '/purchases/suppliers', title: '供应商管理', icon: ShoppingCart },
+      { path: '/purchase/supplier-evals', title: '供应商评估', icon: DataAnalysis },
       { path: '/purchases/receiving', title: '采购收货', icon: ShoppingCart },
       { path: '/purchases/quality-dashboard', title: '质检看板', icon: DataAnalysis },
       { path: '/purchases/returns', title: '采购退货', icon: ShoppingCart },
@@ -151,6 +155,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/cost-accounting/capacity-costs', title: '冷量段单价', icon: DataAnalysis },
       { path: '/cost-accounting/efficiency', title: '成本效率', icon: DataAnalysis },
       { path: '/cost-accounting/dashboard', title: '成本看板', icon: DataAnalysis },
+      { path: '/cost-accounting/alert-rules', title: '成本预警', icon: WarningFilled },
       { path: '/mm', title: '模块管理', icon: DataAnalysis },
     ]
   },
@@ -173,10 +178,13 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/event-timeline', title: '事件时间线', icon: DataAnalysis },
       { path: '/saga-viewer', title: 'Saga事务', icon: Select },
       { path: '/approvals', title: '审批管理', icon: Select },
+      { path: '/settings/webhooks', title: 'Webhook配置', icon: Setting },
       { path: '/alerts', title: '预警体系', icon: WarningFilled },
       { path: '/quality', title: '质量问题', icon: WarnTriangleFilled },
       { path: '/quality/8d-reports', title: '8D报告', icon: WarnTriangleFilled },
       { path: '/quality/iqc', title: '来料检验IQC', icon: WarnTriangleFilled },
+      { path: '/quality/complaints', title: '客户投诉', icon: WarnTriangleFilled },
+      { path: '/quality/improvement-tasks', title: '改善任务', icon: Document },
       { path: '/monitor/events', title: '事件监控', icon: DataAnalysis },
     ]
   },
@@ -198,6 +206,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/quality/8d-reports', title: '8D报告',     icon: WarnTriangleFilled },
   { path: '/quality/iqc', title: '来料检验IQC', icon: WarnTriangleFilled },
   { path: '/quality/complaints', title: '客户投诉', icon: WarnTriangleFilled },
+  { path: '/quality/improvement-tasks', title: '改善任务', icon: Document },
   { path: '/changes',        title: '变更管理',       icon: Refresh },
   { path: '/ecr',            title: 'ECR变更请求',    icon: Document },
   { path: '/eco',            title: 'ECO变更指令',    icon: Document },
@@ -209,6 +218,7 @@ export const ALL_MENUS: MenuItem[] = [
   // Batch-16 采购退货
   { path: '/purchases/returns', title: '采购退货', icon: ShoppingCart },
   { path: '/purchase/rfqs', title: '询比价管理', icon: ShoppingCart },
+  { path: '/purchase/supplier-evals', title: '供应商评估', icon: DataAnalysis },
   // Batch-12 库存管理
   { path: '/inventory', title: '库存总览', icon: DataAnalysis },
   { path: '/inventory/warehouses', title: '仓库管理', icon: OfficeBuilding },
@@ -232,6 +242,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/admin-config',   title: '系统设置',       icon: Setting },
   { path: '/admin/tenants',   title: '多租户管理',     icon: OfficeBuilding },
   { path: '/admin/my-org',    title: '我的组织',       icon: User },
+  { path: '/settings/webhooks', title: 'Webhook配置',  icon: Setting },
   // P0-6 安规管理
   { path: '/tests/test-executions', title: '实验执行', icon: Select },
   { path: '/safety/standards',  title: '安全标准库',       icon: Document },
@@ -269,10 +280,14 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/cost-accounting/capacity-costs', title: '冷量段单价', icon: DataAnalysis },
   { path: '/cost-accounting/efficiency', title: '成本效率', icon: DataAnalysis },
   // P1-T5 事件监控面板
+  { path: '/cost-accounting/alert-rules', title: '成本预警', icon: WarningFilled },
   { path: '/monitor/events',    title: '事件监控面板', icon: DataAnalysis },
   // P2-T5 规则管理
   { path: '/cert/rules',        title: '变更影响规则', icon: DataAnalysis },
   // P2 需求录入
+  { path: '/pm/review-templates', title: '复盘模板', icon: DataAnalysis },
+  { path: '/pm/plan-templates', title: '计划模板', icon: CopyDocument },
+  { path: '/pm/crawl-admin', title: '竞品爬虫管理', icon: DataAnalysis },
   { path: '/pm/requirements',        title: '需求管理', icon: Document },
   { path: '/pm/requirements/submit', title: '需求录入', icon: Edit },
   { path: '/review/dashboard',       title: '复盘看板', icon: DataAnalysis },

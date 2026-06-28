@@ -224,9 +224,15 @@ const router = createRouter({
         },
         {
           path: 'quality/complaints',
-          name: 'Complaints',
+          name: 'ComplaintView',
           component: () => import('../views/quality/ComplaintView.vue'),
           meta: { title: '客户投诉', menu: 'quality' },
+        },
+        {
+          path: 'quality/improvement-tasks',
+          name: 'ImprovementTasks',
+          component: () => import('../views/quality/ImprovementTaskView.vue'),
+          meta: { title: '改善任务', menu: 'quality' },
         },
         {
           path: 'changes',
@@ -314,9 +320,15 @@ const router = createRouter({
         },
         {
           path: 'purchase/rfqs',
-          name: 'RFQ',
+          name: 'RFQView',
           component: () => import('../views/purchase/RFQView.vue'),
-          meta: { title: '询比价管理', menu: 'purchases' },
+          meta: { title: '询比价', menu: 'purchases' },
+        },
+        {
+          path: 'purchase/supplier-evals',
+          name: 'SupplierEval',
+          component: () => import('../views/purchase/SupplierEvalView.vue'),
+          meta: { title: '供应商评估', menu: 'purchases' },
         },
         {
           path: 'process',
@@ -426,7 +438,13 @@ const router = createRouter({
           path: 'settings/ai',
           name: 'AiSettings',
           component: () => import('../views/settings/AiSettings.vue'),
-          meta: { title: 'AI配置管理', menu: 'admin-config' },
+          meta: { title: 'AI配置', menu: 'admin-config' },
+        },
+        {
+          path: 'settings/webhooks',
+          name: 'WebhookSettings',
+          component: () => import('../views/settings/WebhookSettingsView.vue'),
+          meta: { title: 'Webhook配置', menu: 'admin-config' },
         },
         {
           path: 'admin/tenants',
@@ -590,6 +608,12 @@ const router = createRouter({
           meta: { title: '成本效率', menu: 'cost-accounting' },
         },
         {
+          path: 'cost-accounting/alert-rules',
+          name: 'CostAlertRule',
+          component: () => import('../views/cost-accounting/CostAlertRuleView.vue'),
+          meta: { title: '成本预警规则', menu: 'cost-accounting' },
+        },
+        {
           path: 'cost-accounting/dashboard',
           name: 'CostDashboard',
           component: () => import('../views/cost-accounting/CostDashboardView.vue'),
@@ -628,6 +652,28 @@ const router = createRouter({
           meta: { title: '复盘看板', menu: 'product-plans' },
         },
 
+        // 复盘模板
+        {
+          path: 'pm/review-templates',
+          name: 'ReviewTemplate',
+          component: () => import('../views/pm/ReviewTemplateView.vue'),
+          meta: { title: '复盘模板', menu: 'product-plans' },
+        },
+        // 计划模板
+        {
+          path: 'pm/plan-templates',
+          name: 'PlanTemplate',
+          component: () => import('../views/pm/PlanTemplateView.vue'),
+          meta: { title: '计划模板', menu: 'product-plans' },
+        },
+        // 竞品爬虫管理
+        {
+          path: 'pm/crawl-admin',
+          name: 'CrawlAdmin',
+          component: () => import('../views/pm/CrawlAdminView.vue'),
+          meta: { title: '竞品爬虫管理', menu: 'product-plans' },
+        },
+        // 复盘模板
         // P2-T5 — 规则管理
         {
           path: 'cert/rules',
