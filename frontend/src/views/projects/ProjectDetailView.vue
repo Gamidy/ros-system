@@ -135,7 +135,12 @@
             <TaskDepTab :pid="pid" />
           </el-tab-pane>
 
-          <!-- Tab 5: Milestones -->
+          <!-- Tab 5: 日历 -->
+          <el-tab-pane label="日历" name="calendar">
+            <TaskCalendarTab :pid="pid" />
+          </el-tab-pane>
+
+          <!-- Tab 6: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
               <el-statistic title="总数" :value="msStats.total" />
@@ -288,6 +293,7 @@ import api from '../../api'
 import TaskKanbanTab from './TaskKanbanTab.vue'
 import WBSTreeTab from './WBSTreeTab.vue'
 import TaskDepTab from './TaskDepTab.vue'
+import TaskCalendarTab from './TaskCalendarTab.vue'
 
 const route = useRoute()
 const router = useRouter()
