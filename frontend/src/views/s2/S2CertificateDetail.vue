@@ -11,14 +11,14 @@
       <el-descriptions :column="3" border v-loading="loading">
         <el-descriptions-item label="证书编号">{{ cert.cert_no }}</el-descriptions-item>
         <el-descriptions-item label="认证类型">
-          <el-tag :type="certTagType(cert.cert_type)" size="small">{{ cert.cert_type }}</el-tag>
+          <el-tag :type="certTagType(String(cert.cert_type ?? ''))" size="small">{{ cert.cert_type }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="statusType(cert.status)" size="small">{{ statusLabel(cert.status) }}</el-tag>
+          <el-tag :type="statusType(String(cert.status ?? ''))" size="small">{{ statusLabel(String(cert.status ?? '')) }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="发证机构">{{ cert.issuing_body }}</el-descriptions-item>
-        <el-descriptions-item label="签发日期">{{ cert.issue_date?.slice(0, 10) }}</el-descriptions-item>
-        <el-descriptions-item label="到期日期">{{ cert.expiry_date?.slice(0, 10) }}</el-descriptions-item>
+        <el-descriptions-item label="签发日期">{{ String(cert.issue_date ?? '').slice(0, 10) || '' }}</el-descriptions-item>
+        <el-descriptions-item label="到期日期">{{ String(cert.expiry_date ?? '').slice(0, 10) || '' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ cert.remark }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -34,7 +34,7 @@
         <el-timeline-item
           v-for="v in versions"
           :key="v.id"
-          :timestamp="v.issue_date?.slice(0, 10) || ''"
+          :timestamp="String(v.issue_date ?? '').slice(0, 10) || ''"
           :type="v.status === 'active' ? 'primary' : 'info'"
           placement="top"
         >
@@ -47,7 +47,7 @@
             </div>
           </div>
           <div style="font-size: 13px; color: #909399; margin-top: 4px">
-            发证机构: {{ v.issuing_body }} | 到期: {{ v.expiry_date?.slice(0, 10) || '永久' }}
+            发证机构: {{ v.issuing_body }} | 到期: {{ String(v.expiry_date ?? '').slice(0, 10) || '永久' }}
           </div>
           <div v-if="v.change_reason" style="font-size: 13px; color: #e6a23c; margin-top: 2px">
             变更原因: {{ v.change_reason }}

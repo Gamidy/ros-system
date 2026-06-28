@@ -11,15 +11,15 @@
         <el-descriptions-item label="项目编码">{{ project.code }}</el-descriptions-item>
         <el-descriptions-item label="名称">{{ project.name }}</el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="statusType(project.status)" size="small">{{ statusLabel(project.status) }}</el-tag>
+          <el-tag :type="statusType(String(project.status ?? ''))" size="small">{{ statusLabel(String(project.status ?? '')) }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="关联项目ID">{{ project.project_id }}</el-descriptions-item>
         <el-descriptions-item label="目标市场ID">{{ project.target_market_id }}</el-descriptions-item>
         <el-descriptions-item label="认证类型">
           <el-tag v-for="t in parsedCertTypes" :key="t" :type="certTagType(t)" size="small" style="margin-right: 4px">{{ t }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="计划开始">{{ project.planned_start_date?.slice(0, 10) }}</el-descriptions-item>
-        <el-descriptions-item label="计划结束">{{ project.planned_end_date?.slice(0, 10) }}</el-descriptions-item>
+        <el-descriptions-item label="计划开始">{{ String(project.planned_start_date ?? '').slice(0, 10) || '' }}</el-descriptions-item>
+        <el-descriptions-item label="计划结束">{{ String(project.planned_end_date ?? '').slice(0, 10) || '' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ project.remark }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -93,7 +93,7 @@ const loadingResults = ref(false)
 const parsedCertTypes = computed(() => {
   const ct = project.value.cert_types
   if (!ct) return []
-  try { return JSON.parse(ct) } catch { return [ct] }
+  try { return JSON.parse(ct as string) } catch { return [ct] }
 })
 
 const statusMap: Record<string, string> = { planning: '计划中', in_progress: '进行中', completed: '已完成', failed: '失败', on_hold: '暂停', cancelled: '已取消' }

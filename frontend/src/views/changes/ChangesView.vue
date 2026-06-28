@@ -218,7 +218,7 @@ async function fetchData() {
 // ECR actions
 function openEcrDialog(row?: Record<string, unknown>) {
   if (row) {
-    editingEcrId.value = row.id
+    editingEcrId.value = row.id as number
     ecrForm.value = { ...row }
   } else {
     editingEcrId.value = null

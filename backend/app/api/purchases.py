@@ -227,6 +227,29 @@ def update_order_status(order_id: int, data: PurchaseOrderStatusUpdate, db: Sess
 
 
 # ══════════════════════════════════════════════════
+# Orders Stats
+# ══════════════════════════════════════════════════
+
+@router.get("/orders/stats")
+def get_order_stats(db: Session = Depends(get_db), _=Depends(require_menu("purchases"))) -> dict:
+    """返回订单统计数据"""
+    total = db.query(PurchaseOrder).count()
+    pending_approval = db.query(PurchaseOrder).filter(PurchaseOrder.status == "pending_approval").count()
+    approved = db.query(PurchaseOrder).filter(PurchaseOrder.status == "approved").count()
+    in_progress = db.query(PurchaseOrder).filter(PurchaseOrder.status.in_(["ordered"])).count()
+    completed = db.query(PurchaseOrder).filter(PurchaseOrder.status == "received").count()
+    cancelled = db.query(PurchaseOrder).filter(PurchaseOrder.status == "cancelled").count()
+    return {
+        "total": total,
+        "pending_approval": pending_approval,
+        "approved": approved,
+        "in_progress": in_progress,
+        "completed": completed,
+        "cancelled": cancelled,
+    }
+
+
+# ══════════════════════════════════════════════════
 # Purchase Order Items
 # ══════════════════════════════════════════════════
 

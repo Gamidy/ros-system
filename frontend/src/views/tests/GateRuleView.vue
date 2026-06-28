@@ -189,10 +189,14 @@ const evalProject = ref<number | null>(null)
 const evalGate = ref('')
 const evalResult = ref<Record<string, unknown> | null>(null)
 
-const form = ref<Record<string, unknown>>({
+const form = ref<{
+  name: string; product_line: string; customer: string; gate_code: string;
+  all_pass: boolean; auto_block: boolean; priority: number;
+  items: TableRow[];
+}>({
   name: '', product_line: '', customer: '', gate_code: '',
   all_pass: false, auto_block: false, priority: 0,
-  items: [] as TableRow[]
+  items: []
 })
 
 const categoryMap: Record<string, string> = {
@@ -225,7 +229,7 @@ async function fetchProjects() {
 
 function openDialog(row?: TableRow) {
   if (row) {
-    editingId.value = row.id
+    editingId.value = row.id as number
     form.value = {
       name: row.name || '',
       product_line: row.product_line || '',
@@ -234,7 +238,7 @@ function openDialog(row?: TableRow) {
       all_pass: row.all_pass ?? false,
       auto_block: row.auto_block ?? false,
       priority: row.priority ?? 0,
-      items: (row.items || []).map((i: TableRow) => ({
+      items: ((row.items as TableRow[]) || []).map((i: TableRow) => ({
         required_vr_category: i.required_vr_category || '',
         required_prototype_type: i.required_prototype_type || '',
         is_required: i.is_required ?? true,
@@ -266,7 +270,7 @@ async function save() {
 async function removeRule(row: TableRow) {
   try {
     await ElMessageBox.confirm('确定删除此规则？', '确认', { type: 'warning' })
-    await api.delete(`/gate-rules/${row.id}`)
+    await api.delete(`/gate-rules/${row.id as number}`)
     ElMessage.success('删除成功')
     await fetchRules()
   } catch { /* cancelled */ }
@@ -275,9 +279,9 @@ async function removeRule(row: TableRow) {
 async function toggleActive(row: TableRow) {
   try {
     if (row.is_active) {
-      await api.post(`/gate-rules/${row.id}/deactivate`)
+      await api.post(`/gate-rules/${row.id as number}/deactivate`)
     } else {
-      await api.post(`/gate-rules/${row.id}/activate`)
+      await api.post(`/gate-rules/${row.id as number}/activate`)
     }
     ElMessage.success(row.is_active ? '已停用' : '已启用')
     await fetchRules()

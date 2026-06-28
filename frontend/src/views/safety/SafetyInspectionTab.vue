@@ -221,7 +221,7 @@ function showCreate() {
 
 function showEdit(row: TableRow) {
   isEdit.value = true
-  editingId.value = row.id
+  editingId.value = row.id as number
   form.value = { ...row }
   dialogVisible.value = true
 }
@@ -243,7 +243,7 @@ async function handleSave() {
 
 async function handleDelete(row: TableRow) {
   try {
-    await deleteSafetyInspectionItem(row.id)
+    await deleteSafetyInspectionItem(row.id as number)
     fetchData()
   } catch { /* */ }
 }

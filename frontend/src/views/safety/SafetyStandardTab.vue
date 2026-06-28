@@ -198,7 +198,7 @@ function showCreate() {
 
 function showEdit(row: TableRow) {
   isEdit.value = true
-  editingId.value = row.id
+  editingId.value = row.id as number
   form.value = { ...row }
   dialogVisible.value = true
 }
@@ -220,14 +220,14 @@ async function handleSave() {
 
 async function handleDelete(row: TableRow) {
   try {
-    await deleteSafetyStandard(row.id)
+    await deleteSafetyStandard(row.id as number)
     fetchData()
   } catch { /* */ }
 }
 
 async function handleArchive(row: TableRow) {
   try {
-    await archiveSafetyStandard(row.id)
+    await archiveSafetyStandard(row.id as number)
     fetchData()
   } catch { /* */ }
 }

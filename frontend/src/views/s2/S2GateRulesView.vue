@@ -140,7 +140,7 @@ async function fetchData() {
 
 function openDialog(row?: Record<string, unknown>) {
   if (row) {
-    editingId.value = row.id
+    editingId.value = row.id as number
     form.value = { name: row.name, gate_code: row.gate_code, cert_type: row.cert_type, target_market_id: row.target_market_id || 0, is_required: row.is_required, auto_block: row.auto_block, priority: row.priority }
   } else {
     editingId.value = null

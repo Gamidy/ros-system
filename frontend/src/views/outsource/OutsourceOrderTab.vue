@@ -113,14 +113,14 @@ function statusLabel(s: string) { const m: Record<string,string>={draft:'草稿'
 async function fetchData() { loading.value=true; try { const { data } = await listOutsourceOrders({ page:page.value, page_size:pageSize.value, keyword:keyword.value||undefined, status:filterStatus.value||undefined }); items.value=data.items||[]; total.value=data.total||0 } catch{} finally{loading.value=false} }
 async function loadPartners() { try { const { data } = await listOutsourcePartners({ page:1, page_size:200 }); partners.value = data.items||[] } catch{} }
 
-async function showDetail(row: TableRow) { try { const { data } = await getOutsourceOrder(row.id); currentOrder.value=data; detailVisible.value=true } catch{} }
+async function showDetail(row: TableRow) { try { const { data } = await getOutsourceOrder(row.id as number); currentOrder.value=data; detailVisible.value=true } catch{} }
 async function updateStatus(status: string) { if(!currentOrder.value) return; try { await updateOutsourceOrder(currentOrder.value.id, { status }); showDetail(currentOrder.value); fetchData() } catch{} }
 
 function showCreate() { isEditForm.value=false; editingOrderId.value=null; form.value={title:'',partner_id:null,order_type:'part',quantity:1,unit:'批',total_amount:0,delivery_date:null,priority:'normal',technical_requirements:'',quality_requirements:'',remark:'',created_by:''}; formVisible.value=true }
 function editOrder() { if(!currentOrder.value) return; isEditForm.value=true; editingOrderId.value=currentOrder.value.id; form.value={...currentOrder.value}; formVisible.value=true }
 
 async function saveOrder() { if(!await formRef.value?.validate().catch(()=>false)) return; saving.value=true; try { if(isEditForm.value&&editingOrderId.value) await updateOutsourceOrder(editingOrderId.value, form.value); else await createOutsourceOrder(form.value); formVisible.value=false; fetchData() } catch{} finally{saving.value=false} }
-async function handleDelete(row: TableRow) { try{await deleteOutsourceOrder(row.id);fetchData()}catch{} }
+async function handleDelete(row: TableRow) { try{await deleteOutsourceOrder(row.id as number);fetchData()}catch{} }
 
 onMounted(()=>{fetchData();loadPartners()})
 </script>

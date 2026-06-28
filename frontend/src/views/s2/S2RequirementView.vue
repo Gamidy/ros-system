@@ -52,8 +52,8 @@
         <el-descriptions-item label="认证机构">{{ currentDetail.cert_body || '-' }}</el-descriptions-item>
         <el-descriptions-item label="强制">{{ currentDetail.is_mandatory ? '是' : '否' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="statusTag(currentDetail.status)" size="small">
-            {{ statusLabel(currentDetail.status) }}
+          <el-tag :type="statusTag(String(currentDetail.status ?? ''))" size="small">
+            {{ statusLabel(String(currentDetail.status ?? '')) }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="来源" :span="2">{{ currentDetail.source_type }}</el-descriptions-item>

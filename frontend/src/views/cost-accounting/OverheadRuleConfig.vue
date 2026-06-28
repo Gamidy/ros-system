@@ -279,11 +279,11 @@ async function handleDelete(row: TableRow) {
   }
 
   try {
-    await deleteOverheadRule(row.id)
+    await deleteOverheadRule(row.id as number)
     ElMessage.success('删除成功')
     await fetchData()
   } catch (e: unknown) {
-    ElMessage.error(e?.message || '删除失败')
+    ElMessage.error((e as any)?.message || '删除失败')
   }
 }
 

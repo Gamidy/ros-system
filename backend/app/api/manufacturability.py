@@ -380,6 +380,26 @@ def get_report_score(rid: int, db: Session = Depends(get_db),
     return calculate_dfm_score(db, rid)
 
 
+# ═══════════════ DFM评分统计 ═══════════════
+
+@router.get("/stats")
+def get_dfm_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> dict:
+    """返回DFM统计: 总报告数/平均分/通过数/失败数/未关闭问题数"""
+    total_reports = db.query(DFMReport).count()
+    avg_result = db.query(func.avg(DFMReport.total_score)).filter(DFMReport.total_score.isnot(None)).scalar()
+    avg_score = round(float(avg_result), 1) if avg_result else 0.0
+    pass_count = db.query(DFMReport).filter(DFMReport.total_score >= 60).count() if avg_result else 0
+    fail_count = db.query(DFMReport).filter(DFMReport.total_score < 60, DFMReport.total_score.isnot(None)).count()
+    open_issues = db.query(DFMReportItem).filter(DFMReportItem.status != "verified").count()
+    return {
+        "total_reports": total_reports,
+        "avg_score": avg_score,
+        "pass_count": pass_count,
+        "fail_count": fail_count,
+        "open_issues": open_issues,
+    }
+
+
 # ═══════════════ DFM报告问题项 CRUD ═══════════════
 
 @router.get("/reports/{rid}/items", response_model=list[DFMReportItemOut])

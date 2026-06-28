@@ -30,7 +30,7 @@ const chartRef = ref<HTMLElement>()
 const colors = getChartColors()
 
 const option = computed<EChartsOption>(() => {
-  const _total = props.data.reduce((s, d) => s + d.value, 0)
+  // _total available if needed
   return {
     tooltip: {
       ...getGlassTooltip(),

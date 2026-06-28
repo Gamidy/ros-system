@@ -1447,13 +1447,16 @@ function getL2CardColor(key: string, defaultColor: string): string {
 const penetrationTreeData = computed(() => {
   if (!penetrationData.value) return { name: '无数据', children: [] }
   const p = penetrationData.value
+  type PProduct = NonNullable<typeof p.products>[number]
+  type PVersion = NonNullable<PProduct['versions']>[number]
+  type PBom = NonNullable<PVersion['boms']>[number]
   return {
     name: p.project_name || '项目',
-    children: (p.products || []).map((prod: PenetrationRoot['products'][0]) => ({
+    children: (p.products || []).map((prod: PProduct) => ({
       name: prod.name || '产品',
-      children: (prod.versions || []).map((ver: PenetrationRoot['products'][0]['versions'][0]) => ({
+      children: (prod.versions || []).map((ver: PVersion) => ({
         name: ver.version_no || '版本',
-        children: (ver.boms || []).map((bom: PenetrationRoot['products'][0]['versions'][0]['boms'][0]) => ({
+        children: (ver.boms || []).map((bom: PBom) => ({
           name: bom.bom_no || 'BOM',
         })),
       })),
@@ -1465,8 +1468,10 @@ const penetrationChains = computed(() => {
   if (!penetrationData.value) return []
   const chains: ChainLink[][] = []
   const p = penetrationData.value
-  ;(p.products || []).forEach((prod: PenetrationRoot['products'][0]) => {
-    ;(prod.versions || []).forEach((ver: PenetrationRoot['products'][0]['versions'][0]) => {
+  type PProduct = NonNullable<typeof p.products>[number]
+  type PVersion = NonNullable<PProduct['versions']>[number]
+  ;(p.products || []).forEach((prod: PProduct) => {
+    ;(prod.versions || []).forEach((ver: PVersion) => {
       chains.push([
         { label: p.project_name || '项目', type: 'primary' },
         { label: prod.name || '产品', type: 'success' },

@@ -225,7 +225,7 @@ async function saveReport() {
 async function openReportDetail(row: TableRow) {
   currentReport.value = null; scoreResult.value = null
   try {
-    const { data } = await getDFMReport(row.id)
+    const { data } = await getDFMReport(row.id as number)
     currentReport.value = data
     detailVisible.value = true
     refreshScore()
@@ -250,7 +250,7 @@ async function completeReport() {
 }
 
 async function handleDeleteReport(row: TableRow) {
-  try { await deleteDFMReport(row.id); fetchData() } catch {}
+  try { await deleteDFMReport(row.id as number); fetchData() } catch {}
 }
 
 function showAddItem() {
@@ -261,7 +261,7 @@ function showAddItem() {
 }
 
 function editItem(item: TableRow) {
-  isEditItem.value = true; editingItemId.value = item.id
+  isEditItem.value = true; editingItemId.value = item.id as number
   itemForm.value = { ...item }
   itemDialogVisible.value = true
 }
@@ -283,12 +283,12 @@ async function saveItem() {
 }
 
 async function deleteItem(item: TableRow) {
-  try { await deleteDFMReportItem(item.id); if (currentReport.value) openReportDetail(currentReport.value) } catch {}
+  try { await deleteDFMReportItem(item.id as number); if (currentReport.value) openReportDetail(currentReport.value) } catch {}
 }
 
 async function updateItemStatus(item: TableRow, newStatus: string) {
   try {
-    await updateDFMReportItem(item.id, { status: newStatus })
+    await updateDFMReportItem(item.id as number, { status: newStatus })
     if (currentReport.value) openReportDetail(currentReport.value)
   } catch {}
 }

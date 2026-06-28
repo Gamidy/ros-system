@@ -389,7 +389,7 @@ function createChain() {
 }
 
 function addStep() { chainForm.value.steps.push({ name: '', role: '' }) }
-function removeStep(idx: number) { chainForm.value.steps.splice(idx, 1) }
+function removeStep(idx: number | string) { chainForm.value.steps.splice(Number(idx), 1) }
 
 async function saveChain() {
   if (!chainForm.value.name.trim()) {

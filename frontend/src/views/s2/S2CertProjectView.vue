@@ -151,12 +151,12 @@ async function fetchData() {
 
 function openDialog(row?: Record<string, unknown>) {
   if (row) {
-    editingId.value = row.id
+    editingId.value = row.id as number
     form.value = {
       name: row.name || '',
       project_id: row.project_id,
       target_market_id: row.target_market_id,
-      cert_types_arr: parseCertTypes(row.cert_types),
+      cert_types_arr: parseCertTypes(row.cert_types as string | null),
       planned_start_date: row.planned_start_date || null,
       planned_end_date: row.planned_end_date || null,
       remark: row.remark || '',
@@ -171,7 +171,7 @@ function openDialog(row?: Record<string, unknown>) {
 async function save() {
   saving.value = true
   try {
-    const payload = {
+    const payload: Record<string, unknown> = {
       ...form.value,
       cert_types: JSON.stringify(form.value.cert_types_arr),
     }

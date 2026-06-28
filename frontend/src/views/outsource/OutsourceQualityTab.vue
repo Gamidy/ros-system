@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import type { TableRow } from '@/types/common'
-import { computed, ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { listOutsourceQualityRecords, createOutsourceQualityRecord, updateOutsourceQualityRecord, deleteOutsourceQualityRecord, listOutsourceOrders } from '../../api/outsource'
 import type { FormInstance } from 'element-plus'
 
@@ -73,9 +73,9 @@ const rules = { order_id: [{ required: true, message: '请选择订单' }] }
 async function fetchData() { loading.value=true; try { const { data } = await listOutsourceQualityRecords({ page:page.value, page_size:pageSize.value, order_id:filterOrderId.value||undefined, result:filterResult.value||undefined }); items.value=data.items||[]; total.value=data.total||0 } catch{} finally{loading.value=false} }
 async function loadOrders() { try { const { data } = await listOutsourceOrders({ page:1, page_size:200 }); orders.value=data.items||[] } catch{} }
 function showCreate() { isEdit.value=false; editingId.value=null; form.value={order_id:null,inspect_type:'incoming',inspect_date:'',inspector:'',result:'pass',sample_qty:0,defect_qty:0,defect_description:'',conclusion:''}; dialogVisible.value=true }
-function showEdit(row: TableRow) { isEdit.value=true; editingId.value=row.id; form.value={...row}; dialogVisible.value=true }
+function showEdit(row: TableRow) { isEdit.value=true; editingId.value=row.id as number; form.value={...row}; dialogVisible.value=true }
 async function handleSave() { if(!await formRef.value?.validate().catch(()=>false)) return; saving.value=true; try { if(isEdit.value&&editingId.value) await updateOutsourceQualityRecord(editingId.value, form.value); else await createOutsourceQualityRecord(form.value); dialogVisible.value=false; fetchData() } catch{} finally{saving.value=false} }
-async function handleDelete(row: TableRow) { try{await deleteOutsourceQualityRecord(row.id);fetchData()}catch{} }
+async function handleDelete(row: TableRow) { try{await deleteOutsourceQualityRecord(row.id as number);fetchData()}catch{} }
 
 onMounted(()=>{fetchData();loadOrders()})
 </script>

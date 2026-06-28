@@ -233,7 +233,7 @@ function showCreate() {
 
 function showEdit(row: TableRow) {
   isEdit.value = true
-  editingId.value = row.id
+  editingId.value = row.id as number
   form.value = { ...row, attachments: null }
   dialogVisible.value = true
 }
@@ -255,15 +255,15 @@ async function handleSave() {
 
 async function handleDelete(row: TableRow) {
   try {
-    await deleteSupplierQualification(row.id)
+    await deleteSupplierQualification(row.id as number)
     fetchData()
   } catch { /* */ }
 }
 
 function showAuditDialog(row: TableRow) {
-  currentQualId.value = row.id
+  currentQualId.value = row.id as number
   auditForm.value = {
-    qualification_id: row.id,
+    qualification_id: row.id as number,
     audit_date: new Date().toISOString().slice(0, 10),
     auditor: '', result: 'pass', findings: '', next_audit_date: null,
   }

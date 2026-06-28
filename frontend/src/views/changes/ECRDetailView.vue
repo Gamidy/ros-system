@@ -338,7 +338,7 @@ function formatFileSize(bytes: number): string {
 }
 
 function downloadAttachment(row: Record<string, unknown>) {
-  window.open(row.file_path, '_blank')
+  window.open(row.file_path as string, '_blank')
 }
 
 // ====== 数据获取 ======

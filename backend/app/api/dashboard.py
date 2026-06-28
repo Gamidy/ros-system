@@ -675,3 +675,47 @@ def get_alerts_summary(
 ) -> AlertsSummaryResponse:
     """预警摘要 — 委托 dashboard_alert_service 扫描检测"""
     return build_alerts_summary_response(db)
+
+
+# ═══════════════ WS实时推送角色化视图 ═══════════════
+
+_ROLE_WIDGETS: dict[str, list[dict]] = {
+    "admin": [
+        {"id": "sys-health", "type": "overview", "title": "系统健康概览"},
+        {"id": "project-ops", "type": "overview", "title": "项目运营概览"},
+        {"id": "penetration", "type": "detail", "title": "穿透分析"},
+        {"id": "ac-metrics", "type": "metrics", "title": "AC指标"},
+        {"id": "alerts", "type": "alert", "title": "预警管理"},
+    ],
+    "product_manager": [
+        {"id": "competitor", "type": "insight", "title": "竞品动态"},
+        {"id": "project-ops", "type": "overview", "title": "项目运营概览"},
+        {"id": "kpi-detail", "type": "metrics", "title": "KPI明细"},
+    ],
+    "rd_director": [
+        {"id": "bom-summary", "type": "detail", "title": "BOM汇总"},
+        {"id": "project-ops", "type": "overview", "title": "项目运营概览"},
+        {"id": "penetration", "type": "detail", "title": "穿透分析"},
+    ],
+    "quality_engineer": [
+        {"id": "cert-summary", "type": "insight", "title": "认证汇总"},
+        {"id": "test-pass-rate", "type": "metrics", "title": "测试通过率"},
+        {"id": "issue-tracking", "type": "detail", "title": "问题追踪"},
+    ],
+    "procurement": [
+        {"id": "order-stats", "type": "metrics", "title": "采购统计"},
+        {"id": "pending-approval", "type": "alert", "title": "待审批订单"},
+        {"id": "supplier-summary", "type": "overview", "title": "供应商概览"},
+    ],
+}
+
+
+@router.get("/role-view")
+def get_role_view(
+    role: str = Query(..., description="角色: product_manager|rd_director|quality_engineer|procurement|admin"),
+) -> dict:
+    """根据角色返回对应仪表盘配置"""
+    role = role.lower()
+    if role not in _ROLE_WIDGETS:
+        raise HTTPException(status_code=400, detail=f"未知角色: {role}")
+    return {"role": role, "widgets": _ROLE_WIDGETS[role]}

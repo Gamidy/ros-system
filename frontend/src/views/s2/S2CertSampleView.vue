@@ -109,7 +109,7 @@ async function fetchPrototypes() {
 
 function openDialog(row?: Record<string, unknown>) {
   if (row) {
-    editingId.value = row.id
+    editingId.value = row.id as number
     form.value = { cert_project_id: row.cert_project_id, prototype_id: row.prototype_id, cert_type: row.cert_type, submitted_date: row.submitted_date || null, remark: row.remark || '' }
   } else {
     editingId.value = null
