@@ -259,3 +259,46 @@ class InspectionOut(BaseModel):
     remark: Optional[str] = None
     inspected_at: datetime
     class Config: from_attributes = True
+
+
+# ═══════════════ 采购质检统计 ═══════════════
+
+
+class SupplierQualityItem(BaseModel):
+    """供应商质量统计"""
+    supplier_name: str = ""
+    supplier_code: str = ""
+    total_inspections: int = 0
+    pass_count: int = 0
+    concession_count: int = 0
+    reject_count: int = 0
+    pass_rate: float = 0.0
+
+
+class QualityTrendItem(BaseModel):
+    """质量趋势（按月份）"""
+    month: str = ""
+    total: int = 0
+    pass_count: int = 0
+    reject_count: int = 0
+    pass_rate: float = 0.0
+
+
+class DefectTypeItem(BaseModel):
+    """缺陷分类统计"""
+    defect_desc: str = ""
+    count: int = 0
+
+
+class QualityStatsOut(BaseModel):
+    """采购质检整体统计"""
+    total_inspections: int = 0
+    pass_rate: float = 0.0
+    concession_rate: float = 0.0
+    reject_rate: float = 0.0
+    month_total: int = 0
+    month_pass_rate: float = 0.0
+    by_supplier: list[SupplierQualityItem] = []
+    trend: list[QualityTrendItem] = []
+    top_defects: list[DefectTypeItem] = []
+    recent_rejects: list[dict] = []

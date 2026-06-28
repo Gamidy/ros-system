@@ -211,6 +211,12 @@ const router = createRouter({
           meta: { title: '采购收货', menu: 'purchases' },
         },
         {
+          path: 'purchases/quality-dashboard',
+          name: 'PurchasesQuality',
+          component: () => import('../views/purchases/QualityDashboardView.vue'),
+          meta: { title: '质检看板', menu: 'purchases' },
+        },
+        {
           path: 'inventory',
           name: 'Inventory',
           component: () => import('../views/inventory/InventoryListView.vue'),

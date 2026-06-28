@@ -129,6 +129,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/purchases', title: '采购订单', icon: ShoppingCart },
       { path: '/purchases/suppliers', title: '供应商管理', icon: ShoppingCart },
       { path: '/purchases/receiving', title: '采购收货', icon: ShoppingCart },
+      { path: '/purchases/quality-dashboard', title: '质检看板', icon: DataAnalysis },
       { path: '/inventory', title: '库存总览', icon: DataAnalysis },
       { path: '/inventory/warehouses', title: '仓库管理', icon: OfficeBuilding },
       { path: '/inventory/transactions', title: '库存流水', icon: List },
@@ -190,6 +191,8 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/approvals',      title: '审批管理',       icon: Select },
   // P0-6 采购
   { path: '/purchases',      title: '采购管理',       icon: ShoppingCart },
+  // Batch-13 质检看板
+  { path: '/purchases/quality-dashboard', title: '质检看板', icon: DataAnalysis },
   // Batch-12 库存管理
   { path: '/inventory', title: '库存总览', icon: DataAnalysis },
   { path: '/inventory/warehouses', title: '仓库管理', icon: OfficeBuilding },

@@ -223,6 +223,7 @@ from .purchase import (
     ReceiptItemOut,
     InspectionCreate,
     InspectionOut,
+    QualityStatsOut,
 )
 
 # ═══════════════ 外协送样管理 ═══════════════
