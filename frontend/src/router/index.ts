@@ -235,6 +235,12 @@ const router = createRouter({
           meta: { title: '库存流水', menu: 'inventory' },
         },
         {
+          path: 'inventory/counts',
+          name: 'InventoryCounts',
+          component: () => import('../views/inventory/InventoryCountListView.vue'),
+          meta: { title: '盘点管理', menu: 'inventory' },
+        },
+        {
           path: 'mm',
           name: 'ModuleManager',
           component: () => import('../views/mm/ModuleManagerView.vue'),

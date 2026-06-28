@@ -43,6 +43,7 @@ from app.api import ws
 from app.api import standard_query_api, standard_admin_api
 from app.api import ci_v2, event_graph, cost_recalculation
 from app.api import inventory
+from app.api import inventory_count
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -180,6 +181,7 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")
 app.include_router(purchases.router, prefix="/api")
 app.include_router(inventory.router, prefix="/api")
+app.include_router(inventory_count.router, prefix="/api")
 app.include_router(knowledge.router)
 app.include_router(pm_workspace.router, prefix="/api")
 app.include_router(pm_statistics.router, prefix="/api")
