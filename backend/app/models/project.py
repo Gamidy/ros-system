@@ -228,3 +228,16 @@ class TimeEntry(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     task = relationship("Task", backref="time_entries")
+
+
+class TaskComment(Base):
+    """任务评论"""
+    __tablename__ = "task_comments"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    author = Column(String(50), nullable=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    task = relationship("Task", backref="comments")

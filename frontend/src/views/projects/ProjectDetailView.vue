@@ -150,7 +150,12 @@
             <BudgetTab :project="project" />
           </el-tab-pane>
 
-          <!-- Tab 8: Milestones -->
+          <!-- Tab 8: Gate报告 -->
+          <el-tab-pane label="Gate报告" name="report">
+            <GateReportTab :project="project" :gates="gates" />
+          </el-tab-pane>
+
+          <!-- Tab 9: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
               <el-statistic title="总数" :value="msStats.total" />
@@ -306,6 +311,7 @@ import TaskDepTab from './TaskDepTab.vue'
 import TaskCalendarTab from './TaskCalendarTab.vue'
 import TimeLogTab from './TimeLogTab.vue'
 import BudgetTab from './BudgetTab.vue'
+import GateReportTab from './GateReportTab.vue'
 
 const route = useRoute()
 const router = useRouter()
