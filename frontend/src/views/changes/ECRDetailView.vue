@@ -96,6 +96,11 @@
       </el-timeline>
     </el-card>
 
+    <!-- ⬇ CIE v2.0: AI 风险评分 ⬇ -->
+    <RiskScoreCard :ecr-id="ecrId" />
+    <ImpactGraphView :ecr-id="ecrId" />
+    <ApprovalRecommendation :ecr-id="ecrId" />
+
     <!-- 附件列表 -->
     <el-card shadow="never">
       <template #header>
@@ -196,6 +201,11 @@ import {
   reviewECR, approveECR, rejectECR, convertToECO
 } from '../../api/ecr'
 import type { ECRDetailOut, ECRUpdate } from '../../api/ecr'
+
+// === CIE v2.0 组件 ===
+import RiskScoreCard from './components/RiskScoreCard.vue'
+import ImpactGraphView from './components/ImpactGraphView.vue'
+import ApprovalRecommendation from './components/ApprovalRecommendation.vue'
 
 const route = useRoute()
 const ecrId = computed(() => Number(route.params.id))
