@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_menu, require_role
 from app.models.user import User
 from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier, OutsourceRequest
+from app.services import event_bus
 from app.schemas import (
     SupplierCreate, SupplierOut, SupplierUpdate,
     PurchaseOrderCreate, PurchaseOrderOut, PurchaseOrderDetailOut,
@@ -135,6 +136,21 @@ def create_order(data: PurchaseOrderCreate, db: Session = Depends(get_db), _=Dep
         order.total_amount = float(total)
 
         db.commit()
+
+        # ── event bus: purchase.order.created ──
+        event_bus.emit(
+            event_type="purchase.order.created",
+            payload={
+                "id": order.id,
+                "order_no": order_no,
+                "total_amount": float(total),
+                "supplier_name": data.supplier_name,
+            },
+            source="purchases",
+            producer="purchases.service",
+            user_id=None,
+        )
+
         db.refresh(order)
     except Exception as e:
         db.rollback()
@@ -175,8 +191,38 @@ def update_order_status(order_id: int, data: PurchaseOrderStatusUpdate, db: Sess
             detail=f"状态 {order.status} 不允许变更到 {data.status}，允许目标: {', '.join(allowed) if allowed else '无'}",
         )
 
+    old_status = order.status
     order.status = data.status
-    db.commit(); db.refresh(order)
+    db.commit()
+    db.refresh(order)
+
+    # ── event bus: purchase.order.status_changed ──
+    event_bus.emit(
+        event_type="purchase.order.status_changed",
+        payload={
+            "id": order.id,
+            "order_no": order.order_no,
+            "from_status": old_status,
+            "to_status": data.status,
+        },
+        source="purchases",
+        producer="purchases.service",
+        user_id=None,
+    )
+
+    # ── event bus: purchase.order.approved ──
+    if data.status == "approved":
+        event_bus.emit(
+            event_type="purchase.order.approved",
+            payload={
+                "id": order.id,
+                "order_no": order.order_no,
+            },
+            source="purchases",
+            producer="purchases.service",
+            user_id=None,
+        )
+
     return order
 
 
@@ -372,4 +418,20 @@ def update_outsource_request(
 
     db.commit()
     db.refresh(req)
+
+    # ── event bus: outsource.partner.evaluated ──
+    if "status" in update_dict and update_dict["status"] in ("approved", "completed"):
+        event_bus.emit(
+            event_type="outsource.partner.evaluated",
+            payload={
+                "id": req.id,
+                "request_no": req.request_no,
+                "status": req.status,
+                "product_code": req.product_code,
+            },
+            source="purchases",
+            producer="purchases.service",
+            user_id=None,
+        )
+
     return req

@@ -8,6 +8,7 @@ from datetime import date, datetime
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.models.user import User
+from app.services import event_bus
 from app.models.outsource import (
     OutsourcePartner, OutsourceOrder, OutsourceOrderItem,
     OutsourceQualityRecord, OutsourceQualityFile,
@@ -196,6 +197,22 @@ def create_order(data: OutsourceOrderCreate, db: Session = Depends(get_db),
         db.add(OutsourceOrderItem(order_id=order.id, **item_data.model_dump()))
     db.commit()
     db.refresh(order)
+
+    # ── event bus: outsource.order.created ──
+    user_id = str(current_user.id) if hasattr(current_user, "id") else None
+    event_bus.emit(
+        event_type="outsource.order.created",
+        payload={
+            "id": order.id,
+            "order_no": order.order_no,
+            "partner_id": order.partner_id,
+            "title": order.title,
+        },
+        source="purchases",
+        producer="purchases.service",
+        user_id=user_id,
+    )
+
     out = OutsourceOrderOut.model_validate(order)
     out.partner_name = partner.name
     return out

@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
+from app.services import event_bus
 from app.models.user import User
 from app.models.manufacturability import (
     DFMChecklist, DFMReport, DFMReportItem, DFMScoreWeight,
@@ -285,6 +286,22 @@ def create_report(data: DFMReportCreate, db: Session = Depends(get_db),
     db.add(report)
     db.commit()
     db.refresh(report)
+
+    # ── event bus: dfm.report.created ──
+    user_id = str(current_user.id) if hasattr(current_user, "id") else None
+    event_bus.emit(
+        event_type="dfm.report.created",
+        payload={
+            "id": report.id,
+            "report_no": report.report_no,
+            "project_id": report.project_id,
+            "title": report.title,
+        },
+        source="manufacturability",
+        producer="manufacturability.service",
+        user_id=user_id,
+    )
+
     return DFMReportOut.model_validate(report)
 
 
@@ -303,6 +320,39 @@ def update_report(rid: int, data: DFMReportUpdate, db: Session = Depends(get_db)
     if data.status == "completed":
         score = calculate_dfm_score(db, rid)
         report.total_score = score.total_score
+
+        # ── event bus: dfm.score.calculated ──
+        user_id = str(current_user.id) if hasattr(current_user, "id") else None
+        event_bus.emit(
+            event_type="dfm.score.calculated",
+            payload={
+                "id": rid,
+                "total_score": score.total_score,
+                "critical_count": score.critical_count,
+                "major_count": score.major_count,
+                "minor_count": score.minor_count,
+            },
+            source="manufacturability",
+            producer="manufacturability.service",
+            user_id=user_id,
+        )
+
+        # ── event bus: dfm.issue.identified (if serious issues found) ──
+        if score.total_score < 60 or score.critical_count > 0:
+            event_bus.emit(
+                event_type="dfm.issue.identified",
+                payload={
+                    "id": rid,
+                    "total_score": score.total_score,
+                    "critical_count": score.critical_count,
+                    "major_count": score.major_count,
+                    "minor_count": score.minor_count,
+                    "threshold": 60,
+                },
+                source="manufacturability",
+                producer="manufacturability.service",
+                user_id=user_id,
+            )
     db.commit()
     db.refresh(report)
     out = DFMReportOut.model_validate(report)
