@@ -52,3 +52,19 @@ export function getCostTrend(planId: string, limit?: number) { return api.get('/
 
 // ── 导出 ──
 export function exportCostSheetCsv(sheetId: number) { return api.get('/cost-accounting/reports/export/csv', { params: { sheet_id: sheetId } }) }
+
+// ═══════════════════════════════════════════
+// P3 冷量联动成本重算
+// ═══════════════════════════════════════════
+
+// CapacityUnitCost CRUD
+export function listCapacityCosts() { return api.get('/cost-recalc/capacity-costs') }
+export function createCapacityCost(data: Record<string, any>) { return api.post('/cost-recalc/capacity-costs', data) }
+export function updateCapacityCost(id: number, data: Record<string, any>) { return api.put(`/cost-recalc/capacity-costs/${id}`, data) }
+export function deleteCapacityCost(id: number) { return api.delete(`/cost-recalc/capacity-costs/${id}`) }
+
+// 冷量联动重算
+export function triggerRecalculation(data: Record<string, any>) { return api.post('/cost-recalc/run', data) }
+export function listRecalcResults(params: Record<string, any>) { return api.get('/cost-recalc/results', { params }) }
+export function getRecalcResult(id: number) { return api.get(`/cost-recalc/results/${id}`) }
+export function getRecalcResultsByPlan(planId: string, limit?: number) { return api.get(`/cost-recalc/results/by-plan/${planId}`, { params: { limit: limit || 10 } }) }

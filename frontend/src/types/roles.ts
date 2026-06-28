@@ -136,6 +136,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/cost-accounting/periods', title: '核算期间', icon: Document },
       { path: '/cost-accounting/overview', title: '成本概览', icon: DataAnalysis },
       { path: '/cost-accounting/analysis', title: '成本分析', icon: DataAnalysis },
+      { path: '/cost-accounting/capacity-costs', title: '冷量段单价', icon: DataAnalysis },
       { path: '/mm', title: '模块管理', icon: DataAnalysis },
     ]
   },
@@ -227,6 +228,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/cost-accounting/periods',    title: '核算期间', icon: Document },
   { path: '/cost-accounting/overview', title: '成本概览', icon: DataAnalysis },
   { path: '/cost-accounting/analysis',   title: '成本分析', icon: DataAnalysis },
+  { path: '/cost-accounting/capacity-costs', title: '冷量段单价', icon: DataAnalysis },
   // P1-T5 事件监控面板
   { path: '/monitor/events',    title: '事件监控面板', icon: DataAnalysis },
   // P2-T5 规则管理

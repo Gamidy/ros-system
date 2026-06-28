@@ -145,6 +145,15 @@
               </div>
             </div>
           </el-tab-pane>
+
+          <!-- ── 冷量联动重算 ── -->
+          <el-tab-pane label="冷量联动重算" name="capacityRecalc">
+            <CapacityRecalcPanel
+              :product-plan-id="sheet.product_plan_id"
+              :period-id="sheet.period_id"
+              :sheet-id="sheet.id"
+            />
+          </el-tab-pane>
         </el-tabs>
       </el-card>
 
@@ -183,6 +192,7 @@ import {
   recalculateSheet,
   exportCostSheetCsv,
 } from '../../api/costAccounting'
+import CapacityRecalcPanel from './components/CapacityRecalcPanel.vue'
 
 const route = useRoute()
 

@@ -445,6 +445,12 @@ const router = createRouter({
           component: () => import('../views/cost-accounting/CostAnalysisView.vue'),
           meta: { title: '成本分析', menu: 'cost-accounting' },
         },
+        {
+          path: 'cost-accounting/capacity-costs',
+          name: 'CapacityCostConfig',
+          component: () => import('../views/cost-accounting/CapacityCostConfig.vue'),
+          meta: { title: '冷量段单价', menu: 'cost-accounting' },
+        },
         // D1 — BI 分析看板
         {
           path: 'bi/planning',

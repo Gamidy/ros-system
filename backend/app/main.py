@@ -37,7 +37,7 @@ from app.api import market_param_config
 from app.api import competitor_crawl_admin
 from app.api import ws
 from app.api import standard_query_api, standard_admin_api
-from app.api import ci_v2, event_graph
+from app.api import ci_v2, event_graph, cost_recalculation
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -153,6 +153,8 @@ app.include_router(safety.router)
 app.include_router(manufacturability.router)
 app.include_router(outsource.router)
 app.include_router(cost_accounting.router)
+# ── 冷量联动成本重算 ──
+app.include_router(cost_recalculation.router)
 app.include_router(bi_analytics.router)
 # ── 成本超标预警引擎 ──
 app.include_router(cost_alert_api.router, prefix="/api")
