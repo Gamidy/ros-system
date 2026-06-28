@@ -53,6 +53,42 @@ export function getCostTrend(planId: string, limit?: number) { return api.get('/
 // ── 导出 ──
 export function exportCostSheetCsv(sheetId: number) { return api.get('/cost-accounting/reports/export/csv', { params: { sheet_id: sheetId } }) }
 
+interface ExportExcelParams {
+  period_id?: number
+  status?: string
+  sheet_ids?: string
+  plan_id?: string
+}
+
+export function exportCostSheetExcel(params: ExportExcelParams): Promise<void> {
+  // 用 Axios 下载（自动携带Authorization header）→ 创建 Blob 触发下载
+  const q = new URLSearchParams()
+  if (params.period_id) q.set('period_id', String(params.period_id))
+  if (params.status) q.set('status', params.status)
+  if (params.sheet_ids) q.set('sheet_ids', params.sheet_ids)
+  if (params.plan_id) q.set('plan_id', params.plan_id)
+  return api.get('/cost-accounting/reports/export/excel', {
+    params: q,
+    responseType: 'blob',
+  }).then((res) => {
+    const anyRes = res as any
+    const url = window.URL.createObjectURL(new Blob([anyRes.data]))
+    const a = document.createElement('a')
+    a.href = url
+    // 从响应头取文件名
+    const disp: string = anyRes.headers?.['content-disposition'] ?? ''
+    const match = disp.match(/filename="?(.+?)"?$/)
+    a.download = match?.[1] || `成本核算_${Date.now()}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }).catch((err: Error) => {
+    console.error('导出Excel失败', err)
+    throw err
+  })
+}
+
 // ═══════════════════════════════════════════
 // P3 冷量联动成本重算
 // ═══════════════════════════════════════════

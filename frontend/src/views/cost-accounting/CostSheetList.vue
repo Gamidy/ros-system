@@ -74,6 +74,21 @@
       </el-form>
 
       <div class="filter-actions">
+        <el-dropdown trigger="click" @command="handleExportCommand">
+          <el-button type="primary" plain>
+            <el-icon style="margin-right:4px"><Download /></el-icon>
+            导出Excel
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="all">导出全部（当前筛选）</el-dropdown-item>
+              <el-dropdown-item command="selected" :disabled="selectedIds.length === 0">
+                导出选中（{{ selectedIds.length }}项）
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button type="success" @click="showGenerateDialog">
           + 生成核算单
         </el-button>
@@ -88,7 +103,9 @@
       stripe
       style="width: 100%"
       @sort-change="handleSortChange"
+      @selection-change="handleSelectionChange"
     >
+      <el-table-column type="selection" width="45" />
       <el-table-column prop="sheet_no" label="核算单编号" min-width="160" sortable="custom" />
       <el-table-column prop="product_plan_id" label="产品策划ID" min-width="120" />
       <el-table-column prop="period_id" label="期间ID" min-width="80" />
@@ -255,6 +272,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import * as API from '../../api/costAccounting'
 
 const router = useRouter()
@@ -285,6 +303,32 @@ interface SheetRecord {
   total_cost_target: number
   variance_pct: number
   status: string
+}
+
+const selectedIds = ref<number[]>([])
+
+const handleSelectionChange = (rows: SheetRecord[]) => {
+  selectedIds.value = rows.map(r => r.id)
+}
+
+const handleExportCommand = (command: string) => {
+  if (command === 'all') {
+    // 用当前筛选条件导出
+    API.exportCostSheetExcel({
+      period_id: query.period_id,
+      status: query.status,
+      plan_id: query.plan_id as string | undefined,
+    }).catch(() => {
+      ElMessage.error('导出Excel失败')
+    })
+  } else if (command === 'selected') {
+    // 导出选中项
+    API.exportCostSheetExcel({
+      sheet_ids: selectedIds.value.join(','),
+    }).catch(() => {
+      ElMessage.error('导出Excel失败')
+    })
+  }
 }
 
 const periods = ref<Period[]>([])
