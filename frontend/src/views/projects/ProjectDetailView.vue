@@ -115,6 +115,16 @@
             </el-table>
           </el-tab-pane>
 
+          <!-- Tab 2: Kanban -->
+          <el-tab-pane label="看板" name="kanban">
+            <TaskKanbanTab
+              :tasks="tasks"
+              @new-task="showTaskDialog = true"
+              @update-status="updateTaskById"
+              @switch-view="activeTab = 'tasks'"
+            />
+          </el-tab-pane>
+
           <!-- Tab 2: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
@@ -265,6 +275,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { CircleCheckFilled, WarningFilled, CircleCloseFilled, Clock, Monitor, Check, Warning, MoreFilled, View } from '@element-plus/icons-vue'
 import api from '../../api'
+import TaskKanbanTab from './TaskKanbanTab.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -370,6 +381,10 @@ async function saveTask() {
 async function updateTask(t: any, s: string) {
   try { await api.patch(`/projects/${pid.value}/tasks/${t.id}`, null, { params: { status: s } }); ElMessage.success('任务状态已更新'); await fetchAll() }
   catch (e: any) { ElMessage.error(e?.response?.data?.detail || '更新任务失败'); t._is = '' }
+}
+async function updateTaskById(taskId: number, status: string) {
+  try { await api.patch(`/projects/${pid.value}/tasks/${taskId}`, null, { params: { status } }); await fetchAll() }
+  catch (e: any) { ElMessage.error(e?.response?.data?.detail || '更新任务失败') }
 }
 
 // ── Milestone ──
