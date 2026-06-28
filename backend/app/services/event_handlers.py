@@ -251,10 +251,99 @@ def _register_all_events():
     bus.on("approval.completed", store_event)
     bus.on("approval.rejected", store_event)
 
+    # ── Safety Events — 安规预警+通知 ──
+    for evt in ["safety.standard.updated", "safety.inspection.completed",
+                "safety.alert.triggered", "safety.supplier.qualified"]:
+        bus.on(evt, store_event)
+    bus.on("safety.alert.triggered", _on_safety_alert)
+    logger.info("safety.* 事件已注册")
+
+    # ── Competitor Events — 竞品变更 ──
+    for evt in ["competitor.created", "competitor.updated",
+                "competitor.crawl_completed", "competitor.imported"]:
+        bus.on(evt, store_event)
+    logger.info("competitor.* 事件已注册")
+
+    # ── Knowledge Events — 知识库变更 ──
+    for evt in ["knowledge.created", "knowledge.updated",
+                "knowledge.archived", "knowledge.linked"]:
+        bus.on(evt, store_event)
+    logger.info("knowledge.* 事件已注册")
+
+    # ── Purchase Events — 采购订单变更 ──
+    for evt in ["purchase.order.created", "purchase.order.approved",
+                "purchase.order.status_changed", "outsource.partner.evaluated",
+                "outsource.order.created"]:
+        bus.on(evt, store_event)
+    bus.on("purchase.order.approved", _on_purchase_approved)
+    logger.info("purchase.* 事件已注册")
+
+    # ── DFM Events — 可制造性分析 ──
+    for evt in ["dfm.report.created", "dfm.score.calculated", "dfm.issue.identified"]:
+        bus.on(evt, store_event)
+    logger.info("dfm.* 事件已注册")
+
+    # ── Certification Events — 认证管理 ──
+    for evt in ["cert.requirement.created", "cert.project.created",
+                "cert.sample.submitted", "cert.execution.completed",
+                "cert.result.passed", "cert.certificate.issued"]:
+        bus.on(evt, store_event)
+    logger.info("cert.* 事件已注册")
+
     logger.info(
         "事件系统初始化完成: %d 事件类型, Event Store 已激活",
         len(bus.handlers),
     )
+
+
+def _on_safety_alert(**kwargs):
+    """safety.alert.triggered → 创建通知记录"""
+    db: Session = SessionLocal()
+    try:
+        from app.models.alert import Notification
+        alert_id = kwargs.get("alert_id")
+        alert_type = kwargs.get("alert_type", "unknown")
+        if not alert_id:
+            return
+        notif = Notification(
+            alert_id=alert_id,
+            target_user=kwargs.get("user_id", "system"),
+            channel="system",
+            title=f"【安规预警】{alert_type}",
+            content=kwargs.get("message", ""),
+        )
+        db.add(notif)
+        db.commit()
+        logger.info("safety alert notification created: alert_id=%s", alert_id)
+    except Exception as e:
+        db.rollback()
+        logger.error("_on_safety_alert 失败: %s", e)
+    finally:
+        db.close()
+
+
+def _on_purchase_approved(**kwargs):
+    """purchase.order.approved → 通知采购人"""
+    db: Session = SessionLocal()
+    try:
+        from app.models.alert import Notification
+        order_id = kwargs.get("order_id") or kwargs.get("payload", {}).get("order_id")
+        if not order_id:
+            return
+        notif = Notification(
+            target_user=kwargs.get("user_id", "system"),
+            channel="system",
+            title="采购订单已审批通过",
+            content=f"采购订单 #{order_id} 已审批通过，请跟进后续流程。",
+        )
+        db.add(notif)
+        db.commit()
+        logger.info("purchase approved notification: order_id=%s", order_id)
+    except Exception as e:
+        db.rollback()
+        logger.error("_on_purchase_approved 失败: %s", e)
+    finally:
+        db.close()
 
 
 register_all_handlers = _register_all_events
