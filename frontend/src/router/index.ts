@@ -71,6 +71,12 @@ const router = createRouter({
           meta: { title: '项目甘特图', menu: 'projects' },
         },
         {
+          path: 'projects/stats',
+          name: 'ProjectStats',
+          component: () => import('../views/projects/ProjectStatsView.vue'),
+          meta: { title: '项目统计' },
+        },
+        {
           path: 'tests',
           name: 'Tests',
           component: () => import('../views/tests/TestsView.vue'),
