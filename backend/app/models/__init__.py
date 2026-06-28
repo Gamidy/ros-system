@@ -4,6 +4,7 @@ from app.models.organization import Organization, OrganizationMember
 from app.models.product import Platform, Product, Version, Market, ManufacturingVariant
 from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem
 from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
+from app.models.project_review import ProjectReview
 from app.models.test import TestRequest, TestResult, MQVerification, Certification, Prototype, QualityIssue, ECR, ECN
 from app.models.alert import AlertRule, Alert, Notification
 from app.models.webhook import WebhookDeliveryLog

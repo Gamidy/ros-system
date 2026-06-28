@@ -223,3 +223,35 @@ class IssueUpdate(BaseModel):
     root_cause: str | None = None
     solution: str | None = None
     status: str | None = None
+
+
+# ═══════════════ 项目复盘 ═══════════════
+
+class ProjectReviewCreate(BaseModel):
+    review_type: str = "final"
+    phase_name: Optional[str] = None
+    what_went_well: Optional[str] = None
+    what_could_improve: Optional[str] = None
+    key_lessons: Optional[str] = None
+    action_items: Optional[str] = None
+    overall_rating: Optional[int] = None
+    reviewer: Optional[str] = None
+    review_date: Optional[date] = None
+    is_shared: bool = True
+
+
+class ProjectReviewOut(ProjectReviewCreate):
+    id: int
+    project_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectReviewUpdate(BaseModel):
+    what_went_well: Optional[str] = None
+    what_could_improve: Optional[str] = None
+    key_lessons: Optional[str] = None
+    action_items: Optional[str] = None
+    overall_rating: Optional[int] = None
+    is_shared: Optional[bool] = None

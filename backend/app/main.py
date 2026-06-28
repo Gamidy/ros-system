@@ -9,7 +9,7 @@ from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, product_plan_subs, admin_config, pm_config, pm_accessory, competitor, competitor_bench, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks, task_deps, project_templates, time_entries, task_comments
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, product_plan_subs, admin_config, pm_config, pm_accessory, competitor, competitor_bench, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks, task_deps, project_templates, time_entries, task_comments, project_reviews
 from app.api import product_plan_crud, product_plan_workflow_api, product_plan_versions
 from app.api import markets
 from app.api import verification_requirements, prototypes, test_executions, gate_rules, target_markets
@@ -145,6 +145,7 @@ app.include_router(task_deps.router, prefix="/api")
 app.include_router(project_templates.router, prefix="/api")
 app.include_router(time_entries.router, prefix="/api")
 app.include_router(task_comments.router, prefix="/api")
+app.include_router(project_reviews.router, prefix="/api")
 app.include_router(tests.router, prefix="/api")
 app.include_router(certifications.router, prefix="/api")
 app.include_router(verification_requirements.router)
