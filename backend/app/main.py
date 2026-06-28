@@ -45,6 +45,7 @@ from app.api import ci_v2, event_graph, cost_recalculation
 from app.api import inventory
 from app.api import inventory_count
 from app.api import inventory_alert
+from app.api import purchase_return
 from app.models import system_config  # ensure table created
 from app.services.event_handlers import register_all_handlers
 import asyncio
@@ -184,6 +185,7 @@ app.include_router(purchases.router, prefix="/api")
 app.include_router(inventory.router, prefix="/api")
 app.include_router(inventory_count.router, prefix="/api")
 app.include_router(inventory_alert.router, prefix="/api")
+app.include_router(purchase_return.router, prefix="/api")
 app.include_router(knowledge.router)
 app.include_router(pm_workspace.router, prefix="/api")
 app.include_router(pm_statistics.router, prefix="/api")
