@@ -1,4 +1,4 @@
-"""采购订单模型: 订单 + 订单项 + 供应商"""
+"""采购订单模型: 订单 + 订单项 + 供应商 + 供应商评估"""
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Date, func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -11,14 +11,21 @@ class Supplier(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     code = Column(String(50), unique=True, index=True, nullable=False, comment="供应商编码")
     name = Column(String(200), nullable=False, comment="供应商名称")
+    category = Column(String(100), nullable=True, comment="供应品类（电子/结构/包装/辅料等）")
     contact = Column(String(100), nullable=True, comment="联系人")
     phone = Column(String(50), nullable=True, comment="联系电话")
     email = Column(String(100), nullable=True, comment="邮箱")
     address = Column(String(500), nullable=True, comment="地址")
     tax_id = Column(String(50), nullable=True, comment="税号")
     bank_info = Column(String(200), nullable=True, comment="银行信息")
-    status = Column(String(20), default="active", comment="active/inactive")
+    status = Column(String(20), default="active", comment="potential/qualified/active/suspended/blacklisted")
+    overall_score = Column(Float, default=0, comment="综合评分(0-100)")
+    business_license = Column(String(500), nullable=True, comment="营业执照附件路径")
+    cert_iso = Column(Integer, default=0, comment="ISO认证(0未/1有)")
+    cert_rohs = Column(Integer, default=0, comment="RoHS认证")
+    cert_ul = Column(Integer, default=0, comment="UL认证")
     remark = Column(Text, nullable=True)
+    is_deleted = Column(Integer, default=0, comment="软删除标记")
     # ---- 多租户 ----
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
@@ -86,3 +93,35 @@ class OutsourceRequest(Base):
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+# ══════════════════════════════════════════════════
+# 供应商评估
+# ══════════════════════════════════════════════════
+
+EVAL_DIM_QUALITY = "quality"
+EVAL_DIM_DELIVERY = "delivery"
+EVAL_DIM_COST = "cost"
+EVAL_DIM_SERVICE = "service"
+EVAL_DIM_TECH = "technology"
+
+DIMENSION_LABELS = {
+    EVAL_DIM_QUALITY: "品质", EVAL_DIM_DELIVERY: "交期",
+    EVAL_DIM_COST: "成本", EVAL_DIM_SERVICE: "服务",
+    EVAL_DIM_TECH: "技术能力",
+}
+VALID_DIMENSIONS = [EVAL_DIM_QUALITY, EVAL_DIM_DELIVERY, EVAL_DIM_COST, EVAL_DIM_SERVICE, EVAL_DIM_TECH]
+
+
+class SupplierEvaluation(Base):
+    """供应商评估记录"""
+    __tablename__ = "supplier_evaluations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="CASCADE"), nullable=False, comment="供应商ID")
+    dimension = Column(String(20), nullable=False, comment="评估维度")
+    score = Column(Float, nullable=False, comment="评分(0-100)")
+    weight = Column(Float, default=1.0, comment="该维度权重")
+    comment = Column(String(500), nullable=True, comment="评估意见")
+    evaluator = Column(String(50), nullable=True, comment="评估人")
+    evaluated_at = Column(DateTime, server_default=func.now(), comment="评估时间")

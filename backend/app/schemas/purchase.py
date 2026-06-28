@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 class SupplierCreate(BaseModel):
     code: str = Field(min_length=1, max_length=50)
     name: str = Field(min_length=1, max_length=200)
+    category: Optional[str] = None
     contact: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -19,11 +20,17 @@ class SupplierCreate(BaseModel):
     tax_id: Optional[str] = None
     bank_info: Optional[str] = None
     status: str = "active"
+    overall_score: float = 0
+    business_license: Optional[str] = None
+    cert_iso: int = 0
+    cert_rohs: int = 0
+    cert_ul: int = 0
     remark: Optional[str] = None
 
 
 class SupplierUpdate(BaseModel):
     name: Optional[str] = None
+    category: Optional[str] = None
     contact: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -31,14 +38,55 @@ class SupplierUpdate(BaseModel):
     tax_id: Optional[str] = None
     bank_info: Optional[str] = None
     status: Optional[str] = None
+    overall_score: Optional[float] = None
+    business_license: Optional[str] = None
+    cert_iso: Optional[int] = None
+    cert_rohs: Optional[int] = None
+    cert_ul: Optional[int] = None
     remark: Optional[str] = None
 
 
 class SupplierOut(SupplierCreate):
     id: int
+    is_deleted: int = 0
     created_at: datetime
     updated_at: Optional[datetime] = None
     class Config: from_attributes = True
+
+
+# ═══════════════ 供应商评估 ═══════════════
+
+
+class EvaluationCreate(BaseModel):
+    dimension: str
+    score: float = Field(..., ge=0, le=100)
+    weight: float = Field(1.0, ge=0, le=1)
+    comment: Optional[str] = None
+    evaluator: Optional[str] = None
+
+
+class EvaluationOut(BaseModel):
+    id: int
+    supplier_id: int
+    dimension: str
+    dimension_label: str = ""
+    score: float
+    weight: float
+    comment: Optional[str] = None
+    evaluator: Optional[str] = None
+    evaluated_at: datetime
+    class Config: from_attributes = True
+
+
+class SupplierStatsOut(BaseModel):
+    total_count: int = 0
+    qualified_count: int = 0
+    active_count: int = 0
+    suspended_count: int = 0
+    blacklisted_count: int = 0
+    avg_score: float = 0
+    low_score_count: int = 0
+    category_count: int = 0
 
 
 # ═══════════════ 采购订单 ═══════════════

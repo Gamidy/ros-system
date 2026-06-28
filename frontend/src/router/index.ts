@@ -196,7 +196,13 @@ const router = createRouter({
           path: 'purchases',
           name: 'Purchases',
           component: () => import('../views/purchases/PurchasesView.vue'),
-          meta: { title: '采购管理' },
+          meta: { title: '采购订单', menu: 'purchases' },
+        },
+        {
+          path: 'purchases/suppliers',
+          name: 'PurchasesSuppliers',
+          component: () => import('../views/purchases/SupplierListView.vue'),
+          meta: { title: '供应商管理', menu: 'purchases' },
         },
         {
           path: 'mm',

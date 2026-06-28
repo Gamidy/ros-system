@@ -126,7 +126,8 @@ export const MENU_GROUPS: MenuGroup[] = [
     title: '供应链与成本',
     icon: ShoppingCart,
     children: [
-      { path: '/purchases', title: '采购管理', icon: ShoppingCart },
+      { path: '/purchases', title: '采购订单', icon: ShoppingCart },
+      { path: '/purchases/suppliers', title: '供应商管理', icon: ShoppingCart },
       { path: '/outsource/partners', title: '外协厂商', icon: ShoppingCart },
       { path: '/outsource/orders', title: '外协订单', icon: List },
       { path: '/outsource/quality-records', title: '外协质检', icon: Document },
@@ -138,6 +139,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/cost-accounting/analysis', title: '成本分析', icon: DataAnalysis },
       { path: '/cost-accounting/capacity-costs', title: '冷量段单价', icon: DataAnalysis },
       { path: '/cost-accounting/efficiency', title: '成本效率', icon: DataAnalysis },
+      { path: '/cost-accounting/dashboard', title: '成本看板', icon: DataAnalysis },
       { path: '/mm', title: '模块管理', icon: DataAnalysis },
     ]
   },
