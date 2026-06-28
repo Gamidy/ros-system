@@ -19,7 +19,7 @@
       <el-col :span="6">
         <el-card shadow="never" class="kpi-card">
           <div class="kpi-label">平均效率评分</div>
-          <div class="kpi-value" :style="{ color: avgScore >= 80 ? '#67c23a' : avgScore >= 60 ? '#e6a23c' : '#f56c6c' }">
+          <div class="kpi-value" :style="{ color: scoreColor }">
             {{ avgScore }}
           </div>
         </el-card>
@@ -103,6 +103,14 @@ const avgScore = computed(() => {
   if (products.value.length === 0) return '-'
   const sum = products.value.reduce((s: number, p: any) => s + p.cost_efficiency_score, 0)
   return (sum / products.value.length).toFixed(1)
+})
+
+const scoreColor = computed(() => {
+  const s = parseFloat(avgScore.value as string)
+  if (isNaN(s)) return '#909399'
+  if (s >= 80) return '#67c23a'
+  if (s >= 60) return '#e6a23c'
+  return '#f56c6c'
 })
 
 function scoreTagType(score: number) {
