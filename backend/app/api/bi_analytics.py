@@ -22,6 +22,7 @@ from app.models.product_plan import ProductPlan, ProductPlanStage, ProductPlanPr
 from app.models.project import Project, ProjectGate
 from app.models.approval import ApprovalRequest, ApprovalRecord
 from app.models.cost_accounting import CostAccountingSheet, SheetStatus
+from app.models.cost_recalculation import CostRecalculationResult
 from app.schemas.bi import TrendItem, TrendResponse, FunnelItem, FunnelResponse, DistributionItem, DistributionResponse
 
 logger = logging.getLogger(__name__)
@@ -537,4 +538,129 @@ def bi_distribution(
     items = [DistributionItem(name=row.market, value=row.count) for row in rows]
     result = DistributionResponse(items=items)
     _cache_set(cache_key, result.model_dump_json(), CACHE_TTL)
+    return result
+
+
+# ═══════════════════════════════════════════
+# 成本效率趋势
+# ═══════════════════════════════════════════
+
+@router.get("/cost-efficiency")
+def bi_cost_efficiency(
+    limit_periods: int = Query(12, ge=1, le=48, description="最近N个核算期间"),
+    min_score: float = Query(0, ge=0, le=100, description="最低评分筛选"),
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("bi-analytics")),
+):
+    """成本效率趋势 — 按核算期间+BTU段分组
+
+    返回每个期间各BTU段的平均效率评分/产品数/平均差异率
+    用于前端ECharts折线图（各BTU段为不同系列）
+    """
+    from app.models.cost_accounting import CostAccountingPeriod
+    from app.models.cost_recalculation import CostRecalculationResult as CRR
+    from sqlalchemy import func as sa_func
+
+    cache_key = f"bi:cost-efficiency:periods={limit_periods}:min={min_score}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        import json
+        return json.loads(cached)
+
+    # 获取最近的 period_id 列表
+    periods = (
+        db.query(CostAccountingPeriod.id, CostAccountingPeriod.period_name)
+        .filter(CostAccountingPeriod.status.in_(["active", "closed"]))
+        .order_by(CostAccountingPeriod.start_date.desc())
+        .limit(limit_periods)
+        .all()
+    )
+    if not periods:
+        result = {"periods": [], "series": [], "summary": {}}
+        _cache_set(cache_key, json.dumps(result), CACHE_TTL)
+        return result
+
+    period_ids = [p.id for p in periods]
+    period_names = {p.id: p.period_name for p in periods}
+
+    # 按 period + capacity_key 分组聚合
+    rows = (
+        db.query(
+            CRR.period_id,
+            CRR.capacity_key,
+            sa_func.count(CRR.id).label("product_count"),
+            sa_func.avg(CRR.cost_efficiency_score).label("avg_score"),
+            sa_func.avg(CRR.variance_pct).label("avg_variance_pct"),
+            sa_func.min(CRR.cost_efficiency_score).label("min_score"),
+            sa_func.max(CRR.cost_efficiency_score).label("max_score"),
+        )
+        .filter(
+            CRR.period_id.in_(period_ids),
+            CRR.status == "completed",
+            CRR.cost_efficiency_score >= min_score,
+        )
+        .group_by(CRR.period_id, CRR.capacity_key)
+        .order_by(CRR.period_id, CRR.capacity_key)
+        .all()
+    )
+
+    # 整理为前端友好格式
+    # periods: 按时序排列的期间列表
+    # series: 每个 BTU 段一条线
+    from collections import defaultdict
+
+    periods_sorted = sorted(periods, key=lambda p: p.id)
+    btu_data = defaultdict(lambda: defaultdict(dict))
+
+    for r in rows:
+        pid = r.period_id
+        cap_key = r.capacity_key or "未知"
+        btu_data[cap_key][pid] = {
+            "period_name": period_names.get(pid, f"Period#{pid}"),
+            "avg_score": round(float(r.avg_score or 0), 1),
+            "product_count": int(r.product_count),
+            "avg_variance_pct": round(float(r.avg_variance_pct or 0), 1),
+            "min_score": round(float(r.min_score or 0), 1),
+            "max_score": round(float(r.max_score or 0), 1),
+        }
+
+    series = []
+    for cap_key in sorted(btu_data.keys()):
+        data_points = []
+        for p in periods_sorted:
+            point = btu_data[cap_key].get(p.id, None)
+            if point:
+                data_points.append(point)
+        if data_points:  # 只返回有数据的系列
+            series.append({
+                "capacity_key": cap_key,
+                "data": data_points,
+            })
+
+    # 汇总统计
+    all_scores = [float(r.avg_score or 0) for r in rows]
+    total = db.query(sa_func.count(CRR.id)).filter(
+        CRR.status == "completed",
+        CRR.period_id.in_(period_ids),
+    ).scalar() or 0
+
+    summary = {
+        "total_recalc_count": total,
+        "periods_with_data": len(set(r.period_id for r in rows)),
+        "btu_segments_with_data": len(series),
+        "overall_avg_score": round(
+            sum(all_scores) / len(all_scores), 1
+        ) if all_scores else 0,
+    }
+
+    result = {
+        "periods": [
+            {"id": p.id, "name": period_names.get(p.id, f"Period#{p.id}")}
+            for p in periods_sorted
+        ],
+        "series": series,
+        "summary": summary,
+    }
+
+    _cache_set(cache_key, json.dumps(result), CACHE_TTL)
     return result

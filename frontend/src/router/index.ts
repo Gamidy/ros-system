@@ -471,6 +471,12 @@ const router = createRouter({
           meta: { title: 'BI成本分析', menu: 'bi' },
         },
         {
+          path: 'bi/cost-efficiency',
+          name: 'BiCostEfficiency',
+          component: () => import('../views/bi/CostEfficiencyTrend.vue'),
+          meta: { title: 'BI成本效率趋势', menu: 'bi' },
+        },
+        {
           path: 'bi',
           name: 'BiAnalytics',
           component: () => import('../views/bi/BIAnalyticsView.vue'),
