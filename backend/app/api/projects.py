@@ -1458,3 +1458,79 @@ def project_export(pid: int, db: Session = Depends(get_db)):
                     "probability": r.probability, "impact": r.impact} for r in risks],
         "exported_at": str(datetime.now()),
     }
+
+
+# ═══════════════ 项目通知提醒 ═══════════════
+
+@project_router.get("/{pid}/alerts")
+def project_alerts(pid: int, db: Session = Depends(get_db)):
+    """聚合项目相关提醒: 超期任务/风险预警/里程碑延期"""
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(404, "项目不存在")
+
+    today = date.today()
+    alerts_list = []
+
+    # 1. 超期任务
+    overdue_tasks = db.query(Task).filter(
+        Task.project_id == pid,
+        Task.due_date < today,
+        Task.status.in_(["todo", "in_progress", "blocked"]),
+    ).all()
+    for t in overdue_tasks:
+        days = (today - t.due_date).days if t.due_date else 0
+        alerts_list.append({
+            "type": "task_overdue", "severity": "high",
+            "title": f"任务超期: {t.title}",
+            "detail": f"已超期 {days} 天，负责人: {t.assignee or '-'}",
+            "date": str(t.due_date) if t.due_date else None,
+        })
+
+    # 2. 即将到期任务 (3天内)
+    from datetime import timedelta
+    near_due = db.query(Task).filter(
+        Task.project_id == pid,
+        Task.due_date >= today,
+        Task.due_date <= today + timedelta(days=3),
+        Task.status.in_(["todo", "in_progress"]),
+    ).all()
+    for t in near_due:
+        days = (t.due_date - today).days if t.due_date else 0
+        alerts_list.append({
+            "type": "task_due_soon", "severity": "medium",
+            "title": f"任务即将到期: {t.title}",
+            "detail": f"还剩 {days} 天，负责人: {t.assignee or '-'}",
+            "date": str(t.due_date),
+        })
+
+    # 3. A级未解决风险
+    open_risks = db.query(Risk).filter(
+        Risk.project_id == pid,
+        Risk.risk_level == "A",
+        Risk.status.in_(["open", "monitoring"]),
+    ).all()
+    for r in open_risks:
+        alerts_list.append({
+            "type": "risk_alert", "severity": "critical",
+            "title": f"A级风险: {r.title}",
+            "detail": f"来源: {r.risk_source or '-'}，概率: {r.probability}，影响: {r.impact}",
+            "date": str(r.created_at.date()) if r.created_at else None,
+        })
+
+    # 4. 里程碑延期
+    delayed_ms = db.query(Milestone).filter(
+        Milestone.project_id == pid,
+        Milestone.status == "delayed",
+    ).all()
+    for m in delayed_ms:
+        alerts_list.append({
+            "type": "milestone_delayed", "severity": "high",
+            "title": f"里程碑延期: {m.name}",
+            "detail": f"延期里程碑，关联Gate: {m.gate_code or '-'}",
+            "date": str(m.planned_date) if m.planned_date else None,
+        })
+
+    return sorted(alerts_list, key=lambda x: (
+        {"critical": 0, "high": 1, "medium": 2, "low": 3}.get(x["severity"], 4),
+    ))

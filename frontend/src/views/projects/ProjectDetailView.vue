@@ -163,6 +163,11 @@
             <ProjectReviewTab :pid="pid" />
           </el-tab-pane>
 
+          <!-- Tab Alert: 通知提醒 -->
+          <el-tab-pane label="提醒" name="alerts">
+            <ProjectAlertsTab :pid="pid" />
+          </el-tab-pane>
+
           <!-- Tab 9b: 跨模块联动 -->
           <el-tab-pane label="跨模块" name="cross-module">
             <CrossModuleTab :pid="pid" />
@@ -326,6 +331,7 @@ import TimeLogTab from './TimeLogTab.vue'
 import BudgetTab from './BudgetTab.vue'
 import GateReportTab from './GateReportTab.vue'
 import ProjectReviewTab from './ProjectReviewTab.vue'
+import ProjectAlertsTab from './ProjectAlertsTab.vue'
 import CrossModuleTab from './CrossModuleTab.vue'
 
 const route = useRoute()
@@ -515,6 +521,20 @@ onMounted(fetchAll)
 .kpi-row :deep(.el-statistic__head) { font-size: 12px; color: #909399; }
 .kpi-row :deep(.el-statistic__content) { font-size: 22px; font-weight: 700; color: #303133; }
 .toolbar { margin-bottom: 12px; }
+
+/* 移动端响应式 */
+@media (max-width: 768px) {
+  .project-detail-page { padding: 8px; }
+  .header-content { flex-direction: column; }
+  .project-meta { flex-direction: column; gap: 4px; }
+  .header-right { width: 100%; }
+  .health-card { flex: 1; min-width: 0; }
+  .gate-stepper { gap: 8px; }
+  .gate-connector { width: 16px; }
+  .kpi-row { gap: 12px; }
+  .kpi-row :deep(.el-statistic) { flex: 1; min-width: 80px; }
+  .top-bar { flex-wrap: wrap; }
+}
 .ms-list { display: flex; flex-direction: column; gap: 8px; }
 .ms-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fafafa; border-radius: 6px; border: 1px solid #ebeef5; transition: background 0.15s; }
 .ms-item:hover { background: #f0f5ff; }
