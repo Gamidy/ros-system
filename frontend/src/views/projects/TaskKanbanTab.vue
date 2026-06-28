@@ -65,7 +65,6 @@ interface TaskItem {
   priority: string
   due_date?: string | null
   description?: string | null
-  [key: string]: any
 }
 
 interface ColumnDef {
