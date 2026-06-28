@@ -11,6 +11,8 @@ from app.models.user import User
 from pydantic import BaseModel
 from typing import Optional
 
+from app.services import event_bus
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/kb", tags=["知识库"])
 
@@ -130,6 +132,13 @@ def create_knowledge(
     db.add(item)
     db.commit()
     db.refresh(item)
+    event_bus.emit(
+        "knowledge.created",
+        {"item_id": item.id, "category": item.category, "code": item.code, "name": item.name},
+        source="knowledge",
+        producer="knowledge.service",
+        user_id=current_user.username,
+    )
     return item
 
 
@@ -154,6 +163,20 @@ def update_knowledge(
     item.updated_at = datetime.now()
     db.commit()
     db.refresh(item)
+    event_bus.emit(
+        "knowledge.updated",
+        {"item_id": item.id, "category": item.category, "code": item.code, "name": item.name},
+        source="knowledge",
+        producer="knowledge.service",
+        user_id=current_user.username,
+    )
+    event_bus.emit(
+        "knowledge.linked",
+        {"item_id": item.id, "category": item.category, "code": item.code, "name": item.name},
+        source="knowledge",
+        producer="knowledge.service",
+        user_id=current_user.username,
+    )
     return item
 
 
@@ -169,6 +192,13 @@ def delete_knowledge(
         raise HTTPException(status_code=404, detail="条目不存在")
     db.delete(item)
     db.commit()
+    event_bus.emit(
+        "knowledge.archived",
+        {"item_id": item_id},
+        source="knowledge",
+        producer="knowledge.service",
+        user_id=current_user.username,
+    )
 
 
 @router.get("/categories")

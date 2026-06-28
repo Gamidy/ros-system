@@ -21,6 +21,10 @@ from app.schemas.safety import (
     SafetyAlertItem, SafetyAlertListOut,
 )
 from app.models.purchase import Supplier
+from app.services import event_bus
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/safety", tags=["安规管理"])
 
@@ -89,6 +93,14 @@ def create_standard(data: SafetyStandardCreate, db: Session = Depends(get_db),
     db.add(item)
     db.commit()
     db.refresh(item)
+    event_id = event_bus.emit(
+        event_type="safety.standard.updated",
+        payload={"standard_id": item.id, "standard_code": item.standard_code, "action": "created", "status": item.status},
+        source="safety",
+        producer="safety.service",
+        user_id=str(current_user.id) if current_user else None,
+    )
+    logger.info("Event emitted: event_id=%s event_type=safety.standard.updated action=created standard_id=%s", event_id, item.id)
     return SafetyStandardOut.model_validate(item)
 
 
@@ -105,6 +117,14 @@ def update_standard(sid: int, data: SafetyStandardUpdate, db: Session = Depends(
         setattr(item, k, v)
     db.commit()
     db.refresh(item)
+    event_id = event_bus.emit(
+        event_type="safety.standard.updated",
+        payload={"standard_id": item.id, "standard_code": item.standard_code, "action": "updated", "status": item.status},
+        source="safety",
+        producer="safety.service",
+        user_id=str(current_user.id) if current_user else None,
+    )
+    logger.info("Event emitted: event_id=%s event_type=safety.standard.updated action=updated standard_id=%s", event_id, item.id)
     return SafetyStandardOut.model_validate(item)
 
 
@@ -131,6 +151,14 @@ def archive_standard(sid: int, db: Session = Depends(get_db),
     item.status = "obsolete"
     db.commit()
     db.refresh(item)
+    event_id = event_bus.emit(
+        event_type="safety.standard.updated",
+        payload={"standard_id": item.id, "standard_code": item.standard_code, "action": "archived", "status": item.status},
+        source="safety",
+        producer="safety.service",
+        user_id=str(current_user.id) if current_user else None,
+    )
+    logger.info("Event emitted: event_id=%s event_type=safety.standard.updated action=archived standard_id=%s", event_id, item.id)
     return SafetyStandardOut.model_validate(item)
 
 
@@ -426,12 +454,37 @@ def create_audit_record(data: SafetyAuditRecordCreate, db: Session = Depends(get
     # 更新资质审核状态
     if data.result == "pass":
         qual.audit_status = "approved"
+        event_id = event_bus.emit(
+            event_type="safety.supplier.qualified",
+            payload={
+                "qualification_id": qual.id,
+                "supplier_id": qual.supplier_id,
+                "qualification_type": qual.qualification_type,
+            },
+            source="safety",
+            producer="safety.service",
+            user_id=str(current_user.id) if current_user else None,
+        )
+        logger.info("Event emitted: event_id=%s event_type=safety.supplier.qualified qualification_id=%s", event_id, qual.id)
     elif data.result == "fail":
         qual.audit_status = "rejected"
     else:
         qual.audit_status = "pending"
     db.commit()
     db.refresh(record)
+    event_id = event_bus.emit(
+        event_type="safety.inspection.completed",
+        payload={
+            "record_id": record.id,
+            "qualification_id": record.qualification_id,
+            "result": data.result,
+            "audit_date": str(record.audit_date),
+        },
+        source="safety",
+        producer="safety.service",
+        user_id=str(current_user.id) if current_user else None,
+    )
+    logger.info("Event emitted: event_id=%s event_type=safety.inspection.completed record_id=%s", event_id, record.id)
     return SafetyAuditRecordOut.model_validate(record)
 
 
@@ -515,5 +568,20 @@ def get_safety_alerts(
 
     if severity:
         items = [i for i in items if i.severity == severity]
+
+    if items:
+        event_id = event_bus.emit(
+            event_type="safety.alert.triggered",
+            payload={
+                "alert_count": len(items),
+                "critical_count": sum(1 for i in items if i.severity == "critical"),
+                "warning_count": sum(1 for i in items if i.severity == "warning"),
+                "info_count": sum(1 for i in items if i.severity == "info"),
+            },
+            source="safety",
+            producer="safety.service",
+            user_id=str(current_user.id) if current_user else None,
+        )
+        logger.info("Event emitted: event_id=%s event_type=safety.alert.triggered alert_count=%s", event_id, len(items))
 
     return {"items": items, "total": len(items)}

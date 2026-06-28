@@ -10,6 +10,7 @@ from app.core.security import get_current_user, require_role
 from app.models.user import User
 from app.models.competitor import CompetitorModel
 from app.models.competitor_version import CompetitorVersion
+from app.services import event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -479,6 +480,22 @@ def create_competitor(
     db.add(item)
     db.commit()
     db.refresh(item)
+
+    # ── event bus: competitor.created ──
+    user_id = str(current_user.id) if hasattr(current_user, "id") else None
+    event_bus.emit(
+        event_type="competitor.created",
+        payload={
+            "id": item.id,
+            "brand": item.brand,
+            "model": item.model,
+            "market": item.market,
+        },
+        source="competitor",
+        producer="competitor.service",
+        user_id=user_id,
+    )
+
     return _serialize(item)
 
 
@@ -508,6 +525,21 @@ def update_competitor(
     # 自动创建版本快照
     _create_snapshot(db, item, old_snapshot, changed_by)
     db.commit()
+
+    # ── event bus: competitor.updated ──
+    user_id = str(current_user.id) if hasattr(current_user, "id") else None
+    event_bus.emit(
+        event_type="competitor.updated",
+        payload={
+            "id": item.id,
+            "brand": item.brand,
+            "model": item.model,
+            "market": item.market,
+        },
+        source="competitor",
+        producer="competitor.service",
+        user_id=user_id,
+    )
 
     return _serialize(item)
 
@@ -955,3 +987,64 @@ def _get_market_code(market_name: str, db: Session) -> str:
         "加纳": "GH", "澳大利亚": "AU",
     }
     return NAME_TO_CODE.get(market_name, "")
+
+
+# ══════════════════════════════════════════════════
+# Event Bus 发射点（供其他模块调用）
+# ══════════════════════════════════════════════════
+
+
+def emit_crawl_completed(
+    market_code: str,
+    brand: str,
+    new_added: int = 0,
+    updated: int = 0,
+    skipped: int = 0,
+    crawl_log_id: int | None = None,
+) -> str:
+    """发射 competitor.crawl_completed 事件
+
+    由 competitor_crawl_admin 或爬取编排器在爬取完成后调用。
+    调用方应确保在 db.commit() 之后调用此函数。
+    """
+    return event_bus.emit(
+        event_type="competitor.crawl_completed",
+        payload={
+            "market_code": market_code,
+            "brand": brand,
+            "new_added": new_added,
+            "updated": updated,
+            "skipped": skipped,
+            "crawl_log_id": crawl_log_id,
+        },
+        source="competitor",
+        producer="competitor.service",
+    )
+
+
+def emit_import_completed(
+    market: str,
+    total: int,
+    success: int,
+    failed: int,
+    filename: str,
+    user_id: str | None = None,
+) -> str:
+    """发射 competitor.imported 事件
+
+    由 Excel 批量导入接口在导入完成后调用。
+    调用方应确保在 db.commit() 之后调用此函数。
+    """
+    return event_bus.emit(
+        event_type="competitor.imported",
+        payload={
+            "market": market,
+            "total": total,
+            "success": success,
+            "failed": failed,
+            "filename": filename,
+        },
+        source="competitor",
+        producer="competitor.service",
+        user_id=user_id,
+    )
