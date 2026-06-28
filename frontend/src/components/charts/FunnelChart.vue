@@ -30,7 +30,7 @@ const chartRef = ref<HTMLElement>()
 const colors = getChartColors()
 
 const option = computed<EChartsOption>(() => {
-  const total = props.data.reduce((s, d) => s + d.value, 0)
+  const _total = props.data.reduce((s, d) => s + d.value, 0)
   return {
     tooltip: {
       ...getGlassTooltip(),
@@ -74,17 +74,17 @@ const option = computed<EChartsOption>(() => {
         itemStyle: { color: colors[i % colors.length] },
       })),
     }],
-  }
+  } as EChartsOption
 })
 
 function render() {
   if (!chartRef.value) return
-  initChart(chartRef.value, option.value)
+  initChart(chartRef.value!, option.value)
 }
 
 watch(() => props.data, () => {
   if (chartRef.value && props.data.length > 0) {
-    nextTick(() => updateChart(chartRef.value, option.value))
+    nextTick(() => updateChart(chartRef.value!, option.value))
   }
 }, { deep: true })
 

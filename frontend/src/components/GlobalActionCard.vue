@@ -228,7 +228,7 @@ function mapPlanToActions(plan: PlanAction): ActionItem[] {
   const result: ActionItem[] = []
   const status = plan.status || plan.stage || ''
   const planName = plan.name || '未命名策划'
-  const planId = plan.id
+  const planId = String(plan.id)
   const deadline = plan.deadline || plan.target_end_date || plan.target_date || null
 
   switch (status) {
@@ -320,7 +320,7 @@ function mapApprovalToAction(approval: ApprovalRequest): ActionItem | null {
       title: '审批待审',
       description: `"${planName}" 需要审批`,
       planName,
-      planId: approval.plan_id || '',
+      planId: String(approval.plan_id ?? ''),
       deadline: approval.deadline || approval.created_at || null,
       route: `/approvals`,
     }

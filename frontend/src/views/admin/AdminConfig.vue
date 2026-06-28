@@ -283,8 +283,8 @@ async function loadConfig() {
       const parsed = JSON.parse(data.mfg_cost_threshold)
       parsed.forEach((item: JsonRow, i: number) => {
         if (mfgCostRows[i]) {
-          mfgCostRows[i].max_kw = item.max_kw
-          mfgCostRows[i].cost = item.cost
+          mfgCostRows[i].max_kw = Number(item.max_kw)
+          mfgCostRows[i].cost = Number(item.cost)
         }
       })
     }
@@ -299,14 +299,14 @@ async function loadConfig() {
       const parsed = JSON.parse(data.accessory_defaults)
       if (Array.isArray(parsed)) {
         accessoryDefaultRows.length = 0
-        parsed.forEach((item: JsonRow) => accessoryDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
+        parsed.forEach((item: JsonRow) => accessoryDefaultRows.push({ market: String(item.market ?? ''), name: String(item.name ?? ''), default_selection: String(item.default_selection ?? '选配') }))
       }
     }
     if (data.feature_defaults) {
       const parsed = JSON.parse(data.feature_defaults)
       if (Array.isArray(parsed)) {
         featureDefaultRows.length = 0
-        parsed.forEach((item: JsonRow) => featureDefaultRows.push({ market: item.market || '', name: item.name || '', default_selection: item.default_selection || '选配' }))
+        parsed.forEach((item: JsonRow) => featureDefaultRows.push({ market: String(item.market ?? ''), name: String(item.name ?? ''), default_selection: String(item.default_selection ?? '选配') }))
       }
     }
     if (data.trial_qty_per_class) {

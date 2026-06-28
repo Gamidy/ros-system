@@ -261,7 +261,7 @@ const loadingChains = ref(false)
 const chainEditVisible = ref(false)
 const editingChain = ref<any>(null)
 const savingChain = ref(false)
-const chainForm = ref({ name: '', steps: [{ name: '', role: '' }] })
+const chainForm = ref<any>({ name: '', steps: [{ name: '', role: '' }] })
 
 function resetPage() { page.value = 1; fetchList() }
 

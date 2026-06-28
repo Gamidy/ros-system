@@ -106,9 +106,9 @@ function buildOption(): EChartsOption {
           },
           scale: true,
           scaleSize: 8,
-        },
+        } as any,
       }],
-    }
+    } as EChartsOption
   }
 
   // bar / line 共用 grid
@@ -184,7 +184,7 @@ function buildOption(): EChartsOption {
           scale: props.type === 'line' ? true : undefined,
         },
       })) as any,
-    }
+    } as EChartsOption
   }
 
   // 单系列 bar / line
@@ -247,7 +247,7 @@ function buildOption(): EChartsOption {
         scale: props.type === 'line' ? true : undefined,
       },
     }] as any,
-  }
+  } as EChartsOption
 }
 
 const option = computed<EChartsOption>(buildOption)

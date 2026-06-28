@@ -310,7 +310,7 @@ async function saveEntry() {
       await updateStandard(entryForm.id, entryForm)
       ElMessage.success('更新成功')
     } else {
-      await createStandard(entryForm)
+      await createStandard(entryForm as Parameters<typeof createStandard>[0])
       ElMessage.success('创建成功')
     }
     entryVisible.value = false

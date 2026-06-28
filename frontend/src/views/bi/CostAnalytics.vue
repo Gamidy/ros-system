@@ -132,7 +132,7 @@ async function fetchData() {
     })) || []
 
     deptCostData.value = (deptRes.data as Record<string,unknown>[])?.map((d: Record<string,unknown>) => ({
-      name: d.name || d.department || '',
+      name: String(d.name || d.department || ''),
       value: Number(d.value ?? d.cost ?? 0),
     })) || []
 
