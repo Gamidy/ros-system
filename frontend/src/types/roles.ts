@@ -175,6 +175,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/approvals', title: '审批管理', icon: Select },
       { path: '/alerts', title: '预警体系', icon: WarningFilled },
       { path: '/quality', title: '质量问题', icon: WarnTriangleFilled },
+      { path: '/quality/8d-reports', title: '8D报告', icon: WarnTriangleFilled },
       { path: '/monitor/events', title: '事件监控', icon: DataAnalysis },
     ]
   },
@@ -193,6 +194,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/certifications', title: '认证管理',       icon: Stamp },
   { path: '/prototypes',     title: '样机管理',       icon: Cpu },
   { path: '/quality',        title: '质量问题',       icon: WarnTriangleFilled },
+  { path: '/quality/8d-reports', title: '8D报告',     icon: WarnTriangleFilled },
   { path: '/changes',        title: '变更管理',       icon: Refresh },
   { path: '/ecr',            title: 'ECR变更请求',    icon: Document },
   { path: '/eco',            title: 'ECO变更指令',    icon: Document },

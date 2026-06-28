@@ -331,6 +331,15 @@ from .bi import (
     DistributionResponse,
 )
 
+# ═══════════════ 8D报告管理 ═══════════════
+from .quality_8d_report import (
+    EightDReportCreate,
+    EightDReportUpdate,
+    EightDReportOut,
+    EightDReportListOut,
+    EightDReportStatusUpdate,
+)
+
 # ═══════════════════════════════════════════════════
 # CIE v2.0 — Risk Engine / Impact Graph / Feedback
 # ═══════════════════════════════════════════════════

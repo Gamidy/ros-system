@@ -211,6 +211,12 @@ const router = createRouter({
           meta: { title: '质量问题' },
         },
         {
+          path: 'quality/8d-reports',
+          name: 'EightDReports',
+          component: () => import('../views/quality/EightDReportView.vue'),
+          meta: { title: '8D报告', menu: 'quality' },
+        },
+        {
           path: 'changes',
           name: 'Changes',
           component: () => import('../views/changes/ChangesHub.vue'),

@@ -42,6 +42,7 @@ ALL_MENUS = [
     "certifications",   # 认证
     "prototypes",       # 样机
     "quality",          # 质量
+    "quality/8d-reports",  # 8D报告
     "changes",          # 变更
     "approvals",        # 审批
     "pm-workspace",     # 产品经理工作台
@@ -248,6 +249,8 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         'outsource-partners', 'outsource-orders', 'outsource-quality',
         # P1-T5 事件监控面板
         'event-monitor',
+        # 8D报告
+        'quality/8d-reports',
         # D5-5 移动端导航
         'notifications', 'profile',
     ],
@@ -399,6 +402,7 @@ MENU_PATH_MAP: dict[str, str] = {
     "certifications": "/certifications",
     "prototypes": "/prototypes",
     "quality": "/quality",
+    "quality/8d-reports": "/quality/8d-reports",
     "changes": "/changes",
     "approvals": "/approvals",
     "purchases": "/purchases",
@@ -469,6 +473,7 @@ API_MENU_MAP: dict[str, str] = {
     "inventory": "inventory",
     "dashboard": "dashboard",
     "prototypes": "prototypes",
+    "quality/8d-reports": "quality/8d-reports",
     "verification-requirements": "verification-requirements",
     "gate-rules": "gate-rules",
     "target-markets": "market_mgmt",
