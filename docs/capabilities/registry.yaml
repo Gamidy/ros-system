@@ -59,13 +59,14 @@ capabilities:
       - "docs/events/project.created.v1.schema.json"
       - "docs/events/project.gate_passed.v1.schema.json"
       - "docs/events/project.status_changed.v1.schema.json"
-    status: "implemented"
+    status: "released"
+    released_at: "2026-07-01"
     rfc: "RFC-2026-002"
     approval_score: 95.0
     phase:
-      current: 5
+      current: 7
       total: 7
-      description: "Phase 1-4 完成, Phase 5 合规审查中"
+      description: "已发布（Phase 7/7）"
     baselines: []
     owner:
       business_owner: "R&D Director"
@@ -90,13 +91,14 @@ capabilities:
       - "docs/events/review.created.v1.schema.json"
       - "docs/events/review.updated.v1.schema.json"
       - "docs/events/improvement.created.v1.schema.json"
-    status: "implemented"
+    status: "released"
+    released_at: "2026-07-01"
     rfc: "RFC-2026-002"
     approval_score: 95.2
     phase:
-      current: 5
+      current: 7
       total: 7
-      description: "Phase 1-4 完成, Phase 5 合规审查中"
+      description: "已发布（Phase 7/7）"
     baselines: []
     owner:
       business_owner: "Quality Director"
@@ -119,13 +121,14 @@ capabilities:
     event_schemas:
       - "docs/events/knowledge.created.v1.schema.json"
       - "docs/events/knowledge.linked.v1.schema.json"
-    status: "implemented"
+    status: "released"
+    released_at: "2026-07-01"
     rfc: "RFC-2026-004"
     approval_score: 92.0
     phase:
-      current: 5
+      current: 7
       total: 7
-      description: "Phase 1-4 完成, Phase 5 合规审查中"
+      description: "已发布（Phase 7/7）"
     baselines: []
     owner:
       business_owner: "PM Director"
@@ -148,13 +151,14 @@ capabilities:
       - "docs/events/alert.triggered.v1.schema.json"
       - "docs/events/threshold.breached.v1.schema.json"
       - "docs/events/snapshot.generated.v1.schema.json"
-    status: "implemented"
+    status: "released"
+    released_at: "2026-07-01"
     rfc: "RFC-2026-003"
     approval_score: 93.5
     phase:
-      current: 5
+      current: 7
       total: 7
-      description: "Phase 1-4 完成, Phase 5 合规审查中"
+      description: "已发布（Phase 7/7）"
     baselines: []
     owner:
       business_owner: "PM Director"
@@ -179,13 +183,14 @@ capabilities:
     event_schemas:
       - "docs/events/bi.report_generated.v1.schema.json"
       - "docs/events/bi.anomaly_detected.v1.schema.json"
-    status: "implemented"
+    status: "released"
+    released_at: "2026-07-01"
     rfc: "RFC-2026-002"
     approval_score: 91.0
     phase:
-      current: 5
+      current: 7
       total: 7
-      description: "Phase 1-4 完成, Phase 5 合规审查中"
+      description: "已发布（Phase 7/7）"
     baselines: []
     owner:
       business_owner: "PM Director"
