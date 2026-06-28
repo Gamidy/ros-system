@@ -751,3 +751,245 @@ def bi_dashboard(
 
     _cache_set(cache_key, json.dumps(result, ensure_ascii=False), CACHE_TTL)
     return result
+
+
+# ═══════════════════════════════════════════
+# 多维度成本分析看板
+# ═══════════════════════════════════════════
+
+
+@router.get("/cost/dashboard")
+def bi_cost_dashboard(
+    period_limit: int = Query(12, ge=1, le=48, description="最近N个核算期间"),
+    min_score: float = Query(0, ge=0, le=100, description="最低评分筛选"),
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("bi-analytics")),
+):
+    """多维度成本分析看板
+
+    在一个聚合端点中返回：
+      - KPI 汇总（平均分/最高/最低/产品数/低效数/趋势方向）
+      - 逐期间趋势（每期的平均评分/产品数/平均差异率）
+      - 产品系列成本分布（每系列的产品数/平均成本/平均评分）
+      - 产品效率排名（Top/Bottom 各10条）
+      - 评分分布直方图（10个分桶）
+    """
+    import json as _json
+    from app.models.cost_accounting import CostAccountingPeriod
+    from app.models.cost_recalculation import CostRecalculationResult as CRR
+    from app.models.product_plan import ProductPlan
+    from sqlalchemy import func as sa_func, cast, Integer
+
+    cache_key = f"bi:cost-dashboard:p={period_limit}:m={min_score}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return _json.loads(cached)
+
+    # ── 1. 获取最近 period_ids ──
+    periods = (
+        db.query(CostAccountingPeriod.id, CostAccountingPeriod.period_name, CostAccountingPeriod.start_date)
+        .filter(CostAccountingPeriod.status.in_(["active", "closed"]))
+        .order_by(CostAccountingPeriod.start_date.desc())
+        .limit(period_limit)
+        .all()
+    )
+    if not periods:
+        empty = {"kpi": {}, "trend_by_period": [], "series_breakdown": [], "ranking": [], "distribution": []}
+        _cache_set(cache_key, _json.dumps(empty), CACHE_TTL)
+        return empty
+
+    period_ids = [p.id for p in periods]
+    period_names = {p.id: p.period_name for p in periods}
+
+    # ── 2. KPI 汇总 ──
+    completed = (
+        db.query(CRR)
+        .filter(CRR.status == "completed", CRR.period_id.in_(period_ids))
+        .all()
+    )
+    all_scores = [r.cost_efficiency_score for r in completed if r.cost_efficiency_score > 0]
+    product_count = len(all_scores)
+    low_count = sum(1 for s in all_scores if s < 60)
+    avg_score = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0
+    highest = round(max(all_scores), 1) if all_scores else 0
+    lowest = round(min(all_scores), 1) if all_scores else 0
+
+    # 趋势方向：比较最近2期平均分
+    trend_direction = "flat"
+    if len(periods) >= 2:
+        p0 = periods[0].id
+        p1 = periods[1].id
+        avg0 = (
+            db.query(sa_func.avg(CRR.cost_efficiency_score))
+            .filter(CRR.period_id == p0, CRR.status == "completed")
+            .scalar() or 0
+        )
+        avg1 = (
+            db.query(sa_func.avg(CRR.cost_efficiency_score))
+            .filter(CRR.period_id == p1, CRR.status == "completed")
+            .scalar() or 0
+        )
+        diff = float(avg0 or 0) - float(avg1 or 0)
+        if diff > 2:
+            trend_direction = "up"
+        elif diff < -2:
+            trend_direction = "down"
+        else:
+            trend_direction = "flat"
+
+    kpi = {
+        "avg_score": avg_score,
+        "highest_score": highest,
+        "lowest_score": lowest,
+        "product_count": product_count,
+        "low_efficiency_count": low_count,
+        "trend_direction": trend_direction,
+    }
+
+    # ── 3. 逐期间趋势 ──
+    trend_rows = (
+        db.query(
+            CRR.period_id,
+            sa_func.count(CRR.id).label("cnt"),
+            sa_func.avg(CRR.cost_efficiency_score).label("avg_sc"),
+            sa_func.avg(CRR.variance_pct).label("avg_var"),
+        )
+        .filter(CRR.status == "completed", CRR.period_id.in_(period_ids), CRR.cost_efficiency_score >= min_score)
+        .group_by(CRR.period_id)
+        .order_by(CRR.period_id)
+        .all()
+    )
+    periods_sorted = sorted(periods, key=lambda p: p.id)
+    trend_by_period = []
+    period_score_map = {}
+    for p in periods_sorted:
+        match = None
+        for r in trend_rows:
+            if r.period_id == p.id:
+                match = r
+                break
+        if match:
+            trend_by_period.append({
+                "period_id": p.id,
+                "period_name": period_names.get(p.id, f"#{p.id}"),
+                "avg_score": round(float(match.avg_sc or 0), 1),
+                "product_count": int(match.cnt),
+                "avg_variance_pct": round(float(match.avg_var or 0), 1),
+            })
+            period_score_map[p.id] = round(float(match.avg_sc or 0), 1)
+
+    # ── 4. 产品系列成本分布 ──
+    # 关联 CRR → CostAccountingSheet → ProductPlan 获取 series
+    series_rows = (
+        db.query(
+            ProductPlan.series,
+            sa_func.count(CRR.id).label("cnt"),
+            sa_func.avg(CRR.actual_bom_cost).label("avg_cost"),
+            sa_func.avg(CRR.cost_efficiency_score).label("avg_sc"),
+            sa_func.avg(CRR.variance_pct).label("avg_var"),
+        )
+        .join(ProductPlan, ProductPlan.id == CRR.product_plan_id)
+        .filter(
+            CRR.status == "completed",
+            CRR.period_id.in_(period_ids),
+            CRR.cost_efficiency_score >= min_score,
+            ProductPlan.series.isnot(None),
+            ProductPlan.series != "",
+        )
+        .group_by(ProductPlan.series)
+        .order_by(sa_func.count(CRR.id).desc())
+        .all()
+    )
+    series_breakdown = [
+        {
+            "series": r.series,
+            "product_count": int(r.cnt),
+            "avg_cost": round(float(r.avg_cost or 0), 2),
+            "avg_score": round(float(r.avg_sc or 0), 1),
+            "avg_variance_pct": round(float(r.avg_var or 0), 1),
+        }
+        for r in series_rows
+    ]
+
+    # ── 5. 产品效率排名 ──
+    # Top 10 (highest score) + Bottom 10 (lowest score)
+    ranking_query = (
+        db.query(
+            CRR.product_plan_id,
+            ProductPlan.name.label("plan_name"),
+            ProductPlan.series.label("plan_series"),
+            CRR.cost_efficiency_score,
+            CRR.variance_pct,
+            CRR.matched_btu,
+            CRR.period_id,
+            CRR.actual_bom_cost,
+            CRR.baseline_material_cost,
+        )
+        .join(ProductPlan, ProductPlan.id == CRR.product_plan_id)
+        .filter(
+            CRR.status == "completed",
+            CRR.period_id.in_(period_ids),
+            CRR.cost_efficiency_score >= min_score,
+        )
+    )
+    top10 = ranking_query.order_by(CRR.cost_efficiency_score.desc()).limit(10).all()
+    bottom10 = ranking_query.order_by(CRR.cost_efficiency_score.asc()).limit(10).all()
+
+    def _ranking_item(row):
+        return {
+            "product_plan_id": row.product_plan_id,
+            "plan_name": row.plan_name or "未知产品",
+            "plan_series": row.plan_series or "-",
+            "cost_efficiency_score": round(float(row.cost_efficiency_score), 1),
+            "variance_pct": round(float(row.variance_pct or 0), 1),
+            "matched_btu": row.matched_btu or "-",
+            "period_name": period_names.get(row.period_id, f"#{row.period_id}"),
+            "actual_cost": round(float(row.actual_bom_cost or 0), 2),
+            "baseline_cost": round(float(row.baseline_material_cost or 0), 2),
+        }
+
+    ranking = {
+        "top": [_ranking_item(r) for r in top10],
+        "bottom": [_ranking_item(r) for r in bottom10],
+    }
+
+    # ── 6. 评分分布直方图 ──
+    # 按每10分为一桶: 0-10, 10-20, ..., 90-100
+    bins = []
+    for i in range(0, 100, 10):
+        lo, hi = i, i + 10
+        cnt = (
+            db.query(sa_func.count(CRR.id))
+            .filter(
+                CRR.status == "completed",
+                CRR.period_id.in_(period_ids),
+                CRR.cost_efficiency_score >= lo,
+                CRR.cost_efficiency_score < hi,
+            )
+            .scalar() or 0
+        )
+        bins.append({"range": f"{lo}-{hi}", "range_label": f"{lo}~{hi}分", "count": cnt, "low": lo, "high": hi})
+
+    # 100分精确匹配
+    cnt_100 = (
+        db.query(sa_func.count(CRR.id))
+        .filter(
+            CRR.status == "completed",
+            CRR.period_id.in_(period_ids),
+            CRR.cost_efficiency_score == 100,
+        )
+        .scalar() or 0
+    )
+    if cnt_100 > 0:
+        bins.append({"range": "100", "range_label": "100分", "count": cnt_100, "low": 100, "high": 100})
+
+    result = {
+        "kpi": kpi,
+        "trend_by_period": trend_by_period,
+        "series_breakdown": series_breakdown,
+        "ranking": ranking,
+        "distribution": bins,
+    }
+
+    _cache_set(cache_key, _json.dumps(result, ensure_ascii=False), CACHE_TTL)
+    return result

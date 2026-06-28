@@ -45,6 +45,14 @@ export function finalizeSheet(id: number) { return api.post(`/cost-accounting/sh
 export function recalculateSheet(id: number) { return api.post(`/cost-accounting/sheets/${id}/recalculate`) }
 export function deleteSheet(id: number) { return api.delete(`/cost-accounting/sheets/${id}`) }
 
+// ═══════════════════════════════════════════
+// 多维度成本看板
+// ═══════════════════════════════════════════
+
+export function getCostDashboard(params?: Record<string, number>) {
+  return api.get('/bi/cost/dashboard', { params })
+}
+
 // ── 差异分析 ──
 export function getVarianceAnalysis(planId: string, periodId: number) { return api.get('/cost-accounting/analysis/variance', { params: { plan_id: planId, period_id: periodId } }) }
 export function getVarianceDetail(planId: string, periodId: number) { return api.get('/cost-accounting/analysis/detail', { params: { plan_id: planId, period_id: periodId } }) }
