@@ -247,6 +247,12 @@ const router = createRouter({
           meta: { title: '盘点管理', menu: 'inventory' },
         },
         {
+          path: 'inventory/locations',
+          name: 'StorageLocations',
+          component: () => import('../views/inventory/StorageLocationView.vue'),
+          meta: { title: '库位管理', menu: 'inventory' },
+        },
+        {
           path: 'inventory/alerts',
           name: 'InventoryAlerts',
           component: () => import('../views/inventory/InventoryAlertView.vue'),

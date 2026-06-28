@@ -53,6 +53,39 @@ class Inventory(Base):
     warehouse = relationship("Warehouse", lazy="joined")
 
 
+class StorageLocation(Base):
+    """库位管理 — 仓库内的具体存储位置"""
+    __tablename__ = "storage_locations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False, comment="所属仓库ID")
+    code = Column(String(50), nullable=False, comment="库位编码(如 A-01-01)")
+    name = Column(String(200), nullable=True, comment="库位名称/描述")
+    # 库位层级
+    zone = Column(String(50), nullable=True, comment="区域(如 A/B/C/收货区/存储区)")
+    row_label = Column(String(50), nullable=True, comment="排")
+    shelf = Column(String(50), nullable=True, comment="层")
+    bin = Column(String(50), nullable=True, comment="位")
+    # 容量
+    max_capacity = Column(Float, default=0.0, comment="最大容量")
+    current_occupied = Column(Float, default=0.0, comment="当前占用量")
+    capacity_unit = Column(String(20), default="个", comment="容量单位")
+    # 库位类型
+    location_type = Column(String(20), default="storage", comment="storage(存储)/receiving(收货)/picking(拣货)/return(退货)/quarantine(待检)")
+    is_lockable = Column(Integer, default=0, comment="是否需要锁定管理(如贵重物料)")
+    status = Column(String(20), default="active", comment="active/full/blocked/maintenance/inactive")
+    # 排序
+    sort_order = Column(Integer, default=0, comment="排序号(用于拣货路径优化)")
+    remark = Column(Text, nullable=True, comment="备注")
+    is_deleted = Column(Integer, default=0, comment="软删除标记")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    warehouse = relationship("Warehouse", lazy="joined")
+
+
 class ReplenishmentSuggestion(Base):
     """补货建议"""
     __tablename__ = "replenishment_suggestions"

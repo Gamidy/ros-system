@@ -190,6 +190,74 @@ class ReplenishmentStatsOut(BaseModel):
     urgent_count: int = 0  # qty <= min_stock 的条数
 
 
+# ═══════════════ 库位管理 ═══════════════
+
+
+class StorageLocationCreate(BaseModel):
+    warehouse_id: int
+    code: str = Field(min_length=1, max_length=50)
+    name: Optional[str] = None
+    zone: Optional[str] = None
+    row_label: Optional[str] = None
+    shelf: Optional[str] = None
+    bin: Optional[str] = None
+    max_capacity: float = 0.0
+    capacity_unit: str = "个"
+    location_type: str = "storage"
+    is_lockable: int = 0
+    sort_order: int = 0
+    remark: Optional[str] = None
+
+
+class StorageLocationUpdate(BaseModel):
+    name: Optional[str] = None
+    zone: Optional[str] = None
+    row_label: Optional[str] = None
+    shelf: Optional[str] = None
+    bin: Optional[str] = None
+    max_capacity: Optional[float] = None
+    current_occupied: Optional[float] = None
+    capacity_unit: Optional[str] = None
+    location_type: Optional[str] = None
+    is_lockable: Optional[int] = None
+    status: Optional[str] = None
+    sort_order: Optional[int] = None
+    remark: Optional[str] = None
+
+
+class StorageLocationOut(BaseModel):
+    id: int
+    warehouse_id: int
+    warehouse_name: Optional[str] = None
+    code: str
+    name: Optional[str] = None
+    zone: Optional[str] = None
+    row_label: Optional[str] = None
+    shelf: Optional[str] = None
+    bin: Optional[str] = None
+    max_capacity: float
+    current_occupied: float
+    capacity_unit: str
+    location_type: str
+    is_lockable: int
+    status: str
+    sort_order: int
+    remark: Optional[str] = None
+    is_deleted: int = 0
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    class Config: from_attributes = True
+
+
+class LocationStatsOut(BaseModel):
+    total_locations: int = 0
+    active_count: int = 0
+    full_count: int = 0
+    blocked_count: int = 0
+    usage_rate: float = 0.0  # 综合利用率 %
+    by_type: dict[str, int] = {}
+
+
 class InventoryAlertCheckResult(BaseModel):
     """库存检查结果"""
     total_checked: int

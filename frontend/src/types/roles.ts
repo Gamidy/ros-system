@@ -135,6 +135,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       { path: '/inventory/warehouses', title: '仓库管理', icon: OfficeBuilding },
       { path: '/inventory/transactions', title: '库存流水', icon: List },
       { path: '/inventory/counts', title: '盘点管理', icon: Select },
+      { path: '/inventory/locations', title: '库位管理', icon: OfficeBuilding },
       { path: '/inventory/alerts', title: '库存预警', icon: WarningFilled },
       { path: '/inventory/replenishments', title: '补货建议', icon: DataAnalysis },
       { path: '/outsource/partners', title: '外协厂商', icon: ShoppingCart },
@@ -207,6 +208,8 @@ export const ALL_MENUS: MenuItem[] = [
   // Batch-15 库存预警与补货
   { path: '/inventory/alerts', title: '库存预警', icon: WarningFilled },
   { path: '/inventory/replenishments', title: '补货建议', icon: DataAnalysis },
+  // Batch-17 库位管理
+  { path: '/inventory/locations', title: '库位管理', icon: OfficeBuilding },
   { path: '/pm-workspace',   title: '工作台',         icon: Monitor },
   { path: '/competitor-bench',   title: '竞品对标',     icon: DataAnalysis },
   { path: '/market-mgmt',        title: '市场管理',       icon: Stamp },
