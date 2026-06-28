@@ -416,3 +416,22 @@ def infra_health() -> dict:
             "checks": checks,
         },
     )
+
+
+# ── 应用启动 ──────────────────────────────────────────
+@app.on_event("startup")
+async def startup_event():
+    """注册服务组件"""
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from app.services.change_impact_engine import ChangeImpactEngine
+        from app.core.database import SessionLocal
+        db = SessionLocal()
+        try:
+            ChangeImpactEngine(db).register_events()
+            logger.info("ChangeImpactEngine 注册到 EventBus ✅")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning("ChangeImpactEngine 注册失败(非阻断): %s", e)

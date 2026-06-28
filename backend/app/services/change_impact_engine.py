@@ -10,6 +10,7 @@ from app.models.test import Prototype
 from app.models.certification import CertificationSample, CertificationProject, Certificate
 from app.models.change_impact import ChangeImpactRule, ChangeImpactRecord
 from app.models.ecr_eco import ECRRequest, ECO, ECOItem
+from app.models.bom import BOMItem, BOM
 from app.core.enums_s2 import ImpactLevel
 
 
@@ -318,25 +319,61 @@ class ChangeImpactEngine:
     def analyze_bom_change(
         self, bom_item_id: int, old_part_no: str, new_part_no: str
     ) -> dict:
-        """分析BOM变更对认证的影响（预留ECR/ECO集成）
+        """分析BOM变更对认证的影响（集成ECR/ECO流程）
 
-        通过变更的物料号查找物料信息，匹配 ChangeImpactRule，
-        找出受影响的认证类型。
+        通过变更的物料号查找BOM信息，匹配 ChangeImpactRule，
+        生成影响记录。产品-证书的精确链路由 CIE ImpactGraph 分析。
         """
-        # TODO: 集成 ECR/ECO 流程后完善
-        # 1. 查找 BOMItem 和 Part 信息
-        # 2. 获取 Part 的 category / cdf_type 等属性
-        # 3. 匹配规则
-        # 4. 查找关联该物料的产品 → 证书
-        # 5. 生成记录
+        impact_records = []
+
+        # 1. 查找 BOMItem
+        bom_item = self.db.query(BOMItem).filter(
+            (BOMItem.part_no == new_part_no) | (BOMItem.part_no == old_part_no)
+        ).first()
+
+        changed_part_desc = f"BOM物料变更: {new_part_no}"
+        if bom_item:
+            changed_part_desc = f"BOM变更: {bom_item.part_name or new_part_no} ({bom_item.item_type})"
+
+        # 2. 按 BOM 变更维度匹配规则
+        for trigger_val in ["bom_change", new_part_no, old_part_no]:
+            rules = self._match_rules("bom_change", trigger_val)
+            for rule in rules:
+                affected_cert_types = json.loads(rule.affected_cert_types) if isinstance(rule.affected_cert_types, str) else rule.affected_cert_types
+
+                record = ChangeImpactRecord(
+                    prototype_id=None,
+                    changed_part=changed_part_desc,
+                    matched_rule_id=rule.id,
+                    impact_level=rule.impact_level,
+                    affected_cert_types=rule.affected_cert_types,
+                    analysis_detail=(
+                        f"规则 '{rule.name}' 匹配: 物料={new_part_no}"
+                        f"(原={old_part_no}) → 影响 {rule.affected_cert_types}"
+                    ),
+                )
+                self.db.add(record)
+                self.db.flush()
+
+                impact_records.append({
+                    "record_id": record.id,
+                    "bom_item_id": bom_item_id,
+                    "changed_part": new_part_no,
+                    "matched_rule": rule.name,
+                    "impact_level": rule.impact_level,
+                    "affected_cert_types": affected_cert_types,
+                })
+
+        self.db.commit()
+
         return {
             "success": True,
             "bom_item_id": bom_item_id,
             "old_part_no": old_part_no,
             "new_part_no": new_part_no,
-            "impact_level": ImpactLevel.NONE.value,
-            "impact_records": [],
-            "message": "BOM变更影响分析 — 预留实现，需集成ECR/ECO流程",
+            "overall_impact_level": self._compute_overall_level(impact_records),
+            "impact_records": impact_records,
+            "message": "BOM变更影响分析完成",
         }
 
     # ── EventBus 事件注册 ──────────────────────────────────

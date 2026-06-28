@@ -408,6 +408,16 @@ def effective_eco(
     eco.status = ECOStatus.EFFECTIVE.value
     eco.updated_at = datetime.now(timezone.utc)
 
+    # ── BOM Impact Propagation: 变更影响传播 ──
+    try:
+        from app.services.change_impact_engine import ChangeImpactEngine
+        impact_result = ChangeImpactEngine(db).analyze_by_eco(eco_id)
+        logger.info("ECO %s: 变更影响分析完成, 等级=%s, 记录=%d条",
+                     eco_id, impact_result.get("overall_impact_level"),
+                     len(impact_result.get("impact_records", [])))
+    except Exception as e:
+        logger.warning("ECO %s: 变更影响分析失败(非阻断): %s", eco_id, e)
+
     # ── BOM 联动: 触发 Celery 异步重试任务 ──
     try:
         from app.workers.bom_worker import eco_effective_bom_update
