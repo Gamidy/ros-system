@@ -92,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted } from 'vue'
 import BiChart from '../../components/BiChart.vue'
 import api from '../../api/index'
 
@@ -112,28 +112,9 @@ async function fetchData() {
     const data = (res as any).data || res
     summary.value = data.summary || {}
 
-    // 转换 chart 数据
+    // 构建 chart 数据
     const periods = data.periods || []
     const series = data.series || []
-
-    // 构建 BiChart 需要的格式
-    // chartData: [{ period_name, '09K': 85, '12K': 72 }, ...]
-    const periodMap: Record<number, Record<string, any>> = {}
-    for (const p of periods) {
-      periodMap[p.id] = { period_name: p.name }
-    }
-    for (const s of series) {
-      if (s.capacity_key && s.data) {
-        for (const dp of s.data) {
-          // Find the period this data belongs to
-          // The data doesn't have period_id directly in this format
-          // We need period_id to map it
-        }
-      }
-    }
-
-    // Alternative: use the raw series data structure
-    // periods ordered list, each series has data_period matching
     const chartRows: Record<string, any>[] = []
     const capacityKeys: string[] = []
 
