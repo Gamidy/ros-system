@@ -143,6 +143,7 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     milestone_id = Column(Integer, ForeignKey("milestones.id"), nullable=True, comment="关联里程碑")
+    parent_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True, comment="父任务ID(WBS层级)")
     title = Column(String(200), nullable=False)
     assignee = Column(String(50), nullable=True)
     status = Column(String(20), default="todo", comment="todo/in_progress/done/blocked")
@@ -151,6 +152,7 @@ class Task(Base):
     due_date = Column(Date, nullable=True)
     actual_date = Column(Date, nullable=True)
     description = Column(Text, nullable=True)
+    sort_order = Column(Integer, default=0, comment="同级排序")
     # ---- 多租户 ----
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
     created_at = Column(DateTime, server_default=func.now())
@@ -158,6 +160,7 @@ class Task(Base):
 
     project = relationship("Project", back_populates="tasks")
     milestone = relationship("Milestone")
+    parent = relationship("Task", remote_side=[id], backref="children")
 
 
 class Risk(Base):

@@ -715,8 +715,10 @@ def update_task(
     status: str | None = None,
     assignee: str | None = None,
     priority: str | None = None,
+    parent_task_id: int | None = None,
     due_date: date | None = None,
     description: str | None = None,
+    sort_order: int | None = None,
     db: Session = Depends(get_db),
     _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
 ) -> dict:
@@ -735,13 +737,109 @@ def update_task(
         if priority not in ("low", "medium", "high", "urgent"):
             raise HTTPException(status_code=400, detail="无效优先级")
         t.priority = priority
+    if parent_task_id is not None:
+        if parent_task_id == tid:
+            raise HTTPException(status_code=400, detail="任务不能是自己的父任务")
+        t.parent_task_id = parent_task_id
     if due_date is not None:
         t.due_date = due_date
     if description is not None:
         t.description = description
+    if sort_order is not None:
+        t.sort_order = sort_order
     db.commit()
     db.refresh(t)
     return t
+
+
+@project_router.delete("/{pid}/tasks/{tid}")
+def delete_task(
+    pid: int,
+    tid: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
+) -> dict:
+    """删除任务（级联删除子任务）"""
+    t = db.query(Task).filter(Task.id == tid, Task.project_id == pid).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    # 级联删除子任务
+    def _cascade_delete(parent_id: int):
+        children = db.query(Task).filter(Task.parent_task_id == parent_id).all()
+        for c in children:
+            _cascade_delete(c.id)
+            db.delete(c)
+    _cascade_delete(tid)
+    db.delete(t)
+    db.commit()
+    return {"ok": True}
+
+
+@project_router.get("/{pid}/tasks/tree")
+def task_tree(
+    pid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _=Depends(require_menu("projects")),
+) -> dict:
+    """返回任务WBS树 (层级结构)"""
+    from sqlalchemy.orm import joinedload
+
+    tasks = db.query(Task).filter(
+        Task.project_id == pid
+    ).order_by(Task.sort_order, Task.created_at).all()
+
+    # Build tree
+    task_map: dict[int, dict] = {}
+    roots: list[dict] = []
+
+    for t in tasks:
+        node = {
+            "id": t.id,
+            "title": t.title,
+            "assignee": t.assignee,
+            "status": t.status,
+            "priority": t.priority,
+            "parent_task_id": t.parent_task_id,
+            "planned_date": str(t.planned_date) if t.planned_date else None,
+            "due_date": str(t.due_date) if t.due_date else None,
+            "actual_date": str(t.actual_date) if t.actual_date else None,
+            "description": t.description,
+            "sort_order": t.sort_order,
+            "milestone_id": t.milestone_id,
+            "children": [],
+        }
+        task_map[t.id] = node
+
+    for t in tasks:
+        node = task_map[t.id]
+        if t.parent_task_id and t.parent_task_id in task_map:
+            task_map[t.parent_task_id]["children"].append(node)
+        else:
+            roots.append(node)
+
+    def count_descendants(node: dict) -> int:
+        total = 0
+        for c in node["children"]:
+            total += 1 + count_descendants(c)
+        return total
+
+    def calc_progress(node: dict) -> dict:
+        total = 1
+        done = 1 if node["status"] == "done" else 0
+        for c in node["children"]:
+            sub = calc_progress(c)
+            total += sub["total"]
+            done += sub["done"]
+        return {"total": total, "done": done}
+
+    return {
+        "tree": roots,
+        "stats": {
+            "total_tasks": len(tasks),
+            "root_count": len(roots),
+        },
+    }
 
 
 # ══════════════════════════════════════════════════════════════

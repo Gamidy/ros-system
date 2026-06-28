@@ -125,7 +125,12 @@
             />
           </el-tab-pane>
 
-          <!-- Tab 2: Milestones -->
+          <!-- Tab 3: WBS -->
+          <el-tab-pane label="WBS分解" name="wbs">
+            <WBSTreeTab :pid="pid" @new-task="showTaskDialog = true" />
+          </el-tab-pane>
+
+          <!-- Tab 4: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
               <el-statistic title="总数" :value="msStats.total" />
@@ -276,6 +281,7 @@ import { ElMessage } from 'element-plus'
 import { CircleCheckFilled, WarningFilled, CircleCloseFilled, Clock, Monitor, Check, Warning, MoreFilled, View } from '@element-plus/icons-vue'
 import api from '../../api'
 import TaskKanbanTab from './TaskKanbanTab.vue'
+import WBSTreeTab from './WBSTreeTab.vue'
 
 const route = useRoute()
 const router = useRouter()

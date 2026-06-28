@@ -168,10 +168,12 @@ class TaskCreate(BaseModel):
     title: str
     assignee: Optional[str] = None
     milestone_id: Optional[int] = None
+    parent_task_id: Optional[int] = None
     priority: str = "medium"
     planned_date: Optional[date] = None
     due_date: Optional[date] = None
     description: Optional[str] = None
+    sort_order: int = 0
 
 
 class TaskOut(TaskCreate):
@@ -180,6 +182,21 @@ class TaskOut(TaskCreate):
     status: str
     actual_date: Optional[date] = None
     created_at: datetime
+    class Config: from_attributes = True
+
+
+class TaskUpdate(BaseModel):
+    """任务更新 - PATCH"""
+    title: Optional[str] = None
+    assignee: Optional[str] = None
+    milestone_id: Optional[int] = None
+    parent_task_id: Optional[int] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    planned_date: Optional[date] = None
+    due_date: Optional[date] = None
+    description: Optional[str] = None
+    sort_order: Optional[int] = None
     class Config: from_attributes = True
 
 
