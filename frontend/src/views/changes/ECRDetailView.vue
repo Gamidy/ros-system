@@ -101,6 +101,9 @@
     <ImpactGraphView :ecr-id="ecrId" />
     <ApprovalRecommendation :ecr-id="ecrId" />
 
+    <!-- ⬇ Digital Thread: 事件链 ⬇ -->
+    <EventChainView ref="eventChainRef" aggregate-type="ecr" :aggregate-id="ecrId" />
+
     <!-- 附件列表 -->
     <el-card shadow="never">
       <template #header>
@@ -206,6 +209,8 @@ import type { ECRDetailOut, ECRUpdate } from '../../api/ecr'
 import RiskScoreCard from './components/RiskScoreCard.vue'
 import ImpactGraphView from './components/ImpactGraphView.vue'
 import ApprovalRecommendation from './components/ApprovalRecommendation.vue'
+// === Digital Thread ===
+import EventChainView from './components/EventChainView.vue'
 
 const route = useRoute()
 const ecrId = computed(() => Number(route.params.id))

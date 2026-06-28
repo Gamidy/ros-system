@@ -9,8 +9,10 @@ import {
   fetchRiskScore as apiFetchRiskScore,
   fetchImpactGraph as apiFetchImpactGraph,
   fetchApprovalRecommendation as apiFetchApprovalRecommendation,
+  fetchEventChain as apiFetchEventChain,
+  fetchCausationChain as apiFetchCausationChain,
 } from '../api/ci_v2'
-import type { RiskScoreData, ImpactGraphData, RecommendationData } from '../api/ci_v2'
+import type { RiskScoreData, ImpactGraphData, RecommendationData, EventChainItem } from '../api/ci_v2'
 
 export const useCIEv2Store = defineStore('ci_v2', () => {
   // ── 风险评分 ──────────────────────────────────────────
@@ -84,6 +86,47 @@ export const useCIEv2Store = defineStore('ci_v2', () => {
     graphLoading.value = false
   }
 
+  // ── Event Chain ─────────────────────────────────────
+  const eventChain = ref<EventChainItem[]>([])
+  const eventChainLoading = ref(false)
+  const eventChainError = ref<string | null>(null)
+  const causationChain = ref<EventChainItem[]>([])
+  const causationLoading = ref(false)
+
+  async function loadEventChain(aggregateType: 'ecr' | 'eco', aggregateId: number): Promise<void> {
+    eventChainLoading.value = true
+    eventChainError.value = null
+    try {
+      const res = await apiFetchEventChain(aggregateType, aggregateId)
+      eventChain.value = res
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '获取事件链失败'
+      eventChainError.value = msg
+    } finally {
+      eventChainLoading.value = false
+    }
+  }
+
+  async function loadCausationChain(aggregateType: 'ecr' | 'eco', aggregateId: number): Promise<void> {
+    causationLoading.value = true
+    try {
+      const res = await apiFetchCausationChain(aggregateType, aggregateId)
+      causationChain.value = res
+    } catch (e: unknown) {
+      // silent — causality is secondary info
+    } finally {
+      causationLoading.value = false
+    }
+  }
+
+  function clearEventChain(): void {
+    eventChain.value = []
+    eventChainError.value = null
+    eventChainLoading.value = false
+    causationChain.value = []
+    causationLoading.value = false
+  }
+
   return {
     riskScore,
     riskLoading,
@@ -99,5 +142,14 @@ export const useCIEv2Store = defineStore('ci_v2', () => {
     recError,
     loadApprovalRecommendation,
     clearRecommendation,
+    // ── Event Chain ──
+    eventChain,
+    eventChainLoading,
+    eventChainError,
+    causationChain,
+    causationLoading,
+    loadEventChain,
+    loadCausationChain,
+    clearEventChain,
   }
 })

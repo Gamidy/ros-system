@@ -125,3 +125,35 @@ export function rollbackModelParams(versionId: string): Promise<ModelWeightsItem
   return api.post(`/api/v2/model-params/${versionId}`)
     .then(res => res.data as ModelWeightsItem)
 }
+
+// ── Digital Thread — 事件链 ──────────────────────────
+
+export interface EventChainItem {
+  id: number
+  event_type: string
+  aggregate_type: string
+  aggregate_id: number
+  correlation_id: string
+  causation_id: number | null
+  event_data: string | null
+  producer: string
+  created_at: string
+}
+
+/**
+ * 获取某个聚合 (ECR/ECO) 的完整事件链
+ * GET /api/v2/event-graph/{aggregate_type}/{aggregate_id}
+ */
+export function fetchEventChain(aggregateType: 'ecr' | 'eco', aggregateId: number): Promise<EventChainItem[]> {
+  return api.get(`/api/v2/event-graph/${aggregateType}/${aggregateId}`)
+    .then(res => res.data as EventChainItem[])
+}
+
+/**
+ * 获取因果链回溯（从最新事件沿 causation_id 回溯）
+ * GET /api/v2/event-graph/{aggregate_type}/{aggregate_id}/causation
+ */
+export function fetchCausationChain(aggregateType: 'ecr' | 'eco', aggregateId: number): Promise<EventChainItem[]> {
+  return api.get(`/api/v2/event-graph/${aggregateType}/${aggregateId}/causation`)
+    .then(res => res.data as EventChainItem[])
+}

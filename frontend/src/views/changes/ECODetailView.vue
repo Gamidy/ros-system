@@ -198,6 +198,9 @@
           </el-timeline-item>
         </el-timeline>
       </el-card>
+
+      <!-- ⬇ Digital Thread: 事件链 ⬇ -->
+      <EventChainView ref="eventChainRef" aggregate-type="eco" :aggregate-id="ecoId" />
     </template>
 
     <!-- ═══════ 编辑基本信息 Dialog ═══════ -->
@@ -245,6 +248,8 @@ import {
   type ECOItemOut,
   type ECOItemCreate,
 } from '../../api/eco'
+// === Digital Thread ===
+import EventChainView from './components/EventChainView.vue'
 
 const route = useRoute()
 const router = useRouter()
