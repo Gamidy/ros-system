@@ -130,7 +130,12 @@
             <WBSTreeTab :pid="pid" @new-task="showTaskDialog = true" />
           </el-tab-pane>
 
-          <!-- Tab 4: Milestones -->
+          <!-- Tab 4: 依赖 -->
+          <el-tab-pane label="依赖" name="deps">
+            <TaskDepTab :pid="pid" />
+          </el-tab-pane>
+
+          <!-- Tab 5: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
               <el-statistic title="总数" :value="msStats.total" />
@@ -282,6 +287,7 @@ import { CircleCheckFilled, WarningFilled, CircleCloseFilled, Clock, Monitor, Ch
 import api from '../../api'
 import TaskKanbanTab from './TaskKanbanTab.vue'
 import WBSTreeTab from './WBSTreeTab.vue'
+import TaskDepTab from './TaskDepTab.vue'
 
 const route = useRoute()
 const router = useRouter()

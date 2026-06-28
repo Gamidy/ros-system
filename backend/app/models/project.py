@@ -184,3 +184,18 @@ class Risk(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     project = relationship("Project", back_populates="risks")
+
+
+class TaskDependency(Base):
+    """任务依赖关系"""
+    __tablename__ = "task_dependencies"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, comment="当前任务")
+    depends_on_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, comment="依赖的前置任务")
+    dep_type = Column(String(20), default="finish_to_start", comment="finish_to_start/start_to_start/finish_to_finish")
+    lag_days = Column(Integer, default=0, comment="滞后天数")
+    created_at = Column(DateTime, server_default=func.now())
+
+    task = relationship("Task", foreign_keys=[task_id], backref="dependencies_out")
+    depends_on = relationship("Task", foreign_keys=[depends_on_task_id], backref="dependencies_in")
