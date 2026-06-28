@@ -145,7 +145,12 @@
             <TimeLogTab :pid="pid" />
           </el-tab-pane>
 
-          <!-- Tab 7: Milestones -->
+          <!-- Tab 7: 预算 -->
+          <el-tab-pane label="预算" name="budget">
+            <BudgetTab :project="project" />
+          </el-tab-pane>
+
+          <!-- Tab 8: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
               <el-statistic title="总数" :value="msStats.total" />
@@ -300,6 +305,7 @@ import WBSTreeTab from './WBSTreeTab.vue'
 import TaskDepTab from './TaskDepTab.vue'
 import TaskCalendarTab from './TaskCalendarTab.vue'
 import TimeLogTab from './TimeLogTab.vue'
+import BudgetTab from './BudgetTab.vue'
 
 const route = useRoute()
 const router = useRouter()
