@@ -59,14 +59,62 @@ import type { EChartsOption } from 'echarts'
 const route = useRoute()
 const pid = computed(() => Number(route.params.id))
 
+// ── Types ──
+interface ProjectInfo {
+  id: number; code: string; name: string;
+  project_class: string; status: string;
+  start_date: string | null; target_end_date: string | null;
+}
+interface GanttTask {
+  id: number; title: string; assignee: string | null;
+  status: string; priority: string;
+  start_date: string | null; end_date: string | null;
+  actual_date: string | null; milestone_id: number | null;
+}
+interface GanttMilestone {
+  id: number; name: string; status: string;
+  planned_date: string | null; actual_date: string | null;
+  gate_code: string | null;
+}
+interface GanttGate {
+  code: string; name: string; status: string | null;
+  seq: number; planned_date: string | null; actual_date: string | null;
+}
+interface GanttData {
+  project: ProjectInfo; tasks: GanttTask[];
+  milestones: GanttMilestone[]; gates: GanttGate[];
+  date_range: { start: string | null; end: string | null };
+}
+interface MilestoneScatterItem {
+  value: number[];
+  name: string;
+  itemStyle: Record<string, string>;
+  symbol: string;
+  symbolSize: number;
+  _milestone: GanttMilestone;
+}
+interface GateScatterItem {
+  value: number[];
+  name: string;
+  itemStyle: Record<string, string>;
+  symbol: string;
+  symbolSize: number;
+  _gate: GanttGate;
+}
+interface TaskBarItem {
+  value: number[];
+  itemStyle: Record<string, string>;
+}
+
+// ── State ──
 const loading = ref(true)
 const chartRef = ref<HTMLElement | null>(null)
-const project = ref<any>(null)
-const ganttData = ref<any>(null)
+const project = ref<ProjectInfo | null>(null)
+const ganttData = ref<GanttData | null>(null)
 
-const doneCount = computed(() => ganttData.value?.tasks.filter((t: any) => t.status === 'done').length || 0)
-const progressCount = computed(() => ganttData.value?.tasks.filter((t: any) => t.status === 'in_progress').length || 0)
-const todoCount = computed(() => ganttData.value?.tasks.filter((t: any) => t.status === 'todo' || t.status === 'blocked').length || 0)
+const doneCount = computed(() => ganttData.value?.tasks.filter((t) => t.status === 'done').length || 0)
+const progressCount = computed(() => ganttData.value?.tasks.filter((t) => t.status === 'in_progress').length || 0)
+const todoCount = computed(() => ganttData.value?.tasks.filter((t) => t.status === 'todo' || t.status === 'blocked').length || 0)
 
 function classTag(c: string | undefined): string {
   return ({ T: 'danger', A: 'warning', B: 'success', C: 'info' })[c || ''] || 'info'
@@ -78,7 +126,6 @@ function statusLabel(s: string | undefined): string {
   return ({ planning: '规划中', running: '进行中', completed: '已完成', paused: '已暂停' })[s || ''] || s || '未知'
 }
 
-// Status colors for chart
 const STATUS_COLORS: Record<string, string> = {
   todo: '#909399',
   in_progress: '#409eff',
@@ -90,16 +137,16 @@ const STATUS_COLORS: Record<string, string> = {
 async function fetchGantt() {
   loading.value = true
   try {
-    const [gRes, pRes] = await Promise.all([
+    const [gRes] = await Promise.all([
       api.get(`/projects/${pid.value}/gantt`),
-      api.get(`/projects/${pid.value}`),
     ])
-    ganttData.value = gRes.data
-    project.value = pRes.data
+    ganttData.value = gRes.data as GanttData
+    project.value = (gRes.data as GanttData).project
     await nextTick()
     renderChart()
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.detail || '加载Gantt数据失败')
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : (e && typeof e === 'object' && 'response' in e && (e as any).response?.data?.detail) || '加载Gantt数据失败'
+    ElMessage.error(msg)
   } finally {
     loading.value = false
   }
@@ -108,19 +155,17 @@ async function fetchGantt() {
 // ── Render Gantt Chart ──
 function renderChart() {
   if (!chartRef.value || !ganttData.value) return
-  // Dispose previous instance sits in disposeChart
 
   const data = ganttData.value
   const tasks = data.tasks || []
   const milestones = data.milestones || []
   const gates = data.gates || []
 
-  // Parse dates
+  // Parse date range
   const minDate = new Date()
   const maxDate = new Date()
 
-  // Find date range
-  tasks.forEach((t: any) => {
+  tasks.forEach((t) => {
     if (t.start_date) {
       const d = new Date(t.start_date)
       if (d < minDate) minDate.setTime(d.getTime())
@@ -132,14 +177,14 @@ function renderChart() {
       if (d > maxDate) maxDate.setTime(d.getTime())
     }
   })
-  milestones.forEach((m: any) => {
+  milestones.forEach((m) => {
     if (m.planned_date) {
       const d = new Date(m.planned_date)
       if (d < minDate) minDate.setTime(d.getTime())
       if (d > maxDate) maxDate.setTime(d.getTime())
     }
   })
-  gates.forEach((g: any) => {
+  gates.forEach((g) => {
     if (g.planned_date) {
       const d = new Date(g.planned_date)
       if (d < minDate) minDate.setTime(d.getTime())
@@ -147,17 +192,15 @@ function renderChart() {
     }
   })
 
-  // Add 14-day padding
   minDate.setDate(minDate.getDate() - 14)
   maxDate.setDate(maxDate.getDate() + 14)
 
-  // Build series data
   // Tasks as horizontal bars
-  const taskSeries: any[] = []
+  const taskSeries: TaskBarItem[] = []
 
-  tasks.forEach((t: any, idx: number) => {
+  tasks.forEach((t, idx) => {
     const start = t.start_date ? new Date(t.start_date).getTime() : minDate.getTime()
-    const end = t.end_date ? new Date(t.end_date).getTime() : start + 7 * 24 * 60 * 60 * 1000 // default 7 days if no end
+    const end = t.end_date ? new Date(t.end_date).getTime() : start + 7 * 24 * 60 * 60 * 1000
 
     taskSeries.push({
       value: [idx, start, end],
@@ -165,12 +208,11 @@ function renderChart() {
     })
   })
 
-  // Milestones as scatter points on the chart
-  const milestoneData = milestones.map((m: any) => {
+  // Milestones as scatter
+  const milestoneData: (MilestoneScatterItem | null)[] = milestones.map((m) => {
     const date = m.planned_date || m.actual_date
     if (!date) return null
     const d = new Date(date).getTime()
-    // Place milestone at top of the chart (beyond task list)
     return {
       value: [tasks.length + 1, d],
       name: m.name,
@@ -179,12 +221,12 @@ function renderChart() {
       },
       symbol: 'diamond',
       symbolSize: m.status === 'achieved' ? 18 : 14,
-      _milestone: m,  // store ref for tooltip
+      _milestone: m,
     }
-  }).filter(Boolean)
+  }).filter(Boolean) as MilestoneScatterItem[]
 
-  // Gates
-  const gateData = gates.map((g: any) => {
+  // Gates as scatter
+  const gateData: (GateScatterItem | null)[] = gates.map((g) => {
     const date = g.actual_date || g.planned_date
     if (!date) return null
     return {
@@ -195,13 +237,12 @@ function renderChart() {
       },
       symbol: 'rect',
       symbolSize: g.status === 'passed' ? 14 : 10,
-      _gate: g,  // store ref for tooltip
+      _gate: g,
     }
-  }).filter(Boolean)
+  }).filter(Boolean) as GateScatterItem[]
 
-  // Build categories (y-axis labels)
   const categories = [
-    ...tasks.map((t: any) => t.title),
+    ...tasks.map((t) => t.title),
     '里程碑',
     'Gate节点',
   ]
@@ -209,32 +250,27 @@ function renderChart() {
   const option: EChartsOption = {
     tooltip: {
       trigger: 'item',
-      formatter: (params: any) => {
-        if (!params) return ''
-        const idx = params.dataIndex
-        if (params.seriesIndex === 0) {
-          // Task bar
-          const t = tasks[idx]
+      formatter: (params: unknown) => {
+        const p = params as any
+        if (!p) return ''
+        if (p.seriesIndex === 0) {
+          const t = tasks[p.dataIndex] as GanttTask | undefined
           if (!t) return ''
-          const start = t.start_date || '-'
-          const end = t.end_date || '-'
           return `<b>${t.title}</b><br/>
             负责人: ${t.assignee || '-'}<br/>
             状态: ${statusLabel(t.status)}<br/>
             优先级: ${t.priority}<br/>
-            开始: ${start}<br/>
-            截止: ${end}`
-        } else if (params.seriesIndex === 1) {
-          // Milestone
-          const mData = params.data?._milestone
+            开始: ${t.start_date || '-'}<br/>
+            截止: ${t.end_date || '-'}`
+        } else if (p.seriesIndex === 1) {
+          const mData = p.data?._milestone as GanttMilestone | undefined
           if (!mData) return ''
           return `<b>🏁 ${mData.name}</b><br/>
             状态: ${(mData.status === 'achieved' ? '已达成' : mData.status === 'delayed' ? '已延期' : '待定')}<br/>
             计划: ${mData.planned_date || '-'}<br/>
             实际: ${mData.actual_date || '-'}`
-        } else if (params.seriesIndex === 2) {
-          // Gate
-          const gData = params.data?._gate
+        } else if (p.seriesIndex === 2) {
+          const gData = p.data?._gate as GanttGate | undefined
           if (!gData) return ''
           return `<b>🚪 ${gData.code} ${gData.name}</b><br/>
             状态: ${(gData.status === 'passed' ? '通过' : gData.status === 'failed' ? '失败' : gData.status === 'skipped' ? '跳过' : '待定')}<br/>
@@ -277,9 +313,8 @@ function renderChart() {
         name: '任务',
         data: taskSeries,
         barWidth: 16,
-        barGap: '30%',
         encode: { x: [1, 2], y: 0 },
-        itemStyle: { borderRadius: [4, 4, 4, 4] },
+        itemStyle: { borderRadius: [4, 4, 4, 4] as any },
         markLine: {
           silent: true,
           symbol: 'none',
@@ -304,7 +339,6 @@ function renderChart() {
         symbol: 'diamond',
         symbolSize: 16,
         encode: { x: 1, y: 0 },
-        itemStyle: { color: '#e6a23c' },
         label: {
           show: true,
           formatter: '{b}',
@@ -320,7 +354,6 @@ function renderChart() {
         symbol: 'rect',
         symbolSize: 12,
         encode: { x: 1, y: 0 },
-        itemStyle: { color: '#909399' },
       },
     ],
   }

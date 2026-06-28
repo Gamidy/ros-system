@@ -1027,7 +1027,7 @@ def project_gantt_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _=Depends(require_menu("projects")),
-):
+) -> dict:
     """返回项目甘特图数据: 任务时间条 + 里程碑节点"""
     p = db.query(Project).filter(Project.id == pid, Project.is_deleted == False).first()
     if not p:
