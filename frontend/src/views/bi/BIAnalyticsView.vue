@@ -122,10 +122,10 @@ async function fetchData() {
     ])
 
     // KPI
-    const kpiRaw = kpiRes.data as Record<string, any> || {}
+    const kpiRaw = (kpiRes.data as Record<string, unknown>) || {}
     kpiList.value = [
       { key: 'total_plans', label: '策划总数', value: String(kpiRaw.total_plans ?? 0), color: '#007AFF' },
-      { key: 'approval_rate', label: '审批通过率', value: (kpiRaw.approval_rate != null ? (kpiRaw.approval_rate * 100).toFixed(1) : '-') + '%', color: '#34C759' },
+      { key: 'approval_rate', label: '审批通过率', value: (Number(kpiRaw.approval_rate) != null ? (Number(kpiRaw.approval_rate) * 100).toFixed(1) : '-') + '%', color: '#34C759' },
       { key: 'cost_overrun', label: '成本超标数', value: String(kpiRaw.cost_overrun_count ?? 0), color: '#FF3B30', unit: '项' },
     ]
 
@@ -143,7 +143,7 @@ async function fetchData() {
       overrun_rate: Number(d.overrun_rate ?? d.rate ?? 0),
       overrun_amount: Number(d.overrun_amount ?? d.gap ?? 0),
     })) || []
-  } catch {
+  } catch (e: unknown) {
     // 兜底模拟数据
     kpiList.value = [
       { key: 'total_plans', label: '策划总数', value: '156', color: '#007AFF' },

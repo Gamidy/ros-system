@@ -271,8 +271,9 @@ const saving = ref(false)
 const categoryTree = ref<CategoryTreeNode[]>([])
 
 // 分类级联选择器选项（将树转成 cascader 格式）
+interface CascaderItem { value: string; label: string; children?: CascaderItem[] }
 const cascaderOptions = computed(() => {
-  function flatten(nodes: CategoryTreeNode[]): any[] {
+  function flatten(nodes: CategoryTreeNode[]): CascaderItem[] {
     return nodes.map(n => ({
       value: n.id,
       label: n.name,
@@ -461,7 +462,7 @@ async function handleDelete(id: number) {
     ElMessage.success('已删除')
     loadData()
     loadCategoryTree()
-  } catch { /* error already handled by interceptor */ }
+  } catch (e: unknown) { /* error already handled by interceptor */ }
 }
 
 // ── 初始化 ──
