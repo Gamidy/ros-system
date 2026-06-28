@@ -3,7 +3,7 @@ import {
   Monitor, Goods, List, Folder, Document, WarningFilled,
   Stamp, Cpu, WarnTriangleFilled, Refresh, Select,
   ShoppingCart, DataAnalysis, Setting,
-  OfficeBuilding, User, Edit,
+  OfficeBuilding, User, Edit, CopyDocument,
 } from '@element-plus/icons-vue'
 
 /** 系统支持的全部角色（与后端 permissions.py ALL_ROLES 对齐） */
@@ -187,6 +187,7 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/bom',            title: 'BOM物料管理',    icon: List },
   { path: '/projects',       title: '项目管理',       icon: Folder },
   { path: '/projects/stats', title: '项目统计',       icon: DataAnalysis },
+  { path: '/project-templates', title: '项目模板',     icon: CopyDocument },
   { path: '/tests',          title: '实验与测试',     icon: Document },
   { path: '/alerts',         title: '预警体系',       icon: WarningFilled },
   { path: '/certifications', title: '认证管理',       icon: Stamp },

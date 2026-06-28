@@ -199,3 +199,17 @@ class TaskDependency(Base):
 
     task = relationship("Task", foreign_keys=[task_id], backref="dependencies_out")
     depends_on = relationship("Task", foreign_keys=[depends_on_task_id], backref="dependencies_in")
+
+
+class ProjectTemplate(Base):
+    """项目模板 — 快速立项模板"""
+    __tablename__ = "project_templates"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(200), nullable=False, comment="模板名称")
+    description = Column(Text, nullable=True)
+    project_class = Column(String(10), default="C", comment="默认项目等级")
+    template_data = Column(Text, nullable=True, comment="模板JSON: gates+tasks+milestones")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

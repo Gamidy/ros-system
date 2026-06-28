@@ -77,6 +77,12 @@ const router = createRouter({
           meta: { title: '项目统计' },
         },
         {
+          path: 'project-templates',
+          name: 'ProjectTemplates',
+          component: () => import('../views/projects/ProjectTemplatesView.vue'),
+          meta: { title: '项目模板' },
+        },
+        {
           path: 'tests',
           name: 'Tests',
           component: () => import('../views/tests/TestsView.vue'),
