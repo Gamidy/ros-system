@@ -241,3 +241,53 @@ def get_recalc_results_by_plan(
     return db.query(CostRecalculationResult).filter(
         CostRecalculationResult.product_plan_id == plan_id
     ).order_by(desc(CostRecalculationResult.created_at)).limit(limit).all()
+
+
+@router.get("/low-efficiency")
+def get_low_efficiency_products(
+    min_score: float = Query(60, ge=0, le=100, description="效率评分上限（低于此值视为低效率）"),
+    max_results: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    _=_RECALC_DEP,
+):
+    """查询低效率产品列表（最新一次重算效率评分低于阈值的）"""
+    from sqlalchemy import func as sa_func
+
+    # 取每个产品的最新一次 completed 重算结果
+    subq = (
+        db.query(
+            CostRecalculationResult.product_plan_id,
+            sa_func.max(CostRecalculationResult.id).label("max_id"),
+        )
+        .filter(CostRecalculationResult.status == RecalcStatus.COMPLETED)
+        .group_by(CostRecalculationResult.product_plan_id)
+        .subquery()
+    )
+
+    results = (
+        db.query(CostRecalculationResult)
+        .join(
+            subq,
+            CostRecalculationResult.id == subq.c.max_id,
+        )
+        .filter(CostRecalculationResult.cost_efficiency_score < min_score)
+        .order_by(CostRecalculationResult.cost_efficiency_score.asc())
+        .limit(max_results)
+        .all()
+    )
+
+    return [
+        {
+            "id": r.id,
+            "product_plan_id": r.product_plan_id,
+            "main_capacity": r.main_capacity,
+            "capacity_key": r.capacity_key,
+            "baseline_material_cost": r.baseline_material_cost,
+            "actual_bom_cost": r.actual_bom_cost,
+            "variance_amount": r.variance_amount,
+            "variance_pct": r.variance_pct,
+            "cost_efficiency_score": r.cost_efficiency_score,
+            "created_at": str(r.created_at) if r.created_at else None,
+        }
+        for r in results
+    ]

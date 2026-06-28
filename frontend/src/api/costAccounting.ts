@@ -68,3 +68,8 @@ export function triggerRecalculation(data: Record<string, any>) { return api.pos
 export function listRecalcResults(params: Record<string, any>) { return api.get('/cost-recalc/results', { params }) }
 export function getRecalcResult(id: number) { return api.get(`/cost-recalc/results/${id}`) }
 export function getRecalcResultsByPlan(planId: string, limit?: number) { return api.get(`/cost-recalc/results/by-plan/${planId}`, { params: { limit: limit || 10 } }) }
+
+// 低效率产品查询（Dashboard 使用）
+export function getLowEfficiencyProducts(minScore?: number, maxResults?: number) {
+  return api.get('/cost-recalc/low-efficiency', { params: { min_score: minScore || 60, max_results: maxResults || 10 } })
+}

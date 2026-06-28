@@ -13,7 +13,9 @@
 import logging
 import json
 import math
+import re
 from typing import Optional
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -364,7 +366,71 @@ def run_capacity_recalculation(
     
     db.commit()
     db.refresh(result)
-    
+
+    # 11. ⚡ 自动预警：效率评分<60 或 差异率>20% 时创建 AlertEvent
+    plan_name = plan.name if plan else str(product_plan_id)
+    if efficiency < 60 or variance_pct > 20:
+        try:
+            from app.models.cost_alert_rule import CostAlertRule, AlertEvent
+
+            # 查找或创建冷量联动预警规则
+            rule = db.query(CostAlertRule).filter(
+                CostAlertRule.name == "冷量联动预警"
+            ).first()
+            if not rule:
+                rule = CostAlertRule(
+                    name="冷量联动预警",
+                    threshold_pct=20,
+                    threshold_amount=0,
+                    enabled=True,
+                )
+                db.add(rule)
+                db.flush()
+
+            # 避免重复预警（同一重算结果不重复）
+            existing_alert = db.query(AlertEvent).filter(
+                AlertEvent.rule_id == rule.id,
+                AlertEvent.sheet_id == sheet_id,
+                AlertEvent.product_plan_id == product_plan_id,
+            ).order_by(desc(AlertEvent.created_at)).first()
+            if existing_alert:
+                # 检查是否为同一重算周期
+                from datetime import timedelta
+                if existing_alert.created_at and (
+                    existing_alert.created_at > datetime.utcnow() - timedelta(hours=24)
+                ):
+                    pass  # 24h 内已有预警，不重复
+                else:
+                    existing_alert = None  # 超过24h，重新创建
+
+            if not existing_alert:
+                alert_level = "critical" if efficiency < 40 or variance_pct > 30 else "warning"
+                msg = (
+                    f"冷量效率预警：{plan_name} "
+                    f"效率评分{efficiency:.1f}分（阈值60），"
+                    f"基准{baseline_material:.0f}元 vs 实际{actual_bom_cost:.0f}元，"
+                    f"差异率{variance_pct:+.1f}%（阈值20%）"
+                )
+                event = AlertEvent(
+                    rule_id=rule.id,
+                    rule_name=rule.name,
+                    sheet_id=sheet_id,
+                    product_plan_id=product_plan_id,
+                    plan_name=plan_name,
+                    target_amount=baseline_material,
+                    actual_amount=actual_bom_cost,
+                    variance_amount=variance,
+                    variance_pct=variance_pct,
+                    threshold_pct=20,
+                    threshold_amount=0,
+                    alert_level=alert_level,
+                    message=msg,
+                )
+                db.add(event)
+                db.commit()
+        except Exception as e:
+            logger.warning("冷量联动预警创建失败(非阻断): %s", e)
+
     return {
         "ok": True,
         "status": "completed",
