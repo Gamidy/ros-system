@@ -42,3 +42,4 @@ backend/app/**/__pycache__/
 # Temp
 /tmp/
 *.tar.gz
+stage8-compliance-*.md
