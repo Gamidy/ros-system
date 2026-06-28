@@ -25,6 +25,7 @@
         <el-tab-pane label="项目列表" name="projects">
           <div class="toolbar">
             <el-button type="primary" size="small" @click="showProjectDialog=true">新建项目</el-button>
+            <el-button size="small" @click="$router.push('/projects/compare')">项目对比</el-button>
             <el-select v-model="filterClass" placeholder="等级" clearable size="small" style="width:100px;margin-left:8px">
               <el-option v-for="c in ['T','A','B','C']" :key="c" :label="c+'级'" :value="c" />
             </el-select>

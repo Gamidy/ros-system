@@ -155,6 +155,11 @@
             <GateReportTab :project="project" :gates="gates" />
           </el-tab-pane>
 
+          <!-- Tab 9a: 项目复盘 -->
+          <el-tab-pane label="复盘" name="review">
+            <ProjectReviewTab :pid="pid" />
+          </el-tab-pane>
+
           <!-- Tab 9: Milestones -->
           <el-tab-pane label="里程碑" name="milestones">
             <div class="kpi-row">
@@ -312,6 +317,7 @@ import TaskCalendarTab from './TaskCalendarTab.vue'
 import TimeLogTab from './TimeLogTab.vue'
 import BudgetTab from './BudgetTab.vue'
 import GateReportTab from './GateReportTab.vue'
+import ProjectReviewTab from './ProjectReviewTab.vue'
 
 const route = useRoute()
 const router = useRouter()

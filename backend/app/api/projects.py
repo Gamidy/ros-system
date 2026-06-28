@@ -1,5 +1,5 @@
 """项目管理API: Program群 → Project(T/A/B/C) → M1~M9 Gate → Task + 里程碑 + 风险"""
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import random
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.core.permissions import require_menu
 from app.models.user import User
-from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
+from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk, TaskDependency
 from app.services.state_machine import assert_transition
 from app.schemas import (
     ProgramCreate, ProgramOut, ProjectCreate, ProjectUpdate, ProjectOut, TaskCreate, RiskCreate,
@@ -1177,6 +1177,13 @@ def project_gantt_data(
             "start": str(p.start_date) if p.start_date else None,
             "end": str(p.target_end_date) if p.target_end_date else None,
         },
+        "dependencies": [{
+            "task_id": d.task_id,
+            "depends_on_task_id": d.depends_on_task_id,
+            "dep_type": d.dep_type,
+        } for d in db.query(TaskDependency).filter(
+            TaskDependency.task_id.in_([t.id for t in tasks])
+        ).all()],
     }
 
 
@@ -1299,4 +1306,59 @@ def project_detail_dashboard(
         "health": "overdue" if is_overdue else (
             "at_risk" if risk_stats["a_level"] > 0 or task_stats["blocked"] > 0 else "on_track"
         ),
+    }
+
+
+# ═══════════════ 项目对比 ═══════════════
+
+from pydantic import BaseModel
+
+class CompareRequest(BaseModel):
+    project_ids: list[int]
+
+@project_router.post("/compare")
+def compare_projects(data: CompareRequest, db: Session = Depends(get_db)):
+    """多项目对比 — 返回基本信息+Gate+任务统计+风险统计"""
+    projects = db.query(Project).filter(Project.id.in_(data.project_ids)).all()
+    if len(projects) < 2:
+        raise HTTPException(400, "至少选择2个项目")
+    if len(projects) > 4:
+        raise HTTPException(400, "最多对比4个项目")
+
+    result_projects = []
+    for p in projects:
+        tasks = db.query(Task).filter(Task.project_id == p.id).all()
+        risks = db.query(Risk).filter(Risk.project_id == p.id).all()
+        result_projects.append({
+            "id": p.id, "code": p.code, "name": p.name,
+            "project_class": p.project_class, "status": p.status,
+            "source": p.source, "owner": p.owner,
+            "start_date": str(p.start_date) if p.start_date else None,
+            "target_end_date": str(p.target_end_date) if p.target_end_date else None,
+            "budget": p.budget,
+            "_taskStats": {
+                "total": len(tasks),
+                "todo": sum(1 for t in tasks if t.status == "todo"),
+                "in_progress": sum(1 for t in tasks if t.status == "in_progress"),
+                "done": sum(1 for t in tasks if t.status == "done"),
+            },
+            "_riskStats": {
+                "total": len(risks),
+                "a_level": sum(1 for r in risks if r.risk_level == "A"),
+            },
+        })
+
+    # Gates across all compared projects
+    all_gates = {}
+    for p in projects:
+        gates = db.query(ProjectGate).filter(ProjectGate.project_id == p.id).order_by(ProjectGate.seq).all()
+        for g in gates:
+            key = f"{g.gate_code}|{g.gate_name}"
+            if key not in all_gates:
+                all_gates[key] = {"gate_code": g.gate_code, "gate_name": g.gate_name, "per_project": []}
+            all_gates[key]["per_project"].append({"project_id": p.id, "status": g.status})
+
+    return {
+        "projects": result_projects,
+        "gates": list(all_gates.values()),
     }

@@ -83,6 +83,12 @@ const router = createRouter({
           meta: { title: '项目模板' },
         },
         {
+          path: 'projects/compare',
+          name: 'ProjectCompare',
+          component: () => import('../views/projects/ProjectCompareView.vue'),
+          meta: { title: '项目对比', menu: 'projects' },
+        },
+        {
           path: 'tests',
           name: 'Tests',
           component: () => import('../views/tests/TestsView.vue'),
