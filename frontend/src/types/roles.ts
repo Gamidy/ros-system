@@ -128,6 +128,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     children: [
       { path: '/purchases', title: '采购订单', icon: ShoppingCart },
       { path: '/purchases/suppliers', title: '供应商管理', icon: ShoppingCart },
+      { path: '/purchases/receiving', title: '采购收货', icon: ShoppingCart },
       { path: '/outsource/partners', title: '外协厂商', icon: ShoppingCart },
       { path: '/outsource/orders', title: '外协订单', icon: List },
       { path: '/outsource/quality-records', title: '外协质检', icon: Document },

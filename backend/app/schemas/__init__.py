@@ -217,6 +217,12 @@ from .purchase import (
     PurchaseOrderOut,
     PurchaseOrderDetailOut,
     PurchaseDashboardOut,
+    ReceiptCreate,
+    ReceiptOut,
+    ReceiptItemCreate,
+    ReceiptItemOut,
+    InspectionCreate,
+    InspectionOut,
 )
 
 # ═══════════════ 外协送样管理 ═══════════════

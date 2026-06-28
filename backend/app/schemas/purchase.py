@@ -169,3 +169,93 @@ class PurchaseDashboardOut(BaseModel):
     total_orders: int = 0
     total_suppliers: int = 0
     status_breakdown: dict[str, int] = {}
+
+
+# ═══════════════ 采购收货 ═══════════════
+
+
+class ReceiptItemCreate(BaseModel):
+    order_item_id: Optional[int] = None
+    part_no: str
+    part_name: Optional[str] = None
+    spec: Optional[str] = None
+    unit: str = "个"
+    ordered_qty: float = 0
+    received_qty: float = 0
+    unit_price: float = 0
+
+
+class ReceiptCreate(BaseModel):
+    order_id: int
+    warehouse: Optional[str] = None
+    location: Optional[str] = None
+    remark: Optional[str] = None
+    items: list[ReceiptItemCreate] = []
+
+
+class ReceiptItemOut(BaseModel):
+    id: int
+    receipt_id: int
+    order_item_id: Optional[int] = None
+    part_no: str
+    part_name: Optional[str] = None
+    spec: Optional[str] = None
+    unit: str
+    ordered_qty: float
+    received_qty: float
+    accepted_qty: float
+    rejected_qty: float
+    unit_price: float
+    total_price: float
+    remark: Optional[str] = None
+    class Config: from_attributes = True
+
+
+class ReceiptOut(BaseModel):
+    id: int
+    receipt_no: str
+    order_id: int
+    supplier_name: str
+    supplier_code: str
+    received_date: Optional[datetime] = None
+    warehouse: Optional[str] = None
+    location: Optional[str] = None
+    status: str
+    total_qty: float
+    total_amount: float
+    remark: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    items: list[ReceiptItemOut] = []
+    class Config: from_attributes = True
+
+
+# ═══════════════ 来料检验 ═══════════════
+
+
+class InspectionCreate(BaseModel):
+    receipt_id: int
+    receipt_item_id: Optional[int] = None
+    part_no: str
+    sample_qty: int = 0
+    defect_qty: int = 0
+    defect_desc: Optional[str] = None
+    result: str = "pass"
+    inspector: Optional[str] = None
+    remark: Optional[str] = None
+
+
+class InspectionOut(BaseModel):
+    id: int
+    receipt_id: int
+    receipt_item_id: Optional[int] = None
+    part_no: str
+    sample_qty: int
+    defect_qty: int
+    defect_desc: Optional[str] = None
+    result: str
+    inspector: Optional[str] = None
+    remark: Optional[str] = None
+    inspected_at: datetime
+    class Config: from_attributes = True

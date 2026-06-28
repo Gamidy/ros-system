@@ -36,3 +36,28 @@ export function getSupplierRanking(limit?: number) {
 export function getSupplierCategories() {
   return api.get('/purchases/suppliers/categories/list')
 }
+
+// ── 收货管理 ──
+export function listReceipts(params?: Record<string, any>) {
+  return api.get('/purchases/receipts', { params })
+}
+export function getReceipt(id: number) {
+  return api.get(`/purchases/receipts/${id}`)
+}
+export function createReceipt(data: Record<string, any>) {
+  return api.post('/purchases/receipts', data)
+}
+export function deleteReceipt(id: number) {
+  return api.delete(`/purchases/receipts/${id}`)
+}
+
+// ── 检验 ──
+export function listInspections(receiptId: number) {
+  return api.get(`/purchases/receipts/${receiptId}/inspections`)
+}
+export function createInspection(data: Record<string, any>) {
+  return api.post('/purchases/inspections', data)
+}
+export function getReceiptStats() {
+  return api.get('/purchases/receipts/stats/summary')
+}

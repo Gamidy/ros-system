@@ -125,3 +125,78 @@ class SupplierEvaluation(Base):
     comment = Column(String(500), nullable=True, comment="评估意见")
     evaluator = Column(String(50), nullable=True, comment="评估人")
     evaluated_at = Column(DateTime, server_default=func.now(), comment="评估时间")
+
+
+# ══════════════════════════════════════════════════
+# 采购收货管理
+# ══════════════════════════════════════════════════
+
+
+class GoodsReceipt(Base):
+    """采购收货单 — 对应一次到货"""
+    __tablename__ = "goods_receipts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    receipt_no = Column(String(30), unique=True, index=True, nullable=False, comment="收货单号 GR-YYYYMMDD-XXXX")
+    order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False, comment="关联采购订单ID")
+    supplier_name = Column(String(200), nullable=False, comment="供应商名称(快照)")
+    supplier_code = Column(String(50), nullable=False, comment="供应商编码(快照)")
+
+    received_date = Column(DateTime, server_default=func.now(), comment="收货日期")
+    warehouse = Column(String(100), nullable=True, comment="仓库")
+    location = Column(String(100), nullable=True, comment="库位")
+    status = Column(String(20), default="pending_inspection", comment="pending/pending_inspection/inspected/partially_rejected/rejected")
+    total_qty = Column(Float, default=0, comment="总收货数量")
+    total_amount = Column(Float, default=0, comment="收货金额")
+    remark = Column(Text, nullable=True, comment="备注")
+
+    created_by = Column(String(50), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    items = relationship("GoodsReceiptItem", back_populates="receipt", cascade="all, delete-orphan")
+
+
+class GoodsReceiptItem(Base):
+    """收货明细 — 对应PO中的一行"""
+    __tablename__ = "goods_receipt_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    receipt_id = Column(Integer, ForeignKey("goods_receipts.id"), nullable=False)
+    order_item_id = Column(Integer, ForeignKey("purchase_order_items.id"), nullable=True, comment="关联PO明细ID")
+    part_no = Column(String(50), nullable=False, comment="物料编码(快照)")
+    part_name = Column(String(200), nullable=True, comment="物料名称(快照)")
+    spec = Column(String(500), nullable=True, comment="规格(快照)")
+    unit = Column(String(20), default="个")
+    ordered_qty = Column(Float, default=0, comment="PO数量")
+    received_qty = Column(Float, default=0, comment="本次收货数量")
+    accepted_qty = Column(Float, default=0, comment="合格数量")
+    rejected_qty = Column(Float, default=0, comment="不合格数量")
+    unit_price = Column(Float, default=0, comment="单价(快照)")
+    total_price = Column(Float, default=0, comment="小计金额")
+    remark = Column(String(500), nullable=True)
+
+    receipt = relationship("GoodsReceipt", back_populates="items")
+
+
+class InspectionStatus(str):
+    PASS = "pass"            # 合格
+    CONCESSION = "concession"  # 让步接收
+    REJECT = "reject"        # 退货
+
+
+class IncomingInspection(Base):
+    """来料检验记录"""
+    __tablename__ = "incoming_inspections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    receipt_id = Column(Integer, ForeignKey("goods_receipts.id"), nullable=False, comment="关联收货单ID")
+    receipt_item_id = Column(Integer, ForeignKey("goods_receipt_items.id"), nullable=True, comment="关联收货明细ID")
+    part_no = Column(String(50), nullable=False, comment="物料编码")
+    sample_qty = Column(Integer, default=0, comment="抽检数量")
+    defect_qty = Column(Integer, default=0, comment="不合格数")
+    defect_desc = Column(Text, nullable=True, comment="缺陷描述")
+    result = Column(String(20), default=InspectionStatus.PASS, comment="判定结果")
+    inspector = Column(String(50), nullable=True, comment="检验员")
+    remark = Column(Text, nullable=True, comment="备注")
+    inspected_at = Column(DateTime, server_default=func.now(), comment="检验日期")

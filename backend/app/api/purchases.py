@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user, require_menu, require_role
 from app.models.user import User
-from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier, OutsourceRequest, SupplierEvaluation, VALID_DIMENSIONS, DIMENSION_LABELS
+from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier, OutsourceRequest, SupplierEvaluation, VALID_DIMENSIONS, DIMENSION_LABELS, GoodsReceipt, GoodsReceiptItem, IncomingInspection, InspectionStatus
 from app.services import event_bus
 from app.schemas import (
     SupplierCreate, SupplierOut, SupplierUpdate,
@@ -17,6 +17,7 @@ from app.schemas import (
     PurchaseOrderItemCreate, PurchaseOrderItemOut, PurchaseOrderItemUpdate,
     PurchaseDashboardOut,
     OutsourceRequestCreate, OutsourceRequestOut, OutsourceRequestUpdate,
+    ReceiptCreate, ReceiptOut, ReceiptItemOut, InspectionCreate, InspectionOut,
 )
 
 logger = logging.getLogger(__name__)
@@ -565,3 +566,146 @@ def supplier_ranking(limit: int = Query(20, ge=1, le=100), db: Session = Depends
 def supplier_categories(db: Session = Depends(get_db), _=Depends(require_menu("purchases"))):
     rows = db.query(Supplier.category, func.count(Supplier.id).label("cnt")).filter(Supplier.is_deleted == 0, Supplier.category.isnot(None), Supplier.category != "").group_by(Supplier.category).order_by(func.count(Supplier.id).desc()).all()
     return [{"category": r.category, "count": r.cnt} for r in rows]
+
+
+# ══════════════════════════════════════════════════
+# 采购收货管理
+# ══════════════════════════════════════════════════
+
+
+@router.get("/receipts", response_model=list[ReceiptOut])
+def list_receipts(
+    keyword: str = "", status: str = "",
+    date_from: str = "", date_to: str = "",
+    db: Session = Depends(get_db), _=Depends(require_menu("purchases")),
+):
+    q = db.query(GoodsReceipt)
+    if keyword:
+        q = q.filter(
+            GoodsReceipt.receipt_no.like(f"%{keyword}%") |
+            GoodsReceipt.supplier_name.like(f"%{keyword}%")
+        )
+    if status: q = q.filter(GoodsReceipt.status == status)
+    if date_from: q = q.filter(GoodsReceipt.received_date >= date_from)
+    if date_to: q = q.filter(GoodsReceipt.received_date <= f"{date_to} 23:59:59")
+    return q.order_by(GoodsReceipt.created_at.desc()).all()
+
+
+@router.get("/receipts/{rid}", response_model=ReceiptOut)
+def get_receipt(rid: int, db: Session = Depends(get_db), _=Depends(require_menu("purchases"))):
+    r = db.query(GoodsReceipt).filter(GoodsReceipt.id == rid).first()
+    if not r: raise HTTPException(404, "收货单不存在")
+    return r
+
+
+@router.post("/receipts", response_model=ReceiptOut)
+def create_receipt(data: ReceiptCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), _=Depends(require_role("admin", "general_manager", "procurement"))):
+    # 验证PO
+    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == data.order_id).first()
+    if not po: raise HTTPException(400, "采购订单不存在")
+    if po.status not in ("ordered", "approved"):
+        raise HTTPException(400, f"订单状态 {po.status} 不允许收货，需为 ordered/approved")
+
+    # 自动生成单号
+    prefix = f"GR-{date.today().strftime('%Y%m%d')}-"
+    last = db.query(GoodsReceipt).filter(GoodsReceipt.receipt_no.like(f"{prefix}%")).order_by(GoodsReceipt.id.desc()).first()
+    seq = 1
+    if last and last.receipt_no.startswith(prefix):
+        try: seq = int(last.receipt_no.split("-")[-1]) + 1
+        except: seq = 1
+    receipt_no = f"{prefix}{seq:04d}"
+
+    total_qty = sum(it.received_qty for it in data.items)
+    total_amount = sum(it.received_qty * it.unit_price for it in data.items)
+
+    receipt = GoodsReceipt(
+        receipt_no=receipt_no, order_id=data.order_id,
+        supplier_name=po.supplier_name, supplier_code=po.supplier_code,
+        warehouse=data.warehouse, location=data.location,
+        total_qty=total_qty, total_amount=total_amount,
+        remark=data.remark, created_by=current_user.username,
+    )
+    db.add(receipt); db.flush()
+
+    for it in data.items:
+        item = GoodsReceiptItem(
+            receipt_id=receipt.id, order_item_id=it.order_item_id,
+            part_no=it.part_no, part_name=it.part_name, spec=it.spec,
+            unit=it.unit, ordered_qty=it.ordered_qty,
+            received_qty=it.received_qty, unit_price=it.unit_price,
+            total_price=it.received_qty * it.unit_price,
+        )
+        db.add(item)
+
+        # 更新PO明细已收货数量
+        if it.order_item_id:
+            poi = db.query(PurchaseOrderItem).filter(PurchaseOrderItem.id == it.order_item_id).first()
+            if poi:
+                poi.received_qty = (poi.received_qty or 0) + it.received_qty
+
+    # 更新PO状态: 检查是否全部收货
+    all_items = db.query(PurchaseOrderItem).filter(PurchaseOrderItem.order_id == data.order_id).all()
+    all_received = all(
+        (i.received_qty or 0) >= i.quantity for i in all_items
+    ) if all_items else False
+    if all_received:
+        po.status = "received"
+
+    db.commit(); db.refresh(receipt)
+    return receipt
+
+
+@router.delete("/receipts/{rid}")
+def delete_receipt(rid: int, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement"))):
+    r = db.query(GoodsReceipt).filter(GoodsReceipt.id == rid).first()
+    if not r: raise HTTPException(404, "收货单不存在")
+    if r.status != "pending_inspection":
+        raise HTTPException(400, f"状态 {r.status} 不允许删除")
+    db.delete(r); db.commit()
+    return {"ok": True}
+
+
+# ══════════════════════════════════════════════════
+# 来料检验
+# ══════════════════════════════════════════════════
+
+
+@router.get("/receipts/{rid}/inspections", response_model=list[InspectionOut])
+def list_inspections(rid: int, db: Session = Depends(get_db), _=Depends(require_menu("purchases"))):
+    return db.query(IncomingInspection).filter(IncomingInspection.receipt_id == rid).order_by(IncomingInspection.inspected_at.desc()).all()
+
+
+@router.post("/inspections", response_model=InspectionOut)
+def create_inspection(data: InspectionCreate, db: Session = Depends(get_db), _=Depends(require_role("admin", "general_manager", "procurement", "quality_engineer"))):
+    receipt = db.query(GoodsReceipt).filter(GoodsReceipt.id == data.receipt_id).first()
+    if not receipt: raise HTTPException(400, "收货单不存在")
+
+    insp = IncomingInspection(**data.model_dump())
+    db.add(insp)
+
+    # 更新收货明细的accepted/rejected数量
+    if data.receipt_item_id:
+        item = db.query(GoodsReceiptItem).filter(GoodsReceiptItem.id == data.receipt_item_id).first()
+        if item:
+            item.accepted_qty = item.received_qty - data.defect_qty
+            item.rejected_qty = data.defect_qty
+
+    # 更新收货单状态
+    if data.result == InspectionStatus.REJECT:
+        receipt.status = "rejected"
+    elif data.result == InspectionStatus.CONCESSION:
+        receipt.status = "inspected"
+    else:
+        receipt.status = "inspected"
+
+    db.commit(); db.refresh(insp)
+    return insp
+
+
+@router.get("/receipts/stats/summary")
+def receipt_stats(db: Session = Depends(get_db), _=Depends(require_menu("purchases"))):
+    total = db.query(GoodsReceipt).count()
+    pending = db.query(GoodsReceipt).filter(GoodsReceipt.status == "pending_inspection").count()
+    inspected = db.query(GoodsReceipt).filter(GoodsReceipt.status == "inspected").count()
+    rejected = db.query(GoodsReceipt).filter(GoodsReceipt.status == "rejected").count()
+    return {"total": total, "pending_inspection": pending, "inspected": inspected, "rejected": rejected}
