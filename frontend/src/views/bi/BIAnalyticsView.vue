@@ -112,7 +112,12 @@ async function fetchData() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/bi/dashboard')
+    const params: Record<string, string> = {}
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_month = dateRange.value[0].substring(0, 7)
+      params.end_month = dateRange.value[1].substring(0, 7)
+    }
+    const res = await api.get('/bi/dashboard', { params })
     const data = (res as any).data || res
 
     // KPI

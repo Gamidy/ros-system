@@ -672,19 +672,24 @@ def bi_cost_efficiency(
 
 @router.get("/dashboard")
 def bi_dashboard(
+    start_month: Optional[str] = Query(None, description="开始月份 YYYY-MM"),
+    end_month: Optional[str] = Query(None, description="结束月份 YYYY-MM"),
     db: Session = Depends(get_db),
     _=Depends(require_menu("bi-analytics")),
 ):
-    """BI分析仪表盘 — 用原生SQL聚合（避免ORM lazy loading问题）"""
+    """BI分析仪表盘 — 用原生SQL聚合（避免ORM lazy loading问题）
+
+    支持按月份范围筛选策划趋势。
+    """
     import json
     from sqlalchemy import text as sa_text
 
-    cache_key = "bi:dashboard"
+    cache_key = f"bi:dashboard:{start_month or ''}:{end_month or ''}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return json.loads(cached)
 
-    # ── 1. KPI: 原生SQL直接查询 ──
+    # ── 1. KPI: 原生SQL直接查询（不按日期筛选，KPI始终全量） ──
     total_plans = db.execute(sa_text(
         "SELECT COUNT(*) FROM product_plans"
     )).scalar() or 0
@@ -705,11 +710,18 @@ def bi_dashboard(
         "cost_overrun_count": cost_overrun_count,
     }
 
-    # ── 2. 策划月度趋势 ──
-    trend_rows = db.execute(sa_text(
-        "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count "
-        "FROM product_plans GROUP BY month ORDER BY month LIMIT 12"
-    )).fetchall()
+    # ── 2. 策划月度趋势（支持日期筛选） ──
+    trend_sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count FROM product_plans"
+    params: list = []
+    if start_month:
+        trend_sql += " WHERE DATE_FORMAT(created_at, '%Y-%m') >= ?"
+        params.append(start_month)
+    if end_month:
+        trend_sql += " AND DATE_FORMAT(created_at, '%Y-%m') <= ?" if start_month else " WHERE DATE_FORMAT(created_at, '%Y-%m') <= ?"
+        params.append(end_month)
+    trend_sql += " GROUP BY month ORDER BY month LIMIT 12"
+
+    trend_rows = db.execute(sa_text(trend_sql), params).fetchall()
     planning_trend = [{"month": row[0], "count": row[1]} for row in trend_rows]
 
     # ── 3. 成本超标 Top5 ──

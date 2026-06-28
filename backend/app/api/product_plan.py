@@ -25,13 +25,11 @@ from app.api.product_plan_review import router as review_router
 logger = logging.getLogger(__name__)
 
 # 聚合路由 — 所有子路由使用相同的 prefix，由 main.py 统一注册
+# 注意: 路由由 main.py 直接 include 子模块，避免 extend 导致 FastAPI 不识别 prefix
 router = APIRouter(prefix="/product-plans", tags=["产品策划"])
 
-# 将子路由中的端点挂载到主路由
-# 注意：子路由的端点路径是相对路径（无 prefix），由主路由统一加 prefix
-router.routes.extend(crud_router.routes)
-router.routes.extend(workflow_router.routes)
-router.routes.extend(versions_router.routes)
+# 保留 review_router 的 extend（它在 main.py 单独 include 且没有 prefix 冲突问题）
+router.routes.extend(review_router.routes)
 
 __all__ = [
     "router", "review_router",

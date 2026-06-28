@@ -10,6 +10,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
 from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, product_plan_subs, admin_config, pm_config, pm_accessory, competitor, competitor_bench, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks
+from app.api import product_plan_crud, product_plan_workflow_api, product_plan_versions
 from app.api import markets
 from app.api import verification_requirements, prototypes, test_executions, gate_rules, target_markets
 from app.api import s2_cert_requirements, s2_cert_projects, s2_cert_samples, s2_cert_executions, s2_cert_results, s2_certificates, s2_gate_rules, s2_change_impact
@@ -176,6 +177,9 @@ app.include_router(pm_workspace.router, prefix="/api")
 app.include_router(pm_statistics.router, prefix="/api")
 app.include_router(pm_roadmap.router, prefix="/api")
 app.include_router(product_plan.router, prefix="/api")
+app.include_router(product_plan_crud.router, prefix="/api/product-plans")
+app.include_router(product_plan_workflow_api.router, prefix="/api/product-plans")
+app.include_router(product_plan_versions.router, prefix="/api/product-plans")
 app.include_router(product_plan_subs.router, prefix="/api")
 app.include_router(pm_config.router, prefix="/api")
 app.include_router(pm_accessory.router, prefix="/api")
