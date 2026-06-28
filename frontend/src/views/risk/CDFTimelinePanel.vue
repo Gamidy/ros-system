@@ -220,7 +220,7 @@ function renderBarChart(data: Record<string, unknown>) {
 async function onExpandChange(row: PlanItem, expandedRows: TableRow[]) {
   const expanded = expandedRows.includes(row)
   if (!expanded) return
-  if (row._timeline_items?.length > 0) return
+  if ((row._timeline_items?.length ?? 0) > 0) return
   row._loading_timeline = true
   try {
     const res = await api.get(`/api/v2/dashboard/cdf-detail/${row.plan_id ?? row.id}`)

@@ -154,7 +154,7 @@ function renderPieChart(data: Record<string, unknown>) {
 async function onExpandChange(row: PlanItem, expandedRows: TableRow[]) {
   const expanded = expandedRows.includes(row)
   if (!expanded) return
-  if (row._detail_items?.length > 0) return
+  if ((row._detail_items?.length ?? 0) > 0) return
   row._loading_detail = true
   try {
     const res = await api.get(`/api/v2/dashboard/mq-detail/${row.plan_id ?? row.id}`)

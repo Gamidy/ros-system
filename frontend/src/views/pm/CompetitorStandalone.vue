@@ -142,8 +142,8 @@
               <el-tag v-if="item.is_complete" size="small" type="success" effect="plain">完整</el-tag>
               <el-tag v-else size="small" type="warning" effect="plain">缺{{ item.missing_fields?.length }}项</el-tag>
             </div>
-            <div class="card-thumb" v-if="item.image_urls && item.image_urls.length > 0" @click="openDetailDrawer(item)">
-              <img :src="item.image_urls[0].url" class="thumb-img" alt="外观" />
+            <div class="card-thumb" v-if="(item as any).image_urls && (item as any).image_urls.length > 0" @click="openDetailDrawer(item)">
+              <img :src="(item as any).image_urls[0].url" class="thumb-img" alt="外观" />
             </div>
             <div class="card-actions">
               <el-button size="small" plain @click="openDetailDrawer(item)">详情</el-button>
@@ -186,7 +186,7 @@
         <el-divider content-position="left">📈 雷达图对比</el-divider>
         <div class="chart-card">
           <RadarChart
-            :competitors="chartCompetitors"
+            :competitors="chartCompetitors as any"
             :loading="chartLoading"
             :empty="chartCompetitors.length === 0"
           />
@@ -194,7 +194,7 @@
         <el-divider content-position="left">📊 分组柱状图对比</el-divider>
         <div class="chart-card">
           <BarCompare
-            :competitors="chartCompetitors"
+            :competitors="chartCompetitors as any"
             :loading="chartLoading"
             :empty="chartCompetitors.length === 0"
           />
@@ -301,7 +301,7 @@
           </el-col>
           <el-col :span="8">
             <el-form-item :label="energyLabel" :prop="energyKey">
-              <el-input-number v-model="form[energyKey]" :min="0" :step="0.1" style="width:100%" />
+              <el-input-number v-model="(form as any)[energyKey]" :min="0" :step="0.1" style="width:100%" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -451,11 +451,11 @@
           <el-tab-pane label="参数详情" name="params">
             <div class="detail-params">
               <!-- 外观图片 -->
-              <div v-if="detailItem.image_urls && detailItem.image_urls.length > 0" class="detail-images-section">
+              <div v-if="(detailItem as any).image_urls && (detailItem as any).image_urls.length > 0" class="detail-images-section">
                 <div class="detail-section-title">📷 外观外形</div>
                 <div class="detail-images-grid">
-                  <div v-for="(img, ii) in detailItem.image_urls" :key="ii" class="detail-image-item">
-                    <el-image :src="img.url" fit="contain" class="detail-image" :preview-src-list="detailItem.image_urls.map(i => i.url)" />
+                  <div v-for="(img, ii) in (detailItem as any).image_urls" :key="ii" class="detail-image-item">
+                    <el-image :src="img.url" fit="contain" class="detail-image" :preview-src-list="Array.isArray((detailItem as any).image_urls) ? (detailItem as any).image_urls.map((i: any) => i.url) : []" />
                     <div class="detail-image-label">{{ img.label || '外观' }}</div>
                   </div>
                 </div>

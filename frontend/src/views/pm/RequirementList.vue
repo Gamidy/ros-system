@@ -92,7 +92,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   listRequirements,
   updateRequirementStatus,
-  convertToPlan,
   convertRequirementToPlan,
 } from '../../api/productPlan'
 import type { RequirementItem } from '../../api/productPlan'
@@ -164,7 +163,7 @@ function handleTabChange() {
 async function handleAccept(row: RequirementItem) {
   try {
     await ElMessageBox.confirm('确认采纳该需求？', '采纳确认', { type: 'info' })
-    await updateRequirementStatus(row.id, 'accepted')
+    await updateRequirementStatus(Number(row.id), 'accepted')
     ElMessage.success('已采纳')
     fetchList()
   } catch {
@@ -181,7 +180,7 @@ async function handleReject(row: RequirementItem) {
       inputPlaceholder: '拒绝原因',
       inputValidator: (v: string) => (v ? true : '请填写拒绝原因'),
     })
-    await updateRequirementStatus(row.id, 'rejected', value)
+    await updateRequirementStatus(Number(row.id), 'rejected', value)
     ElMessage.success('已拒绝')
     fetchList()
   } catch {

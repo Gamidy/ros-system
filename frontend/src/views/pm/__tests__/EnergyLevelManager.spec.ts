@@ -102,9 +102,7 @@ describe('EnergyLevelManager', () => {
       expect((e as Error).message).toBe('Network Error')
     }
 
-    // Verify ElMessage.error was called by the component's catch block
-    const { ElMessage } = await import('element-plus')
-    // Note: In a real mount test this would be triggered, but we're testing API contract
+    // Note: In a real mount test ElMessage.error would be triggered, but we're testing API contract
     expect(mockApi.get).toHaveBeenCalledWith('/pm/markets/TEST/energy-levels')
   })
 })

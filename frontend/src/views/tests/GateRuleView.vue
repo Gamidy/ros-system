@@ -231,17 +231,17 @@ function openDialog(row?: TableRow) {
   if (row) {
     editingId.value = row.id as number
     form.value = {
-      name: row.name || '',
-      product_line: row.product_line || '',
-      customer: row.customer || '',
-      gate_code: row.gate_code || '',
-      all_pass: row.all_pass ?? false,
-      auto_block: row.auto_block ?? false,
-      priority: row.priority ?? 0,
-      items: ((row.items as TableRow[]) || []).map((i: TableRow) => ({
-        required_vr_category: i.required_vr_category || '',
-        required_prototype_type: i.required_prototype_type || '',
-        is_required: i.is_required ?? true,
+      name: String(row.name ?? ''),
+      product_line: String(row.product_line ?? ''),
+      customer: String(row.customer ?? ''),
+      gate_code: String(row.gate_code ?? ''),
+      all_pass: !!row.all_pass,
+      auto_block: !!row.auto_block,
+      priority: Number(row.priority ?? 0),
+      items: ((row.items as unknown as TableRow[]) || []).map((i: TableRow) => ({
+        required_vr_category: String(i.required_vr_category ?? ''),
+        required_prototype_type: String(i.required_prototype_type ?? ''),
+        is_required: !!i.is_required,
       })),
     }
   } else {

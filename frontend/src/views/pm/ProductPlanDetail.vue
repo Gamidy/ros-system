@@ -1243,8 +1243,8 @@ try {
     projectLinks.value.map(link => api.get(`/projects/${link.project_id}`))
   )
   projectDetails.value = results
-    .filter((r): r is PromiseFulfilledResult<ProjectDetailInfo> => r.status === 'fulfilled')
-    .map(r => r.value.data as ProjectDetailInfo)
+    .filter(r => r.status === 'fulfilled')
+    .map(r => (r as any).value.data as ProjectDetailInfo)
 } catch {
   // 静默处理 — 项目详情加载失败不影响主页面
 } finally {
@@ -1311,7 +1311,7 @@ function projectStatusTagType(s: string): string {
 function visibleGates(proj: ProjectDetailInfo): ProjectGateInfo[] {
   return (proj.gates || []).filter(g => !g.is_hidden).sort((a, b) => a.seq - b.seq)
 }
-function gateStatus(g: ProjectGateInfo): 'success' | 'process' | 'wait' {
+function gateStatus(g: ProjectGateInfo): 'success' | 'process' | 'wait' | 'error' {
   if (g.status === 'passed') return 'success'
   if (g.status === 'failed') return 'error'
   // 如果当前 gate 之前有未通过的，则是等待状态
@@ -1339,7 +1339,7 @@ function formatCost(val: number): string {
 /** 格式化 JSON 对象为可读字符串（用于历史明细展示） */
 function formatCostJson(val: unknown): string {
   if (typeof val === 'string') {
-    try { val = JSON.parse(val) } catch { return val }
+    try { val = JSON.parse(val) } catch { /* skip */ }
   }
   if (val && typeof val === 'object') {
     return JSON.stringify(val, null, 2)
@@ -1675,7 +1675,7 @@ const comparing = ref(false)
 const rollingBack = ref(false)
 
 /** 当前策划的最新版本号 */
-const planVersion = computed(() => plan.value?.version ?? 0)
+const planVersion = computed(() => (plan.value as any)?.version ?? 0)
 
 /** 是否可以选择两个版本进行对比 */
 const canCompare = computed(() => {

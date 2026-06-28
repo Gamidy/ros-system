@@ -565,7 +565,7 @@ const batchCreateForm = ref({ template_id: '', count: 1 })
 const selectedTemplatePreview = computed(() => {
   return planTemplates.value.find((t: PlanTemplateItem) => t.id === batchCreateForm.value.template_id) || null
 })
-const planTableRef = ref<InstanceType<typeof import('element-plus')['ElTable']> | null>(null)
+const planTableRef = ref<{ clearSelection: () => void } | null>(null)
 
 function onSelectionChange(rows: PlanItem[]) {
   selectedPlanIds.value = rows.map((r: PlanItem) => r.id)

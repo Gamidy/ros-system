@@ -540,7 +540,7 @@ function transformBenchmarkData(raw: BenchmarkApiResponse): BenchmarkRow[] {
         }
       }
       if (val !== undefined && val !== null) {
-        row.competitors[c.brand] = { value: Number(val) || val, model: c.model || '' }
+        row.competitors[c.brand] = { value: (Number(val) || val) as number | string, model: c.model || '' }
       }
     }
 

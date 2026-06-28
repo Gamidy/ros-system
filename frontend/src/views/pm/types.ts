@@ -102,20 +102,31 @@ export interface WorkspaceStats {
   completed_count: number
 }
 
-export interface RoadmapItem {
+export interface RoadmapPlan {
+  id: number
+  name: string
+  description: string | null
+}
+
+export interface RoadmapProject {
   id: number
   name: string
   status: string
-  date: string
-  description: string
-  priority?: string
-  progress?: number
-  assignee?: string
-  milestone?: string
-  parent_id?: number | null
-  children?: RoadmapItem[]
+  start_date: string | null
+  target_end_date: string | null
+  actual_end_date: string | null
+  budget: number | null
+  project_class: string | null
+  annual_planning_ref: string | null
+}
+
+export interface RoadmapGroup {
+  year: number
+  plans: RoadmapPlan[]
+  projects: RoadmapProject[]
+  is_other?: boolean
 }
 
 export interface RoadmapData {
-  roadmap_items: RoadmapItem[]
+  roadmap_items: RoadmapGroup[]
 }

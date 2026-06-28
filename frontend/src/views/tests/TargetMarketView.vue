@@ -179,7 +179,7 @@ async function onCollapseChange(val: string[], market: TableRow) {
 function openMarketDialog(row?: TableRow) {
   if (row) {
     editingMarketId.value = (row.id ?? 0) as number
-    marketForm.value = { market_code: row.market_code || '', name: row.name || '' }
+    marketForm.value = { market_code: String(row.market_code || ''), name: String(row.name || '') }
   } else {
     editingMarketId.value = null
     marketForm.value = { market_code: '', name: '' }

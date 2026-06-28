@@ -302,7 +302,7 @@ function renderPieChart(data: PieDataItem[]) {
 
 function renderLineChart(data: LineDataItem[]) {
   if (!lineChartRef.value) return
-  const dates = data.map((d: LineDataItem) => d.date || d.day || d.name)
+  const dates = data.map((d: LineDataItem) => d.date || d.day || d.name).filter(Boolean) as string[]
   const values = data.map((d: LineDataItem) => d.count || d.value || 0)
   const option: EChartsOption = {
     tooltip: { trigger: 'axis' },
@@ -340,7 +340,7 @@ async function onPlanChange() {
 }
 
 async function handleReplay(evt: TimelineEvent) {
-  replayingId.value = evt.id
+  replayingId.value = Number(evt.id)
   replayDialogVisible.value = true
   replayLoading.value = true
   replayResult.value = null

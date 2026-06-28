@@ -45,10 +45,10 @@
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="开始时间">
-            {{ formatTime(sagaData.started_at || sagaData.created_at) }}
+            {{ formatTime(sagaData.started_at ?? sagaData.created_at ?? '') }}
           </el-descriptions-item>
           <el-descriptions-item label="结束时间" v-if="sagaData.completed_at || sagaData.updated_at">
-            {{ formatTime(sagaData.completed_at || sagaData.updated_at) }}
+            {{ formatTime(sagaData.completed_at || sagaData.updated_at || '') }}
           </el-descriptions-item>
           <el-descriptions-item label="关联 Plan" v-if="sagaData.plan_id">
             {{ sagaData.plan_id }}
@@ -83,7 +83,7 @@
                     {{ step.status || 'pending' }}
                   </el-tag>
                   <span class="step-time" v-if="step.completed_at || step.created_at">
-                    {{ formatTime(step.completed_at || step.created_at) }}
+                    {{ formatTime(step.completed_at || step.created_at || '') }}
                   </span>
                 </div>
                 <div class="step-result" v-if="step.result">
@@ -206,7 +206,7 @@ function stepTagType(step: SagaStep): string {
     processing: 'primary',
     pending: 'info',
   }
-  return map[step.status] || 'info'
+  return map[step.status ?? ''] || 'info'
 }
 
 // ── API ──

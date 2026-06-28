@@ -249,7 +249,7 @@ async function onTabChange(name: string) {
   if (name === 'risks') {
     try {
       const all = await Promise.all(projects.value.map((p: Record<string, unknown>) => api.get(`/projects/${p.id}/risks`).catch(() => ({ data: [] }))))
-      allRisks.value = all.flatMap((r: Record<string, unknown>) => r.data)
+      allRisks.value = all.flatMap((r: { data: unknown }) => r.data)
     } catch {}
   }
 }

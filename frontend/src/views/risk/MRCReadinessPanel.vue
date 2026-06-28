@@ -204,7 +204,7 @@ function renderRadarChart(data: Record<string, unknown>) {
         (p.tooling_score ?? p.tooling ?? 0) * 100,
         (p.supply_score ?? p.supply ?? 0) * 100,
       ],
-      name: p.plan_name,
+      name: p.plan_name || '',
     }))
   } else {
     radarIndicators = [
@@ -273,7 +273,7 @@ function renderBarChart(data: Record<string, unknown>) {
 async function onExpandChange(row: PlanItem, expandedRows: TableRow[]) {
   const expanded = expandedRows.includes(row)
   if (!expanded) return
-  if (row._gap_items?.length > 0) return
+  if ((row._gap_items?.length ?? 0) > 0) return
   row._loading_gap = true
   try {
     const res = await api.get(`/api/v2/dashboard/mrc-detail/${row.plan_id ?? row.id}`)

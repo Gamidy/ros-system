@@ -520,6 +520,7 @@ function openEditDialog(item: MarketItem) {
     energy_standard_detail: item.energy_standard_detail ?? null,
     national_standard: item.national_standard ?? null,
     voltage_freq: item.voltage_freq ?? null,
+    min_voltage: item.min_voltage ?? null,
     cooling_max_temp: item.cooling_max_temp ?? null,
     heating_min_temp: item.heating_min_temp ?? null,
     structure_type: item.structure_type ?? null,
