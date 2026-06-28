@@ -89,6 +89,12 @@ const router = createRouter({
           meta: { title: '项目对比', menu: 'projects' },
         },
         {
+          path: 'knowledge-base',
+          name: 'KnowledgeBase',
+          component: () => import('../views/projects/KnowledgeBaseView.vue'),
+          meta: { title: '知识库', menu: 'projects' },
+        },
+        {
           path: 'tests',
           name: 'Tests',
           component: () => import('../views/tests/TestsView.vue'),
