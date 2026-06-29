@@ -58,7 +58,13 @@ export const useAuthStore = defineStore('auth', () => {
     if (path === '/login' || path === '/register') return true
     // 未登录或未获取到权限数据则拦截
     if (!user.value || allowedPaths.value.size === 0) return false
-    return allowedPaths.value.has(path)
+    // 精确匹配
+    if (allowedPaths.value.has(path)) return true
+    // 前缀匹配：/product-plans/xxx → 有 /product-plans 权限即可
+    for (const allowed of allowedPaths.value) {
+      if (path.startsWith(allowed + '/') || path.startsWith(allowed + '?')) return true
+    }
+    return false
   }
 
   // ── 原有认证逻辑 ──────────────────────────────────

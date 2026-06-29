@@ -177,8 +177,8 @@
         <el-divider content-position="left">产品参数</el-divider>
         <el-row :gutter="16">
           <el-col :span="8">
-            <el-form-item label="主要制冷剂">
-              <el-select v-model="form.refrigerant" clearable placeholder="选择制冷剂" style="width:100%">
+            <el-form-item label="主要制冷剂" required>
+              <el-select v-model="form.refrigerant" placeholder="选择制冷剂" style="width:100%">
                 <el-option label="R32" value="R32" />
                 <el-option label="R410A" value="R410A" />
                 <el-option label="R290" value="R290" />
@@ -188,8 +188,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="机型结构">
-              <el-select v-model="form.structure_type" clearable placeholder="选择结构" style="width:100%">
+            <el-form-item label="机型结构" required>
+              <el-select v-model="form.structure_type" placeholder="选择结构" style="width:100%">
                 <el-option label="分体壁挂" value="分体壁挂" />
                 <el-option label="天花机" value="天花机" />
                 <el-option label="风管机" value="风管机" />

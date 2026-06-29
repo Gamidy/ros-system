@@ -20,7 +20,7 @@ class MarketCreate(BaseModel):
     """新增市场请求"""
     code: str = Field(..., min_length=1, max_length=20, description="市场代码")
     name: str = Field("", max_length=100, description="市场名称")
-    region: str = Field("", max_length=50, description="区域")
+    region: str = Field(..., max_length=50, description="区域")
     energy_standard: str = Field("eer", max_length=20, description="能效标准代码")
     energy_label: str = Field("EER", max_length=20, description="能效显示名")
     energy_unit: str = Field("", max_length=20, description="能效单位")
@@ -29,9 +29,9 @@ class MarketCreate(BaseModel):
     voltage_freq: Optional[str] = Field(None, max_length=50, description="电压/频率")
     cooling_max_temp: Optional[float] = Field(None, description="制冷最高环境温度")
     heating_min_temp: Optional[float] = Field(None, description="制热最低环境温度")
-    structure_type: Optional[str] = Field(None, max_length=100, description="机型结构")
+    structure_type: str = Field(..., max_length=100, description="机型结构")
     main_selling_model: Optional[str] = Field(None, max_length=200, description="主销机型")
-    refrigerant: Optional[str] = Field(None, max_length=50, description="主要制冷剂")
+    refrigerant: str = Field(..., max_length=50, description="主要制冷剂")
     refrigerant_charge: Optional[float] = Field(None, description="制冷剂灌注量")
     min_voltage: Optional[int] = Field(None, description="最低电压要求")
     is_active: str = Field("true", max_length=5, description="是否激活")
@@ -197,6 +197,10 @@ def create_market(
         errors.append("能效显示名称不能为空")
     if not data.energy_unit or not data.energy_unit.strip():
         errors.append("能效单位不能为空")
+    if not data.structure_type or not data.structure_type.strip():
+        errors.append("机型结构不能为空")
+    if not data.refrigerant or not data.refrigerant.strip():
+        errors.append("主要制冷剂不能为空")
     if errors:
         raise HTTPException(status_code=422, detail="；".join(errors))
 
@@ -243,6 +247,14 @@ def update_market(
     if not m:
         raise HTTPException(status_code=404, detail="市场不存在")
     update_data = data.model_dump(exclude_unset=True)
+    # ── 必填字段校验（当传入空值时拒绝） ──
+    errors = []
+    if "structure_type" in update_data and (not update_data["structure_type"] or not str(update_data["structure_type"]).strip()):
+        errors.append("机型结构不能为空")
+    if "refrigerant" in update_data and (not update_data["refrigerant"] or not str(update_data["refrigerant"]).strip()):
+        errors.append("主要制冷剂不能为空")
+    if errors:
+        raise HTTPException(status_code=422, detail="；".join(errors))
     for key, val in update_data.items():
         setattr(m, key, val)
     db.commit()
