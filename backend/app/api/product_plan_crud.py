@@ -89,6 +89,12 @@ def create_plan(
 
     通过 product_plan_workflow 创建工作流实例。
     """
+    # 验证目标市场存在
+    if data.market_id:
+        from app.models.target_market import TargetMarket
+        market = db.query(TargetMarket).filter(TargetMarket.id == data.market_id).first()
+        if not market:
+            raise HTTPException(status_code=404, detail=f"目标市场 ID={data.market_id} 不存在")
     plan = workflow_create(db, data.model_dump(), current_user.username)
     return _plan_to_dict(plan)
 

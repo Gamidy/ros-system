@@ -811,6 +811,14 @@ function cancelGeneration() {
 
 async function acceptDraft() {
   if (!aiDraft.value) return
+  if (!createForm.value.market_id) {
+    ElMessage.warning('请先选择目标市场')
+    return
+  }
+  if (!createForm.value.product_type) {
+    ElMessage.warning('请先选择产品类型')
+    return
+  }
   acceptingDraft.value = true
   try {
     // 从 AI 草案中提取数据填充表单
@@ -820,6 +828,7 @@ async function acceptDraft() {
       series: draft.series || createForm.value.series || '',
       market: createForm.value.market || '',
       market_id: createForm.value.market_id,
+      product_type: createForm.value.product_type,
     }
 
     // 调用 API 创建策划
@@ -980,6 +989,14 @@ async function deletePlan(row: PlanItem) {
 async function createPlan() {
   if (!createForm.value.name.trim()) {
     ElMessage.warning('请输入策划名称')
+    return
+  }
+  if (!createForm.value.market_id) {
+    ElMessage.warning('请选择目标市场')
+    return
+  }
+  if (!createForm.value.product_type) {
+    ElMessage.warning('请选择产品类型')
     return
   }
   creating.value = true

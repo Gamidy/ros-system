@@ -49,8 +49,8 @@ class PlanCreate(BaseModel):
     cost_target: Optional[str] = None
     performance_target: Optional[str] = None
     # [P0-2] 创建策划字段对齐
-    product_type: Optional[str] = None
-    market_id: Optional[str] = None
+    product_type: str = Field(..., min_length=1, max_length=100, description="产品类型（必填）")
+    market_id: str = Field(..., min_length=1, max_length=36, description="目标市场ID（必填）")
 
 
 class AdvancePlanRequest(BaseModel):

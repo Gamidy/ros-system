@@ -93,14 +93,14 @@
       <el-form :model="form" label-width="130px" size="small">
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="国家/市场名称" prop="name">
+            <el-form-item label="国家/市场名称" required>
               <el-input v-model="form.name" placeholder="如: 越南" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :span="8">
-            <el-form-item label="区域" prop="region">
+            <el-form-item label="区域" required>
               <el-select v-model="form.region" placeholder="选择区域" style="width:100%">
                 <el-option label="东南亚 SEA" value="SEA" />
                 <el-option label="中亚 CA" value="CA" />
@@ -115,7 +115,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="能效标准代码">
+            <el-form-item label="能效标准代码" required>
               <el-select v-model="form.energy_standard" placeholder="选择标准" style="width:100%">
                 <el-option label="CSPF（越南/印尼/伊朗）" value="cspf" />
                 <el-option label="SEER（GCC/美洲/英国等）" value="seer" />
@@ -126,14 +126,14 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="能效显示名称">
+            <el-form-item label="能效显示名称" required>
               <el-input v-model="form.energy_label" placeholder="如: CSPF/SEER/EER" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :span="8">
-            <el-form-item label="能效单位">
+            <el-form-item label="能效单位" required>
               <el-select v-model="form.energy_unit" style="width:100%">
                 <el-option label="W/W" value="W/W" />
                 <el-option label="BTU/Wh" value="BTU/Wh" />
@@ -533,6 +533,22 @@ function openEditDialog(item: MarketItem) {
 async function handleSave() {
   if (!form.value.name) {
     ElMessage.warning('请填写市场名称')
+    return
+  }
+  if (!form.value.region) {
+    ElMessage.warning('请选择区域')
+    return
+  }
+  if (!form.value.energy_standard) {
+    ElMessage.warning('请选择能效标准代码')
+    return
+  }
+  if (!form.value.energy_label) {
+    ElMessage.warning('请填写能效显示名称')
+    return
+  }
+  if (!form.value.energy_unit) {
+    ElMessage.warning('请选择能效单位')
     return
   }
   saving.value = true

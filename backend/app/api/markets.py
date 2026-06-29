@@ -182,9 +182,25 @@ def create_market(
 ) -> dict:
     """新增市场"""
     from app.models.product import Market
+
+    # ── 必填字段校验 ──
+    errors = []
+    if not data.code or not data.code.strip():
+        errors.append("市场代码不能为空")
+    if not data.name or not data.name.strip():
+        errors.append("国家/市场名称不能为空")
+    if not data.region or not data.region.strip():
+        errors.append("区域不能为空")
+    if not data.energy_standard or not data.energy_standard.strip():
+        errors.append("能效标准代码不能为空")
+    if not data.energy_label or not data.energy_label.strip():
+        errors.append("能效显示名称不能为空")
+    if not data.energy_unit or not data.energy_unit.strip():
+        errors.append("能效单位不能为空")
+    if errors:
+        raise HTTPException(status_code=422, detail="；".join(errors))
+
     code = data.code.strip().upper()
-    if not code:
-        raise HTTPException(status_code=400, detail="市场代码不能为空")
     existing = db.query(Market).filter(Market.code == code).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"市场代码 {code} 已存在")
