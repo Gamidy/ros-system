@@ -120,6 +120,16 @@ class InitiationOut(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            date: lambda v: v.isoformat() if v else None,
+        }
+
+    @field_validator("required_date", mode="before")
+    @classmethod
+    def _date_to_str(cls, v):
+        if isinstance(v, date) and not isinstance(v, datetime):
+            return v.isoformat()
+        return v
 
     @field_validator("dev_cost_items", "mold_costs", "prototype_costs_detail",
                      "test_costs", "cert_costs", "labor_costs", "economic_indicators", mode="before")
@@ -263,7 +273,7 @@ def upsert_initiation(
         for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
             if val is not None:
                 setattr(initiation, key, val)
-        initiation.version_id = (initiation.version_id or 0) + 1
+        initiation.version_id = (int(initiation.version_id or 0)) + 1
     else:
         initiation = ProductPlanInitiation(
             product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
@@ -316,7 +326,7 @@ def upsert_market(
         for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
             if val is not None:
                 setattr(market, key, val)
-        market.version_id = (market.version_id or 0) + 1
+        market.version_id = (int(market.version_id or 0)) + 1
     else:
         market = ProductPlanMarket(
             product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
@@ -369,7 +379,7 @@ def upsert_tech_spec(
         for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
             if val is not None:
                 setattr(tech, key, val)
-        tech.version_id = (tech.version_id or 0) + 1
+        tech.version_id = (int(tech.version_id or 0)) + 1
     else:
         tech = ProductPlanTechSpec(
             product_plan_id=plan_id, **data.model_dump(exclude_unset=True, exclude={'version_id'})
@@ -441,7 +451,7 @@ def update_team_member(
     for key, val in data.model_dump(exclude_unset=True, exclude={'version_id'}).items():
         if val is not None:
             setattr(member, key, val)
-    member.version_id = (member.version_id or 0) + 1
+    member.version_id = (int(member.version_id or 0)) + 1
     member.product_plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(member)
