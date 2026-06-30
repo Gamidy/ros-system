@@ -259,8 +259,6 @@ const trialQtyRows = reactive<TrialQtyRow[]>([
 interface ShortNameRow { full: string; short: string }
 const shortNameRows = reactive<ShortNameRow[]>([
   { full: '分体式壁挂机', short: '挂机' },
-  { full: '分体立柜机', short: '柜机' },
-  { full: '窗机', short: '窗机' },
 ])
 function addShortNameRow() {
   shortNameRows.push({ full: '', short: '' })

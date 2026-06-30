@@ -79,8 +79,6 @@
       <div style="margin-bottom:8px;display:flex;gap:8px;">
         <el-select v-model="weightProductType" placeholder="选择产品类型" style="width:200px">
           <el-option label="分体空调" value="split_ac" />
-          <el-option label="移动空调" value="portable_ac" />
-          <el-option label="除湿机" value="dehumidifier" />
         </el-select>
         <el-button type="primary" @click="loadWeights">加载</el-button>
       </div>

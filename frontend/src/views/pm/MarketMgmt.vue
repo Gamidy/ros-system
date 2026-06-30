@@ -191,11 +191,6 @@
             <el-form-item label="机型结构" required>
               <el-select v-model="form.structure_type" placeholder="选择结构" style="width:100%">
                 <el-option label="分体壁挂" value="分体壁挂" />
-                <el-option label="天花机" value="天花机" />
-                <el-option label="风管机" value="风管机" />
-                <el-option label="柜机" value="柜机" />
-                <el-option label="窗机" value="窗机" />
-                <el-option label="移动空调" value="移动空调" />
               </el-select>
             </el-form-item>
           </el-col>

@@ -28,7 +28,6 @@
             <el-option label="越南" value="VN" />
             <el-option label="台湾" value="TW" />
             <el-option label="日本" value="JP" />
-            <el-option label="中国" value="CN" />
             <el-option label="美国" value="US" />
             <el-option label="澳大利亚" value="AU" />
             <el-option label="马来西亚" value="MY" />
@@ -87,7 +86,6 @@
             <el-option label="越南" value="VN" />
             <el-option label="台湾" value="TW" />
             <el-option label="日本" value="JP" />
-            <el-option label="中国" value="CN" />
             <el-option label="美国" value="US" />
             <el-option label="澳大利亚" value="AU" />
             <el-option label="马来西亚" value="MY" />

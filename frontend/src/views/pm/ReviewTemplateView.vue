@@ -218,12 +218,7 @@ interface ReviewTemplate extends TableRow {
 }
 
 const productTypeOptions = [
-  { value: 'window', label: '窗机' },
   { value: 'split_wall', label: '分体壁挂' },
-  { value: 'ceiling', label: '天花' },
-  { value: 'duct', label: '风管' },
-  { value: 'cabinet', label: '柜机' },
-  { value: 'portable', label: '移动空调' },
 ]
 
 const productTypeMap = new Map(productTypeOptions.map((p) => [p.value, p.label] as [string, string]))

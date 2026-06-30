@@ -202,11 +202,6 @@ import api from '../../api/index'
 // ── 产品类型映射 ──
 const projectTypeMap: Record<string, string> = {
   split_wall: '分体壁挂',
-  ceiling: '天花',
-  duct: '风管',
-  cabinet: '柜机',
-  window: '窗机',
-  mobile: '移动空调',
 }
 
 // ── 导航菜单 ──

@@ -309,7 +309,6 @@ interface TermForm {
 // ── 常量 ──────────────────────────────────────────────────────────────
 
 const MARKET_OPTIONS: MarketOption[] = [
-  { code: 'CN', label: '中国' },
   { code: 'US', label: '美国' },
   { code: 'EU', label: '欧盟' },
   { code: 'SEA', label: '东南亚' },

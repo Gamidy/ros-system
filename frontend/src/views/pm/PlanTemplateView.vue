@@ -4,15 +4,9 @@
       <h2>📋 计划模板管理</h2>
       <div class="header-actions">
         <el-select v-model="filterProductType" placeholder="产品类型" clearable size="small" style="width:130px" @change="fetchData">
-          <el-option label="窗机" value="窗机" />
           <el-option label="分体壁挂" value="分体壁挂" />
-          <el-option label="天花" value="天花" />
-          <el-option label="风管" value="风管" />
-          <el-option label="柜机" value="柜机" />
-          <el-option label="移动空调" value="移动空调" />
         </el-select>
         <el-select v-model="filterMarket" placeholder="市场" clearable size="small" style="width:120px" @change="fetchData">
-          <el-option label="中国" value="中国" />
           <el-option label="美国" value="美国" />
           <el-option label="欧盟" value="欧盟" />
           <el-option label="东南亚" value="东南亚" />
@@ -61,12 +55,7 @@
           <el-col :span="12">
             <el-form-item label="产品类型">
               <el-select v-model="form.product_type" placeholder="选择产品类型" style="width:100%">
-                <el-option label="窗机" value="窗机" />
                 <el-option label="分体壁挂" value="分体壁挂" />
-                <el-option label="天花" value="天花" />
-                <el-option label="风管" value="风管" />
-                <el-option label="柜机" value="柜机" />
-                <el-option label="移动空调" value="移动空调" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -75,7 +64,6 @@
           <el-col :span="12">
             <el-form-item label="市场">
               <el-select v-model="form.market" placeholder="选择市场" style="width:100%">
-                <el-option label="中国" value="中国" />
                 <el-option label="美国" value="美国" />
                 <el-option label="欧盟" value="欧盟" />
                 <el-option label="东南亚" value="东南亚" />

@@ -122,7 +122,7 @@
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12"><el-form-item label="产品类型"><el-select v-model="reportForm.product_type" style="width:100%">
-            <el-option label="分体空调" value="split_ac" /><el-option label="移动空调" value="portable_ac" /><el-option label="除湿机" value="dehumidifier" />
+            <el-option label="分体空调" value="split_ac" />
           </el-select></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="版本"><el-input v-model="reportForm.version" placeholder="V1.0" /></el-form-item></el-col>
         </el-row>
