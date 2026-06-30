@@ -2,7 +2,7 @@
   <div class="planning-calendar-view">
     <div class="page-header">
       <h2>🗓️ 年度规划日历</h2>
-      <el-button type="primary" @click="$router.push('/pm-workspace')">← 返回工作台</el-button>
+      <el-button type="primary" @click="$router.push('/product-plans')">← 返回产品策划中心</el-button>
     </div>
     <el-card shadow="never">
       <p style="text-align:center;padding:60px 0;font-size:16px;color:#909399">

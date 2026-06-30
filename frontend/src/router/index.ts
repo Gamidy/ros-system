@@ -349,12 +349,6 @@ const router = createRouter({
           meta: { title: '模块管理' },
         },
         {
-          path: 'pm-workspace',
-          name: 'PMWorkspace',
-          component: () => import('../views/pm/PMWorkspace.vue'),
-          meta: { title: '工作台', menu: 'pm-workspace' },
-        },
-        {
           path: 'proposals',
           name: 'Proposals',
           component: () => import('../views/pm/ProposalsView.vue'),

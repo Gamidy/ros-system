@@ -11,10 +11,23 @@
       </div>
     </div>
 
-    <!-- ═══════════ 主体区 + 全局待办 ═══════════ -->
-    <el-row :gutter="16">
-      <el-col :xs="24" :md="18" :lg="18">
-        <!-- ═══════════ 筛选栏 ═══════════ -->
+    <!-- ═══════════ Tab 切换：策划列表 / 年度规划 / 路线图 ═══════════ -->
+    <el-tabs v-model="activeTab" class="ppc-tabs" @tab-change="onTabChange">
+      <el-tab-pane label="📋 策划列表" name="plans">
+        <!-- ═══════════ 统计卡片 ═══════════ -->
+        <StatsCards v-if="statisticsData" :statsData="statisticsData" />
+
+        <!-- ═══════════ 待处理需求入口 ═══════════ -->
+        <div class="ppc-pending-bar" v-if="pendingCount > 0">
+          <el-tag type="warning" effect="plain" @click="$router.push('/pm/requirements')" class="pending-tag">
+            📋 {{ pendingCount }} 个待处理需求
+          </el-tag>
+        </div>
+
+        <!-- ═══════════ 主体区 + 全局待办 ═══════════ -->
+        <el-row :gutter="16">
+          <el-col :xs="24" :md="18" :lg="18">
+            <!-- ═══════════ 筛选栏 ═══════════ -->
         <div class="ppc-filters">
           <!-- 桌面端：正常两列布局 -->
           <el-row v-if="!isMobile" :gutter="12">
@@ -203,6 +216,18 @@
         <GlobalActionCard />
       </el-col>
     </el-row>
+      </el-tab-pane>
+
+      <!-- ═══════════ Tab: 年度规划 ═══════════ -->
+      <el-tab-pane label="📊 年度规划" name="annual">
+        <AnnualPlanList :planning-items="planningItems" />
+      </el-tab-pane>
+
+      <!-- ═══════════ Tab: 路线图 ═══════════ -->
+      <el-tab-pane label="🗺️ 路线图" name="roadmap">
+        <RoadmapPanel :items="roadmapData?.roadmap_items || []" />
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- ═══════════ 创建策划弹窗（含 AI 智能生成草案） ═══════════ -->
     <el-dialog v-model="showCreateDialog" title="新建产品策划" width="620px" :close-on-click-modal="false" :destroy-on-close="true">
@@ -449,9 +474,13 @@ import { useResponsive } from '../../composables/useResponsive'
 import api from '../../api'
 import { generatePlanDraft } from '../../api/ai'
 import GlobalActionCard from '../../components/GlobalActionCard.vue'
+import StatsCards from './StatsCards.vue'
+import AnnualPlanList from './AnnualPlanList.vue'
+import RoadmapPanel from './RoadmapPanel.vue'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
+import type { PlanningItem, WorkspaceStats, RoadmapData } from './types'
 import type { CreatePlanPayload, PlanTemplateItem } from '../../api/productPlan'
-import { batchClonePlans, batchCreatePlans } from '../../api/productPlan'
+import { batchClonePlans, batchCreatePlans, listRequirements } from '../../api/productPlan'
 
 // ── Types ──
 interface PlanItem {
@@ -541,6 +570,13 @@ const AIIcon = MagicStick
 const { isMobile } = useResponsive()
 const searchExpanded = ref(false)
 const hasMore = ref(true)
+
+// ── 合并自工作台的状态变量 ──
+const activeTab = ref('plans')
+const statisticsData = ref<WorkspaceStats | null>(null)
+const planningItems = ref<PlanningItem[]>([])
+const roadmapData = ref<RoadmapData | null>(null)
+const pendingCount = ref(0)
 
 // ── Data ──
 const plans = ref<PlanItem[]>([])
@@ -940,6 +976,52 @@ async function loadMore() {
   await fetchPlans(false)
 }
 
+// ── 合并自工作台的 API 方法 ──
+async function fetchStatistics() {
+  try {
+    const res = await api.get('/pm/statistics')
+    statisticsData.value = res.data
+  } catch (e: unknown) {
+    // 静默失败，统计数据非关键
+  }
+}
+
+async function fetchRoadmap() {
+  try {
+    const res = await api.get('/pm/roadmap')
+    roadmapData.value = res.data
+  } catch (e: unknown) {
+    // 静默失败
+  }
+}
+
+async function fetchPendingCount() {
+  try {
+    const res = await listRequirements({ status: 'pending', page_size: 1 })
+    pendingCount.value = res.data?.total ?? 0
+  } catch (e: unknown) {
+    // 静默失败
+  }
+}
+
+function onTabChange(tab: string) {
+  if (tab === 'roadmap' && !roadmapData.value) {
+    fetchRoadmap()
+  }
+  if (tab === 'annual' && planningItems.value.length === 0) {
+    fetchAnnualPlanData()
+  }
+}
+
+async function fetchAnnualPlanData() {
+  try {
+    const res = await api.get('/pm/workspace')
+    planningItems.value = res.data.planning_items || []
+  } catch (e: unknown) {
+    // 静默失败
+  }
+}
+
 function toggleSearch() {
   searchExpanded.value = !searchExpanded.value
 }
@@ -1015,7 +1097,11 @@ async function createPlan() {
   finally { creating.value = false }
 }
 
-onMounted(fetchPlans)
+onMounted(() => {
+  fetchPlans()
+  fetchStatistics()
+  fetchPendingCount()
+})
 </script>
 
 <style scoped>
@@ -1029,6 +1115,11 @@ onMounted(fetchPlans)
 .ppc-header-actions { display: flex; gap: 8px; }
 .ppc-filters { margin-bottom: 16px; }
 .ppc-pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
+.ppc-tabs { margin-top: 4px; }
+.ppc-tabs :deep(.el-tabs__content) { padding-top: 16px; }
+.ppc-pending-bar { margin-bottom: 12px; }
+.pending-tag { cursor: pointer; transition: opacity 0.2s; }
+.pending-tag:hover { opacity: 0.8; }
 
 /* 极小屏幕下标题行换行保护 */
 @media (max-width: 480px) {

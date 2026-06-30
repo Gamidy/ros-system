@@ -85,7 +85,6 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: Goods,
     children: [
       { path: '/product-plans', title: '产品策划', icon: DataAnalysis },
-      { path: '/pm-workspace', title: '工作台', icon: Monitor },
       { path: '/proposals', title: '提案管理', icon: Edit },
       { path: '/planning/calendar', title: '年度规划日历', icon: DataAnalysis },
       { path: '/competitor-bench', title: '竞品对标', icon: DataAnalysis },
@@ -229,7 +228,6 @@ export const ALL_MENUS: MenuItem[] = [
   { path: '/inventory/replenishments', title: '补货建议', icon: DataAnalysis },
   // Batch-17 库位管理
   { path: '/inventory/locations', title: '库位管理', icon: OfficeBuilding },
-  { path: '/pm-workspace',   title: '工作台',         icon: Monitor },
   { path: '/competitor-bench',   title: '竞品对标',     icon: DataAnalysis },
   { path: '/market-mgmt',        title: '市场管理',       icon: Stamp },
   { path: '/product-plans',      title: '产品策划',       icon: DataAnalysis },
