@@ -60,21 +60,29 @@ class InitiationCreate(BaseModel):
     sample_qty: Optional[int] = None
     required_date: Optional[date] = None
     version_id: Optional[int] = None
+    # 立项书记录字段
+    customer_name: Optional[str] = Field(default=None, description="客户名称")
+    other_requirements: Optional[str] = Field(default=None, description="其他要求")
+    accessory_config: Optional[str] = Field(default=None, description="辅配要求")
+    feature_config: Optional[str] = Field(default=None, description="功能配置要求")
+    fob_price: Optional[str] = Field(default=None, description="FOB目标价")
+    bom_cost_target: Optional[str] = Field(default=None, description="BOM成本目标")
+    bom_cost_ratio: Optional[str] = Field(default=None, description="BOM成本占比")
     # @deprecated — 以下7个成本字段已在 Cost 表(costingNew Tab)管理，由前端统一写入 Cost 表
     # Initiation 中存储的旧数据仅供「历史明细」只读展示
-    dev_cost_items: Optional[dict] = None
-    mold_costs: Optional[dict] = None
-    prototype_costs_detail: Optional[dict] = None
-    test_costs: Optional[dict] = None
-    cert_costs: Optional[dict] = None
-    labor_costs: Optional[dict] = None
-    economic_indicators: Optional[dict] = None
+    dev_cost_items: Optional[str] = None
+    mold_costs: Optional[str] = None
+    prototype_costs_detail: Optional[str] = None
+    test_costs: Optional[str] = None
+    cert_costs: Optional[str] = None
+    labor_costs: Optional[str] = None
+    economic_indicators: Optional[str] = None
 
     @field_validator("dev_cost_items", "mold_costs", "prototype_costs_detail",
                      "test_costs", "cert_costs", "labor_costs", "economic_indicators", mode="before")
     @classmethod
     def _stringify_deprecated_costs(cls, v):
-        """将 dict/GIS JSON 转为 JSON 字符串，适配 DB Text 列存储"""
+        """将 dict 转为 JSON 字符串，适配 DB Text 列存储；str 则原样保留"""
         if v is not None and not isinstance(v, str):
             return json.dumps(v, ensure_ascii=False)
         return v
@@ -109,6 +117,14 @@ class InitiationOut(BaseModel):
     required_date: Optional[str] = None
     created_at: Optional[datetime] = None
     version_id: int = 1
+    # 立项书记录字段
+    customer_name: Optional[str] = None
+    other_requirements: Optional[str] = None
+    accessory_config: Optional[str] = None
+    feature_config: Optional[str] = None
+    fob_price: Optional[str] = None
+    bom_cost_target: Optional[str] = None
+    bom_cost_ratio: Optional[str] = None
     # @deprecated — Initiation 中的旧成本 JSON，仅供历史明细展示
     dev_cost_items: Optional[dict] = None
     mold_costs: Optional[dict] = None
