@@ -46,9 +46,9 @@
             <el-tag :type="energyTagType(row.energy_standard)" size="small">{{ row.energy_label || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="制热指标" width="100">
+        <el-table-column label="制热指标" width="80">
           <template #default="{ row }">
-            <span>{{ row.heating_energy_label ? `${row.heating_energy_label} (${row.heating_energy_standard || '-'})` : '-' }}</span>
+            <el-tag :type="heatingTagType(row.heating_energy_standard)" size="small">{{ row.heating_energy_label || '-' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="national_standard" label="国家标准" width="110" />
@@ -519,6 +519,11 @@ const STRUCTURE_LABELS: Record<string, string> = {
 
 function structureTypeLabel(val: string | null): string {
   return (val && STRUCTURE_LABELS[val]) || val || '-'
+}
+
+function heatingTagType(std: string): string {
+  const map: Record<string, string> = { scop: 'success', hspf: 'primary', apf: 'warning', cop: 'info' }
+  return map[std] || 'info'
 }
 
 function certTypeLabel(type: string): string {
