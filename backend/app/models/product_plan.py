@@ -140,7 +140,7 @@ class ProductRequirement(Base):
     market = Column(String(100), nullable=False, comment="目标市场")
     customer = Column(String(200), nullable=True, comment="客户名称")
     contact = Column(String(100), nullable=True, comment="联系人")
-    product_type = Column(String(100), nullable=False, comment="产品类型")
+    product_type = Column(String(100), nullable=False, comment="产品类型（当前仅支持 split_wall）")
     capacity_target = Column(String(100), nullable=True, comment="目标冷量")
     price_target = Column(Numeric(12, 2), nullable=True, comment="目标价格")
     energy_standard = Column(String(50), nullable=True, comment="能效标准")

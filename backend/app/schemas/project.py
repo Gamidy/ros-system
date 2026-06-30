@@ -1,8 +1,17 @@
 """项目管理 — Pydantic Schema"""
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional
 from datetime import date, datetime
+
+from app.core.constants import VALID_PRODUCT_TYPES
+
+
+def _validate_product_type(v):
+    """Validate product_type is one of the allowed values."""
+    if v is not None and v not in VALID_PRODUCT_TYPES:
+        raise ValueError(f"不支持的产品类型: {v}")
+    return v
 
 
 # ═══════════════ 项目群 ═══════════════
@@ -87,6 +96,11 @@ class ProjectCreate(BaseModel):
     team_members: Optional[str] = None
     # Draft 机制
     is_draft: Optional[bool] = True
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        return _validate_product_type(v)
 
 
 class ProjectDraftSave(ProjectCreate):

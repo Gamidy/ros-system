@@ -230,7 +230,7 @@
           </el-col>
         </el-row>
         <el-form-item label="产品类型提示" prop="product_type_hint">
-          <el-input v-model="termForm.product_type_hint" placeholder="如 壁挂分体机 / 窗机" />
+          <el-input v-model="termForm.product_type_hint" placeholder="如 分体壁挂 / 窗机" />
         </el-form-item>
         <el-form-item label="备注" prop="notes">
           <el-input

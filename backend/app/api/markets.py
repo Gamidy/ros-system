@@ -26,14 +26,14 @@ class MarketCreate(BaseModel):
     energy_unit: str = Field("", max_length=20, description="能效单位")
     energy_standard_detail: Optional[str] = Field(None, max_length=100, description="能效标准细分")
     national_standard: Optional[str] = Field(None, max_length=100, description="国家标准编号")
-    voltage_freq: Optional[str] = Field(None, max_length=50, description="电压/频率")
-    cooling_max_temp: Optional[float] = Field(None, description="制冷最高环境温度")
-    heating_min_temp: Optional[float] = Field(None, description="制热最低环境温度")
+    voltage_freq: str = Field(..., max_length=50, description="电压/频率")
+    cooling_max_temp: float = Field(..., description="制冷最高环境温度")
+    heating_min_temp: float = Field(..., description="制热最低环境温度")
     structure_type: str = Field(..., max_length=100, description="机型结构")
     main_selling_model: Optional[str] = Field(None, max_length=200, description="主销机型")
     refrigerant: str = Field(..., max_length=50, description="主要制冷剂")
     refrigerant_charge: Optional[float] = Field(None, description="制冷剂灌注量")
-    min_voltage: Optional[int] = Field(None, description="最低电压要求")
+    min_voltage: int = Field(..., description="最低电压要求")
     is_active: str = Field("true", max_length=5, description="是否激活")
 
 
@@ -201,6 +201,14 @@ def create_market(
         errors.append("机型结构不能为空")
     if not data.refrigerant or not data.refrigerant.strip():
         errors.append("主要制冷剂不能为空")
+    if not data.voltage_freq or not data.voltage_freq.strip():
+        errors.append("电压/频率不能为空")
+    if data.min_voltage is None:
+        errors.append("最低电压要求不能为空")
+    if data.cooling_max_temp is None:
+        errors.append("制冷最高环境温度不能为空")
+    if data.heating_min_temp is None:
+        errors.append("制热最低环境温度不能为空")
     if errors:
         raise HTTPException(status_code=422, detail="；".join(errors))
 

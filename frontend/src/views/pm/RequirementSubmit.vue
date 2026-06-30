@@ -46,7 +46,7 @@
           <el-col :span="12">
             <el-form-item label="产品类型" prop="product_type">
               <el-select v-model="form.product_type" placeholder="请选择产品类型" style="width:100%">
-                <el-option label="壁挂分体机" value="壁挂分体机" />
+                <el-option label="分体壁挂" value="split_wall" />
               </el-select>
             </el-form-item>
           </el-col>

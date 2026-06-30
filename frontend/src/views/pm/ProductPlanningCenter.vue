@@ -259,7 +259,7 @@
           <el-form-item label="产品类型" required>
             <el-select v-model="createForm.product_type" placeholder="请选择产品类型" style="width:100%"
               :disabled="aiGenerating || !!aiDraft">
-              <el-option label="壁挂分体机" value="split_wall" />
+              <el-option label="分体壁挂" value="split_wall" />
             </el-select>
           </el-form-item>
           <el-form-item label="产品系列">

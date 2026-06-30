@@ -8,11 +8,12 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_serializer, field_validator
 from datetime import datetime
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
+from app.core.constants import VALID_PRODUCT_TYPES
 from app.models.user import User
 from app.models.review_template import ReviewTemplate
 
@@ -36,6 +37,13 @@ class TemplateCreate(BaseModel):
     template_fields: list[TemplateFieldSchema]
     is_active: bool = True
 
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        if v not in VALID_PRODUCT_TYPES:
+            raise ValueError(f"不支持的产品类型: {v}")
+        return v
+
 
 class TemplateOut(BaseModel):
     """模板输出"""
@@ -46,6 +54,13 @@ class TemplateOut(BaseModel):
     is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        if v not in VALID_PRODUCT_TYPES:
+            raise ValueError(f"不支持的产品类型: {v}")
+        return v
 
     @field_serializer("created_at", "updated_at")
     def serialize_dt(self, v: Optional[datetime]) -> Optional[str]:

@@ -64,7 +64,7 @@
           <el-col :span="8"><el-form-item label="权重"><el-input-number v-model="form.weight" style="width:100%" :min="0" :max="10" :step="0.1" /></el-form-item></el-col>
           <el-col :span="8"><el-form-item label="排序"><el-input-number v-model="form.sort_order" style="width:100%" :min="0" /></el-form-item></el-col>
         </el-row>
-        <el-form-item label="适用产品"><el-input v-model="form.applicable_product_types" placeholder="如 split_ac,portable_ac" /></el-form-item>
+        <el-form-item label="适用产品"><el-input v-model="form.applicable_product_types" placeholder="如 split_wall,portable_ac" /></el-form-item>
         <el-form-item label="参考标准"><el-input v-model="form.reference_standard" /></el-form-item>
         <el-form-item label="检查方法"><el-input v-model="form.check_method" type="textarea" :rows="2" /></el-form-item>
       </el-form>
@@ -78,7 +78,7 @@
     <el-dialog v-model="showWeights" title="DFM评分权重配置" width="500px">
       <div style="margin-bottom:8px;display:flex;gap:8px;">
         <el-select v-model="weightProductType" placeholder="选择产品类型" style="width:200px">
-          <el-option label="分体空调" value="split_ac" />
+          <el-option label="分体壁挂" value="split_wall" />
         </el-select>
         <el-button type="primary" @click="loadWeights">加载</el-button>
       </div>
@@ -124,7 +124,7 @@ const editingId = ref<number | null>(null)
 const saving = ref(false)
 const formRef = ref<FormInstance>()
 const showWeights = ref(false)
-const weightProductType = ref('split_ac')
+const weightProductType = ref('split_wall')
 const weights = ref<any[]>([])
 
 const form = ref<any>({ item_code: '', item_name: '', description: '', dfm_category: 'structural', severity: 'major', applicable_product_types: '', reference_standard: '', check_method: '', weight: 1.0, sort_order: 0, status: 'active' })

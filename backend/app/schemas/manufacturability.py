@@ -1,8 +1,17 @@
 """DFM可制造性分析模块 — Pydantic Schema"""
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, Any
 from datetime import datetime
+
+from app.core.constants import VALID_PRODUCT_TYPES
+
+
+def _validate_product_type(v):
+    """Validate product_type is one of the allowed values."""
+    if v is not None and v not in VALID_PRODUCT_TYPES:
+        raise ValueError(f"不支持的产品类型: {v}")
+    return v
 
 
 # ═══════════════ DFM检查项模板 ═══════════════
@@ -70,6 +79,11 @@ class DFMReportCreate(BaseModel):
     summary: Optional[str] = None
     created_by: Optional[str] = None
 
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        return _validate_product_type(v)
+
 
 class DFMReportUpdate(BaseModel):
     title: Optional[str] = None
@@ -79,6 +93,11 @@ class DFMReportUpdate(BaseModel):
     version: Optional[str] = None
     status: Optional[str] = None
     summary: Optional[str] = None
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        return _validate_product_type(v)
 
 
 class DFMReportItemOut(BaseModel):
@@ -117,6 +136,11 @@ class DFMReportOut(BaseModel):
     updated_at: datetime
     items: list[DFMReportItemOut] = []
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        return _validate_product_type(v)
 
 
 class DFMReportListOut(BaseModel):
@@ -158,6 +182,11 @@ class DFMScoreWeightCreate(BaseModel):
     dfm_category: str
     weight: float = Field(ge=0, le=1)
 
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        return _validate_product_type(v)
+
 
 class DFMScoreWeightUpdate(BaseModel):
     weight: Optional[float] = Field(None, ge=0, le=1)
@@ -172,6 +201,11 @@ class DFMScoreWeightOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        return _validate_product_type(v)
 
 
 class DFMScoreWeightListOut(BaseModel):

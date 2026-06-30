@@ -18,7 +18,7 @@ class ReviewTemplate(Base):
     __tablename__ = "review_templates"
 
     id = Column(String(36), primary_key=True, default=uuid4_str)
-    product_type = Column(String(100), nullable=False, comment="产品类型")
+    product_type = Column(String(100), nullable=False, comment="产品类型（当前仅支持 split_wall）")
     name = Column(String(200), nullable=False, comment="模板名称")
     template_fields = Column(JSON, nullable=False,
                              comment="字段配置JSON: [{field, label, required, max_length}]")

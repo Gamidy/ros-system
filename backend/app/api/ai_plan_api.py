@@ -9,12 +9,13 @@ import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
+from app.core.constants import VALID_PRODUCT_TYPES
 from app.models.user import User
 from app.services.ai.plan_generator import generate_plan_draft
 
@@ -37,6 +38,13 @@ class GeneratePlanDraftRequest(BaseModel):
     model: str = Field("deepseek-chat", description="模型名称")
     api_key: Optional[str] = Field(None, description="API 密钥（不传则从 settings 读取）")
     api_base: Optional[str] = Field(None, description="自定义 API Base URL")
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        if v not in VALID_PRODUCT_TYPES:
+            raise ValueError(f"不支持的产品类型: {v}")
+        return v
 
 
 class GeneratePlanDraftResponse(BaseModel):

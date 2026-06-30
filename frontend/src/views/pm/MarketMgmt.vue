@@ -151,25 +151,27 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-divider content-position="left">电气与温度参数</el-divider>
+        <el-divider content-position="left">电气与温度参数（全部必填）</el-divider>
         <el-row :gutter="16">
-          <el-col :span="6">
-            <el-form-item label="电压/频率">
+          <el-col :span="12">
+            <el-form-item label="电压/频率" required>
               <el-input v-model="form.voltage_freq" placeholder="如: 220V/50Hz" />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
-            <el-form-item label="最低电压(V)">
+          <el-col :span="12">
+            <el-form-item label="最低电压(V)" required>
               <el-input-number v-model="form.min_voltage" :min="100" :max="500" :step="10" controls-position="right" style="width:100%" placeholder="如: 220" />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
-            <el-form-item label="制冷最高温度°C">
+        </el-row>
+        <el-row :gutter="16" style="margin-top:0">
+          <el-col :span="12">
+            <el-form-item label="制冷最高温度°C" required>
               <el-input-number v-model="form.cooling_max_temp" :min="-50" :max="80" :step="0.5" controls-position="right" style="width:100%" placeholder="如: 46" />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
-            <el-form-item label="制热最低温度°C">
+          <el-col :span="12">
+            <el-form-item label="制热最低温度°C" required>
               <el-input-number v-model="form.heating_min_temp" :min="-50" :max="80" :step="0.5" controls-position="right" style="width:100%" placeholder="如: -7" />
             </el-form-item>
           </el-col>
@@ -190,7 +192,7 @@
           <el-col :span="8">
             <el-form-item label="机型结构" required>
               <el-select v-model="form.structure_type" placeholder="选择结构" style="width:100%">
-                <el-option label="分体壁挂" value="分体壁挂" />
+                <el-option label="分体壁挂" value="split_wall" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -544,6 +546,22 @@ async function handleSave() {
   }
   if (!form.value.energy_unit) {
     ElMessage.warning('请选择能效单位')
+    return
+  }
+  if (!form.value.voltage_freq) {
+    ElMessage.warning('请填写电压/频率')
+    return
+  }
+  if (form.value.min_voltage === null || form.value.min_voltage === undefined) {
+    ElMessage.warning('请填写最低电压要求')
+    return
+  }
+  if (form.value.cooling_max_temp === null || form.value.cooling_max_temp === undefined) {
+    ElMessage.warning('请填写制冷最高环境温度')
+    return
+  }
+  if (form.value.heating_min_temp === null || form.value.heating_min_temp === undefined) {
+    ElMessage.warning('请填写制热最低环境温度')
     return
   }
   saving.value = true

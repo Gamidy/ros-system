@@ -19,7 +19,7 @@ class ProductPlanInitiation(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     product_plan_id = Column(String(36), ForeignKey("product_plans.id"), nullable=False, unique=True, comment="关联策划ID")
     # 产品定义
-    product_type = Column(String(50), nullable=True, comment="产品类型")
+    product_type = Column(String(50), nullable=True, comment="产品类型（当前仅支持 split_wall）")
     target_market = Column(String(100), nullable=True, comment="目标市场")
     climate_zone = Column(String(50), nullable=True, comment="温带")
     refrigerant = Column(String(50), nullable=True, comment="制冷剂")

@@ -4,7 +4,7 @@
       <h2>📋 计划模板管理</h2>
       <div class="header-actions">
         <el-select v-model="filterProductType" placeholder="产品类型" clearable size="small" style="width:130px" @change="fetchData">
-          <el-option label="分体壁挂" value="分体壁挂" />
+          <el-option label="分体壁挂" value="split_wall" />
         </el-select>
         <el-select v-model="filterMarket" placeholder="市场" clearable size="small" style="width:120px" @change="fetchData">
           <el-option label="美国" value="美国" />
@@ -55,7 +55,7 @@
           <el-col :span="12">
             <el-form-item label="产品类型">
               <el-select v-model="form.product_type" placeholder="选择产品类型" style="width:100%">
-                <el-option label="分体壁挂" value="分体壁挂" />
+                <el-option label="分体壁挂" value="split_wall" />
               </el-select>
             </el-form-item>
           </el-col>

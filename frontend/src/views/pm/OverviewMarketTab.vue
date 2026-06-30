@@ -373,7 +373,7 @@ function inputChanged() {
 }
 
 // ── 能力段 Cascader 选项 ──
-const structureTypes = ['分体壁挂']
+const structureTypes = ['split_wall']
 const capacityOptions = ['7K', '9K', '12K', '18K', '24K'].map(cap => ({
   value: cap,
   label: cap,

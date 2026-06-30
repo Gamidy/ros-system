@@ -18,7 +18,7 @@ class CompetitorModel(Base):
     brand = Column(String(80), nullable=False, index=True, comment="品牌")
     model = Column(String(120), nullable=False, index=True, comment="型号")
     market = Column(String(80), nullable=False, index=True, comment="目标市场")
-    product_type = Column(String(60), nullable=True, comment="产品类型")
+    product_type = Column(String(60), nullable=True, comment="产品类型（当前仅支持 split_wall）")
     cooling_capacity = Column(String(40), nullable=True, comment="冷量段")
     cooling_capacity_w = Column(Integer, nullable=True, comment="制冷量(W)")
     heating_capacity_w = Column(Integer, nullable=True, comment="制热量(W)")

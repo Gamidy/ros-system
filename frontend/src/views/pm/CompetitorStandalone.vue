@@ -648,7 +648,7 @@ const templateLoading = ref(false)
 const exportLoading = ref(false)
 const capacities = ['9000BTU', '12000BTU', '18000BTU', '24000BTU']
 const energyRatings = ['3星', '4星', '5星', 'A+', 'A++', 'A+++']
-const productTypes = ['壁挂分体机']
+const productTypes = ['split_wall']
 const brandPresets = ['AUX', 'TCL', 'Midea', 'Gree', 'Haier', 'Hisense', 'Chigo']
 
 const selectedMarket = ref('')

@@ -109,7 +109,7 @@ ROLE_MENU_MAP: dict[str, list[str]] = {
         "dashboard", "products", "bom", "projects", "tests",
         "certifications", "prototypes", "quality", "changes",
         'alerts', 'approvals', 'rd_dashboard', 'purchases',
-        'pm-workspace', 'competitor_bench',
+        'pm-workspace', 'competitor_bench', 'market_mgmt',
         'product-plans', 'verification-requirements', 'gate-rules',
         'risk-dashboard', 'event-timeline',
         'target-markets', 'test-executions',

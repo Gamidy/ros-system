@@ -10,7 +10,7 @@
 
 from typing import Generic, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ── 子表 Schema 引用 ──
 from app.api.product_plan_subs import (
@@ -19,6 +19,7 @@ from app.api.product_plan_subs import (
     TechSpecOut as _TechSpecOut,
     TeamOut as _TeamOut,
 )
+from app.core.constants import VALID_PRODUCT_TYPES
 from app.schemas.product_plan_link import ProductPlanLinkOut
 from app.services.product_plan_workflow import STAGE_LABELS
 
@@ -51,6 +52,13 @@ class PlanCreate(BaseModel):
     # [P0-2] 创建策划字段对齐
     product_type: str = Field(..., min_length=1, max_length=100, description="产品类型（必填）")
     market_id: str = Field(..., min_length=1, max_length=36, description="目标市场ID（必填）")
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        if v not in VALID_PRODUCT_TYPES:
+            raise ValueError(f"不支持的产品类型: {v}")
+        return v
 
 
 class AdvancePlanRequest(BaseModel):

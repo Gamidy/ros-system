@@ -71,7 +71,7 @@ class DFMReport(Base):
     title = Column(String(300), nullable=False, comment="报告标题")
     project_id = Column(Integer, nullable=True, comment="关联项目ID")
     prototype_id = Column(Integer, nullable=True, comment="关联样机ID")
-    product_type = Column(String(100), nullable=True, comment="产品类型")
+    product_type = Column(String(100), nullable=True, comment="产品类型（当前仅支持 split_wall）")
     version = Column(String(50), nullable=True, default="V1.0")
     status = Column(String(20), nullable=False, default="draft", comment="状态: draft/in_progress/completed")
     total_score = Column(Float, nullable=True, comment="总分0-100")
@@ -118,7 +118,7 @@ class DFMScoreWeight(Base):
     __tablename__ = "dfm_score_weights"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    product_type = Column(String(100), nullable=False, comment="产品类型，如 split_ac/portable_ac/dehumidifier")
+    product_type = Column(String(100), nullable=False, comment="产品类型（当前仅支持 split_wall）")
     dfm_category = Column(String(50), nullable=False, comment="分类")
     weight = Column(Float, nullable=False, default=0.2, comment="权重0-1，同一产品类型下权重和=1")
     org_id = Column(Integer, nullable=True)

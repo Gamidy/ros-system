@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
@@ -19,6 +19,7 @@ from decimal import Decimal
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.permissions import require_menu
+from app.core.constants import VALID_PRODUCT_TYPES
 from app.models.user import User
 from app.models.product_plan import ProductRequirement, ProductPlan, ProductPlanStage
 from app.models.product_plan_subs import ProductPlanInitiation
@@ -41,6 +42,13 @@ class RequirementCreate(BaseModel):
     notes: Optional[str] = Field(None, description="补充说明")
     submitter_name: Optional[str] = Field(None, max_length=100, description="提交人姓名")
     submitter_phone: Optional[str] = Field(None, max_length=20, description="提交人电话")
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        if v not in VALID_PRODUCT_TYPES:
+            raise ValueError(f"不支持的产品类型: {v}")
+        return v
 
 
 class RequirementStatusUpdate(BaseModel):
@@ -67,6 +75,13 @@ class RequirementOut(BaseModel):
     submitter_phone: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    @field_validator('product_type')
+    @classmethod
+    def validate_product_type(cls, v):
+        if v not in VALID_PRODUCT_TYPES:
+            raise ValueError(f"不支持的产品类型: {v}")
+        return v
 
     class Config:
         from_attributes = True
