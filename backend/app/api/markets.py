@@ -35,6 +35,10 @@ class MarketCreate(BaseModel):
     refrigerant_charge: Optional[float] = Field(None, description="制冷剂灌注量")
     min_voltage: int = Field(..., description="最低电压要求")
     is_active: str = Field("true", max_length=5, description="是否激活")
+    # ── 制热能效指标 ──
+    heating_energy_standard: Optional[str] = Field(None, max_length=20, description="制热能效标准代码")
+    heating_energy_label: Optional[str] = Field(None, max_length=20, description="制热标准显示名")
+    heating_energy_unit: Optional[str] = Field(None, max_length=20, description="制热单位")
 
 
 class MarketUpdate(BaseModel):
@@ -55,6 +59,10 @@ class MarketUpdate(BaseModel):
     refrigerant_charge: Optional[float] = Field(None)
     min_voltage: Optional[int] = Field(None)
     is_active: Optional[str] = Field(None, max_length=5)
+    # ── 制热能效指标 ──
+    heating_energy_standard: Optional[str] = Field(None, max_length=20)
+    heating_energy_label: Optional[str] = Field(None, max_length=20)
+    heating_energy_unit: Optional[str] = Field(None, max_length=20)
 
 
 class EnergyLevelCreate(BaseModel):
@@ -64,6 +72,10 @@ class EnergyLevelCreate(BaseModel):
     seer_min: Optional[float] = Field(None, description="最低SEER")
     eer_min: Optional[float] = Field(None, description="最低EER")
     cspf_min: Optional[float] = Field(None, description="最低CSPF")
+    # ── 制热能效等级指标 ──
+    cop_min: Optional[float] = Field(None, description="最低COP")
+    hspf_min: Optional[float] = Field(None, description="最低HSPF")
+    scop_min: Optional[float] = Field(None, description="最低SCOP")
     is_primary: str = Field("false", max_length=5, description="是否主销等级")
 
 
@@ -74,6 +86,10 @@ class EnergyLevelUpdate(BaseModel):
     seer_min: Optional[float] = Field(None)
     eer_min: Optional[float] = Field(None)
     cspf_min: Optional[float] = Field(None)
+    # ── 制热能效等级指标 ──
+    cop_min: Optional[float] = Field(None)
+    hspf_min: Optional[float] = Field(None)
+    scop_min: Optional[float] = Field(None)
     is_primary: Optional[str] = Field(None, max_length=5)
 
 
@@ -134,6 +150,9 @@ def list_markets_with_standards(
             "refrigerant": m.refrigerant,
             "refrigerant_charge": m.refrigerant_charge,
             "min_voltage": m.min_voltage,
+            "heating_energy_standard": m.heating_energy_standard,
+            "heating_energy_label": m.heating_energy_label,
+            "heating_energy_unit": m.heating_energy_unit,
         }
         for m in items
     ]
@@ -166,6 +185,9 @@ def list_all_markets(
             "refrigerant_charge": m.refrigerant_charge,
             "min_voltage": m.min_voltage,
             "is_active": m.is_active or "true",
+            "heating_energy_standard": m.heating_energy_standard,
+            "heating_energy_label": m.heating_energy_label,
+            "heating_energy_unit": m.heating_energy_unit,
         }
         for m in items
     ]
@@ -234,6 +256,9 @@ def create_market(
         refrigerant_charge=data.refrigerant_charge,
         min_voltage=data.min_voltage,
         is_active=data.is_active or "true",
+        heating_energy_standard=data.heating_energy_standard,
+        heating_energy_label=data.heating_energy_label,
+        heating_energy_unit=data.heating_energy_unit,
     )
     db.add(m)
     db.commit()
@@ -319,6 +344,9 @@ def list_energy_levels(
             "seer_min": e.seer_min,
             "eer_min": e.eer_min,
             "cspf_min": e.cspf_min,
+            "cop_min": e.cop_min,
+            "hspf_min": e.hspf_min,
+            "scop_min": e.scop_min,
             "is_primary": e.is_primary,
         }
         for e in items
@@ -345,6 +373,9 @@ def create_energy_level(
         seer_min=data.seer_min,
         eer_min=data.eer_min,
         cspf_min=data.cspf_min,
+        cop_min=data.cop_min,
+        hspf_min=data.hspf_min,
+        scop_min=data.scop_min,
         is_primary=data.is_primary or "false",
     )
     db.add(e)

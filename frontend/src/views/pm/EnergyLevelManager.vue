@@ -20,6 +20,15 @@
       <el-table-column prop="cspf_min" label="最低CSPF" width="100">
         <template #default="{ row }">{{ row.cspf_min ?? '-' }}</template>
       </el-table-column>
+      <el-table-column prop="cop_min" label="最低COP" width="90">
+        <template #default="{ row }">{{ row.cop_min ?? '-' }}</template>
+      </el-table-column>
+      <el-table-column prop="hspf_min" label="最低HSPF" width="100">
+        <template #default="{ row }">{{ row.hspf_min ?? '-' }}</template>
+      </el-table-column>
+      <el-table-column prop="scop_min" label="最低SCOP" width="100">
+        <template #default="{ row }">{{ row.scop_min ?? '-' }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="110">
         <template #default="{ row }">
           <el-button size="small" type="primary" link @click="openEdit(row)">编辑</el-button>
@@ -51,6 +60,23 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-row :gutter="12">
+          <el-col :span="8">
+            <el-form-item label="最低COP" prop="cop_min">
+              <el-input-number v-model="form.cop_min" :min="0" :max="20" :step="0.1" controls-position="right" style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="最低HSPF" prop="hspf_min">
+              <el-input-number v-model="form.hspf_min" :min="0" :max="20" :step="0.1" controls-position="right" style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="最低SCOP" prop="scop_min">
+              <el-input-number v-model="form.scop_min" :min="0" :max="20" :step="0.1" controls-position="right" style="width:100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort_order" :min="0" :max="99" style="width:120px" />
         </el-form-item>
@@ -79,6 +105,9 @@ interface EnergyLevelItem {
   seer_min: number | null
   eer_min: number | null
   cspf_min: number | null
+  cop_min: number | null
+  hspf_min: number | null
+  scop_min: number | null
   is_primary: string
 }
 
@@ -94,6 +123,9 @@ const form = ref({
   seer_min: null as number | null,
   eer_min: null as number | null,
   cspf_min: null as number | null,
+  cop_min: null as number | null,
+  hspf_min: null as number | null,
+  scop_min: null as number | null,
   is_primary: 'false',
 })
 
@@ -110,7 +142,7 @@ async function fetchData(code: string) {
 
 function openAdd() {
   editingId.value = null
-  form.value = { level_name: '', sort_order: 0, seer_min: null, eer_min: null, cspf_min: null, is_primary: 'false' }
+  form.value = { level_name: '', sort_order: 0, seer_min: null, eer_min: null, cspf_min: null, cop_min: null, hspf_min: null, scop_min: null, is_primary: 'false' }
   editVisible.value = true
 }
 
@@ -122,6 +154,9 @@ function openEdit(item: EnergyLevelItem) {
     seer_min: item.seer_min,
     eer_min: item.eer_min,
     cspf_min: item.cspf_min,
+    cop_min: item.cop_min,
+    hspf_min: item.hspf_min,
+    scop_min: item.scop_min,
     is_primary: item.is_primary,
   }
   editVisible.value = true

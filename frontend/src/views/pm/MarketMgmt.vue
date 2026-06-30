@@ -46,6 +46,11 @@
             <el-tag :type="energyTagType(row.energy_standard)" size="small">{{ row.energy_label || '-' }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="制热指标" width="100">
+          <template #default="{ row }">
+            <span>{{ row.heating_energy_label ? `${row.heating_energy_label} (${row.heating_energy_standard || '-'})` : '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="national_standard" label="国家标准" width="110" />
         <el-table-column prop="voltage_freq" label="电压频率" width="100">
           <template #default="{ row }">{{ row.voltage_freq || '-' }}</template>
@@ -64,7 +69,9 @@
         <el-table-column prop="refrigerant" label="制冷剂" width="70">
           <template #default="{ row }">{{ row.refrigerant || '-' }}</template>
         </el-table-column>
-        <el-table-column prop="structure_type" label="机型结构" width="110" />
+        <el-table-column prop="structure_type" label="机型结构" width="110">
+          <template #default="{ row }">{{ structureTypeLabel(row.structure_type) }}</template>
+        </el-table-column>
         <el-table-column prop="main_selling_model" label="主销机型" width="130" show-overflow-tooltip />
         <el-table-column prop="is_active" label="状态" width="70">
           <template #default="{ row }">
@@ -148,6 +155,30 @@
           <el-col :span="8">
             <el-form-item label="国家标准编号">
               <el-input v-model="form.national_standard" placeholder="如: GB/T 7725" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="8">
+            <el-form-item label="制热标准代码">
+              <el-select v-model="form.heating_energy_standard" placeholder="选择制热标准" clearable style="width:100%">
+                <el-option label="COP" value="COP" />
+                <el-option label="SCOP" value="SCOP" />
+                <el-option label="HSPF" value="HSPF" />
+                <el-option label="APF" value="APF" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="制热显示名称">
+              <el-input v-model="form.heating_energy_label" placeholder="如: COP/HSPF/SCOP" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="制热单位">
+              <el-select v-model="form.heating_energy_unit" placeholder="选择制热单位" clearable style="width:100%">
+                <el-option label="W/W" value="W/W" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -341,6 +372,9 @@ interface MarketItem {
   refrigerant_charge: number | null
   min_voltage: number | null
   is_active: string
+  heating_energy_standard: string | null
+  heating_energy_label: string | null
+  heating_energy_unit: string | null
 }
 
 interface CertificationItem {
@@ -378,6 +412,9 @@ interface MarketForm {
   structure_type: string | null
   main_selling_model: string | null
   refrigerant: string | null
+  heating_energy_standard: string | null
+  heating_energy_label: string | null
+  heating_energy_unit: string | null
 }
 
 interface CertForm {
@@ -406,6 +443,9 @@ const form = ref<MarketForm>({
   voltage_freq: null, min_voltage: null, cooling_max_temp: null, heating_min_temp: null,
   structure_type: null, main_selling_model: null,
   refrigerant: null,
+  heating_energy_standard: null,
+  heating_energy_label: null,
+  heating_energy_unit: null,
 })
 
 // ── 认证管理 ──
@@ -468,6 +508,19 @@ function energyTagType(std: string): string {
   return map[std] || 'info'
 }
 
+const STRUCTURE_LABELS: Record<string, string> = {
+  split_wall: '分体壁挂',
+  ceiling: '天花机',
+  duct: '风管机',
+  cabinet: '柜机',
+  window: '窗机',
+  portable: '移动空调',
+}
+
+function structureTypeLabel(val: string | null): string {
+  return (val && STRUCTURE_LABELS[val]) || val || '-'
+}
+
 function certTypeLabel(type: string): string {
   const map: Record<string, string> = {
     safety: '安规 Safety',
@@ -501,6 +554,9 @@ function openAddDialog() {
     voltage_freq: null, cooling_max_temp: null, heating_min_temp: null,
     structure_type: null, main_selling_model: null,
     refrigerant: null,
+    heating_energy_standard: null,
+    heating_energy_label: null,
+    heating_energy_unit: null,
   }
   dialogVisible.value = true
 }
@@ -523,6 +579,9 @@ function openEditDialog(item: MarketItem) {
     structure_type: item.structure_type ?? null,
     main_selling_model: item.main_selling_model ?? null,
     refrigerant: item.refrigerant ?? null,
+    heating_energy_standard: item.heating_energy_standard ?? null,
+    heating_energy_label: item.heating_energy_label ?? null,
+    heating_energy_unit: item.heating_energy_unit ?? null,
   }
   dialogVisible.value = true
 }

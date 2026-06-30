@@ -52,6 +52,9 @@
       <el-table-column prop="seer_min" label="SEER" width="120" />
       <el-table-column prop="eer_min" label="EER" width="120" />
       <el-table-column prop="cspf_min" label="CSPF" width="120" />
+      <el-table-column prop="cop_min" label="COP" width="120" />
+      <el-table-column prop="hspf_min" label="HSPF" width="120" />
+      <el-table-column prop="scop_min" label="SCOP" width="120" />
       <el-table-column prop="is_primary" label="主销" width="80">
         <template #default="{ row }">
           <el-tag :type="row.is_primary === 'true' ? 'success' : 'info'" size="small">
@@ -81,6 +84,9 @@ interface EnergyLevelDefault {
   seer_min: number | null
   eer_min: number | null
   cspf_min: number | null
+  cop_min: number | null
+  hspf_min: number | null
+  scop_min: number | null
   is_primary: string
 }
 
@@ -144,9 +150,9 @@ async function loadEnergyLevelDefaults() {
     // 非关键 — 使用静态示例数据
     if (energyLevelDefaults.length === 0) {
       energyLevelDefaults.push(
-        { level_name: '一级', seer_min: 5.0, eer_min: 3.6, cspf_min: 5.0, is_primary: 'true' },
-        { level_name: '二级', seer_min: 4.5, eer_min: 3.2, cspf_min: 4.5, is_primary: 'false' },
-        { level_name: '三级', seer_min: 4.0, eer_min: 2.8, cspf_min: 4.0, is_primary: 'false' },
+        { level_name: '一级', seer_min: 5.0, eer_min: 3.6, cspf_min: 5.0, cop_min: 4.0, hspf_min: 3.8, scop_min: 4.5, is_primary: 'true' },
+        { level_name: '二级', seer_min: 4.5, eer_min: 3.2, cspf_min: 4.5, cop_min: 3.5, hspf_min: 3.3, scop_min: 4.0, is_primary: 'false' },
+        { level_name: '三级', seer_min: 4.0, eer_min: 2.8, cspf_min: 4.0, cop_min: 3.0, hspf_min: 2.8, scop_min: 3.5, is_primary: 'false' },
       )
     }
   }

@@ -111,6 +111,11 @@ class Market(Base):
     min_voltage = Column(Integer, nullable=True, comment="最低电压要求 V")
     # ── 结束新增 ──
     is_active = Column(String(5), default="true")
+    # ── 制热能效指标 ──
+    heating_energy_standard = Column(String(20), nullable=True, comment="制热能效标准代码: cop/scop/hspf")
+    heating_energy_label = Column(String(20), nullable=True, comment="制热标准显示名: COP/SCOP/HSPF")
+    heating_energy_unit = Column(String(20), nullable=True, comment="制热单位: W/W")
+    # ── 结束制热 ──
 
     products = relationship("Product", secondary="product_markets",
                           primaryjoin="Market.code == product_markets.c.market_code",
@@ -129,6 +134,11 @@ class MarketEnergyLevel(Base):
     seer_min = Column(Float, nullable=True, comment="最低SEER要求")
     eer_min = Column(Float, nullable=True, comment="最低EER要求")
     cspf_min = Column(Float, nullable=True, comment="最低CSPF要求")
+    # ── 制热能效等级指标 ──
+    cop_min = Column(Float, nullable=True, comment="最低COP要求")
+    hspf_min = Column(Float, nullable=True, comment="最低HSPF要求")
+    scop_min = Column(Float, nullable=True, comment="最低SCOP要求")
+    # ── 结束制热 ──
     is_primary = Column(String(5), default="false", comment="是否主销等级")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
