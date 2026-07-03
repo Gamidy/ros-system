@@ -42,5 +42,6 @@ class CompetitorModel(Base):
     source_url = Column(String(1024), nullable=True, comment="来源 URL（自动采集时的产品页面链接）")
     extra_fields = Column(JSON, nullable=True, comment="扩展参数(JSON)，如欧盟SCOP/PDC/PDH/声功率等")
     image_urls = Column(JSON, nullable=True, comment="外观图片URL数组: [{\"label\":\"正面\",\"url\":\"...\"}]")
-    created_at = Column(DateTime, server_default=func.now(), comment="创建时间")
+    annual_sales = Column(Float, nullable=True, comment="竞品年销售额(万元)，用于市占率计算")
+    created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now(), comment="更新时间")

@@ -783,6 +783,12 @@ from app.models.product import Market
 from app.models.certification import CertificationProject
 from app.models.competitor import CompetitorModel as Competitor
 from app.models.product_plan import ProductPlan, ProductPlanStage
+from app.models.delivery_record import DeliveryRecord
+from app.models.financial_snapshot import FinancialSnapshot
+from app.models.revenue_channel import RevenueByChannel
+from app.models.inventory_snapshot import InventorySnapshot
+from app.models.ai_agent import AIAgent
+from app.models.cost_saving import CostSaving as CostSavingRecord
 
 
 def _build_production_sales(db: Session) -> ProductionSalesPillar:
@@ -814,6 +820,23 @@ def _build_production_sales(db: Session) -> ProductionSalesPillar:
         # 转化率 = 有关联项目的策划数 / 总策划数
         linked_plans = db.query(func.count(ProductPlanProjectLink.product_plan_id.distinct())).scalar() or 0
         plan_to_project_rate = round((linked_plans / max(total_plans, 1)) * 100, 1)
+        # T+3 补充指标
+        try:
+            avg_days = db.query(func.avg(DeliveryRecord.cycle_days)).scalar()
+            avg_delivery_cycle_days = round(avg_days, 1) if avg_days else None
+        except Exception:
+            avg_delivery_cycle_days = None
+        try:
+            inv = db.query(func.avg(InventorySnapshot.turnover_rate)).scalar()
+            inventory_turnover_rate = round(inv, 1) if inv else None
+        except Exception:
+            inventory_turnover_rate = None
+        try:
+            total_deliveries = db.query(func.count(DeliveryRecord.id)).scalar() or 0
+            on_time_deliveries = db.query(func.count(DeliveryRecord.id)).filter(DeliveryRecord.on_time == True).scalar() or 0
+            otd_rate = round((on_time_deliveries / max(total_deliveries, 1)) * 100, 1) if total_deliveries > 0 else None
+        except Exception:
+            otd_rate = None
 
         return ProductionSalesPillar(
             total_projects=total_projects,
@@ -827,6 +850,9 @@ def _build_production_sales(db: Session) -> ProductionSalesPillar:
             total_boms=total_boms,
             total_parts=total_parts,
             plan_to_project_rate=plan_to_project_rate,
+            avg_delivery_cycle_days=avg_delivery_cycle_days,
+            inventory_turnover_rate=inventory_turnover_rate,
+            on_time_delivery_rate=otd_rate,
         )
     except Exception:
         return ProductionSalesPillar(
@@ -878,6 +904,21 @@ def _build_financial_control(db: Session) -> FinancialControlPillar:
         )
 
 
+def _add_financial_metrics(db: Session, pillar: FinancialControlPillar) -> FinancialControlPillar:
+    """补充财务指标（来自 financial_snapshots 表）"""
+    try:
+        fs = db.query(FinancialSnapshot).order_by(FinancialSnapshot.period.desc()).first()
+        if fs:
+            pillar.revenue = fs.revenue
+            pillar.gross_profit_rate = fs.gross_profit_rate
+            pillar.net_profit_rate = fs.net_profit_rate
+            pillar.r_and_d_budget = fs.r_and_d_budget
+            pillar.r_and_d_spent = fs.r_and_d_spent
+    except Exception:
+        pass
+    return pillar
+
+
 def _build_growth_engine(db: Session) -> GrowthEnginePillar:
     """增长引擎维度"""
     try:
@@ -910,6 +951,27 @@ def _build_growth_engine(db: Session) -> GrowthEnginePillar:
             total_cert_projects=0, cert_projects_in_progress=0,
             total_products=0, total_versions=0,
         )
+
+
+def _add_revenue_metrics(db: Session, pillar: GrowthEnginePillar) -> GrowthEnginePillar:
+    """补充收入渠道数据（来自 revenue_by_channel 表）"""
+    try:
+        rows = db.query(RevenueByChannel).order_by(RevenueByChannel.period.desc()).all()
+        if rows:
+            period_rows = [r for r in rows if r.period == rows[0].period]
+            total = 0.0
+            for r in period_rows:
+                if r.channel_type == "overseas":
+                    pillar.overseas_revenue = r.amount
+                elif r.channel_type == "tob":
+                    pillar.tob_revenue = r.amount
+                elif r.channel_type == "domestic_retail":
+                    pillar.domestic_revenue = r.amount
+                total += r.amount or 0
+            pillar.total_revenue = round(total, 2)
+    except Exception:
+        pass
+    return pillar
 
 
 def _build_efficiency(db: Session) -> EfficiencyMetricsPillar:
@@ -965,6 +1027,20 @@ def _build_efficiency(db: Session) -> EfficiencyMetricsPillar:
         )
 
 
+def _add_ai_metrics(db: Session, pillar: EfficiencyMetricsPillar) -> EfficiencyMetricsPillar:
+    """补充AI数字化指标"""
+    try:
+        pillar.ai_agent_count = db.query(func.count(AIAgent.id)).filter(AIAgent.status == "active").scalar() or 0
+    except Exception:
+        pass
+    try:
+        savings = db.query(func.sum(CostSavingRecord.amount)).filter(CostSavingRecord.verified == True).scalar()
+        pillar.monthly_cost_savings = round(savings, 2) if savings else None
+    except Exception:
+        pass
+    return pillar
+
+
 @router.get("/business-analysis", response_model=BusinessAnalysisResponse)
 def get_business_analysis(
     db: Session = Depends(get_db),
@@ -980,11 +1056,19 @@ def get_business_analysis(
     - 效率指标（AI提效+数字化）
     """
     try:
+        ps = _build_production_sales(db)
+        fc = _build_financial_control(db)
+        ge = _build_growth_engine(db)
+        ef = _build_efficiency(db)
+        # 补充新数据源
+        fc = _add_financial_metrics(db, fc)
+        ge = _add_revenue_metrics(db, ge)
+        ef = _add_ai_metrics(db, ef)
         return BusinessAnalysisResponse(
-            production_sales=_build_production_sales(db),
-            financial_control=_build_financial_control(db),
-            growth_engine=_build_growth_engine(db),
-            efficiency=_build_efficiency(db),
+            production_sales=ps,
+            financial_control=fc,
+            growth_engine=ge,
+            efficiency=ef,
         )
     except Exception as exc:
         logger.exception("经营分析看板构建失败: %s", exc)

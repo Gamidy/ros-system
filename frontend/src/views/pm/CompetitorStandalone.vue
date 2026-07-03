@@ -350,6 +350,13 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="年销售额(万元)" prop="annual_sales">
+              <el-input-number v-model="form.annual_sales" :min="0" :step="0.01" :precision="2" style="width:100%" placeholder="用于市占率计算" />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
         <el-divider content-position="left">📷 外观外形</el-divider>
         <div class="image-urls-editor">
@@ -624,6 +631,7 @@ interface CompetitorFormData {
   unit_type: string
   launch_year: number | null
   notes: string
+  annual_sales: number | null
   extraFields: Record<string, number | string | null>
   imageUrls: Array<{label: string; url: string}>
 }
@@ -1088,6 +1096,7 @@ const defaultForm = () => ({
   unit_type: '',
   launch_year: null as number | null,
   notes: '',
+  annual_sales: null as number | null,
   extraFields: {} as Record<string, number | string | null>,
   imageUrls: [],
 })
@@ -1279,6 +1288,7 @@ function openEditDialog(item: CompetitorItem) {
 
     launch_year: item.launch_year ?? null,
     notes: item.notes || '',
+    annual_sales: (item as Record<string, unknown>)['annual_sales'] as number | null ?? null,
     extraFields,
     imageUrls: (item as Record<string, unknown>)['image_urls'] as Array<{label: string; url: string}> || [],
   }
@@ -1304,6 +1314,7 @@ async function handleSave() {
       'noise_indoor_db', 'noise_outdoor_db', 'airflow_m3h',
       'indoor_size_mm', 'outdoor_size_mm', 'unit_type',
       'launch_year', 'notes',
+      'annual_sales',
     ]
     for (const f of fields) {
       if (form.value[f] !== null && form.value[f] !== '') {

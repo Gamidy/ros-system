@@ -41,6 +41,7 @@ class CompetitorCreate(BaseModel):
     unit_type: Optional[str] = Field(None, max_length=20)
     launch_year: Optional[int] = None
     notes: Optional[str] = None
+    annual_sales: Optional[float] = None
     extra_fields: Optional[dict] = None
     image_urls: Optional[list] = None
     image_urls: Optional[list] = None
@@ -68,6 +69,7 @@ class CompetitorUpdate(BaseModel):
     unit_type: Optional[str] = Field(None, max_length=20)
     launch_year: Optional[int] = None
     notes: Optional[str] = None
+    annual_sales: Optional[float] = None
     extra_fields: Optional[dict] = None
 
 
@@ -284,6 +286,7 @@ def _serialize(item: CompetitorModel) -> dict:
         "indoor_size_mm": item.indoor_size_mm,
         "outdoor_size_mm": item.outdoor_size_mm,
         "factory_price": item.factory_price,
+        "annual_sales": item.annual_sales,
         "unit_type": item.unit_type,
         "launch_year": item.launch_year,
         "notes": item.notes,
@@ -310,6 +313,7 @@ TRACKED_FIELDS = [
     "cooling_w", "heating_w", "eer", "cspf",
     "noise_indoor_db", "noise_outdoor_db", "airflow_m3h",
     "indoor_size_mm", "outdoor_size_mm", "factory_price",
+    "annual_sales",
     "unit_type",
     "launch_year", "notes", "extra_fields", "image_urls",
 ]
@@ -343,6 +347,7 @@ def _build_snapshot_data(item: CompetitorModel) -> dict:
         "indoor_size_mm": item.indoor_size_mm,
         "outdoor_size_mm": item.outdoor_size_mm,
         "factory_price": item.factory_price,
+        "annual_sales": item.annual_sales,
         "unit_type": item.unit_type,
         "launch_year": item.launch_year,
         "notes": item.notes,

@@ -90,6 +90,11 @@ from app.models.competitor_search_term import CompetitorSearchTerm
 from app.models.market_param_config import MarketParamConfig
 from app.models.ci_v2_feedback import PredictionOutcome, ModelWeightSnapshot
 from app.models.quality_8d_report import EightDReport
+from app.models.inventory_snapshot import InventorySnapshot
+from app.models.ai_agent import AIAgent
+from app.models.delivery_record import DeliveryRecord
+from app.models.financial_snapshot import FinancialSnapshot
+from app.models.revenue_channel import RevenueByChannel
 
 __all__ = [
     "User",
@@ -199,4 +204,16 @@ __all__ = [
     "EventStore",
     # 8D报告管理
     "EightDReport",
+    # 库存快照
+    "InventorySnapshot",
+    # AI 智能体
+    "AIAgent",
+    # 降本记录
+    "CostSaving",
+    # 交付记录
+    "DeliveryRecord",
+    # 财务快照
+    "FinancialSnapshot",
+    # 收入渠道
+    "RevenueByChannel",
 ]

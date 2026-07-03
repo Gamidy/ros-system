@@ -6,7 +6,7 @@ from typing import Optional
 # ═══════════════ 产销协同（T+3产销） ═══════════════
 
 class ProductionSalesPillar(BaseModel):
-    """产销协同维度指标"""
+    """产销协同维度 — T+3产销"""
     # 项目管道
     total_projects: int = 0
     running_projects: int = 0
@@ -15,19 +15,23 @@ class ProductionSalesPillar(BaseModel):
     # 产品策划管道
     total_plans: int = 0
     draft_plans: int = 0
-    costing_plans: int = 0  # 成本目标阶段
-    released_plans: int = 0  # 已发布
+    costing_plans: int = 0
+    released_plans: int = 0
     # BOM/物料
     total_boms: int = 0
     total_parts: int = 0
-    # 转化率（策划→项目）
+    # 转化率
     plan_to_project_rate: float = 0.0
+    # T+3 补充指标
+    avg_delivery_cycle_days: Optional[float] = None
+    inventory_turnover_rate: Optional[float] = None
+    on_time_delivery_rate: Optional[float] = None
 
 
 # ═══════════════ 财务管控（老虎管控） ═══════════════
 
 class FinancialControlPillar(BaseModel):
-    """财务管控维度指标"""
+    """财务管控维度 — 老虎管控"""
     # 采购
     total_purchase_orders: int = 0
     pending_purchase_orders: int = 0
@@ -38,19 +42,23 @@ class FinancialControlPillar(BaseModel):
     # 成本核算
     cost_accounting_periods: int = 0
     cost_orders_count: int = 0
-    # 成本执行
     cost_execution_rate: float = 0.0
-    # 预警
     cost_overrun_alerts: int = 0
+    # 财务指标
+    revenue: Optional[float] = None
+    gross_profit_rate: Optional[float] = None
+    net_profit_rate: Optional[float] = None
+    r_and_d_budget: Optional[float] = None
+    r_and_d_spent: Optional[float] = None
 
 
 # ═══════════════ 增长引擎（ToB+海外+新市场） ═══════════════
 
 class GrowthEnginePillar(BaseModel):
-    """增长引擎维度指标"""
+    """增长引擎维度 — ToB+海外+新市场"""
     # 市场
     total_markets: int = 0
-    r32_markets: int = 0  # R32冷媒市场数
+    r32_markets: int = 0
     r410a_markets: int = 0
     # 竞品
     total_competitors: int = 0
@@ -61,12 +69,18 @@ class GrowthEnginePillar(BaseModel):
     # 产品
     total_products: int = 0
     total_versions: int = 0
+    # 收入
+    overseas_revenue: Optional[float] = None
+    tob_revenue: Optional[float] = None
+    domestic_revenue: Optional[float] = None
+    total_revenue: Optional[float] = None
+    market_share: Optional[float] = None
 
 
 # ═══════════════ 效率指标（AI提效+数字化） ═══════════════
 
 class EfficiencyMetricsPillar(BaseModel):
-    """效率指标维度"""
+    """效率指标维度 — AI提效+数字化"""
     # 项目效率
     on_time_rate: float = 0.0
     avg_project_duration_days: float = 0.0
@@ -78,6 +92,9 @@ class EfficiencyMetricsPillar(BaseModel):
     # 系统活跃
     alert_count: int = 0
     overdue_alert_count: int = 0
+    # AI数字化
+    ai_agent_count: Optional[int] = None
+    monthly_cost_savings: Optional[float] = None
 
 
 # ═══════════════ 经营分析会总响应 ═══════════════
