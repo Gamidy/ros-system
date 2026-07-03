@@ -15,7 +15,7 @@ from app.models.project import Project, ProjectGate
 from app.models.test import TestResult, QualityIssue
 from app.models.alert import Alert, AlertRule
 from app.models.approval import ApprovalRequest  # unified approval engine
-from app.models.product_plan import ProductPlan, ProductPlanStage
+from app.models.product_plan import ProductPlan, ProductPlanStage, ProductPlanProjectLink
 from app.models.user import User
 from app.schemas import (
     DashboardSummary,
@@ -811,8 +811,9 @@ def _build_production_sales(db: Session) -> ProductionSalesPillar:
         # BOM/物料
         total_boms = db.query(func.count(BOM.id)).scalar() or 0
         total_parts = db.query(func.count(BOMItem.id)).scalar() or 0
-        # 转化率
-        plan_to_project_rate = round((completed_projects / max(total_plans, 1)) * 100, 1)
+        # 转化率 = 有关联项目的策划数 / 总策划数
+        linked_plans = db.query(func.count(ProductPlanProjectLink.product_plan_id.distinct())).scalar() or 0
+        plan_to_project_rate = round((linked_plans / max(total_plans, 1)) * 100, 1)
 
         return ProductionSalesPillar(
             total_projects=total_projects,
