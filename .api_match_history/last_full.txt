@@ -1,0 +1,587 @@
+Backend endpoints loaded: 693
+Frontend routes loaded: 5
+Frontend API files: 18
+Total frontend API call references: 568
+
+================================================================================
+PART 1: BACKEND API MODULE BREAKDOWN
+================================================================================
+  pm                       :   68 endpoints
+  projects                 :   46 endpoints
+  other                    :   42 endpoints
+  product-plans            :   39 endpoints
+  s2-cert                  :   37 endpoints
+  cost-accounting          :   33 endpoints
+  inventory                :   33 endpoints
+  admin                    :   32 endpoints
+  purchases                :   27 endpoints
+  dfm                      :   20 endpoints
+  safety                   :   20 endpoints
+  bom                      :   19 endpoints
+  products                 :   17 endpoints
+  target-markets           :   16 endpoints
+  auth                     :   15 endpoints
+  certifications           :   15 endpoints
+  eco                      :   15 endpoints
+  quality                  :   15 endpoints
+  outsource                :   14 endpoints
+  purchase-supplier        :   14 endpoints
+  ecr                      :   12 endpoints
+  tests                    :   12 endpoints
+  knowledge-base           :   11 endpoints
+  approvals                :   10 endpoints
+  bi-analytics             :   10 endpoints
+  dashboard                :   10 endpoints
+  process                  :   10 endpoints
+  cost-recalc              :    9 endpoints
+  gate-rules               :    7 endpoints
+  prototypes               :    7 endpoints
+  purchase-rfq             :    7 endpoints
+  cost-alert               :    6 endpoints
+  notifications            :    6 endpoints
+  standards                :    6 endpoints
+  verification-requirements:    6 endpoints
+  product-requirements     :    6 endpoints
+  events                   :    5 endpoints
+  reviews                  :    4 endpoints
+  alerts                   :    3 endpoints
+  plan-templates           :    3 endpoints
+  audit-logs               :    2 endpoints
+  review-templates         :    2 endpoints
+  ai                       :    1 endpoints
+  tasks                    :    1 endpoints
+
+================================================================================
+PART 2: FRONTEND API CALL MODULE BREAKDOWN
+================================================================================
+  inventory                :   52 calls
+  product-plans            :   51 calls
+  pm                       :   48 calls
+  projects                 :   37 calls
+  cost-accounting          :   32 calls
+  admin                    :   28 calls
+  ci-v2                    :   22 calls
+  safety                   :   20 calls
+  quality                  :   19 calls
+  dfm                      :   19 calls
+  target-markets           :   18 calls
+  bi-analytics             :   17 calls
+  tests                    :   16 calls
+  purchase-supplier        :   15 calls
+  eco                      :   14 calls
+  outsource                :   14 calls
+  ecr                      :   12 calls
+  knowledge-base           :   12 calls
+  auth                     :    9 calls
+  cost-recalc              :    9 calls
+  process                  :    8 calls
+  purchases                :    7 calls
+  plan-templates           :    7 calls
+  dashboard                :    7 calls
+  approvals                :    7 calls
+  certifications           :    7 calls
+  gate-rules               :    7 calls
+  other                    :    6 calls
+  standards                :    6 calls
+  verification-requirements:    6 calls
+  cost-alert               :    6 calls
+  product-requirements     :    5 calls
+  review-templates         :    5 calls
+  reviews                  :    4 calls
+  notifications            :    4 calls
+  purchase-rfq             :    4 calls
+  alerts                   :    3 calls
+  prototypes               :    2 calls
+  tasks                    :    1 calls
+  ai                       :    1 calls
+  s2-cert                  :    1 calls
+
+================================================================================
+PART 3: BACKEND-TO-FRONTEND CROSS-REFERENCE
+================================================================================
+
+  Matched backend endpoints: 291
+  Unmatched backend endpoints: 275
+
+  --- P1: ORPHAN BACKEND APIS (no frontend caller) ---
+    GET    /admin/capacity-unit-costs                         [admin_cost_configs.py]
+    PUT    /admin/capacity-unit-costs                         [admin_cost_configs.py]
+    POST   /admin/indirect-cost                               [admin_cost_configs.py]
+    GET    /admin/indirect-cost/current                       [admin_cost_configs.py]
+    GET    /admin/role-mappings                               [admin_role_mappings.py]
+    POST   /admin/role-mappings                               [admin_role_mappings.py]
+    DELETE /admin/role-mappings/{mapping_id}                  [admin_role_mappings.py]
+    GET    /admin/team-role-templates                         [admin_role_templates.py]
+    POST   /admin/team-role-templates                         [admin_role_templates.py]
+    DELETE /admin/team-role-templates/{template_id}           [admin_role_templates.py]
+    PATCH  /admin/tenants/{org_id}/members/{user_id}/role     [admin_tenant.py]
+    PUT    /admin/trial-qty-configs                           [admin_cost_configs.py]
+    GET    /approval/chains/{chain_id}                        [approvals.py]
+    GET    /approval/requests/my-history                      [approvals.py]
+    GET    /audit-logs                                        [audit_logs.py]
+    GET    /audit-logs/stats                                  [audit_logs.py]
+    POST   /auth/admin-reset-password                         [password_reset_api.py]
+    POST   /auth/admin/reset-password                         [auth.py]
+    GET    /auth/applications                                 [auth.py]
+    PATCH  /auth/applications/{user_id}/review                [auth.py]
+    POST   /auth/apply                                        [auth.py]
+    POST   /auth/register                                     [auth.py]
+    GET    /auth/users                                        [auth.py]
+    GET    /bi/planning                                       [bi_analytics.py]
+    GET    /bi/projects                                       [bi_analytics.py]
+    GET    /bom                                               [bom.py]
+    POST   /bom                                               [bom.py]
+    GET    /bom/categories                                    [bom.py]
+    GET    /bom/cost-aggregation/{project_id}                 [bom.py]
+    GET    /bom/parts                                         [bom.py]
+  Total orphan APIs: 242
+
+  --- P3: HTTP METHOD MISMATCHES ---
+    Backend: PUT    /admin/config                                      vs Frontend: GET    [views/admin/AdminConfig.vue]
+    Backend: DELETE /admin/tenants/{org_id}                            vs Frontend: PATCH  [views/admin/TenantManagement.vue]
+    Backend: GET    /admin/tenants/{org_id}                            vs Frontend: PATCH  [views/admin/TenantManagement.vue]
+    Backend: POST   /approval/requests                                 vs Frontend: GET    [views/approvals/ApprovalsView.vue]
+    Backend: GET    /certifications/ecns                               vs Frontend: PATCH  [views/certifications/CertificationsView.vue]
+    Backend: POST   /certifications/ecns                               vs Frontend: PATCH  [views/certifications/CertificationsView.vue]
+    Backend: GET    /certifications/ecrs                               vs Frontend: PATCH  [views/certifications/CertificationsView.vue]
+    Backend: POST   /certifications/ecrs                               vs Frontend: PATCH  [views/certifications/CertificationsView.vue]
+    Backend: GET    /certifications/prototypes/{pid}                   vs Frontend: PUT    [views/prototypes/PrototypesView.vue]
+    Backend: GET    /certifications/quality-issues                     vs Frontend: PATCH  [views/certifications/CertificationsView.vue]
+    Backend: POST   /certifications/quality-issues                     vs Frontend: PATCH  [views/certifications/CertificationsView.vue]
+    Backend: PATCH  /cost-accounting/product/{plan_id}/labor-costs/{lid} vs Frontend: DELETE [api/costAccounting.ts]
+    Backend: GET    /gate-rules/{rid}                                  vs Frontend: PUT    [views/tests/GateRuleView.vue]
+    Backend: POST   /pm/markets/{code}/compressors                     vs Frontend: GET    [views/pm/MarketMgmt.vue]
+    Backend: POST   /pm/proposals/submit                               vs Frontend: GET    [views/pm/proposal/ProductProposalForm.vue]
+    Backend: GET    /process/routes/{rid}                              vs Frontend: PUT    [views/process/ProcessView.vue]
+    Backend: GET    /process/sops/{sid}                                vs Frontend: PUT    [views/process/ProcessView.vue]
+    Backend: POST   /projects/compare                                  vs Frontend: GET    [api/projects.ts]
+    Backend: GET    /projects/{pid}/risks                              vs Frontend: POST   [views/projects/ProjectsView.vue]
+    Backend: DELETE /projects/{pid}/tasks/{tid}                        vs Frontend: GET    [views/projects/TaskDepTab.vue]
+    Backend: PATCH  /projects/{pid}/tasks/{tid}                        vs Frontend: GET    [views/projects/TaskDepTab.vue]
+    Backend: DELETE /purchase/rfqs/{rid}                               vs Frontend: GET    [views/purchase/RFQView.vue]
+    Backend: PUT    /purchase/rfqs/{rid}                               vs Frontend: GET    [views/purchase/RFQView.vue]
+    Backend: PUT    /quality/8d-reports/{rid}                          vs Frontend: GET    [api/quality.ts]
+    Backend: PUT    /quality/complaints/{cid}                          vs Frontend: GET    [api/quality.ts]
+    Backend: DELETE /quality/iqc/{rid}                                 vs Frontend: GET    [api/quality.ts]
+    Backend: PUT    /quality/iqc/{rid}                                 vs Frontend: GET    [api/quality.ts]
+    Backend: GET    /target-markets/by-market                          vs Frontend: PUT    [views/tests/TargetMarketView.vue]
+    Backend: GET    /target-markets/{tid}                              vs Frontend: PUT    [views/tests/TargetMarketView.vue]
+    Backend: POST   /target-markets/{tid}/certifications               vs Frontend: GET    [views/tests/TargetMarketView.vue]
+    Backend: PATCH  /test-executions/{eid}/complete                    vs Frontend: PUT    [views/tests/TestExecutionPanel.vue]
+    Backend: POST   /tests/mq                                          vs Frontend: GET    [api/tests.ts]
+    Backend: GET    /verification-requirements/{rid}                   vs Frontend: PUT    [views/tests/VerificationRequirementView.vue]
+  Total method mismatches: 33
+
+================================================================================
+PART 4: FRONTEND-TO-BACKEND CROSS-REFERENCE
+================================================================================
+
+  Matched frontend calls: 483
+  Unmatched frontend calls: 85
+
+  --- P0: MISSING BACKEND API (frontend calls with no backend) ---
+    [quality             ] GET    /quality/dashboard                                 [api/quality.ts]
+    [quality             ] PATCH  /quality/8d-reports/:id                            [api/quality.ts]
+    [quality             ] PATCH  /quality/iqc/:id                                   [api/quality.ts]
+    [quality             ] PATCH  /quality/complaints/:id                            [api/quality.ts]
+    [quality             ] GET    /quality/improvement-tasks                         [api/quality.ts]
+    [quality             ] GET    /quality/improvement-tasks/:id                     [api/quality.ts]
+    [quality             ] POST   /quality/improvement-tasks                         [api/quality.ts]
+    [quality             ] PATCH  /quality/improvement-tasks/:id                     [api/quality.ts]
+    [quality             ] DELETE /quality/improvement-tasks/:id                     [api/quality.ts]
+    [inventory           ] GET    /inventory                                         [api/inventory.ts]
+    [inventory           ] PATCH  /inventory/:id                                     [api/inventory.ts]
+    [inventory           ] PATCH  /inventory/warehouses/:id                          [api/inventory.ts]
+    [inventory           ] PATCH  /inventory/counts/:id                              [api/inventory.ts]
+    [tests               ] DELETE /tests/:id                                         [api/tests.ts]
+    [tests               ] POST   /tests/verification-requirements                   [api/tests.ts]
+    [tests               ] POST   /tests/gate-rules                                  [api/tests.ts]
+    [product-plans       ] GET    /product-plans/:id/knowledge                       [api/productPlan.ts]
+    [other               ] POST   /knowledge                                         [api/productPlan.ts]
+    [admin               ] GET    /admin/ai-configs                                  [api/ai.ts]
+    [admin               ] GET    /admin/ai-configs/:id                              [api/ai.ts]
+    [admin               ] POST   /admin/ai-configs                                  [api/ai.ts]
+    [admin               ] PUT    /admin/ai-configs/:id                              [api/ai.ts]
+    [admin               ] DELETE /admin/ai-configs/:id                              [api/ai.ts]
+    [admin               ] POST   /admin/ai-configs/:id/test                         [api/ai.ts]
+    [admin               ] GET    /admin/ai-call-logs                                [api/ai.ts]
+    [ci-v2               ] GET    /api/v2/risk/:ecrId                                [api/ci_v2.ts]
+    [ci-v2               ] GET    /api/v2/impact-graph/:ecrId                        [api/ci_v2.ts]
+    [ci-v2               ] GET    /api/v2/approval-recommendation/:ecrId             [api/ci_v2.ts]
+    [ci-v2               ] POST   /api/v2/risk/batch                                 [api/ci_v2.ts]
+    [ci-v2               ] POST   /api/v2/feedback                                   [api/ci_v2.ts]
+    [ci-v2               ] GET    /api/v2/model-params                               [api/ci_v2.ts]
+    [ci-v2               ] POST   /api/v2/model-params/:versionId                    [api/ci_v2.ts]
+    [ci-v2               ] GET    /api/v2/event-graph/:aggregateType/:aggregateId    [api/ci_v2.ts]
+    [ci-v2               ] GET    /api/v2/event-graph/:aggregateType/:aggregateId/causation [api/ci_v2.ts]
+    [other               ] GET    /api/s2/change-impact/records                      [api/ci_v2.ts]
+    [ci-v2               ] GET    /api/v2/events/timeline/:planId/detail             [views/pm/EventTimelineDetail.vue]
+    [ci-v2               ] POST   /api/v2/events/replay/:planId                      [views/pm/EventTimelineDetail.vue]
+    [review-templates    ] DELETE /review-templates/:id                              [views/pm/ReviewTemplateView.vue]
+    [ci-v2               ] GET    /api/v2/events/timeline/:planId                    [views/pm/EventTimelineView.vue]
+    [ci-v2               ] GET    /api/v2/events/stats                               [views/pm/EventTimelineView.vue]
+    [ci-v2               ] POST   /api/v2/events/replay/:planId                      [views/pm/EventTimelineView.vue]
+    [pm                  ] GET    /pm/proposals/:draftId                             [views/pm/proposal/ProductProposalForm.vue]
+    [pm                  ] POST   /pm/proposals                                      [views/pm/proposal/ProductProposalForm.vue]
+    [pm                  ] POST   /pm/proposals                                      [views/pm/proposal/ProductProposalForm.vue]
+    [admin               ] GET    /admin/users                                       [views/pm/proposal/tab/TeamTab.vue]
+    [knowledge-base      ] GET    /kb/team-roles                                     [views/pm/proposal/tab/TeamTab.vue]
+    [admin               ] GET    /admin/users                                       [views/pm/proposal/tab/TeamTab.vue]
+    [pm                  ] GET    /pm/markets/energy-levels                          [views/pm/proposal/tab/PerfStep.vue]
+    [pm                  ] GET    /pm/market-presets                                 [views/pm/proposal/tab/FeatureStep.vue]
+    [pm                  ] GET    /pm/crawls/logs                                    [views/pm/CrawlAdminView.vue]
+    [product-plans       ] GET    /product-plans/:id/costs                           [views/pm/CostBreakdownDialog.vue]
+    [ci-v2               ] GET    /api/v2/events/saga/:id                            [views/pm/SagaChainViewer.vue]
+    [projects            ] PATCH  /projects/gates/:gateId                            [views/projects/ProjectsView.vue]
+    [admin               ] GET    /admin/users/search                                [views/admin/TenantMemberManager.vue]
+    [tests               ] PUT    /tests/:id                                         [views/tests/TestsView.vue]
+    [target-markets      ] GET    /target-markets/:id/certifications                 [views/tests/TargetMarketView.vue]
+    [tests               ] GET    /test-requests/:id/executions                      [views/tests/TestExecutionPanel.vue]
+    [tests               ] POST   /test-requests/:id/executions                      [views/tests/TestExecutionPanel.vue]
+    [tests               ] PUT    /test-executions/:id/complete                      [views/tests/TestExecutionPanel.vue]
+    [tests               ] PUT    /test-executions/:id/abort                         [views/tests/TestExecutionPanel.vue]
+    [gate-rules          ] POST   /gate-rules/:id/deactivate                         [views/tests/GateRuleView.vue]
+    [gate-rules          ] POST   /gate-rules/:id/activate                           [views/tests/GateRuleView.vue]
+    [verification-requirements] DELETE /verification-requirements/:id                     [views/tests/VerificationRequirementView.vue]
+    [certifications      ] PUT    /certifications/prototypes/:id                     [views/prototypes/PrototypesView.vue]
+    [prototypes          ] GET    /prototypes/:id/test-timeline                      [views/prototypes/PrototypesView.vue]
+    [other               ] GET    /api/s2/change-impact/rules                        [views/cert/CertRulesView.vue]
+    [other               ] PUT    /api/s2/change-impact/rules/:id                    [views/cert/CertRulesView.vue]
+    [other               ] POST   /api/s2/change-impact/rules                        [views/cert/CertRulesView.vue]
+    [other               ] DELETE /api/s2/change-impact/rules/:id                    [views/cert/CertRulesView.vue]
+    [bi-analytics        ] GET    /bi/planning/kpi                                   [views/bi/PlanningAnalytics.vue]
+    [bi-analytics        ] GET    /bi/planning/phase-distribution                    [views/bi/PlanningAnalytics.vue]
+    [bi-analytics        ] GET    /bi/planning/approval-timeline                     [views/bi/PlanningAnalytics.vue]
+    [bi-analytics        ] GET    /bi/cost/budget-vs-actual                          [views/bi/CostAnalytics.vue]
+    [bi-analytics        ] GET    /bi/cost/department-ratio                          [views/bi/CostAnalytics.vue]
+    [bi-analytics        ] GET    /bi/cost/over-budget                               [views/bi/CostAnalytics.vue]
+    [bi-analytics        ] GET    /bi/cost/departments                               [views/bi/CostAnalytics.vue]
+    [bi-analytics        ] GET    /bi/cost/budget-vs-actual                          [views/cost-accounting/CostOverview.vue]
+    [bi-analytics        ] GET    /bi/cost/department-ratio                          [views/cost-accounting/CostOverview.vue]
+    [ci-v2               ] GET    /api/v2/dashboard/overview                         [views/risk/RiskDashboard.vue]
+    [ci-v2               ] GET    /api/v2/dashboard/mq-summary                       [views/risk/MQScorecardPanel.vue]
+    [ci-v2               ] GET    /api/v2/dashboard/mq-detail/:planId                [views/risk/MQScorecardPanel.vue]
+    [ci-v2               ] GET    /api/v2/dashboard/mrc-summary                      [views/risk/MRCReadinessPanel.vue]
+    [ci-v2               ] GET    /api/v2/dashboard/mrc-detail/:planId               [views/risk/MRCReadinessPanel.vue]
+    [ci-v2               ] GET    /api/v2/dashboard/cdf-summary                      [views/risk/CDFTimelinePanel.vue]
+    [ci-v2               ] GET    /api/v2/dashboard/cdf-detail/:planId               [views/risk/CDFTimelinePanel.vue]
+
+  Total P0 issues: 85
+    ci-v2                    : 22 missing APIs
+    admin                    : 10 missing APIs
+    quality                  : 9 missing APIs
+    bi-analytics             : 9 missing APIs
+    tests                    : 8 missing APIs
+    other                    : 6 missing APIs
+    pm                       : 6 missing APIs
+    inventory                : 4 missing APIs
+    product-plans            : 2 missing APIs
+    gate-rules               : 2 missing APIs
+    review-templates         : 1 missing APIs
+    knowledge-base           : 1 missing APIs
+    projects                 : 1 missing APIs
+    target-markets           : 1 missing APIs
+    verification-requirements: 1 missing APIs
+    certifications           : 1 missing APIs
+    prototypes               : 1 missing APIs
+
+================================================================================
+PART 5: PATH INCONSISTENCIES (P2)
+================================================================================
+  plural_vs_singular   | FE: GET    /quality/dashboard                            vs BE: WEBSOCKET /ws
+
+  Total potential path inconsistencies: 1
+
+================================================================================
+PART 6: MODULE-LEVEL MATCH SUMMARY
+================================================================================
+  ❌ admin                     | BE: 32 APIs | FE: 28 calls | Matched: 17 | P0(Miss):10 | P1(Orphan):12
+  ✅ ai                        | BE:  1 APIs | FE:  1 calls | Matched:  1 | P0(Miss): 0 | P1(Orphan): 0
+  ✅ alerts                    | BE:  3 APIs | FE:  3 calls | Matched:  3 | P0(Miss): 0 | P1(Orphan): 0
+  ⚠️ approvals                 | BE: 10 APIs | FE:  7 calls | Matched:  7 | P0(Miss): 0 | P1(Orphan): 2
+  ⚠️ audit-logs                | BE:  2 APIs | FE:  0 calls | Matched:  0 | P0(Miss): 0 | P1(Orphan): 2
+  ⚠️ auth                      | BE: 15 APIs | FE:  9 calls | Matched:  8 | P0(Miss): 0 | P1(Orphan): 7
+  ❌ bi-analytics              | BE: 10 APIs | FE: 17 calls | Matched:  8 | P0(Miss): 9 | P1(Orphan): 2
+  ⚠️ bom                       | BE: 19 APIs | FE:  0 calls | Matched:  0 | P0(Miss): 0 | P1(Orphan):19
+  ⚠️ certifications            | BE: 15 APIs | FE:  7 calls | Matched:  6 | P0(Miss): 1 | P1(Orphan): 2
+  ❌ ci-v2                     | BE:  0 APIs | FE: 22 calls | Matched:  0 | P0(Miss):22 | P1(Orphan): 0
+  ✅ cost-accounting           | BE: 33 APIs | FE: 32 calls | Matched: 32 | P0(Miss): 0 | P1(Orphan): 0
+  ✅ cost-alert                | BE:  6 APIs | FE:  6 calls | Matched:  6 | P0(Miss): 0 | P1(Orphan): 0
+  ✅ cost-recalc               | BE:  9 APIs | FE:  9 calls | Matched:  9 | P0(Miss): 0 | P1(Orphan): 0
+  ⚠️ dashboard                 | BE: 10 APIs | FE:  7 calls | Matched:  5 | P0(Miss): 0 | P1(Orphan): 5
+  ✅ dfm                       | BE: 20 APIs | FE: 19 calls | Matched: 19 | P0(Miss): 0 | P1(Orphan): 1
+  ✅ eco                       | BE: 15 APIs | FE: 14 calls | Matched: 14 | P0(Miss): 0 | P1(Orphan): 1
+  ✅ ecr                       | BE: 12 APIs | FE: 12 calls | Matched: 11 | P0(Miss): 0 | P1(Orphan): 1
+  ⚠️ events                    | BE:  5 APIs | FE:  0 calls | Matched:  0 | P0(Miss): 0 | P1(Orphan): 5
+  ⚠️ gate-rules                | BE:  7 APIs | FE:  7 calls | Matched:  5 | P0(Miss): 2 | P1(Orphan): 1
+  ❌ inventory                 | BE: 33 APIs | FE: 52 calls | Matched: 32 | P0(Miss): 4 | P1(Orphan): 1
+  ⚠️ knowledge-base            | BE: 11 APIs | FE: 12 calls | Matched:  8 | P0(Miss): 1 | P1(Orphan): 3
+  ⚠️ notifications             | BE:  6 APIs | FE:  4 calls | Matched:  4 | P0(Miss): 0 | P1(Orphan): 2
+  ❌ other                     | BE: 42 APIs | FE:  6 calls | Matched:  0 | P0(Miss): 6 | P1(Orphan):42
+  ✅ outsource                 | BE: 14 APIs | FE: 14 calls | Matched: 14 | P0(Miss): 0 | P1(Orphan): 0
+  ✅ plan-templates            | BE:  3 APIs | FE:  7 calls | Matched:  3 | P0(Miss): 0 | P1(Orphan): 0
+  ❌ pm                        | BE: 68 APIs | FE: 48 calls | Matched: 40 | P0(Miss): 6 | P1(Orphan):26
+  ✅ process                   | BE: 10 APIs | FE:  8 calls | Matched:  8 | P0(Miss): 0 | P1(Orphan): 0
+  ⚠️ product-plans             | BE: 39 APIs | FE: 51 calls | Matched: 38 | P0(Miss): 2 | P1(Orphan): 1
+  ✅ product-requirements      | BE:  6 APIs | FE:  5 calls | Matched:  5 | P0(Miss): 0 | P1(Orphan): 1
+  ⚠️ products                  | BE: 17 APIs | FE:  0 calls | Matched:  0 | P0(Miss): 0 | P1(Orphan):17
+  ⚠️ projects                  | BE: 46 APIs | FE: 37 calls | Matched: 25 | P0(Miss): 1 | P1(Orphan):17
+  ⚠️ prototypes                | BE:  7 APIs | FE:  2 calls | Matched:  1 | P0(Miss): 1 | P1(Orphan): 6
+  ⚠️ purchase-rfq              | BE:  7 APIs | FE:  4 calls | Matched:  3 | P0(Miss): 0 | P1(Orphan): 2
+  ✅ purchase-supplier         | BE: 14 APIs | FE: 15 calls | Matched: 14 | P0(Miss): 0 | P1(Orphan): 0
+  ⚠️ purchases                 | BE: 27 APIs | FE:  7 calls | Matched:  7 | P0(Miss): 0 | P1(Orphan):20
+  ❌ quality                   | BE: 15 APIs | FE: 19 calls | Matched: 10 | P0(Miss): 9 | P1(Orphan): 1
+  ⚠️ review-templates          | BE:  2 APIs | FE:  5 calls | Matched:  2 | P0(Miss): 1 | P1(Orphan): 0
+  ✅ reviews                   | BE:  4 APIs | FE:  4 calls | Matched:  4 | P0(Miss): 0 | P1(Orphan): 0
+  ⚠️ s2-cert                   | BE: 37 APIs | FE:  1 calls | Matched:  1 | P0(Miss): 0 | P1(Orphan):36
+  ✅ safety                    | BE: 20 APIs | FE: 20 calls | Matched: 20 | P0(Miss): 0 | P1(Orphan): 0
+  ✅ standards                 | BE:  6 APIs | FE:  6 calls | Matched:  6 | P0(Miss): 0 | P1(Orphan): 0
+  ⚠️ target-markets            | BE: 16 APIs | FE: 18 calls | Matched: 12 | P0(Miss): 1 | P1(Orphan): 1
+  ✅ tasks                     | BE:  1 APIs | FE:  1 calls | Matched:  1 | P0(Miss): 0 | P1(Orphan): 0
+  ❌ tests                     | BE: 12 APIs | FE: 16 calls | Matched:  5 | P0(Miss): 8 | P1(Orphan): 5
+  ⚠️ verification-requirements | BE:  6 APIs | FE:  6 calls | Matched:  4 | P0(Miss): 1 | P1(Orphan): 1
+
+================================================================================
+PART 7: KEY MODULE DEEP-DIVE
+================================================================================
+
+  ── AUTH ──
+     Backend: 15 endpoints | Frontend: 9 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: POST   /auth/admin-reset-password                         [password_reset_api.py]
+        BE: POST   /auth/admin/reset-password                         [auth.py]
+        BE: GET    /auth/applications                                 [auth.py]
+        BE: PATCH  /auth/applications/{user_id}/review                [auth.py]
+        BE: POST   /auth/apply                                        [auth.py]
+        ... and 2 more
+
+  ── BOM ──
+     Backend: 19 endpoints | Frontend: 0 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /bom                                               [bom.py]
+        BE: POST   /bom                                               [bom.py]
+        BE: GET    /bom/categories                                    [bom.py]
+        BE: GET    /bom/cost-aggregation/{project_id}                 [bom.py]
+        BE: GET    /bom/parts                                         [bom.py]
+        ... and 14 more
+
+  ── PROJECTS ──
+     Backend: 46 endpoints | Frontend: 37 calls
+     🔴 P0 (Missing Backend):
+        FE: PATCH  /projects/gates/:gateId                            [views/projects/ProjectsView.vue]
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /projects/{pid}/dashboard                          [projects.py]
+        BE: GET    /projects/{pid}/delay-chain                        [projects.py]
+        BE: GET    /projects/{pid}/export                             [projects.py]
+        BE: GET    /projects/{pid}/gates                              [projects.py]
+        BE: POST   /projects/{pid}/gates                              [projects.py]
+        ... and 12 more
+
+  ── ECR ──
+     Backend: 12 endpoints | Frontend: 12 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: POST   /ecr/{ecr_id}/attachments                          [ecr.py]
+
+  ── ECO ──
+     Backend: 15 endpoints | Frontend: 14 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: POST   /eco/{eco_id}/rollback                             [eco.py]
+
+  ── PURCHASES ──
+     Backend: 27 endpoints | Frontend: 7 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /purchases/dashboard                               [purchases.py]
+        BE: GET    /purchases/orders                                  [purchases.py]
+        BE: POST   /purchases/orders                                  [purchases.py]
+        BE: GET    /purchases/orders/stats                            [purchases.py]
+        BE: GET    /purchases/orders/{order_id}                       [purchases.py]
+        ... and 15 more
+
+  ── PURCHASE-RFQ ──
+     Backend: 7 endpoints | Frontend: 4 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: POST   /purchase/rfqs/{rid}/quotations                    [purchase_rfq.py]
+        BE: DELETE /purchase/rfqs/{rid}/quotations/{qid}              [purchase_rfq.py]
+
+  ── PURCHASE-SUPPLIER ──
+     Backend: 14 endpoints | Frontend: 15 calls
+
+  ── INVENTORY ──
+     Backend: 33 endpoints | Frontend: 52 calls
+     🔴 P0 (Missing Backend):
+        FE: GET    /inventory                                         [api/inventory.ts]
+        FE: PATCH  /inventory/:id                                     [api/inventory.ts]
+        FE: PATCH  /inventory/warehouses/:id                          [api/inventory.ts]
+        FE: PATCH  /inventory/counts/:id                              [api/inventory.ts]
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: PUT    /inventory/counts/{cid}/items/{item_id}            [inventory_count.py]
+
+  ── COST-ACCOUNTING ──
+     Backend: 33 endpoints | Frontend: 32 calls
+
+  ── CERTIFICATIONS ──
+     Backend: 15 endpoints | Frontend: 7 calls
+     🔴 P0 (Missing Backend):
+        FE: PUT    /certifications/prototypes/:id                     [views/prototypes/PrototypesView.vue]
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: PATCH  /certifications/ecrs/{eid}                         [certifications.py]
+        BE: PATCH  /certifications/quality-issues/{iid}               [certifications.py]
+
+  ── S2-CERT ──
+     Backend: 37 endpoints | Frontend: 1 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /s2/certificates                                   [s2_certificates.py]
+        BE: POST   /s2/certificates                                   [s2_certificates.py]
+        BE: GET    /s2/certificates/expiring                          [s2_certificates.py]
+        BE: PUT    /s2/certificates/{cert_id}                         [s2_certificates.py]
+        BE: POST   /s2/certificates/{cert_id}/renew                   [s2_certificates.py]
+        ... and 31 more
+
+  ── PM ──
+     Backend: 68 endpoints | Frontend: 48 calls
+     🔴 P0 (Missing Backend):
+        FE: GET    /pm/proposals/:draftId                             [views/pm/proposal/ProductProposalForm.vue]
+        FE: POST   /pm/proposals                                      [views/pm/proposal/ProductProposalForm.vue]
+        FE: POST   /pm/proposals                                      [views/pm/proposal/ProductProposalForm.vue]
+        FE: GET    /pm/markets/energy-levels                          [views/pm/proposal/tab/PerfStep.vue]
+        FE: GET    /pm/market-presets                                 [views/pm/proposal/tab/FeatureStep.vue]
+        ... and 1 more
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /pm/accessory-defaults                             [pm_accessory.py]
+        BE: GET    /pm/capacity-cost-config                           [pm_workspace.py]
+        BE: POST   /pm/cert-costs-from-compliance                     [pm_workspace.py]
+        BE: GET    /pm/cert-standards                                 [pm_config.py]
+        BE: GET    /pm/cert-standards/by-market                       [pm_proposal_api.py]
+        ... and 21 more
+
+  ── PRODUCT-PLANS ──
+     Backend: 39 endpoints | Frontend: 51 calls
+     🔴 P0 (Missing Backend):
+        FE: GET    /product-plans/:id/knowledge                       [api/productPlan.ts]
+        FE: GET    /product-plans/:id/costs                           [views/pm/CostBreakdownDialog.vue]
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /product-plans/{plan_id}/status                    [product_plan_crud.py]
+
+  ── QUALITY ──
+     Backend: 15 endpoints | Frontend: 19 calls
+     🔴 P0 (Missing Backend):
+        FE: GET    /quality/dashboard                                 [api/quality.ts]
+        FE: PATCH  /quality/8d-reports/:id                            [api/quality.ts]
+        FE: PATCH  /quality/iqc/:id                                   [api/quality.ts]
+        FE: PATCH  /quality/complaints/:id                            [api/quality.ts]
+        FE: GET    /quality/improvement-tasks                         [api/quality.ts]
+        ... and 4 more
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: PUT    /quality/8d-reports/{rid}/status                   [quality_8d_report.py]
+
+  ── OUTSOURCE ──
+     Backend: 14 endpoints | Frontend: 14 calls
+
+  ── SAFETY ──
+     Backend: 20 endpoints | Frontend: 20 calls
+
+  ── DFM ──
+     Backend: 20 endpoints | Frontend: 19 calls
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /dfm/stats                                         [manufacturability.py]
+
+  ── GATE-RULES ──
+     Backend: 7 endpoints | Frontend: 7 calls
+     🔴 P0 (Missing Backend):
+        FE: POST   /gate-rules/:id/deactivate                         [views/tests/GateRuleView.vue]
+        FE: POST   /gate-rules/:id/activate                           [views/tests/GateRuleView.vue]
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: PATCH  /gate-rules/{rid}/status                           [gate_rules.py]
+
+  ── TESTS ──
+     Backend: 12 endpoints | Frontend: 16 calls
+     🔴 P0 (Missing Backend):
+        FE: DELETE /tests/:id                                         [api/tests.ts]
+        FE: POST   /tests/verification-requirements                   [api/tests.ts]
+        FE: POST   /tests/gate-rules                                  [api/tests.ts]
+        FE: PUT    /tests/:id                                         [views/tests/TestsView.vue]
+        FE: GET    /test-requests/:id/executions                      [views/tests/TestExecutionPanel.vue]
+        ... and 3 more
+     🟡 P1 (Orphan Backend APIs - no frontend uses):
+        BE: GET    /test-executions                                   [test_executions.py]
+        BE: POST   /test-executions                                   [test_executions.py]
+        BE: DELETE /test-executions/{eid}                             [test_executions.py]
+        BE: PATCH  /tests/mq/{mid}                                    [tests.py]
+        BE: POST   /tests/{rid}/results                               [tests.py]
+
+================================================================================
+PART 8: FRONTEND ROUTES WITH NO BACKEND COVERAGE
+================================================================================
+  ⚠️ Projects                       path=/projects                                 module=projects             → 1 missing APIs
+  ⚠️ ProjectDetail                  path=/projects/:id                             module=projects             → 1 missing APIs
+  ⚠️ ProjectGantt                   path=/projects/:id/gantt                       module=projects             → 1 missing APIs
+  ⚠️ ProjectStats                   path=/projects/stats                           module=projects             → 1 missing APIs
+  ⚠️ ProjectTemplates               path=/project-templates                        module=projects             → 1 missing APIs
+  ⚠️ ProjectCompare                 path=/projects/compare                         module=projects             → 1 missing APIs
+  ⚠️ Tests                          path=/tests                                    module=tests                → 8 missing APIs
+  ⚠️ VerificationRequirements       path=/tests/verification-requirements          module=tests                → 8 missing APIs
+  ⚠️ GateRules                      path=/tests/gate-rules                         module=tests                → 8 missing APIs
+  ⚠️ Certifications                 path=/certifications                           module=certifications       → 1 missing APIs
+  ⚠️ Prototypes                     path=/prototypes                               module=prototypes           → 1 missing APIs
+  ⚠️ EightDReports                  path=/quality/8d-reports                       module=quality              → 9 missing APIs
+  ⚠️ IQC                            path=/quality/iqc                              module=quality              → 9 missing APIs
+  ⚠️ ComplaintView                  path=/quality/complaints                       module=quality              → 9 missing APIs
+  ⚠️ ImprovementTasks               path=/quality/improvement-tasks                module=quality              → 9 missing APIs
+  ⚠️ Inventory                      path=/inventory                                module=inventory            → 4 missing APIs
+  ⚠️ InventoryWarehouses            path=/inventory/warehouses                     module=inventory            → 4 missing APIs
+  ⚠️ InventoryTransactions          path=/inventory/transactions                   module=inventory            → 4 missing APIs
+  ⚠️ InventoryCounts                path=/inventory/counts                         module=inventory            → 4 missing APIs
+  ⚠️ StorageLocations               path=/inventory/locations                      module=inventory            → 4 missing APIs
+  ⚠️ InventoryAlerts                path=/inventory/alerts                         module=inventory            → 4 missing APIs
+  ⚠️ InventoryReplenishments        path=/inventory/replenishments                 module=inventory            → 4 missing APIs
+  ⚠️ ProductPlanningCenter          path=/product-plans                            module=product-plans        → 2 missing APIs
+  ⚠️ ProductPlanDetail              path=/product-plans/:id                        module=product-plans        → 2 missing APIs
+  ⚠️ AdminConfig                    path=/admin-config                             module=admin                → 10 missing APIs
+  ⚠️ TenantManagement               path=/admin/tenants                            module=admin                → 10 missing APIs
+  ⚠️ MyOrgInfo                      path=/admin/my-org                             module=admin                → 10 missing APIs
+  ⚠️ BiPlanning                     path=/bi/planning                              module=bi-analytics         → 9 missing APIs
+  ⚠️ BiCost                         path=/bi/cost                                  module=bi-analytics         → 9 missing APIs
+  ⚠️ BiCostEfficiency               path=/bi/cost-efficiency                       module=bi-analytics         → 9 missing APIs
+  ⚠️ ReviewTemplate                 path=/pm/review-templates                      module=pm                   → 6 missing APIs
+  ⚠️ PlanTemplate                   path=/pm/plan-templates                        module=pm                   → 6 missing APIs
+  ⚠️ CrawlAdmin                     path=/pm/crawl-admin                           module=pm                   → 6 missing APIs
+  ⚠️ RequirementSubmit              path=/pm/requirements/submit                   module=pm                   → 6 missing APIs
+  ⚠️ RequirementList                path=/pm/requirements                          module=pm                   → 6 missing APIs
+  ⚠️ StandardManage                 path=/admin/standards                          module=admin                → 10 missing APIs
+
+================================================================================
+SUMMARY STATISTICS
+================================================================================
+
+  Overall Statistics:
+  ───────────────────
+  Backend Endpoints:            693
+  Frontend API Calls:           568
+  Frontend Routes:                5
+
+  Issues Found:
+  ─────────────
+  P0 (Missing Backend API):      85  ← Frontend calls without backend
+  P1 (Orphan Backend API):      242  ← Backend APIs not called by frontend
+  P2 (Path Inconsistency):        0  ← Parameter style differences
+  P3 (HTTP Method Mismatch):     33  ← FE/BE use different HTTP methods
+
+  Key Risk Modules (by P0 count):
+
+    ci-v2                    : P0= 22 (BE=0 endpoints)
+    admin                    : P0= 10 (BE=32 endpoints)
+    quality                  : P0=  9 (BE=15 endpoints)
+    bi-analytics             : P0=  9 (BE=10 endpoints)
+    tests                    : P0=  8 (BE=12 endpoints)
+    other                    : P0=  6 (BE=42 endpoints)
+    pm                       : P0=  6 (BE=68 endpoints)
+    inventory                : P0=  4 (BE=33 endpoints)
+    product-plans            : P0=  2 (BE=39 endpoints)
+    gate-rules               : P0=  2 (BE=7 endpoints)
+    review-templates         : P0=  1 (BE=2 endpoints)
+    knowledge-base           : P0=  1 (BE=11 endpoints)
+    projects                 : P0=  1 (BE=46 endpoints)
+    target-markets           : P0=  1 (BE=16 endpoints)
+    verification-requirements: P0=  1 (BE=6 endpoints)
+    certifications           : P0=  1 (BE=15 endpoints)
+    prototypes               : P0=  1 (BE=7 endpoints)

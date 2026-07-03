@@ -68,7 +68,7 @@ const option = computed<EChartsOption>(() => {
       emphasis: {
         label: { fontSize: 16, fontWeight: 'bold' },
       },
-      data: props.data.map((d, i) => ({
+      data: (Array.isArray(props.data) ? props.data : []).map((d, i) => ({
         name: d.name,
         value: d.value,
         itemStyle: { color: colors[i % colors.length] },

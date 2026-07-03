@@ -1,0 +1,4853 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/admin/capacity-unit-costs",
+    "function": "list_capacity_unit_costs",
+    "description": "",
+    "file": "admin_cost_configs.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/capacity-unit-costs",
+    "function": "batch_update_capacity_unit_costs",
+    "description": "",
+    "file": "admin_cost_configs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/config",
+    "function": "get_config",
+    "description": "",
+    "file": "admin_config.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/config",
+    "function": "update_config",
+    "description": "",
+    "file": "admin_config.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/config/batch",
+    "function": "update_config_batch",
+    "description": "",
+    "file": "admin_config.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/config/public",
+    "function": "get_public_config",
+    "description": "获取公开系统配置（无需登录即可访问，仅返回UI渲染和计算所需的非敏感配置）",
+    "file": "admin_config.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/indirect-cost",
+    "function": "update_indirect_cost",
+    "description": "",
+    "file": "admin_cost_configs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/indirect-cost/current",
+    "function": "get_current_indirect_cost",
+    "description": "",
+    "file": "admin_cost_configs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/role-mappings",
+    "function": "list_role_mappings",
+    "description": "",
+    "file": "admin_role_mappings.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/role-mappings",
+    "function": "create_role_mapping",
+    "description": "",
+    "file": "admin_role_mappings.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/role-mappings/{mapping_id}",
+    "function": "delete_role_mapping",
+    "description": "",
+    "file": "admin_role_mappings.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/standards",
+    "function": "create_standard",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/standards/crawl-logs",
+    "function": "list_crawl_logs",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/standards/regions",
+    "function": "list_regions",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/standards/regions",
+    "function": "create_region",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/standards/regions/{region_id}",
+    "function": "update_region",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/standards/trigger-crawl",
+    "function": "trigger_crawl",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/standards/{standard_id}",
+    "function": "delete_standard",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/standards/{standard_id}",
+    "function": "update_standard",
+    "description": "",
+    "file": "standard_admin_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/team-role-templates",
+    "function": "list_team_role_templates",
+    "description": "",
+    "file": "admin_role_templates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/team-role-templates",
+    "function": "batch_upsert_team_role_templates",
+    "description": "",
+    "file": "admin_role_templates.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/team-role-templates/{template_id}",
+    "function": "delete_team_role_template",
+    "description": "",
+    "file": "admin_role_templates.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tenants",
+    "function": "list_orgs",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tenants",
+    "function": "create_org",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tenants/{org_id}",
+    "function": "delete_org",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tenants/{org_id}",
+    "function": "get_org",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/tenants/{org_id}",
+    "function": "update_org",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tenants/{org_id}/members",
+    "function": "list_members",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tenants/{org_id}/members",
+    "function": "add_member",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tenants/{org_id}/members/{user_id}",
+    "function": "remove_member",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/tenants/{org_id}/members/{user_id}/role",
+    "function": "update_member_role",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/trial-qty-configs",
+    "function": "batch_update_trial_qty_configs",
+    "description": "",
+    "file": "admin_cost_configs.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ai/generate-plan-draft",
+    "function": "",
+    "description": "",
+    "file": "ai_plan_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/alert-rules",
+    "function": "list_alert_rules",
+    "description": "",
+    "file": "alerts.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/alerts",
+    "function": "list_alerts",
+    "description": "",
+    "file": "alerts.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/alerts/check-overdue",
+    "function": "check_overdue",
+    "description": "",
+    "file": "alerts.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/approval/chains",
+    "function": "list_approval_chains",
+    "description": "列出所有审批链（含步骤）",
+    "file": "approvals.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/approval/chains",
+    "function": "create_approval_chain",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/approval/chains/{chain_id}",
+    "function": "get_approval_chain",
+    "description": "查看审批链详情",
+    "file": "approvals.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/approval/requests",
+    "function": "list_approval_requests",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/approval/requests",
+    "function": "submit_approval_request",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/approval/requests/my-history",
+    "function": "list_my_approval_history",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/approval/requests/pending",
+    "function": "list_pending_approval_requests",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/approval/requests/{request_id}",
+    "function": "get_approval_request",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/approval/requests/{request_id}/approve",
+    "function": "approve_approval_request",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/approval/requests/{request_id}/reject",
+    "function": "reject_approval_request",
+    "description": "",
+    "file": "approvals.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/audit-logs",
+    "function": "list_audit_logs",
+    "description": "",
+    "file": "audit_logs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/audit-logs/stats",
+    "function": "audit_stats",
+    "description": "",
+    "file": "audit_logs.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin-reset-password",
+    "function": "admin_reset_password",
+    "description": "",
+    "file": "password_reset_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/admin/reset-password",
+    "function": "admin_reset_password",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/applications",
+    "function": "list_applications",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/auth/applications/{user_id}/review",
+    "function": "review_application",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/apply",
+    "function": "apply_account",
+    "description": "账号申请 — 开放接口，无需登录",
+    "file": "auth.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/forgot-password",
+    "function": "forgot_password",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "function": "login",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/logout",
+    "function": "logout",
+    "description": "登出：将当前 token 加入黑名单使其失效",
+    "file": "auth.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "function": "get_me",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/my-org",
+    "function": "get_my_org",
+    "description": "",
+    "file": "admin_tenant.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/auth/password",
+    "function": "change_password",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/register",
+    "function": "register",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/reset-password",
+    "function": "reset_password",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/users",
+    "function": "list_users",
+    "description": "",
+    "file": "auth.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/verify-reset-token",
+    "function": "verify_reset_token",
+    "description": "验证重置令牌 — 验证token有效期 → 更新密码 → 标记token已使用",
+    "file": "password_reset_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/cost",
+    "function": "bi_cost",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/cost-efficiency",
+    "function": "bi_cost_efficiency",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/cost/dashboard",
+    "function": "bi_cost_dashboard",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/dashboard",
+    "function": "bi_dashboard",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/distribution",
+    "function": "bi_distribution",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/funnel",
+    "function": "bi_funnel",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/planning",
+    "function": "bi_planning",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/projects",
+    "function": "bi_projects",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/review-summary",
+    "function": "get_review_summary",
+    "description": "",
+    "file": "review_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bi/trend",
+    "function": "bi_trend",
+    "description": "",
+    "file": "bi_analytics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom",
+    "function": "list_boms",
+    "description": "",
+    "file": "bom.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bom",
+    "function": "create_bom",
+    "description": "创建BOM — bom_no全局唯一",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/categories",
+    "function": "list_categories",
+    "description": "",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/cost-aggregation/{project_id}",
+    "function": "get_bom_cost_aggregation",
+    "description": "",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/parts",
+    "function": "list_parts",
+    "description": "",
+    "file": "bom.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bom/parts",
+    "function": "create_part",
+    "description": "创建物料 — part_no全局唯一",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/parts/cdf-expiring",
+    "function": "cdf_expiring",
+    "description": "CDF证书即将到期的物料 — 按有效期过滤",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/parts/{part_id}",
+    "function": "get_part",
+    "description": "获取物料详情 — 含AVL供应商清单",
+    "file": "bom.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/bom/parts/{part_id}",
+    "function": "update_part",
+    "description": "更新物料 — 生命周期/CDF/MQ/MRC字段",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/parts/{part_id}/alternatives",
+    "function": "list_alternatives",
+    "description": "列出物料的替代料 — 不同part_no，功能可替代",
+    "file": "bom.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bom/parts/{part_id}/alternatives",
+    "function": "set_alternatives",
+    "description": "设置替代料关系 — 替换全部替代料列表",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/parts/{part_id}/avl",
+    "function": "list_avl",
+    "description": "列出物料的所有批准供应商",
+    "file": "bom.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bom/parts/{part_id}/avl",
+    "function": "add_avl",
+    "description": "添加物料批准供应商 — 同一物料可有多家供应商",
+    "file": "bom.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/bom/parts/{part_id}/avl/{avl_id}",
+    "function": "remove_avl",
+    "description": "从AVL中移除供应商",
+    "file": "bom.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/bom/{bom_id}",
+    "function": "update_bom",
+    "description": "更新BOM状态/版本 — MBOM变更需产生新版本(Rule #2)",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/{bom_id}/cost-summary",
+    "function": "get_bom_cost_summary",
+    "description": "BOM成本实时汇总 — 递归遍历树，汇总各级成本",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/{bom_id}/items",
+    "function": "list_bom_items",
+    "description": "列出BOM所有条目（平铺）",
+    "file": "bom.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bom/{bom_id}/items",
+    "function": "add_bom_item",
+    "description": "向BOM添加条目 — 支持6层体系和item_type标记",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bom/{bom_id}/tree",
+    "function": "get_bom_tree",
+    "description": "获取BOM树形结构 — 含item_type字段",
+    "file": "bom.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/certifications",
+    "function": "list_certs",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/certifications",
+    "function": "create_cert",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/certifications/ecns",
+    "function": "list_ecns",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/certifications/ecns",
+    "function": "create_ecn",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/certifications/ecrs",
+    "function": "list_ecrs",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/certifications/ecrs",
+    "function": "create_ecr",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/certifications/ecrs/{eid}",
+    "function": "process_ecr",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/certifications/prototypes",
+    "function": "list_protos",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/certifications/prototypes",
+    "function": "create_proto",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/certifications/prototypes/{pid}",
+    "function": "get_proto",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/certifications/quality-issues",
+    "function": "list_issues",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/certifications/quality-issues",
+    "function": "create_issue",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/certifications/quality-issues/{iid}",
+    "function": "update_issue",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/certifications/{cid}",
+    "function": "get_cert",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/certifications/{cid}",
+    "function": "update_cert",
+    "description": "",
+    "file": "certifications.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/analysis/detail",
+    "function": "get_variance_detail",
+    "description": "成本差异明细 — 每个核算单项的差异",
+    "file": "cost_accounting_analysis.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/analysis/trend",
+    "function": "get_cost_trend",
+    "description": "成本趋势 — 多个核算期间的成本变化",
+    "file": "cost_accounting_analysis.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/analysis/variance",
+    "function": "get_variance_analysis",
+    "description": "成本差异分析 — 料工费三维度对比",
+    "file": "cost_accounting_analysis.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/labor-rates",
+    "function": "list_labor_rates",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/labor-rates",
+    "function": "create_labor_rate",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/cost-accounting/labor-rates/{rid}",
+    "function": "delete_labor_rate",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/cost-accounting/labor-rates/{rid}",
+    "function": "update_labor_rate",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/material-costs/enhanced/{bom_id}",
+    "function": "get_enhanced_material_costs",
+    "description": "增强BOM成本树 — 层级小计/占比/Top物料",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/overhead-rules",
+    "function": "list_overhead_rules",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/overhead-rules",
+    "function": "create_overhead_rule",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/cost-accounting/overhead-rules/{rid}",
+    "function": "delete_overhead_rule",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/cost-accounting/overhead-rules/{rid}",
+    "function": "update_overhead_rule",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/overhead-rules/{rid}/toggle",
+    "function": "toggle_overhead_rule",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/periods",
+    "function": "list_periods",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/periods",
+    "function": "create_period",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/cost-accounting/periods/{pid}",
+    "function": "delete_period",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/cost-accounting/periods/{pid}",
+    "function": "update_period",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/periods/{pid}/close",
+    "function": "close_period",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/product/{plan_id}/allocate-overhead",
+    "function": "allocate_overhead",
+    "description": "执行间接费分摊计算",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/product/{plan_id}/calculate-labor",
+    "function": "calculate_labor",
+    "description": "按最新费率重新计算产品人工成本",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/product/{plan_id}/labor-costs",
+    "function": "list_product_labor",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/product/{plan_id}/labor-costs",
+    "function": "create_product_labor",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/cost-accounting/product/{plan_id}/labor-costs/{lid}",
+    "function": "delete_product_labor",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/cost-accounting/product/{plan_id}/labor-costs/{lid}",
+    "function": "update_product_labor",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/product/{plan_id}/overhead-costs",
+    "function": "list_product_overhead",
+    "description": "",
+    "file": "cost_accounting.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/reports/export/csv",
+    "function": "export_csv",
+    "description": "",
+    "file": "cost_accounting_export.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/reports/export/excel",
+    "function": "export_excel",
+    "description": "",
+    "file": "cost_accounting_export.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/sheets",
+    "function": "list_sheets",
+    "description": "",
+    "file": "cost_accounting_sheets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/sheets/generate",
+    "function": "generate_sheet",
+    "description": "",
+    "file": "cost_accounting_sheets.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/cost-accounting/sheets/{sid}",
+    "function": "delete_sheet",
+    "description": "删除核算单",
+    "file": "cost_accounting_sheets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-accounting/sheets/{sid}",
+    "function": "get_sheet",
+    "description": "获取核算单详情（含明细项）",
+    "file": "cost_accounting_sheets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/sheets/{sid}/finalize",
+    "function": "finalize_sheet",
+    "description": "定稿核算单（锁定，不可修改）",
+    "file": "cost_accounting_sheets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-accounting/sheets/{sid}/recalculate",
+    "function": "recalculate_sheet",
+    "description": "重新核算 — 重新获取BOM成本并更新",
+    "file": "cost_accounting_sheets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-alert-rules",
+    "function": "list_rules",
+    "description": "",
+    "file": "cost_alert_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-alert-rules",
+    "function": "create_rule",
+    "description": "",
+    "file": "cost_alert_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-alert-rules/events",
+    "function": "list_events",
+    "description": "",
+    "file": "cost_alert_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-alert-rules/events/check",
+    "function": "trigger_check",
+    "description": "",
+    "file": "cost_alert_api.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/cost-alert-rules/{rule_id}",
+    "function": "delete_rule",
+    "description": "",
+    "file": "cost_alert_api.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/cost-alert-rules/{rule_id}",
+    "function": "update_rule",
+    "description": "",
+    "file": "cost_alert_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-recalc/capacity-costs",
+    "function": "list_capacity_costs",
+    "description": "获取冷量段单价列表（按 BTU 排序）",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-recalc/capacity-costs",
+    "function": "create_capacity_cost",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/cost-recalc/capacity-costs/{cid}",
+    "function": "delete_capacity_cost",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/cost-recalc/capacity-costs/{cid}",
+    "function": "update_capacity_cost",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-recalc/low-efficiency",
+    "function": "get_low_efficiency_products",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-recalc/results",
+    "function": "list_recalc_results",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-recalc/results/by-plan/{plan_id}",
+    "function": "get_recalc_results_by_plan",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cost-recalc/results/{rid}",
+    "function": "get_recalc_result",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cost-recalc/run",
+    "function": "trigger_recalculation",
+    "description": "",
+    "file": "cost_recalculation.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/alerts",
+    "function": "list_alerts",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/alerts-summary",
+    "function": "get_alerts_summary",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/alerts/rules",
+    "function": "list_alert_rules",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/dashboard/alerts/rules",
+    "function": "create_alert_rule",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/dashboard/alerts/{aid}",
+    "function": "resolve_alert",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/business-analysis",
+    "function": "get_business_analysis",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/kpi-detail",
+    "function": "get_kpi_detail",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/role-view",
+    "function": "get_role_view",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/summary",
+    "function": "dashboard_summary",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dashboard/trends",
+    "function": "get_dashboard_trends",
+    "description": "",
+    "file": "dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/checklist",
+    "function": "list_checklist",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/dfm/checklist",
+    "function": "create_checklist_item",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/dfm/checklist/{cid}",
+    "function": "delete_checklist_item",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/checklist/{cid}",
+    "function": "get_checklist_item",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/dfm/checklist/{cid}",
+    "function": "update_checklist_item",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/dfm/report-items",
+    "function": "create_report_item",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/dfm/report-items/{iid}",
+    "function": "delete_report_item",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/dfm/report-items/{iid}",
+    "function": "update_report_item",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/reports",
+    "function": "list_reports",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/dfm/reports",
+    "function": "create_report",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/dfm/reports/{rid}",
+    "function": "delete_report",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/reports/{rid}",
+    "function": "get_report",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/dfm/reports/{rid}",
+    "function": "update_report",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/reports/{rid}/items",
+    "function": "list_report_items",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/reports/{rid}/score",
+    "function": "get_report_score",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/score-weights",
+    "function": "list_score_weights",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/dfm/score-weights",
+    "function": "create_score_weight",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/dfm/score-weights/{wid}",
+    "function": "delete_score_weight",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/dfm/score-weights/{wid}",
+    "function": "update_score_weight",
+    "description": "",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/dfm/stats",
+    "function": "get_dfm_stats",
+    "description": "返回DFM统计: 总报告数/平均分/通过数/失败数/未关闭问题数",
+    "file": "manufacturability.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/eco",
+    "function": "list_ecos",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco",
+    "function": "create_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/eco/changes",
+    "function": "eco_changes_dashboard",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/eco/{eco_id}",
+    "function": "delete_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/eco/{eco_id}",
+    "function": "get_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/eco/{eco_id}",
+    "function": "update_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco/{eco_id}/cancel",
+    "function": "cancel_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco/{eco_id}/close",
+    "function": "close_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco/{eco_id}/effective",
+    "function": "effective_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco/{eco_id}/implement",
+    "function": "implement_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco/{eco_id}/items",
+    "function": "add_eco_item",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/eco/{eco_id}/items/{item_id}",
+    "function": "delete_eco_item",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/eco/{eco_id}/items/{item_id}",
+    "function": "update_eco_item",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco/{eco_id}/rollback",
+    "function": "rollback_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/eco/{eco_id}/verify",
+    "function": "verify_eco",
+    "description": "",
+    "file": "eco.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ecr",
+    "function": "list_ecrs",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr",
+    "function": "create_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/ecr/{ecr_id}",
+    "function": "delete_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ecr/{ecr_id}",
+    "function": "get_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/ecr/{ecr_id}",
+    "function": "update_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr/{ecr_id}/approve",
+    "function": "approve_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr/{ecr_id}/attachments",
+    "function": "delete_attachment",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr/{ecr_id}/convert",
+    "function": "convert_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr/{ecr_id}/reject",
+    "function": "reject_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr/{ecr_id}/review",
+    "function": "review_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr/{ecr_id}/submit",
+    "function": "submit_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ecr/{ecr_id}/withdraw",
+    "function": "withdraw_ecr",
+    "description": "",
+    "file": "ecr.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/events",
+    "function": "list_events",
+    "description": "",
+    "file": "event_logs.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/events/plan/{plan_id}/copy_event/{event_id}",
+    "function": "copy_event",
+    "description": "",
+    "file": "event_logs.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/events/plan/{plan_id}/replay",
+    "function": "replay_plan_events",
+    "description": "",
+    "file": "event_logs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/types",
+    "function": "list_event_types",
+    "description": "",
+    "file": "event_logs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/{event_id}",
+    "function": "get_event",
+    "description": "",
+    "file": "event_logs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/gate-rules",
+    "function": "list_gate_rules",
+    "description": "",
+    "file": "gate_rules.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/gate-rules",
+    "function": "create_gate_rule",
+    "description": "",
+    "file": "gate_rules.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/gate-rules/evaluate",
+    "function": "evaluate_gate_rule",
+    "description": "",
+    "file": "gate_rules.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/gate-rules/{rid}",
+    "function": "delete_gate_rule",
+    "description": "",
+    "file": "gate_rules.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/gate-rules/{rid}",
+    "function": "get_gate_rule",
+    "description": "",
+    "file": "gate_rules.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/gate-rules/{rid}",
+    "function": "update_gate_rule",
+    "description": "",
+    "file": "gate_rules.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/gate-rules/{rid}/status",
+    "function": "patch_gate_rule_status",
+    "description": "",
+    "file": "gate_rules.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/alert-check",
+    "function": "check_inventory_alerts",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/alerts",
+    "function": "list_inventory_alerts",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/inventory/alerts/{alert_id}/resolve",
+    "function": "resolve_alert",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/counts",
+    "function": "list_counts",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/counts",
+    "function": "create_count",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/counts/stats/overview",
+    "function": "count_stats",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/inventory/counts/{cid}",
+    "function": "delete_count",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/counts/{cid}",
+    "function": "get_count",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/counts/{cid}/complete",
+    "function": "complete_count",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/inventory/counts/{cid}/items/{item_id}",
+    "function": "update_count_item",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/counts/{cid}/submit",
+    "function": "submit_count",
+    "description": "",
+    "file": "inventory_count.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/items",
+    "function": "list_inventory",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/items/adjust",
+    "function": "adjust_inventory",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/items/stats",
+    "function": "inventory_stats",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/locations",
+    "function": "list_locations",
+    "description": "",
+    "file": "inventory_bin.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/locations",
+    "function": "create_location",
+    "description": "",
+    "file": "inventory_bin.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/locations/stats/overview",
+    "function": "location_stats",
+    "description": "",
+    "file": "inventory_bin.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/inventory/locations/{lid}",
+    "function": "delete_location",
+    "description": "",
+    "file": "inventory_bin.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/locations/{lid}",
+    "function": "get_location",
+    "description": "",
+    "file": "inventory_bin.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/inventory/locations/{lid}",
+    "function": "update_location",
+    "description": "",
+    "file": "inventory_bin.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/inventory/locations/{lid}/occupy",
+    "function": "update_occupancy",
+    "description": "",
+    "file": "inventory_bin.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/replenishments",
+    "function": "list_replenishments",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/replenishments",
+    "function": "create_replenishment",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/replenishments/generate",
+    "function": "generate_replenishment_suggestions",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/replenishments/stats",
+    "function": "replenishment_stats",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/inventory/replenishments/{rid}",
+    "function": "update_replenishment",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/inventory/replenishments/{rid}/status",
+    "function": "update_replenishment_status",
+    "description": "",
+    "file": "inventory_alert.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/transactions",
+    "function": "list_transactions",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/warehouses",
+    "function": "list_warehouses",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventory/warehouses",
+    "function": "create_warehouse",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/inventory/warehouses/{wh_id}",
+    "function": "delete_warehouse",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventory/warehouses/{wh_id}",
+    "function": "get_warehouse",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/inventory/warehouses/{wh_id}",
+    "function": "update_warehouse",
+    "description": "",
+    "file": "inventory.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/kb/categories",
+    "function": "get_categories",
+    "description": "获取所有分类",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/kb/categories/tree",
+    "function": "get_category_tree",
+    "description": "返回分类树（支持 / 层级分隔嵌套）",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/kb/items",
+    "function": "list_knowledge",
+    "description": "",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/kb/items",
+    "function": "create_knowledge",
+    "description": "",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/kb/items/search",
+    "function": "search_knowledge",
+    "description": "",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/kb/items/{item_id}",
+    "function": "delete_knowledge",
+    "description": "",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/kb/items/{item_id}",
+    "function": "get_knowledge_item",
+    "description": "知识库条目详情",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/kb/items/{item_id}",
+    "function": "update_knowledge",
+    "description": "",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/kb/team",
+    "function": "get_team_members",
+    "description": "",
+    "file": "knowledge.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/knowledge-base/lessons",
+    "function": "list_lessons",
+    "description": "",
+    "file": "knowledge_base.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/knowledge-base/search",
+    "function": "global_search",
+    "description": "",
+    "file": "knowledge_base.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notifications",
+    "function": "list_notifications",
+    "description": "",
+    "file": "alerts.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/notifications/batch",
+    "function": "delete_notifications_batch",
+    "description": "",
+    "file": "alerts.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/read-all",
+    "function": "mark_all_notifications_read",
+    "description": "",
+    "file": "alerts.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/test/dingtalk",
+    "function": "test_dingtalk",
+    "description": "",
+    "file": "notification_test_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notifications/test/wecom",
+    "function": "test_wecom",
+    "description": "",
+    "file": "notification_test_api.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/notifications/{nid}/read",
+    "function": "mark_notification_read",
+    "description": "",
+    "file": "alerts.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/outsource/orders",
+    "function": "list_orders",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/outsource/orders",
+    "function": "create_order",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/outsource/orders/{oid}",
+    "function": "delete_order",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/outsource/orders/{oid}",
+    "function": "get_order",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/outsource/orders/{oid}",
+    "function": "update_order",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/outsource/partners",
+    "function": "list_partners",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/outsource/partners",
+    "function": "create_partner",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/outsource/partners/{pid}",
+    "function": "delete_partner",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/outsource/partners/{pid}",
+    "function": "get_partner",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/outsource/partners/{pid}",
+    "function": "update_partner",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/outsource/quality-records",
+    "function": "list_quality_records",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/outsource/quality-records",
+    "function": "create_quality_record",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/outsource/quality-records/{qid}",
+    "function": "delete_quality_record",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/outsource/quality-records/{qid}",
+    "function": "update_quality_record",
+    "description": "",
+    "file": "outsource.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/plan-templates",
+    "function": "list_templates",
+    "description": "",
+    "file": "plan_templates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/plan-templates",
+    "function": "create_template",
+    "description": "",
+    "file": "plan_templates.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/plan-templates/{template_id}",
+    "function": "delete_template",
+    "description": "",
+    "file": "plan_templates.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/accessory-defaults",
+    "function": "get_accessory_defaults",
+    "description": "",
+    "file": "pm_accessory.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/capacity-cost-config",
+    "function": "get_capacity_cost_config",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/cert-costs-from-compliance",
+    "function": "get_cert_costs_endpoint",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/cert-standards",
+    "function": "get_cert_standards",
+    "description": "",
+    "file": "pm_config.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/cert-standards/by-market",
+    "function": "api_cert_standards_by_market",
+    "description": "",
+    "file": "pm_proposal_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/competitors",
+    "function": "list_competitors",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/competitors",
+    "function": "create_competitor",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/competitors/benchmark",
+    "function": "benchmark_competitors",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/competitors/check-completeness",
+    "function": "check_completeness",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/competitors/export",
+    "function": "export_competitors",
+    "description": "",
+    "file": "competitor_import_export.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/competitors/import",
+    "function": "import_competitors",
+    "description": "",
+    "file": "competitor_import_export.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/competitors/template",
+    "function": "download_template",
+    "description": "",
+    "file": "competitor_import_export.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/competitors/{cid}",
+    "function": "delete_competitor",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/competitors/{cid}",
+    "function": "get_competitor",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/competitors/{cid}",
+    "function": "update_competitor",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/competitors/{cid}/history",
+    "function": "get_competitor_history",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/competitors/{cid}/snapshot",
+    "function": "take_snapshot",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/crawls/run",
+    "function": "list_crawl_logs",
+    "description": "",
+    "file": "competitor_crawl_admin.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/crawls/search-terms",
+    "function": "list_search_terms",
+    "description": "",
+    "file": "competitor_crawl_admin.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/crawls/search-terms",
+    "function": "add_search_term",
+    "description": "",
+    "file": "competitor_crawl_admin.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/crawls/search-terms/{term_id}",
+    "function": "delete_search_term",
+    "description": "",
+    "file": "competitor_crawl_admin.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/create-plan-from-benchmark",
+    "function": "create_plan_from_benchmark",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/feature-defaults",
+    "function": "get_feature_defaults",
+    "description": "",
+    "file": "pm_config.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/market-params",
+    "function": "create_param_config",
+    "description": "",
+    "file": "market_param_config.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/market-params/{market_code}",
+    "function": "list_param_configs",
+    "description": "",
+    "file": "market_param_config.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/market-params/{market_code}/{param_key}",
+    "function": "delete_param_config",
+    "description": "",
+    "file": "market_param_config.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/market-params/{market_code}/{param_key}",
+    "function": "get_param_config",
+    "description": "",
+    "file": "market_param_config.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/market-params/{market_code}/{param_key}",
+    "function": "update_param_config",
+    "description": "",
+    "file": "market_param_config.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/markets",
+    "function": "list_markets_with_standards",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/markets",
+    "function": "create_market",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/markets/all",
+    "function": "list_all_markets",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/markets/{code}",
+    "function": "delete_market",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/markets/{code}",
+    "function": "update_market",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/markets/{code}/certifications",
+    "function": "list_market_certifications",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/markets/{code}/certifications",
+    "function": "create_market_certification",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/markets/{code}/certifications/{cid}",
+    "function": "delete_market_certification",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/markets/{code}/certifications/{cid}",
+    "function": "update_market_certification",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/markets/{code}/compressors",
+    "function": "list_market_compressors",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/markets/{code}/compressors",
+    "function": "create_market_compressor",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/markets/{code}/compressors/{cid}",
+    "function": "delete_market_compressor",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/markets/{code}/compressors/{cid}",
+    "function": "update_market_compressor",
+    "description": "",
+    "file": "competitor.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/markets/{code}/energy-levels",
+    "function": "list_energy_levels",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/markets/{code}/energy-levels",
+    "function": "create_energy_level",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/markets/{code}/energy-levels/{level_id}",
+    "function": "delete_energy_level",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/markets/{code}/energy-levels/{level_id}",
+    "function": "update_energy_level",
+    "description": "",
+    "file": "markets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/perf-defaults",
+    "function": "get_perf_defaults",
+    "description": "",
+    "file": "pm_config.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/planning-items",
+    "function": "list_planning_items",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/planning-items",
+    "function": "create_planning_item",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/pm/planning-items/{plan_id}",
+    "function": "delete_planning_item",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/planning-items/{plan_id}",
+    "function": "update_planning_item",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/programs",
+    "function": "list_active_programs",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/project/draft",
+    "function": "pm_create_draft",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/pm/project/draft/{pid}",
+    "function": "pm_update_draft",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/proposal-calc",
+    "function": "api_proposal_calc",
+    "description": "",
+    "file": "pm_proposal_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/proposals",
+    "function": "list_my_proposals",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/proposals/submit",
+    "function": "submit_proposal",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/pm/proposals/{proposal_id}/withdraw",
+    "function": "withdraw_proposal",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/roadmap",
+    "function": "pm_roadmap",
+    "description": "",
+    "file": "pm_roadmap.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/role-mappings",
+    "function": "list_role_mappings_public",
+    "description": "",
+    "file": "admin_role_mappings.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/safety-compliance-standards",
+    "function": "get_safety_compliance_standards",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/statistics",
+    "function": "pm_statistics",
+    "description": "",
+    "file": "pm_statistics.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/team-role-template",
+    "function": "api_team_role_template",
+    "description": "",
+    "file": "pm_proposal_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/team-role-templates",
+    "function": "get_team_role_templates_endpoint",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/team-summary",
+    "function": "get_team_summary",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/user-workload",
+    "function": "get_user_workload_endpoint",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/user-workloads",
+    "function": "api_user_workloads",
+    "description": "",
+    "file": "pm_proposal_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/pm/workspace",
+    "function": "pm_workspace",
+    "description": "",
+    "file": "pm_workspace.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/process/routes",
+    "function": "list_routes",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/process/routes",
+    "function": "create_route",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/process/routes/{rid}",
+    "function": "delete_route",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/process/routes/{rid}",
+    "function": "get_route",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/process/routes/{rid}",
+    "function": "update_route",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/process/sops",
+    "function": "list_sop",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/process/sops",
+    "function": "create_sop",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/process/sops/{sid}",
+    "function": "delete_sop",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/process/sops/{sid}",
+    "function": "get_sop",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/process/sops/{sid}",
+    "function": "update_sop",
+    "description": "",
+    "file": "process_sop.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans",
+    "function": "list_plans",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans",
+    "function": "create_plan",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/batch-clone",
+    "function": "batch_clone_plans",
+    "description": "",
+    "file": "product_plan_versions.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/batch-create",
+    "function": "batch_create_plans",
+    "description": "",
+    "file": "product_plan_versions.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/validate",
+    "function": "validate_plan_data",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/product-plans/{plan_id}",
+    "function": "delete_plan",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}",
+    "function": "get_plan_detail",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/product-plans/{plan_id}",
+    "function": "update_plan",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/advance",
+    "function": "advance_plan_stage",
+    "description": "",
+    "file": "product_plan_workflow_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/approve",
+    "function": "approve_plan",
+    "description": "",
+    "file": "product_plan_workflow_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/auto-variance",
+    "function": "get_auto_variance",
+    "description": "",
+    "file": "product_plan_review.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/costs",
+    "function": "create_cost",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/product-plans/{plan_id}/costs/{cost_id}",
+    "function": "delete_cost",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/initiation",
+    "function": "get_initiation",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/product-plans/{plan_id}/initiation",
+    "function": "upsert_initiation",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/market",
+    "function": "get_market",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/product-plans/{plan_id}/market",
+    "function": "upsert_market",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/next-action",
+    "function": "get_next_action",
+    "description": "",
+    "file": "product_plan_workflow_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/project-links",
+    "function": "list_project_links",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/project-links",
+    "function": "create_project_link",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/product-plans/{plan_id}/project-links/{link_id}",
+    "function": "delete_project_link",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/product-plans/{plan_id}/project-links/{link_id}",
+    "function": "update_project_link",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/reject",
+    "function": "reject_plan",
+    "description": "",
+    "file": "product_plan_workflow_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/review",
+    "function": "get_review",
+    "description": "",
+    "file": "product_plan_review.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/review",
+    "function": "create_review",
+    "description": "",
+    "file": "product_plan_review.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/product-plans/{plan_id}/review",
+    "function": "update_review",
+    "description": "",
+    "file": "product_plan_review.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/product-plans/{plan_id}/stage",
+    "function": "set_plan_stage",
+    "description": "",
+    "file": "product_plan_workflow_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/status",
+    "function": "get_plan_status",
+    "description": "",
+    "file": "product_plan_crud.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/team",
+    "function": "list_team_members",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/team",
+    "function": "add_team_member",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/product-plans/{plan_id}/team/{member_id}",
+    "function": "delete_team_member",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/product-plans/{plan_id}/team/{member_id}",
+    "function": "update_team_member",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/tech-spec",
+    "function": "get_tech_spec",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/product-plans/{plan_id}/tech-spec",
+    "function": "upsert_tech_spec",
+    "description": "",
+    "file": "product_plan_subs.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/versions",
+    "function": "list_plan_versions",
+    "description": "",
+    "file": "product_plan_versions.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/versions/diff",
+    "function": "diff_plan_versions",
+    "description": "",
+    "file": "product_plan_versions.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/product-plans/{plan_id}/versions/{version}",
+    "function": "get_plan_version_snapshot",
+    "description": "",
+    "file": "product_plan_versions.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/versions/{version}/rollback",
+    "function": "rollback_plan_version",
+    "description": "",
+    "file": "product_plan_versions.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/product-plans/{plan_id}/withdraw",
+    "function": "withdraw_plan",
+    "description": "",
+    "file": "product_plan_workflow_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/products",
+    "function": "list_products",
+    "description": "",
+    "file": "products.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/products",
+    "function": "create_product",
+    "description": "创建新产品（PR-11: Product = Market × Capacity × Platform）",
+    "file": "products.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/products/markets",
+    "function": "list_markets",
+    "description": "列出所有市场",
+    "file": "products.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/products/markets",
+    "function": "create_market",
+    "description": "添加新市场",
+    "file": "products.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/products/platforms",
+    "function": "list_platforms",
+    "description": "",
+    "file": "products.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/products/platforms",
+    "function": "create_platform",
+    "description": "创建新平台（PR-02: 按结构尺寸定义）",
+    "file": "products.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/products/platforms/{pid}",
+    "function": "get_platform",
+    "description": "",
+    "file": "products.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/products/platforms/{pid}",
+    "function": "update_platform",
+    "description": "更新平台信息",
+    "file": "products.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/products/rules/evaluate-version",
+    "function": "evaluate_version_change",
+    "description": "评估变更是否需要创建新Version（PR-06, PR-09, PR-10）",
+    "file": "products.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/products/versions/{vid}/status",
+    "function": "update_version_status",
+    "description": "",
+    "file": "products.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/products/versions/{vid}/variants",
+    "function": "list_variants",
+    "description": "列出版本的所有制造变体",
+    "file": "products.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/products/versions/{vid}/variants",
+    "function": "create_variant",
+    "description": "创建制造变体（PR-10: Product Version ≠ MBOM Version） 同一Version下不同工厂可有不同MBOM",
+    "file": "products.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/products/{pid}",
+    "function": "get_product",
+    "description": "",
+    "file": "products.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/products/{pid}",
+    "function": "update_product",
+    "description": "更新产品信息",
+    "file": "products.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/products/{pid}/markets",
+    "function": "assign_markets",
+    "description": "为产品分配目标市场（PR-08: Market ≠ Product, 多对多）",
+    "file": "products.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/products/{pid}/versions",
+    "function": "list_versions",
+    "description": "列出产品的所有版本",
+    "file": "products.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/products/{pid}/versions",
+    "function": "create_version",
+    "description": "创建产品新版本",
+    "file": "products.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/programs",
+    "function": "list_programs",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/programs",
+    "function": "create_program",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/programs/{pid}",
+    "function": "get_program",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/project-templates",
+    "function": "list_templates",
+    "description": "",
+    "file": "project_templates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/project-templates",
+    "function": "create_template",
+    "description": "",
+    "file": "project_templates.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/project-templates/{tid}",
+    "function": "delete_template",
+    "description": "",
+    "file": "project_templates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/project-templates/{tid}/apply",
+    "function": "apply_template",
+    "description": "",
+    "file": "project_templates.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "function": "list_projects",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "function": "create_project",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/compare",
+    "function": "compare_projects",
+    "description": "多项目对比 — 返回基本信息+Gate+任务统计+风险统计",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/dashboard/overview",
+    "function": "project_dashboard_overview",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/projects/{pid}",
+    "function": "delete_project",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}",
+    "function": "get_project_detail",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/projects/{pid}",
+    "function": "update_project",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/alerts",
+    "function": "project_alerts",
+    "description": "聚合项目相关提醒: 超期任务/风险预警/里程碑延期",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/cross-module",
+    "function": "project_cross_module",
+    "description": "返回项目关联的跨模块数据: 产品/BOM/认证/采购/ECR",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/dashboard",
+    "function": "project_detail_dashboard",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/delay-chain",
+    "function": "get_delay_chain",
+    "description": "延期传导链预警: 计算里程碑依赖链的延期放大效应  示例输出: [ { \"milestone\": \"设计评审\", \"delay_days\": 5, \"impacts\": [ {\"downstream_milestone\": \"样机制作\", \"amplification\": 1.6, \"estimated_impact_days\": 8}, {\"downstream_milestone\": \"实验验证\", \"amplification\": 3.0, \"estimated_impact_days\": 15}, ... ] } ]",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/export",
+    "function": "project_export",
+    "description": "导出项目完整数据(JSON)",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/gantt",
+    "function": "project_gantt_data",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/gates",
+    "function": "list_gates",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/gates",
+    "function": "create_gate",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/gates/bulk",
+    "function": "bulk_create_gates",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/projects/{pid}/gates/{gate_code}",
+    "function": "update_gate_status",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/milestones",
+    "function": "list_milestones",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/milestones",
+    "function": "create_milestone",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/projects/{pid}/milestones/{mid}",
+    "function": "achieve_milestone",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/reviews",
+    "function": "list_reviews",
+    "description": "获取项目复盘列表",
+    "file": "project_reviews.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/reviews",
+    "function": "create_review",
+    "description": "",
+    "file": "project_reviews.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/projects/{pid}/reviews/{review_id}",
+    "function": "delete_review",
+    "description": "",
+    "file": "project_reviews.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/reviews/{review_id}",
+    "function": "get_review",
+    "description": "",
+    "file": "project_reviews.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/{pid}/reviews/{review_id}",
+    "function": "update_review",
+    "description": "",
+    "file": "project_reviews.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/risks",
+    "function": "list_risks",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/risks",
+    "function": "create_risk",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/projects/{pid}/risks/{rid}",
+    "function": "update_risk",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/tasks",
+    "function": "list_tasks",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/tasks",
+    "function": "create_task",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/tasks/dependencies",
+    "function": "list_dependencies",
+    "description": "",
+    "file": "task_deps.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/tasks/dependencies",
+    "function": "create_dependency",
+    "description": "",
+    "file": "task_deps.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/projects/{pid}/tasks/dependencies/{dep_id}",
+    "function": "delete_dependency",
+    "description": "",
+    "file": "task_deps.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/tasks/tree",
+    "function": "task_tree",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/projects/{pid}/tasks/{tid}",
+    "function": "delete_task",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/projects/{pid}/tasks/{tid}",
+    "function": "update_task",
+    "description": "",
+    "file": "projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/tasks/{tid}/comments",
+    "function": "list_comments",
+    "description": "",
+    "file": "task_comments.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/tasks/{tid}/comments",
+    "function": "create_comment",
+    "description": "",
+    "file": "task_comments.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/time",
+    "function": "list_time_entries",
+    "description": "",
+    "file": "time_entries.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects/{pid}/time",
+    "function": "create_time_entry",
+    "description": "",
+    "file": "time_entries.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects/{pid}/time/workload",
+    "function": "workload_summary",
+    "description": "",
+    "file": "time_entries.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/projects/{pid}/time/{entry_id}",
+    "function": "delete_time_entry",
+    "description": "",
+    "file": "time_entries.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/prototypes",
+    "function": "list_prototypes",
+    "description": "",
+    "file": "prototypes.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/prototypes",
+    "function": "create_prototype",
+    "description": "",
+    "file": "prototypes.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/prototypes/{pid}",
+    "function": "get_prototype",
+    "description": "",
+    "file": "prototypes.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/prototypes/{pid}",
+    "function": "update_prototype",
+    "description": "",
+    "file": "prototypes.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/prototypes/{pid}/judgments",
+    "function": "get_prototype_judgments",
+    "description": "",
+    "file": "prototypes.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/prototypes/{pid}/status",
+    "function": "patch_prototype_status",
+    "description": "",
+    "file": "prototypes.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/prototypes/{pid}/upgrade",
+    "function": "upgrade_prototype",
+    "description": "",
+    "file": "prototypes.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchase/rfqs",
+    "function": "list_rfq",
+    "description": "",
+    "file": "purchase_rfq.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchase/rfqs",
+    "function": "create_rfq",
+    "description": "",
+    "file": "purchase_rfq.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/purchase/rfqs/{rid}",
+    "function": "delete_rfq",
+    "description": "",
+    "file": "purchase_rfq.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchase/rfqs/{rid}",
+    "function": "get_rfq",
+    "description": "",
+    "file": "purchase_rfq.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/purchase/rfqs/{rid}",
+    "function": "update_rfq",
+    "description": "",
+    "file": "purchase_rfq.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchase/rfqs/{rid}/quotations",
+    "function": "create_quotation",
+    "description": "",
+    "file": "purchase_rfq.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/purchase/rfqs/{rid}/quotations/{qid}",
+    "function": "delete_quotation",
+    "description": "",
+    "file": "purchase_rfq.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchase/supplier-evaluations",
+    "function": "list_evaluations",
+    "description": "",
+    "file": "purchase_supplier_eval.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchase/supplier-evaluations",
+    "function": "create_evaluation",
+    "description": "",
+    "file": "purchase_supplier_eval.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/purchase/supplier-evaluations/{eid}",
+    "function": "delete_evaluation",
+    "description": "",
+    "file": "purchase_supplier_eval.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/purchase/supplier-evaluations/{eid}",
+    "function": "update_evaluation",
+    "description": "",
+    "file": "purchase_supplier_eval.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/dashboard",
+    "function": "purchase_dashboard",
+    "description": "采购仪表盘数据（待审批数、本月采购额等）",
+    "file": "purchases.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/inspections",
+    "function": "create_inspection",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/orders",
+    "function": "list_orders",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/orders",
+    "function": "create_order",
+    "description": "创建采购订单 — 自动生成单号",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/orders/stats",
+    "function": "get_order_stats",
+    "description": "返回订单统计数据",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/orders/{order_id}",
+    "function": "get_order",
+    "description": "查看订单详情（含items）",
+    "file": "purchases.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/purchases/orders/{order_id}",
+    "function": "update_order_status",
+    "description": "更新订单状态",
+    "file": "purchases.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/orders/{order_id}/items",
+    "function": "add_order_item",
+    "description": "添加订单项",
+    "file": "purchases.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/purchases/orders/{order_id}/items/{item_id}",
+    "function": "update_order_item",
+    "description": "更新订单项",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/outsource-requests",
+    "function": "list_outsource_requests",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/outsource-requests",
+    "function": "create_outsource_request",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/outsource-requests/{req_id}",
+    "function": "get_outsource_request",
+    "description": "查看外协送样申请详情",
+    "file": "purchases.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/purchases/outsource-requests/{req_id}",
+    "function": "update_outsource_request",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/quality-stats",
+    "function": "quality_stats",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/receipts",
+    "function": "list_receipts",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/receipts",
+    "function": "create_receipt",
+    "description": "验证PO",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/receipts/stats/summary",
+    "function": "receipt_stats",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/purchases/receipts/{rid}",
+    "function": "delete_receipt",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/receipts/{rid}",
+    "function": "get_receipt",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/receipts/{rid}/inspections",
+    "function": "list_inspections",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/returns",
+    "function": "list_returns",
+    "description": "",
+    "file": "purchase_return.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/returns",
+    "function": "create_return",
+    "description": "",
+    "file": "purchase_return.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/returns/stats",
+    "function": "return_stats",
+    "description": "",
+    "file": "purchase_return.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/purchases/returns/{rid}",
+    "function": "delete_return",
+    "description": "",
+    "file": "purchase_return.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/returns/{rid}",
+    "function": "get_return",
+    "description": "",
+    "file": "purchase_return.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/purchases/returns/{rid}",
+    "function": "update_return",
+    "description": "",
+    "file": "purchase_return.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/purchases/returns/{rid}/status",
+    "function": "update_return_status",
+    "description": "",
+    "file": "purchase_return.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/suppliers",
+    "function": "list_suppliers",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/suppliers",
+    "function": "create_supplier",
+    "description": "创建供应商 — code全局唯一",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/suppliers/categories/list",
+    "function": "supplier_categories",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/suppliers/ranking/list",
+    "function": "supplier_ranking",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/suppliers/stats/summary",
+    "function": "supplier_stats_summary",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/purchases/suppliers/{sid}",
+    "function": "delete_supplier",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/suppliers/{sid}",
+    "function": "get_supplier",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/purchases/suppliers/{sid}",
+    "function": "update_supplier",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/purchases/suppliers/{sid}/evaluations",
+    "function": "list_evaluations",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/purchases/suppliers/{sid}/evaluations",
+    "function": "create_evaluation",
+    "description": "",
+    "file": "purchases.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/quality/8d-reports",
+    "function": "list_8d_reports",
+    "description": "",
+    "file": "quality_8d_report.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/quality/8d-reports",
+    "function": "create_8d_report",
+    "description": "",
+    "file": "quality_8d_report.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/quality/8d-reports/{rid}",
+    "function": "delete_8d_report",
+    "description": "",
+    "file": "quality_8d_report.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/quality/8d-reports/{rid}",
+    "function": "get_8d_report",
+    "description": "",
+    "file": "quality_8d_report.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/quality/8d-reports/{rid}",
+    "function": "update_8d_report",
+    "description": "",
+    "file": "quality_8d_report.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/quality/8d-reports/{rid}/status",
+    "function": "update_8d_report_status",
+    "description": "",
+    "file": "quality_8d_report.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/quality/complaints",
+    "function": "list_complaints",
+    "description": "",
+    "file": "quality_complaint.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/quality/complaints",
+    "function": "create_complaint",
+    "description": "",
+    "file": "quality_complaint.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/quality/complaints/{cid}",
+    "function": "get_complaint",
+    "description": "",
+    "file": "quality_complaint.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/quality/complaints/{cid}",
+    "function": "update_complaint",
+    "description": "",
+    "file": "quality_complaint.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/quality/iqc",
+    "function": "list_iqc",
+    "description": "",
+    "file": "quality_iqc.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/quality/iqc",
+    "function": "create_iqc",
+    "description": "",
+    "file": "quality_iqc.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/quality/iqc/{rid}",
+    "function": "delete_iqc",
+    "description": "",
+    "file": "quality_iqc.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/quality/iqc/{rid}",
+    "function": "get_iqc",
+    "description": "",
+    "file": "quality_iqc.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/quality/iqc/{rid}",
+    "function": "update_iqc",
+    "description": "",
+    "file": "quality_iqc.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/rd/panel",
+    "function": "rd_panel",
+    "description": "",
+    "file": "rd_panel.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/review-templates",
+    "function": "list_templates",
+    "description": "",
+    "file": "review_templates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/review-templates",
+    "function": "create_template",
+    "description": "",
+    "file": "review_templates.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reviews",
+    "function": "list_all_reviews",
+    "description": "",
+    "file": "improvement_task_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reviews/compare",
+    "function": "compare_reviews",
+    "description": "",
+    "file": "improvement_task_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reviews/{review_id}/tasks",
+    "function": "list_tasks",
+    "description": "",
+    "file": "improvement_task_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/reviews/{review_id}/tasks",
+    "function": "create_task",
+    "description": "",
+    "file": "improvement_task_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certificates",
+    "function": "list_certificates",
+    "description": "",
+    "file": "s2_certificates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certificates",
+    "function": "create_certificate",
+    "description": "",
+    "file": "s2_certificates.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certificates/expiring",
+    "function": "list_expiring_certificates",
+    "description": "",
+    "file": "s2_certificates.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/s2/certificates/{cert_id}",
+    "function": "update_certificate",
+    "description": "",
+    "file": "s2_certificates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certificates/{cert_id}/renew",
+    "function": "renew_certificate",
+    "description": "",
+    "file": "s2_certificates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certificates/{cert_id}/revoke",
+    "function": "revoke_certificate",
+    "description": "",
+    "file": "s2_certificates.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certificates/{cert_id}/suspend",
+    "function": "suspend_certificate",
+    "description": "",
+    "file": "s2_certificates.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certification-executions",
+    "function": "list_cert_executions",
+    "description": "",
+    "file": "s2_cert_executions.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certification-executions",
+    "function": "create_cert_execution",
+    "description": "",
+    "file": "s2_cert_executions.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/s2/certification-executions/{ce_id}",
+    "function": "update_cert_execution",
+    "description": "",
+    "file": "s2_cert_executions.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certification-projects",
+    "function": "list_cert_projects",
+    "description": "",
+    "file": "s2_cert_projects.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certification-projects",
+    "function": "create_cert_project",
+    "description": "",
+    "file": "s2_cert_projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certification-projects/{cp_id}",
+    "function": "get_cert_project",
+    "description": "",
+    "file": "s2_cert_projects.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/s2/certification-projects/{cp_id}",
+    "function": "update_cert_project",
+    "description": "",
+    "file": "s2_cert_projects.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/s2/certification-projects/{cp_id}/status",
+    "function": "update_cert_project_status",
+    "description": "",
+    "file": "s2_cert_projects.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certification-requirements",
+    "function": "list_cert_requirements",
+    "description": "",
+    "file": "s2_cert_requirements.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certification-requirements/generate",
+    "function": "generate_cert_requirements",
+    "description": "",
+    "file": "s2_cert_requirements.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certification-requirements/{req_id}",
+    "function": "get_cert_requirement",
+    "description": "",
+    "file": "s2_cert_requirements.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certification-results",
+    "function": "list_cert_results",
+    "description": "",
+    "file": "s2_cert_results.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certification-results",
+    "function": "create_cert_result",
+    "description": "",
+    "file": "s2_cert_results.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/s2/certification-results/{cr_id}",
+    "function": "update_cert_result",
+    "description": "",
+    "file": "s2_cert_results.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/s2/certification-results/{cr_id}/status",
+    "function": "update_cert_result_status",
+    "description": "",
+    "file": "s2_cert_results.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/certification-samples",
+    "function": "list_cert_samples",
+    "description": "",
+    "file": "s2_cert_samples.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/certification-samples",
+    "function": "create_cert_sample",
+    "description": "",
+    "file": "s2_cert_samples.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/s2/certification-samples/{cs_id}",
+    "function": "update_cert_sample",
+    "description": "",
+    "file": "s2_cert_samples.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/change-impact/records",
+    "function": "list_impact_records",
+    "description": "",
+    "file": "s2_change_impact.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/change-impact/records/{record_id}",
+    "function": "get_impact_record",
+    "description": "",
+    "file": "s2_change_impact.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/change-impact/rules",
+    "function": "list_impact_rules",
+    "description": "",
+    "file": "s2_change_impact.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/change-impact/rules",
+    "function": "create_impact_rule",
+    "description": "",
+    "file": "s2_change_impact.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/s2/change-impact/rules/{rule_id}",
+    "function": "delete_impact_rule",
+    "description": "",
+    "file": "s2_change_impact.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/s2/change-impact/rules/{rule_id}",
+    "function": "update_impact_rule",
+    "description": "",
+    "file": "s2_change_impact.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/change-impact/stats",
+    "function": "get_change_impact_stats",
+    "description": "",
+    "file": "s2_change_impact.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/gate-rules",
+    "function": "list_gate_rules",
+    "description": "",
+    "file": "s2_gate_rules.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/s2/gate-rules",
+    "function": "create_gate_rule",
+    "description": "",
+    "file": "s2_gate_rules.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/s2/gate-rules/{rule_id}",
+    "function": "delete_gate_rule",
+    "description": "",
+    "file": "s2_gate_rules.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/s2/gate-rules/{rule_id}",
+    "function": "get_gate_rule",
+    "description": "",
+    "file": "s2_gate_rules.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/s2/gate-rules/{rule_id}",
+    "function": "update_gate_rule",
+    "description": "",
+    "file": "s2_gate_rules.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/alerts",
+    "function": "get_safety_alerts",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/safety/audit-records",
+    "function": "create_audit_record",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/inspection-items",
+    "function": "list_inspection_items",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/safety/inspection-items",
+    "function": "create_inspection_item",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/safety/inspection-items/batch",
+    "function": "batch_import_inspection_items",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/safety/inspection-items/{iid}",
+    "function": "delete_inspection_item",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/inspection-items/{iid}",
+    "function": "get_inspection_item",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/safety/inspection-items/{iid}",
+    "function": "update_inspection_item",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/standards",
+    "function": "list_standards",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/safety/standards",
+    "function": "create_standard",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/safety/standards/{sid}",
+    "function": "delete_standard",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/standards/{sid}",
+    "function": "get_standard",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/safety/standards/{sid}",
+    "function": "update_standard",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/safety/standards/{sid}/archive",
+    "function": "archive_standard",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/supplier-qualifications",
+    "function": "list_supplier_qualifications",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/safety/supplier-qualifications",
+    "function": "create_supplier_qualification",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/safety/supplier-qualifications/{qid}",
+    "function": "delete_supplier_qualification",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/supplier-qualifications/{qid}",
+    "function": "get_supplier_qualification",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/safety/supplier-qualifications/{qid}",
+    "function": "update_supplier_qualification",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/safety/supplier-qualifications/{qid}/audit-records",
+    "function": "list_audit_records",
+    "description": "",
+    "file": "safety.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/standards",
+    "function": "list_standards",
+    "description": "",
+    "file": "standard_query_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/standards/categories",
+    "function": "list_categories",
+    "description": "",
+    "file": "standard_query_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/standards/recent",
+    "function": "get_recent_standards",
+    "description": "",
+    "file": "standard_query_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/standards/regions",
+    "function": "list_regions",
+    "description": "",
+    "file": "standard_query_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/standards/stats",
+    "function": "get_standard_stats",
+    "description": "",
+    "file": "standard_query_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/standards/{standard_id}",
+    "function": "get_standard",
+    "description": "",
+    "file": "standard_query_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/state-models",
+    "function": "list_state_models",
+    "description": "返回所有已注册的状态机模型名列表。",
+    "file": "state_machine_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/state-transitions",
+    "function": "query_state_transitions",
+    "description": "",
+    "file": "state_machine_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/target-markets",
+    "function": "list_target_markets",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/target-markets",
+    "function": "create_target_market",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/target-markets/by-market",
+    "function": "get_target_market_by_code",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/target-markets/{tid}",
+    "function": "delete_target_market",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/target-markets/{tid}",
+    "function": "get_target_market",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/target-markets/{tid}",
+    "function": "update_target_market",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/target-markets/{tid}/certifications",
+    "function": "add_required_certification",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/target-markets/{tid}/certifications/{rcid}",
+    "function": "delete_required_certification",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/target-markets/{tid}/standards",
+    "function": "list_required_standards",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/target-markets/{tid}/standards",
+    "function": "add_required_standard",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/target-markets/{tid}/standards/{rsid}",
+    "function": "delete_required_standard",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/target-markets/{tid}/standards/{rsid}",
+    "function": "update_required_standard",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/target-markets/{tid}/tests",
+    "function": "list_required_tests",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/target-markets/{tid}/tests",
+    "function": "add_required_test",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/target-markets/{tid}/tests/{rtid}",
+    "function": "delete_required_test",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/target-markets/{tid}/tests/{rtid}",
+    "function": "update_required_test",
+    "description": "",
+    "file": "target_markets.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/tasks/{task_id}",
+    "function": "update_task",
+    "description": "",
+    "file": "improvement_task_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/test-executions",
+    "function": "list_test_executions",
+    "description": "",
+    "file": "test_executions.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/test-executions",
+    "function": "create_test_execution",
+    "description": "",
+    "file": "test_executions.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/test-executions/{eid}",
+    "function": "delete_test_execution",
+    "description": "",
+    "file": "test_executions.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/test-executions/{eid}/complete",
+    "function": "complete_test_execution",
+    "description": "",
+    "file": "test_executions.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tests",
+    "function": "list_tests",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tests",
+    "function": "create_test",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tests/mq",
+    "function": "list_mq",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tests/mq",
+    "function": "create_mq",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/tests/mq/{mid}",
+    "function": "update_mq",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tests/{rid}",
+    "function": "get_test",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/tests/{rid}",
+    "function": "update_test",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tests/{rid}/results",
+    "function": "add_test_result",
+    "description": "",
+    "file": "tests.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/upload/image",
+    "function": "",
+    "description": "",
+    "file": "upload.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/notification-categories",
+    "function": "get_notification_categories",
+    "description": "",
+    "file": "notification_grouping_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/notification-dnd",
+    "function": "get_dnd_config",
+    "description": "",
+    "file": "notification_grouping_api.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/user/notification-dnd",
+    "function": "update_dnd_config",
+    "description": "",
+    "file": "notification_grouping_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/user/notification-prefs",
+    "function": "get_notification_prefs",
+    "description": "",
+    "file": "user_notification_api.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/user/notification-prefs",
+    "function": "update_notification_prefs",
+    "description": "",
+    "file": "user_notification_api.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/user/notification-read",
+    "function": "mark_notification_read",
+    "description": "",
+    "file": "notification_read_api.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/approval-recommendation/{ecr_id}",
+    "function": "get_approval_recommendation",
+    "description": "",
+    "file": "ci_v2.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/dashboard/cdf-detail/{plan_id}",
+    "function": "dashboard_cdf_detail",
+    "description": "",
+    "file": "risk_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/dashboard/cdf-summary",
+    "function": "dashboard_cdf_summary",
+    "description": "",
+    "file": "risk_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/dashboard/mq-detail/{plan_id}",
+    "function": "dashboard_mq_detail",
+    "description": "",
+    "file": "risk_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/dashboard/mq-summary",
+    "function": "dashboard_mq_summary",
+    "description": "",
+    "file": "risk_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/dashboard/mrc-detail/{plan_id}",
+    "function": "dashboard_mrc_detail",
+    "description": "",
+    "file": "risk_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/dashboard/mrc-summary",
+    "function": "dashboard_mrc_summary",
+    "description": "",
+    "file": "risk_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/dashboard/overview",
+    "function": "dashboard_overview",
+    "description": "",
+    "file": "risk_dashboard.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/event-graph/{aggregate_type}/{aggregate_id}",
+    "function": "get_event_chain",
+    "description": "",
+    "file": "event_graph.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/event-graph/{aggregate_type}/{aggregate_id}/causation",
+    "function": "get_causation_chain",
+    "description": "",
+    "file": "event_graph.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/events/replay/{plan_id}",
+    "function": "replay_plan_events_with_diff",
+    "description": "",
+    "file": "event_timeline.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/events/saga/{saga_id}",
+    "function": "get_saga_detail",
+    "description": "",
+    "file": "event_timeline.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/events/stats",
+    "function": "get_event_stats",
+    "description": "",
+    "file": "event_timeline.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/events/timeline/{plan_id}",
+    "function": "get_paginated_timeline",
+    "description": "",
+    "file": "event_timeline.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/events/timeline/{plan_id}/detail",
+    "function": "get_timeline_detail",
+    "description": "",
+    "file": "event_timeline.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/feedback",
+    "function": "submit_feedback",
+    "description": "",
+    "file": "ci_v2.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/impact-graph/{ecr_id}",
+    "function": "get_impact_graph",
+    "description": "",
+    "file": "ci_v2.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/model-params",
+    "function": "get_model_params",
+    "description": "",
+    "file": "ci_v2.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/model-params/{version_id}",
+    "function": "rollback_model_params",
+    "description": "",
+    "file": "ci_v2.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v2/risk/batch",
+    "function": "batch_risk",
+    "description": "",
+    "file": "ci_v2.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v2/risk/{ecr_id}",
+    "function": "get_risk",
+    "description": "",
+    "file": "ci_v2.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/verification-requirements",
+    "function": "list_verification_requirements",
+    "description": "",
+    "file": "verification_requirements.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/verification-requirements",
+    "function": "create_verification_requirement",
+    "description": "",
+    "file": "verification_requirements.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/verification-requirements/generate-from-plan",
+    "function": "generate_vr_from_plan",
+    "description": "",
+    "file": "verification_requirements.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/verification-requirements/{rid}",
+    "function": "get_verification_requirement",
+    "description": "",
+    "file": "verification_requirements.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/verification-requirements/{rid}",
+    "function": "update_verification_requirement",
+    "description": "",
+    "file": "verification_requirements.py"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/verification-requirements/{rid}/status",
+    "function": "patch_vr_status",
+    "description": "",
+    "file": "verification_requirements.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/webhooks",
+    "function": "list_subscriptions",
+    "description": "",
+    "file": "webhooks.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/webhooks",
+    "function": "create_subscription",
+    "description": "",
+    "file": "webhooks.py"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/webhooks/{sub_id}",
+    "function": "delete_subscription",
+    "description": "",
+    "file": "webhooks.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/webhooks/{sub_id}",
+    "function": "get_subscription",
+    "description": "",
+    "file": "webhooks.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/webhooks/{sub_id}",
+    "function": "update_subscription",
+    "description": "",
+    "file": "webhooks.py"
+  },
+  {
+    "method": "GET",
+    "path": "/api/webhooks/{sub_id}/logs",
+    "function": "get_subscription_logs",
+    "description": "",
+    "file": "webhooks.py"
+  },
+  {
+    "method": "POST",
+    "path": "/api/webhooks/{sub_id}/test",
+    "function": "test_subscription",
+    "description": "",
+    "file": "webhooks.py"
+  },
+  {
+    "method": "GET",
+    "path": "/pm/competitors/benchmark",
+    "function": "benchmark_competitors",
+    "description": "",
+    "file": "competitor_bench.py"
+  },
+  {
+    "method": "GET",
+    "path": "/product-requirements",
+    "function": "list_requirements",
+    "description": "",
+    "file": "product_requirements.py"
+  },
+  {
+    "method": "POST",
+    "path": "/product-requirements",
+    "function": "create_requirement",
+    "description": "",
+    "file": "product_requirements.py"
+  },
+  {
+    "method": "GET",
+    "path": "/product-requirements/{req_id}",
+    "function": "get_requirement_detail",
+    "description": "",
+    "file": "product_requirements.py"
+  },
+  {
+    "method": "POST",
+    "path": "/product-requirements/{req_id}/convert",
+    "function": "convert_requirement_to_plan",
+    "description": "",
+    "file": "product_requirements.py"
+  },
+  {
+    "method": "POST",
+    "path": "/product-requirements/{req_id}/convert-to-plan",
+    "function": "convert_requirement_to_plan_v2",
+    "description": "",
+    "file": "product_requirements.py"
+  },
+  {
+    "method": "PUT",
+    "path": "/product-requirements/{req_id}/status",
+    "function": "update_requirement_status",
+    "description": "",
+    "file": "product_requirements.py"
+  },
+  {
+    "method": "WEBSOCKET",
+    "path": "/ws",
+    "function": "",
+    "description": "",
+    "file": "ws.py"
+  }
+]

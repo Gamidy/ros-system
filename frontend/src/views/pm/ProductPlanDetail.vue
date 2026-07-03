@@ -900,7 +900,6 @@ const showCostBreakdown = ref(false)
 const approvalComment = ref('')
 const submittingApproval = ref(false)
 
-const fetchPlanLoading_teamTab = ref(false)
 const approving = ref(false)
 const rejecting = ref(false)
 const withdrawing = ref(false)

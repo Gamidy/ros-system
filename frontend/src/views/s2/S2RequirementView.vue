@@ -89,7 +89,7 @@ const statusLabel = (s: string) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await api.get('/api/s2/certification-requirements')
+    const { data } = await api.get('/s2/certification-requirements')
     requirements.value = data || []
   } finally {
     loading.value = false
@@ -99,7 +99,7 @@ const fetchData = async () => {
 const triggerGenerate = async () => {
   genLoading.value = true
   try {
-    await api.post('/api/s2/certification-requirements/generate')
+    await api.post('/s2/certification-requirements/generate')
     ElMessage.success('认证需求生成完成')
     await fetchData()
   } catch (e: unknown) {

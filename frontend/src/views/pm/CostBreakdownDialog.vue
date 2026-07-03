@@ -65,7 +65,7 @@ const saving = ref(false)
 watch(() => props.modelValue, (v) => { visible.value = v })
 watch(visible, (v) => { if (!v) emit('update:modelValue', false) })
 
-interface CostItem { name: string; target: number; actual: number; remark: string }
+interface CostItem { id?: number; name: string; target: number; actual: number; remark: string }
 interface CostCategory { name: string; expanded: boolean; items: CostItem[] }
 
 const categories = ref<CostCategory[]>([

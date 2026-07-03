@@ -35,7 +35,7 @@ const option = computed<EChartsOption>(() => {
         type: 'pie',
         radius: props.donut ? ['40%', '70%'] : '70%',
         center: ['50%', '50%'],
-        data: props.data,
+        data: Array.isArray(props.data) ? props.data : [],
         itemStyle: {
           borderRadius: 6,
           borderColor: '#fff',

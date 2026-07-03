@@ -58,7 +58,7 @@ const formatDate = (d: string) => d ? d.substring(0, 19).replace('T', ' ') : '-'
 const fetchData = async () => {
   loading.value = true
   try {
-    const { data } = await api.get('/api/s2/change-impact')
+    const { data } = await api.get('/s2/change-impact/records')
     records.value = data || []
   } finally {
     loading.value = false

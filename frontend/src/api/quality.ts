@@ -1,11 +1,6 @@
 // 品质管理 API
 import api from './index'
 
-// ── 质量工作台 ──
-export function getQualityDashboard(params?: Record<string, any>) {
-  return api.get('/quality/dashboard', { params })
-}
-
 // ── 8D报告 ──
 export function listEightDReports(params?: Record<string, any>) {
   return api.get('/quality/8d-reports', { params })
@@ -20,7 +15,7 @@ export function createEightDReport(data: Record<string, any>) {
 }
 
 export function updateEightDReport(id: number, data: Record<string, any>) {
-  return api.patch(`/quality/8d-reports/${id}`, data)
+  return api.put(`/quality/8d-reports/${id}`, data)
 }
 
 export function deleteEightDReport(id: number) {
@@ -41,7 +36,7 @@ export function createIQC(data: Record<string, any>) {
 }
 
 export function updateIQC(id: number, data: Record<string, any>) {
-  return api.patch(`/quality/iqc/${id}`, data)
+  return api.put(`/quality/iqc/${id}`, data)
 }
 
 // ── 客户投诉 ──
@@ -58,26 +53,5 @@ export function createComplaint(data: Record<string, any>) {
 }
 
 export function updateComplaint(id: number, data: Record<string, any>) {
-  return api.patch(`/quality/complaints/${id}`, data)
-}
-
-// ── 改善任务 ──
-export function listImprovementTasks(params?: Record<string, any>) {
-  return api.get('/quality/improvement-tasks', { params })
-}
-
-export function getImprovementTask(id: number) {
-  return api.get(`/quality/improvement-tasks/${id}`)
-}
-
-export function createImprovementTask(data: Record<string, any>) {
-  return api.post('/quality/improvement-tasks', data)
-}
-
-export function updateImprovementTask(id: number, data: Record<string, any>) {
-  return api.patch(`/quality/improvement-tasks/${id}`, data)
-}
-
-export function deleteImprovementTask(id: number) {
-  return api.delete(`/quality/improvement-tasks/${id}`)
+  return api.put(`/quality/complaints/${id}`, data)
 }

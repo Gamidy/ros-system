@@ -1532,9 +1532,19 @@ async function fetchDashboard() {
     projectList.value = data.layer2_project_ops?.recent_projects ?? []
     dashboardRaw.value = data
 
-    productStatusData.value = data.layer1_system_health?.product_status_distribution ?? []
-    projectStatusData.value = data.layer2_project_ops?.project_status_distribution ?? []
-    phaseProgressData.value = data.layer4_ac_metrics?.phase_progress ?? []
+    // 后端返回的是 dict {key: count}，图表组件需要 [{name, value}] 数组
+    const psd = data.layer1_system_health?.product_status_distribution
+    productStatusData.value = psd && typeof psd === 'object' && !Array.isArray(psd)
+      ? Object.entries(psd).map(([name, value]) => ({ name, value: Number(value) }))
+      : (Array.isArray(psd) ? psd : [])
+    const jsd = data.layer2_project_ops?.project_status_distribution
+    projectStatusData.value = jsd && typeof jsd === 'object' && !Array.isArray(jsd)
+      ? Object.entries(jsd).map(([name, value]) => ({ name, value: Number(value) }))
+      : (Array.isArray(jsd) ? jsd : [])
+    const ppd = data.layer4_ac_metrics?.phase_progress
+    phaseProgressData.value = ppd && typeof ppd === 'object' && !Array.isArray(ppd)
+      ? Object.entries(ppd).map(([name, value]) => ({ name, value: Number(value) }))
+      : (Array.isArray(ppd) ? ppd : [])
   } catch {
     // API 请求失败：标记错误状态，不使用硬编码 fallback 数据掩盖真实状态
     console.warn('[Dashboard] fetchDashboard failed, clearing all data')

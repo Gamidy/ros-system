@@ -69,121 +69,143 @@ def _get_role_view(raw_role: str) -> str:
 
 def _build_layer1(db: Session) -> Layer1SystemHealth:
     """构建L1系统健康概览 — 平台/产品/版本/项目统计"""
-    total_platforms = db.query(func.count(Platform.id)).scalar() or 0
-    total_products = db.query(func.count(Product.id)).scalar() or 0
-    total_versions = db.query(func.count(Version.id)).scalar() or 0
-    active_projects = (
-        db.query(func.count(Project.id))
-        .filter(Project.status == "running", Project.is_deleted == False)
-        .scalar() or 0
-    )
-    product_status_rows = (
-        db.query(Product.status, func.count(Product.id))
-        .group_by(Product.status)
-        .all()
-    )
-    product_status_distribution = {row[0] or "unknown": row[1] for row in product_status_rows}
-    return Layer1SystemHealth(
-        total_platforms=total_platforms,
-        total_products=total_products,
-        total_versions=total_versions,
-        active_projects=active_projects,
-        product_status_distribution=product_status_distribution,
-    )
+    try:
+        total_platforms = db.query(func.count(Platform.id)).scalar() or 0
+        total_products = db.query(func.count(Product.id)).scalar() or 0
+        total_versions = db.query(func.count(Version.id)).scalar() or 0
+        active_projects = (
+            db.query(func.count(Project.id))
+            .filter(Project.status == "running", Project.is_deleted == False)
+            .scalar() or 0
+        )
+        product_status_rows = (
+            db.query(Product.status, func.count(Product.id))
+            .group_by(Product.status)
+            .all()
+        )
+        product_status_distribution = {row[0] or "unknown": row[1] for row in product_status_rows}
+        return Layer1SystemHealth(
+            total_platforms=total_platforms,
+            total_products=total_products,
+            total_versions=total_versions,
+            active_projects=active_projects,
+            product_status_distribution=product_status_distribution,
+        )
+    except Exception:
+        return Layer1SystemHealth(
+            total_platforms=0, total_products=0, total_versions=0,
+            active_projects=0, product_status_distribution={},
+        )
 
 
 # ═══════════════ L2: 项目运营概览 ═══════════════
 
 def _build_layer2_stats(db: Session, today: date) -> tuple[int, float, int]:
     """构建L2基础统计 — 项目总数/按时率/逾期数"""
-    project_count = (
-        db.query(func.count(Project.id))
-        .filter(Project.is_deleted == False)
-        .scalar() or 0
-    )
-    active_count = (
-        db.query(func.count(Project.id))
-        .filter(Project.status == "running", Project.is_deleted == False)
-        .scalar() or 1
-    )
-    on_time_count = (
-        db.query(func.count(Project.id))
-        .filter(
-            Project.is_deleted == False,
-            Project.actual_end_date.isnot(None),
-            Project.target_end_date.isnot(None),
-            Project.actual_end_date <= Project.target_end_date,
+    try:
+        project_count = (
+            db.query(func.count(Project.id))
+            .filter(Project.is_deleted == False)
+            .scalar() or 0
         )
-        .scalar() or 0
-    )
-    on_time_rate = round((on_time_count / active_count) * 100, 1) if active_count > 0 else 0.0
-    overdue_count = (
-        db.query(func.count(Project.id))
-        .filter(
-            Project.is_deleted == False,
-            Project.target_end_date.isnot(None),
-            Project.target_end_date < today,
-            Project.status != "completed",
+        active_count = (
+            db.query(func.count(Project.id))
+            .filter(Project.status == "running", Project.is_deleted == False)
+            .scalar() or 1
         )
-        .scalar() or 0
-    )
-    return project_count, on_time_rate, overdue_count
+        on_time_count = (
+            db.query(func.count(Project.id))
+            .filter(
+                Project.is_deleted == False,
+                Project.actual_end_date.isnot(None),
+                Project.target_end_date.isnot(None),
+                Project.actual_end_date <= Project.target_end_date,
+            )
+            .scalar() or 0
+        )
+        on_time_rate = round((on_time_count / active_count) * 100, 1) if active_count > 0 else 0.0
+        overdue_count = (
+            db.query(func.count(Project.id))
+            .filter(
+                Project.is_deleted == False,
+                Project.target_end_date.isnot(None),
+                Project.target_end_date < today,
+                Project.status != "completed",
+            )
+            .scalar() or 0
+        )
+        return project_count, on_time_rate, overdue_count
+    except Exception:
+        return 0, 0.0, 0
 
 
 def _build_recent_projects(db: Session) -> list[RecentProjectSummary]:
     """构建L2最近项目列表（最近5个）"""
-    rows = (
-        db.query(
-            Project.id, Project.code, Project.name, Project.status,
-            Project.project_class, Project.target_end_date, Project.owner,
+    try:
+        rows = (
+            db.query(
+                Project.id, Project.code, Project.name, Project.status,
+                Project.project_class, Project.target_end_date, Project.owner,
+            )
+            .filter(Project.is_deleted == False)
+            .order_by(Project.created_at.desc())
+            .limit(5)
+            .all()
         )
-        .filter(Project.is_deleted == False)
-        .order_by(Project.created_at.desc())
-        .limit(5)
-        .all()
-    )
-    return [
-        RecentProjectSummary(
-            id=r[0], code=r[1], name=r[2], status=r[3],
-            project_class=r[4], target_end_date=r[5], owner=r[6],
-        )
-        for r in rows
-    ]
+        return [
+            RecentProjectSummary(
+                id=r[0], code=r[1], name=r[2], status=r[3],
+                project_class=r[4], target_end_date=r[5], owner=r[6],
+            )
+            for r in rows
+        ]
+    except Exception:
+        return []
 
 
 def _build_layer2_extra(db: Session) -> tuple[dict[str, int], int]:
     """构建L2项目状态分布及待审批数"""
-    project_status_rows = (
-        db.query(Project.status, func.count(Project.id))
-        .filter(Project.is_deleted == False)
-        .group_by(Project.status)
-        .all()
-    )
-    project_status_distribution = {row[0] or "unknown": row[1] for row in project_status_rows}
-    pending_approvals_count = (
-        db.query(func.count(ApprovalRequest.id))
-        .filter(
-            ApprovalRequest.status == "pending",
-            ApprovalRequest.request_type == "proposal",
+    try:
+        project_status_rows = (
+            db.query(Project.status, func.count(Project.id))
+            .filter(Project.is_deleted == False)
+            .group_by(Project.status)
+            .all()
         )
-        .scalar() or 0
-    )
-    return project_status_distribution, pending_approvals_count
+        project_status_distribution = {row[0] or "unknown": row[1] for row in project_status_rows}
+        pending_approvals_count = (
+            db.query(func.count(ApprovalRequest.id))
+            .filter(
+                ApprovalRequest.status == "pending",
+                ApprovalRequest.request_type == "proposal",
+            )
+            .scalar() or 0
+        )
+        return project_status_distribution, pending_approvals_count
+    except Exception:
+        return {}, 0
 
 
 def _build_layer2(db: Session, today: date) -> Layer2ProjectOps:
     """组装L2项目运营概览"""
-    project_count, on_time_rate, overdue_count = _build_layer2_stats(db, today)
-    recent_projects = _build_recent_projects(db)
-    project_status_distribution, pending_approvals_count = _build_layer2_extra(db)
-    return Layer2ProjectOps(
-        project_count=project_count,
-        on_time_rate=on_time_rate,
-        overdue_count=overdue_count,
-        pending_approvals_count=pending_approvals_count,
-        recent_projects=recent_projects,
-        project_status_distribution=project_status_distribution,
-    )
+    try:
+        project_count, on_time_rate, overdue_count = _build_layer2_stats(db, today)
+        recent_projects = _build_recent_projects(db)
+        project_status_distribution, pending_approvals_count = _build_layer2_extra(db)
+        return Layer2ProjectOps(
+            project_count=project_count,
+            on_time_rate=on_time_rate,
+            overdue_count=overdue_count,
+            pending_approvals_count=pending_approvals_count,
+            recent_projects=recent_projects,
+            project_status_distribution=project_status_distribution,
+        )
+    except Exception:
+        return Layer2ProjectOps(
+            project_count=0, on_time_rate=0.0, overdue_count=0,
+            pending_approvals_count=0, recent_projects=[],
+            project_status_distribution={},
+        )
 
 
 # ═══════════════ L3: 穿透链 ═══════════════
@@ -202,39 +224,45 @@ def _build_penetration_product(
     db: Session, product_code: str,
 ) -> tuple[Optional[Product], Optional[Platform], list]:
     """构建穿透链中的产品/平台/版本数据"""
-    product = db.query(Product).filter(Product.code == product_code).first()
-    platform_obj = None
-    versions_list: list = []
-    if product:
-        platform_obj = db.query(Platform).filter(Platform.id == product.platform_id).first()
-        versions_list = (
-            db.query(Version)
-            .filter(Version.product_id == product.id)
-            .order_by(Version.created_at.desc())
-            .limit(5)
-            .all()
-        )
-    return product, platform_obj, versions_list
+    try:
+        product = db.query(Product).filter(Product.code == product_code).first()
+        platform_obj = None
+        versions_list: list = []
+        if product:
+            platform_obj = db.query(Platform).filter(Platform.id == product.platform_id).first()
+            versions_list = (
+                db.query(Version)
+                .filter(Version.product_id == product.id)
+                .order_by(Version.created_at.desc())
+                .limit(5)
+                .all()
+            )
+        return product, platform_obj, versions_list
+    except Exception:
+        return None, None, []
 
 
 def _build_penetration_gates(db: Session, project_id: int) -> list[dict]:
     """构建穿透链中的门控节点列表"""
-    gates_rows = (
-        db.query(ProjectGate)
-        .filter(ProjectGate.project_id == project_id)
-        .order_by(ProjectGate.seq)
-        .all()
-    )
-    return [
-        {
-            "gate_code": g.gate_code,
-            "gate_name": g.gate_name,
-            "status": g.status,
-            "planned_date": g.planned_date.isoformat() if g.planned_date else None,
-            "actual_date": g.actual_date.isoformat() if g.actual_date else None,
-        }
-        for g in gates_rows
-    ]
+    try:
+        gates_rows = (
+            db.query(ProjectGate)
+            .filter(ProjectGate.project_id == project_id)
+            .order_by(ProjectGate.seq)
+            .all()
+        )
+        return [
+            {
+                "gate_code": g.gate_code,
+                "gate_name": g.gate_name,
+                "status": g.status,
+                "planned_date": g.planned_date.isoformat() if g.planned_date else None,
+                "actual_date": g.actual_date.isoformat() if g.actual_date else None,
+            }
+            for g in gates_rows
+        ]
+    except Exception:
+        return []
 
 
 def _assemble_layer3(
@@ -277,82 +305,95 @@ def _assemble_layer3(
 
 def _build_layer3(db: Session) -> Optional[dict]:
     """构建L3穿透链"""
-    project = _get_penetration_project(db)
-    if not project or not project.product_code:
+    try:
+        project = _get_penetration_project(db)
+        if not project or not project.product_code:
+            return None
+        product, platform_obj, versions_list = _build_penetration_product(
+            db, project.product_code,
+        )
+        gates_list = _build_penetration_gates(db, project.id)
+        return _assemble_layer3(project, product, platform_obj, versions_list, gates_list)
+    except Exception:
         return None
-    product, platform_obj, versions_list = _build_penetration_product(
-        db, project.product_code,
-    )
-    gates_list = _build_penetration_gates(db, project.id)
-    return _assemble_layer3(project, product, platform_obj, versions_list, gates_list)
 
 
 # ═══════════════ L4: 指标聚合 ═══════════════
 
 def _build_phase_progress(db: Session) -> tuple[dict[str, float], list[dict]]:
     """构建阶段进度 — 按Gate节点聚合通过率"""
-    gate_stats = (
-        db.query(
-            ProjectGate.gate_code,
-            func.count(ProjectGate.id).label("total"),
-            func.sum(
-                sa_case((ProjectGate.status == "passed", 1), else_=0),
-            ).label("passed"),
+    try:
+        gate_stats = (
+            db.query(
+                ProjectGate.gate_code,
+                func.count(ProjectGate.id).label("total"),
+                func.sum(
+                    sa_case((ProjectGate.status == "passed", 1), else_=0),
+                ).label("passed"),
+            )
+            .join(Project, ProjectGate.project_id == Project.id)
+            .filter(Project.is_deleted == False)
+            .group_by(ProjectGate.gate_code)
+            .order_by(ProjectGate.gate_code)
+            .all()
         )
-        .join(Project, ProjectGate.project_id == Project.id)
-        .filter(Project.is_deleted == False)
-        .group_by(ProjectGate.gate_code)
-        .order_by(ProjectGate.gate_code)
-        .all()
-    )
-    phase_progress: dict[str, float] = {}
-    phase_progress_array: list[dict] = []
-    for row in gate_stats:
-        code = row[0]
-        total = row[1] or 1
-        passed = row[2] or 0
-        rate = round((passed / total) * 100, 1) if total > 0 else 0.0
-        phase_progress[code] = rate
-        phase_progress_array.append({
-            "gate_code": code, "total": total, "passed": passed, "rate": rate,
-        })
-    return phase_progress, phase_progress_array
+        phase_progress: dict[str, float] = {}
+        phase_progress_array: list[dict] = []
+        for row in gate_stats:
+            code = row[0]
+            total = row[1] or 1
+            passed = row[2] or 0
+            rate = round((passed / total) * 100, 1) if total > 0 else 0.0
+            phase_progress[code] = rate
+            phase_progress_array.append({
+                "gate_code": code, "total": total, "passed": passed, "rate": rate,
+            })
+        return phase_progress, phase_progress_array
+    except Exception:
+        return {}, []
 
 
 def _build_layer4(db: Session) -> Layer4ACMetrics:
     """构建L4进度-测试-品质-成本综合指标"""
-    phase_progress, phase_progress_array = _build_phase_progress(db)
+    try:
+        phase_progress, phase_progress_array = _build_phase_progress(db)
 
-    total_results = (
-        db.query(func.count(TestResult.id))
-        .filter(TestResult.is_pass.isnot(None))
-        .scalar() or 0
-    )
-    pass_results = (
-        db.query(func.count(TestResult.id))
-        .filter(TestResult.is_pass == True)
-        .scalar() or 0
-    )
-    test_pass_rate = round((pass_results / total_results) * 100, 1) if total_results > 0 else 0.0
+        total_results = (
+            db.query(func.count(TestResult.id))
+            .filter(TestResult.is_pass.isnot(None))
+            .scalar() or 0
+        )
+        pass_results = (
+            db.query(func.count(TestResult.id))
+            .filter(TestResult.is_pass == True)
+            .scalar() or 0
+        )
+        test_pass_rate = round((pass_results / total_results) * 100, 1) if total_results > 0 else 0.0
 
-    total_issues = db.query(func.count(QualityIssue.id)).scalar() or 0
-    closed_issues = (
-        db.query(func.count(QualityIssue.id))
-        .filter(QualityIssue.status == "closed")
-        .scalar() or 0
-    )
-    issue_close_rate = round((closed_issues / total_issues) * 100, 1) if total_issues > 0 else 0.0
+        total_issues = db.query(func.count(QualityIssue.id)).scalar() or 0
+        closed_issues = (
+            db.query(func.count(QualityIssue.id))
+            .filter(QualityIssue.status == "closed")
+            .scalar() or 0
+        )
+        issue_close_rate = round((closed_issues / total_issues) * 100, 1) if total_issues > 0 else 0.0
 
-    return Layer4ACMetrics(
-        phase_progress=phase_progress,
-        test_pass_rate=test_pass_rate,
-        issue_close_rate=issue_close_rate,
-        cost_execution_rate=0.0,
-        generalization_rate=0.0,
-        phase_progress_array=phase_progress_array,
-        total_issues=total_issues,
-        closed_issues=closed_issues,
-    )
+        return Layer4ACMetrics(
+            phase_progress=phase_progress,
+            test_pass_rate=test_pass_rate,
+            issue_close_rate=issue_close_rate,
+            cost_execution_rate=0.0,
+            generalization_rate=0.0,
+            phase_progress_array=phase_progress_array,
+            total_issues=total_issues,
+            closed_issues=closed_issues,
+        )
+    except Exception:
+        return Layer4ACMetrics(
+            phase_progress={}, test_pass_rate=0.0, issue_close_rate=0.0,
+            cost_execution_rate=0.0, generalization_rate=0.0,
+            phase_progress_array=[], total_issues=0, closed_issues=0,
+        )
 
 
 # ═══════════════ 角色化视图数据 ═══════════════
@@ -746,148 +787,181 @@ from app.models.product_plan import ProductPlan, ProductPlanStage
 
 def _build_production_sales(db: Session) -> ProductionSalesPillar:
     """产销协同维度"""
-    # 项目管道
-    total_projects = db.query(func.count(Project.id)).filter(Project.is_deleted == False).scalar() or 0
-    running_projects = db.query(func.count(Project.id)).filter(Project.status == "running", Project.is_deleted == False).scalar() or 0
-    completed_projects = db.query(func.count(Project.id)).filter(Project.status == "completed", Project.is_deleted == False).scalar() or 0
-    today = date.today()
-    overdue_projects = (
-        db.query(func.count(Project.id))
-        .filter(
-            Project.is_deleted == False,
-            Project.target_end_date.isnot(None),
-            Project.target_end_date < today,
-            Project.status != "completed",
+    try:
+        # 项目管道
+        total_projects = db.query(func.count(Project.id)).filter(Project.is_deleted == False).scalar() or 0
+        running_projects = db.query(func.count(Project.id)).filter(Project.status == "running", Project.is_deleted == False).scalar() or 0
+        completed_projects = db.query(func.count(Project.id)).filter(Project.status == "completed", Project.is_deleted == False).scalar() or 0
+        today = date.today()
+        overdue_projects = (
+            db.query(func.count(Project.id))
+            .filter(
+                Project.is_deleted == False,
+                Project.target_end_date.isnot(None),
+                Project.target_end_date < today,
+                Project.status != "completed",
+            )
+            .scalar() or 0
         )
-        .scalar() or 0
-    )
-    # 产品策划管道
-    total_plans = db.query(func.count(ProductPlan.id)).scalar() or 0
-    draft_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.DRAFT).scalar() or 0
-    costing_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.COSTING).scalar() or 0
-    released_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.RELEASED).scalar() or 0
-    # BOM/物料
-    total_boms = db.query(func.count(BOM.id)).scalar() or 0
-    total_parts = db.query(func.count(BOMItem.id)).scalar() or 0
-    # 转化率
-    plan_to_project_rate = round((completed_projects / max(total_plans, 1)) * 100, 1)
+        # 产品策划管道
+        total_plans = db.query(func.count(ProductPlan.id)).scalar() or 0
+        draft_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.DRAFT).scalar() or 0
+        costing_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.COSTING).scalar() or 0
+        released_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.RELEASED).scalar() or 0
+        # BOM/物料
+        total_boms = db.query(func.count(BOM.id)).scalar() or 0
+        total_parts = db.query(func.count(BOMItem.id)).scalar() or 0
+        # 转化率
+        plan_to_project_rate = round((completed_projects / max(total_plans, 1)) * 100, 1)
 
-    return ProductionSalesPillar(
-        total_projects=total_projects,
-        running_projects=running_projects,
-        completed_projects=completed_projects,
-        overdue_projects=overdue_projects,
-        total_plans=total_plans,
-        draft_plans=draft_plans,
-        costing_plans=costing_plans,
-        released_plans=released_plans,
-        total_boms=total_boms,
-        total_parts=total_parts,
-        plan_to_project_rate=plan_to_project_rate,
-    )
+        return ProductionSalesPillar(
+            total_projects=total_projects,
+            running_projects=running_projects,
+            completed_projects=completed_projects,
+            overdue_projects=overdue_projects,
+            total_plans=total_plans,
+            draft_plans=draft_plans,
+            costing_plans=costing_plans,
+            released_plans=released_plans,
+            total_boms=total_boms,
+            total_parts=total_parts,
+            plan_to_project_rate=plan_to_project_rate,
+        )
+    except Exception:
+        return ProductionSalesPillar(
+            total_projects=0, running_projects=0, completed_projects=0,
+            overdue_projects=0, total_plans=0, draft_plans=0,
+            costing_plans=0, released_plans=0, total_boms=0,
+            total_parts=0, plan_to_project_rate=0.0,
+        )
 
 
 def _build_financial_control(db: Session) -> FinancialControlPillar:
     """财务管控维度"""
-    total_purchase_orders = db.query(func.count(PurchaseOrder.id)).scalar() or 0
-    pending_purchase_orders = db.query(func.count(PurchaseOrder.id)).filter(PurchaseOrder.status == "pending_approval").scalar() or 0
-    total_amount = db.query(func.sum(PurchaseOrder.total_amount)).scalar() or 0.0
-    total_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.is_deleted == 0).scalar() or 0
-    active_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.status == "active", Supplier.is_deleted == 0).scalar() or 0
-    # 成本核算
     try:
-        from app.models.product_plan_subs import ProjectCostItem
-        cost_orders = db.query(func.count(ProjectCostItem.id)).scalar() or 0
-    except Exception:
-        cost_orders = 0
-    try:
-        from app.models.certification import CostAccountingPeriod
-        cost_periods = db.query(func.count(CostAccountingPeriod.id)).scalar() or 0
-    except Exception:
-        cost_periods = 0
+        total_purchase_orders = db.query(func.count(PurchaseOrder.id)).scalar() or 0
+        pending_purchase_orders = db.query(func.count(PurchaseOrder.id)).filter(PurchaseOrder.status == "pending_approval").scalar() or 0
+        total_amount = db.query(func.sum(PurchaseOrder.total_amount)).scalar() or 0.0
+        total_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.is_deleted == 0).scalar() or 0
+        active_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.status == "active", Supplier.is_deleted == 0).scalar() or 0
+        # 成本核算
+        try:
+            from app.models.product_plan_subs import ProjectCostItem
+            cost_orders = db.query(func.count(ProjectCostItem.id)).scalar() or 0
+        except Exception:
+            cost_orders = 0
+        try:
+            from app.models.certification import CostAccountingPeriod
+            cost_periods = db.query(func.count(CostAccountingPeriod.id)).scalar() or 0
+        except Exception:
+            cost_periods = 0
 
-    return FinancialControlPillar(
-        total_purchase_orders=total_purchase_orders,
-        pending_purchase_orders=pending_purchase_orders,
-        total_purchase_amount=round(total_amount, 2),
-        total_suppliers=total_suppliers,
-        active_suppliers=active_suppliers,
-        cost_accounting_periods=cost_periods,
-        cost_orders_count=cost_orders,
-        cost_execution_rate=0.0,
-        cost_overrun_alerts=0,
-    )
+        return FinancialControlPillar(
+            total_purchase_orders=total_purchase_orders,
+            pending_purchase_orders=pending_purchase_orders,
+            total_purchase_amount=round(total_amount, 2),
+            total_suppliers=total_suppliers,
+            active_suppliers=active_suppliers,
+            cost_accounting_periods=cost_periods,
+            cost_orders_count=cost_orders,
+            cost_execution_rate=0.0,
+            cost_overrun_alerts=0,
+        )
+    except Exception:
+        return FinancialControlPillar(
+            total_purchase_orders=0, pending_purchase_orders=0,
+            total_purchase_amount=0.0, total_suppliers=0,
+            active_suppliers=0, cost_accounting_periods=0,
+            cost_orders_count=0, cost_execution_rate=0.0,
+            cost_overrun_alerts=0,
+        )
 
 
 def _build_growth_engine(db: Session) -> GrowthEnginePillar:
     """增长引擎维度"""
-    total_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true").scalar() or 0
-    r32_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true", Market.refrigerant == "R32").scalar() or 0
-    r410a_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true", Market.refrigerant == "R410A").scalar() or 0
-    total_competitors = db.query(func.count(Competitor.id)).scalar() or 0
-    from sqlalchemy import text as sa_text
-    competitor_markets = db.execute(sa_text("SELECT COUNT(DISTINCT market) FROM competitors")).scalar() or 0
-    total_cert_projects = db.query(func.count(CertificationProject.id)).scalar() or 0
-    cert_in_progress = db.query(func.count(CertificationProject.id)).filter(CertificationProject.status == "in_progress").scalar() or 0
-    total_products = db.query(func.count(Product.id)).scalar() or 0
-    total_versions = db.query(func.count(Version.id)).scalar() or 0
+    try:
+        total_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true").scalar() or 0
+        r32_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true", Market.refrigerant == "R32").scalar() or 0
+        r410a_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true", Market.refrigerant == "R410A").scalar() or 0
+        total_competitors = db.query(func.count(Competitor.id)).scalar() or 0
+        from sqlalchemy import text as sa_text
+        competitor_markets = db.execute(sa_text("SELECT COUNT(DISTINCT market) FROM competitors")).scalar() or 0
+        total_cert_projects = db.query(func.count(CertificationProject.id)).scalar() or 0
+        cert_in_progress = db.query(func.count(CertificationProject.id)).filter(CertificationProject.status == "in_progress").scalar() or 0
+        total_products = db.query(func.count(Product.id)).scalar() or 0
+        total_versions = db.query(func.count(Version.id)).scalar() or 0
 
-    return GrowthEnginePillar(
-        total_markets=total_markets,
-        r32_markets=r32_markets,
-        r410a_markets=r410a_markets,
-        total_competitors=total_competitors,
-        competitor_markets_count=competitor_markets,
-        total_cert_projects=total_cert_projects,
-        cert_projects_in_progress=cert_in_progress,
-        total_products=total_products,
-        total_versions=total_versions,
-    )
+        return GrowthEnginePillar(
+            total_markets=total_markets,
+            r32_markets=r32_markets,
+            r410a_markets=r410a_markets,
+            total_competitors=total_competitors,
+            competitor_markets_count=competitor_markets,
+            total_cert_projects=total_cert_projects,
+            cert_projects_in_progress=cert_in_progress,
+            total_products=total_products,
+            total_versions=total_versions,
+        )
+    except Exception:
+        return GrowthEnginePillar(
+            total_markets=0, r32_markets=0, r410a_markets=0,
+            total_competitors=0, competitor_markets_count=0,
+            total_cert_projects=0, cert_projects_in_progress=0,
+            total_products=0, total_versions=0,
+        )
 
 
 def _build_efficiency(db: Session) -> EfficiencyMetricsPillar:
     """效率指标维度"""
-    # 项目按时率
-    active_count = db.query(func.count(Project.id)).filter(Project.status == "running", Project.is_deleted == False).scalar() or 1
-    on_time_count = (
-        db.query(func.count(Project.id))
-        .filter(
-            Project.is_deleted == False,
-            Project.actual_end_date.isnot(None),
-            Project.target_end_date.isnot(None),
-            Project.actual_end_date <= Project.target_end_date,
+    try:
+        # 项目按时率
+        active_count = db.query(func.count(Project.id)).filter(Project.status == "running", Project.is_deleted == False).scalar() or 1
+        on_time_count = (
+            db.query(func.count(Project.id))
+            .filter(
+                Project.is_deleted == False,
+                Project.actual_end_date.isnot(None),
+                Project.target_end_date.isnot(None),
+                Project.actual_end_date <= Project.target_end_date,
+            )
+            .scalar() or 0
         )
-        .scalar() or 0
-    )
-    on_time_rate = round((on_time_count / active_count) * 100, 1) if active_count > 0 else 0.0
-    # 测试通过率
-    from app.models.test import TestResult
-    total_results = db.query(func.count(TestResult.id)).filter(TestResult.is_pass.isnot(None)).scalar() or 0
-    pass_results = db.query(func.count(TestResult.id)).filter(TestResult.is_pass == True).scalar() or 0
-    test_pass_rate = round((pass_results / max(total_results, 1)) * 100, 1) if total_results > 0 else 0.0
-    # 问题关闭率
-    from app.models.test import QualityIssue
-    total_issues = db.query(func.count(QualityIssue.id)).scalar() or 0
-    closed_issues = db.query(func.count(QualityIssue.id)).filter(QualityIssue.status == "closed").scalar() or 0
-    issue_close_rate = round((closed_issues / max(total_issues, 1)) * 100, 1) if total_issues > 0 else 0.0
-    # 门控通过率
-    gate_total = db.query(func.count(ProjectGate.id)).scalar() or 1
-    gate_passed = db.query(func.count(ProjectGate.id)).filter(ProjectGate.status == "passed").scalar() or 0
-    phase_gate_pass_rate = round((gate_passed / max(gate_total, 1)) * 100, 1)
-    # 预警
-    from app.models.alert import Alert
-    total_alerts = db.query(func.count(Alert.id)).filter(Alert.is_resolved == False).scalar() or 0
-    overdue_alerts = db.query(func.count(Alert.id)).filter(Alert.is_resolved == False, Alert.level == 1).scalar() or 0
+        on_time_rate = round((on_time_count / active_count) * 100, 1) if active_count > 0 else 0.0
+        # 测试通过率
+        from app.models.test import TestResult
+        total_results = db.query(func.count(TestResult.id)).filter(TestResult.is_pass.isnot(None)).scalar() or 0
+        pass_results = db.query(func.count(TestResult.id)).filter(TestResult.is_pass == True).scalar() or 0
+        test_pass_rate = round((pass_results / max(total_results, 1)) * 100, 1) if total_results > 0 else 0.0
+        # 问题关闭率
+        from app.models.test import QualityIssue
+        total_issues = db.query(func.count(QualityIssue.id)).scalar() or 0
+        closed_issues = db.query(func.count(QualityIssue.id)).filter(QualityIssue.status == "closed").scalar() or 0
+        issue_close_rate = round((closed_issues / max(total_issues, 1)) * 100, 1) if total_issues > 0 else 0.0
+        # 门控通过率
+        gate_total = db.query(func.count(ProjectGate.id)).scalar() or 1
+        gate_passed = db.query(func.count(ProjectGate.id)).filter(ProjectGate.status == "passed").scalar() or 0
+        phase_gate_pass_rate = round((gate_passed / max(gate_total, 1)) * 100, 1)
+        # 预警
+        from app.models.alert import Alert
+        total_alerts = db.query(func.count(Alert.id)).filter(Alert.is_resolved == False).scalar() or 0
+        overdue_alerts = db.query(func.count(Alert.id)).filter(Alert.is_resolved == False, Alert.level == 1).scalar() or 0
 
-    return EfficiencyMetricsPillar(
-        on_time_rate=on_time_rate,
-        avg_project_duration_days=0.0,
-        test_pass_rate=test_pass_rate,
-        issue_close_rate=issue_close_rate,
-        phase_gate_pass_rate=phase_gate_pass_rate,
-        alert_count=total_alerts,
-        overdue_alert_count=overdue_alerts,
-    )
+        return EfficiencyMetricsPillar(
+            on_time_rate=on_time_rate,
+            avg_project_duration_days=0.0,
+            test_pass_rate=test_pass_rate,
+            issue_close_rate=issue_close_rate,
+            phase_gate_pass_rate=phase_gate_pass_rate,
+            alert_count=total_alerts,
+            overdue_alert_count=overdue_alerts,
+        )
+    except Exception:
+        return EfficiencyMetricsPillar(
+            on_time_rate=0.0, avg_project_duration_days=0.0,
+            test_pass_rate=0.0, issue_close_rate=0.0,
+            phase_gate_pass_rate=0.0, alert_count=0,
+            overdue_alert_count=0,
+        )
 
 
 @router.get("/business-analysis", response_model=BusinessAnalysisResponse)

@@ -28,7 +28,7 @@ export function createWarehouse(data: Record<string, any>) {
 }
 
 export function updateWarehouse(id: number, data: Record<string, any>) {
-  return api.patch(`/inventory/warehouses/${id}`, data)
+  return api.put(`/inventory/warehouses/${id}`, data)
 }
 
 export function deleteWarehouse(id: number) {

@@ -309,7 +309,7 @@
               <h4 class="biz-detail-title">⏱ 项目效率</h4>
               <div class="biz-detail-metrics">
                 <div class="biz-detail-item">
-                  <span class="biz-detail-val" :class="data.efficiency?.on_time_rate >= 80 ? 'text-success' : 'text-warning'">{{ data.efficiency?.on_time_rate ?? 0 }}%</span>
+                  <span class="biz-detail-val" :class="(data.efficiency?.on_time_rate ?? 0) >= 80 ? 'text-success' : 'text-warning'">{{ data.efficiency?.on_time_rate ?? 0 }}%</span>
                   <span class="biz-detail-lbl">按时完成率</span>
                 </div>
                 <div class="biz-detail-item">
@@ -322,11 +322,11 @@
               <h4 class="biz-detail-title">✅ 质量效率</h4>
               <div class="biz-detail-metrics">
                 <div class="biz-detail-item">
-                  <span class="biz-detail-val" :class="data.efficiency?.test_pass_rate >= 80 ? 'text-success' : 'text-warning'">{{ data.efficiency?.test_pass_rate ?? 0 }}%</span>
+                  <span class="biz-detail-val" :class="(data.efficiency?.test_pass_rate ?? 0) >= 80 ? 'text-success' : 'text-warning'">{{ data.efficiency?.test_pass_rate ?? 0 }}%</span>
                   <span class="biz-detail-lbl">测试通过率</span>
                 </div>
                 <div class="biz-detail-item">
-                  <span class="biz-detail-val" :class="data.efficiency?.issue_close_rate >= 80 ? 'text-success' : 'text-warning'">{{ data.efficiency?.issue_close_rate ?? 0 }}%</span>
+                  <span class="biz-detail-val" :class="(data.efficiency?.issue_close_rate ?? 0) >= 80 ? 'text-success' : 'text-warning'">{{ data.efficiency?.issue_close_rate ?? 0 }}%</span>
                   <span class="biz-detail-lbl">问题关闭率</span>
                 </div>
                 <div class="biz-detail-item">
@@ -339,11 +339,11 @@
               <h4 class="biz-detail-title">🔔 预警监控</h4>
               <div class="biz-detail-metrics">
                 <div class="biz-detail-item">
-                  <span class="biz-detail-val" :class="data.efficiency?.alert_count > 0 ? 'text-warning' : 'text-success'">{{ data.efficiency?.alert_count ?? 0 }}</span>
+                  <span class="biz-detail-val" :class="(data.efficiency?.alert_count ?? 0) > 0 ? 'text-warning' : 'text-success'">{{ data.efficiency?.alert_count ?? 0 }}</span>
                   <span class="biz-detail-lbl">未解决预警</span>
                 </div>
                 <div class="biz-detail-item">
-                  <span class="biz-detail-val" :class="data.efficiency?.overdue_alert_count > 0 ? 'text-danger' : ''">{{ data.efficiency?.overdue_alert_count ?? 0 }}</span>
+                  <span class="biz-detail-val" :class="(data.efficiency?.overdue_alert_count ?? 0) > 0 ? 'text-danger' : ''">{{ data.efficiency?.overdue_alert_count ?? 0 }}</span>
                   <span class="biz-detail-lbl">紧急预警</span>
                 </div>
               </div>
