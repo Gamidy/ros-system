@@ -612,8 +612,10 @@ def create_receipt(data: ReceiptCreate, db: Session = Depends(get_db), current_u
     last = db.query(GoodsReceipt).filter(GoodsReceipt.receipt_no.like(f"{prefix}%")).order_by(GoodsReceipt.id.desc()).first()
     seq = 1
     if last and last.receipt_no.startswith(prefix):
-        try: seq = int(last.receipt_no.split("-")[-1]) + 1
-        except: seq = 1
+        try:
+            seq = int(last.receipt_no.split("-")[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
     receipt_no = f"{prefix}{seq:04d}"
 
     total_qty = sum(it.received_qty for it in data.items)

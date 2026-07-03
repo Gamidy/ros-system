@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.process_sop import SOP, ProcessRoute
+import json
 
 router = APIRouter(prefix="/process", tags=["工艺管理"])
 
@@ -102,10 +103,10 @@ def create_route(data: dict, db: Session = Depends(get_db)):
     if not r.code: r.code = f"ROUTE-{r.id or 0}"
     # 计算总工时
     try:
-        import json
         steps = json.loads(r.steps) if r.steps else []
         r.total_time = sum(s.get("std_time", 0) for s in steps)
-    except: pass
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
     db.add(r); db.commit(); db.refresh(r)
     return _route_out(r)
 
@@ -117,10 +118,10 @@ def update_route(rid: int, data: dict, db: Session = Depends(get_db)):
     for k, v in data.items():
         if hasattr(r, k): setattr(r, k, v)
     try:
-        import json
         steps = json.loads(r.steps) if r.steps else []
         r.total_time = sum(s.get("std_time", 0) for s in steps)
-    except: pass
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
     db.commit(); db.refresh(r)
     return _route_out(r)
 

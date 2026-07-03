@@ -127,7 +127,7 @@ with engine.connect() as conn:
             log.info("  %s: %d -> %d %s", tbl, src, dst, status)
             if dst == src: ok += 1
             else: fail += 1
-        except:
+        except Exception:
             pass
 log.info("Result: %d OK, %d FAIL", ok, fail)
 sqlite_conn.close()

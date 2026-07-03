@@ -15,6 +15,7 @@
 
 import sys
 import os
+import datetime
 
 # 确保项目根目录在 sys.path 中，以便导入 app 模块
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -247,7 +248,7 @@ def print_report(
 def main():
     """主入口"""
     print(f"🔍 开始 ProductPlan ↔ Project 关联完整性检查...")
-    print(f"   时间: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
 
     db = SessionLocal()

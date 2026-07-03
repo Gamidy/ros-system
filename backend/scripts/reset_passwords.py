@@ -20,6 +20,7 @@ import sys
 import os
 import secrets
 import string
+import datetime
 
 # 确保能找到 backend 包
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -86,7 +87,7 @@ def main():
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             f.write("=" * 60 + "\n")
             f.write("ROS 系统 - 用户新密码列表 (机密)\n")
-            f.write(f"生成时间: {__import__('datetime').datetime.now()}\n")
+            f.write(f"生成时间: {datetime.datetime.now()}\n")
             f.write(f"用户总数: {total}\n")
             f.write("=" * 60 + "\n\n")
             for username, pwd in user_passwords.items():
