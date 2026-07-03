@@ -886,7 +886,7 @@ def _build_growth_engine(db: Session) -> GrowthEnginePillar:
         r410a_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true", Market.refrigerant == "R410A").scalar() or 0
         total_competitors = db.query(func.count(Competitor.id)).scalar() or 0
         from sqlalchemy import text as sa_text
-        competitor_markets = db.execute(sa_text("SELECT COUNT(DISTINCT market) FROM competitors")).scalar() or 0
+        competitor_markets = db.execute(sa_text("SELECT COUNT(DISTINCT market) FROM competitor_models")).scalar() or 0
         total_cert_projects = db.query(func.count(CertificationProject.id)).scalar() or 0
         cert_in_progress = db.query(func.count(CertificationProject.id)).filter(CertificationProject.status == "in_progress").scalar() or 0
         total_products = db.query(func.count(Product.id)).scalar() or 0
