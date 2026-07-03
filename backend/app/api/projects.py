@@ -276,7 +276,7 @@ def list_projects(
 def create_project(
     req: ProjectCreate,
     db: Session = Depends(get_db),
-    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin")),
+    _=Depends(require_role("admin", "general_manager", "rd_director", "product_manager", "project_admin", "systems_engineer")),
 ) -> ProjectOut:
     from app.core.sanitize import sanitize_html
 

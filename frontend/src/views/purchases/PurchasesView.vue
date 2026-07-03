@@ -53,7 +53,7 @@
       </el-tab-pane>
       <el-tab-pane label="供应商管理" name="suppliers">
         <div style="margin-bottom: 16px;">
-          <el-button type="primary" @click="showSupplierDialog = true">新增供应商</el-button>
+          <el-button type="primary" @click="openAddSupplier">新增供应商</el-button>
         </div>
         <el-table :data="suppliers" stripe border max-height="520">
           <el-table-column prop="code" label="编号" width="120" />
@@ -94,6 +94,64 @@
       <template #footer>
         <el-button @click="showCreateDialog = false">取消</el-button>
         <el-button type="primary" @click="createOrder" :loading="saving">提交</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 新增供应商对话框 -->
+    <el-dialog v-model="showSupplierDialog" title="新增供应商" width="640px" destroy-on-close>
+      <el-form :model="supplierForm" label-width="100px" size="small">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="编码" required>
+              <el-input v-model="supplierForm.code" placeholder="自动或手动输入" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="名称" required>
+              <el-input v-model="supplierForm.name" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="品类">
+              <el-select v-model="supplierForm.category" placeholder="选择品类" clearable style="width:100%">
+                <el-option label="电子" value="电子" />
+                <el-option label="结构" value="结构" />
+                <el-option label="包装" value="包装" />
+                <el-option label="辅料" value="辅料" />
+                <el-option label="五金" value="五金" />
+                <el-option label="塑料" value="塑料" />
+                <el-option label="其他" value="其他" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态">
+              <el-select v-model="supplierForm.status" style="width:100%">
+                <el-option label="潜在" value="potential" />
+                <el-option label="合格" value="qualified" />
+                <el-option label="合作中" value="active" />
+                <el-option label="暂停" value="suspended" />
+                <el-option label="黑名单" value="blacklisted" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="联系人"><el-input v-model="supplierForm.contact" /></el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="电话"><el-input v-model="supplierForm.phone" /></el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="邮箱"><el-input v-model="supplierForm.email" /></el-form-item>
+        <el-form-item label="地址"><el-input v-model="supplierForm.address" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showSupplierDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveSupplier">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -146,6 +204,11 @@ const page = ref(1)
 const total = ref(0)
 const showCreateDialog = ref(false)
 const showSupplierDialog = ref(false)
+const savingSupplier = ref(false)
+const supplierForm = ref<Record<string, any>>({
+  code: '', name: '', category: '', status: 'potential',
+  contact: '', phone: '', email: '', address: '',
+})
 
 const newOrder = ref<NewOrderDto>({ supplier_code: '', remark: '', items: [{ part_no: '', part_name: '', quantity: 1, unit_price: 0 }] })
 
@@ -208,6 +271,23 @@ function submitOrder(row: OrderDto) {
 }
 function viewSupplier(row: SupplierDto) {
   ElMessage.info(`供应商 ${row.name} 详情功能开发中`)
+}
+function openAddSupplier() {
+  supplierForm.value = { code: '', name: '', category: '', status: 'potential', contact: '', phone: '', email: '', address: '' }
+  showSupplierDialog.value = true
+}
+async function saveSupplier() {
+  savingSupplier.value = true
+  try {
+    await api.post('/purchases/suppliers', supplierForm.value)
+    ElMessage.success('供应商创建成功')
+    showSupplierDialog.value = false
+    fetchSuppliers()
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.detail || '创建供应商失败')
+  } finally {
+    savingSupplier.value = false
+  }
 }
 
 onMounted(() => { fetchOrders(); fetchSuppliers() })

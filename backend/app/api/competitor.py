@@ -453,6 +453,59 @@ def list_competitors(
     }
 
 
+
+
+# ── 完整性校验端点 ────────────────────────────────────────────────
+
+@router.get("/competitors/check-completeness")
+def check_completeness(
+    market: str = Query(..., description="目标市场"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """检查指定市场所有竞品数据的完整性"""
+    items = db.query(CompetitorModel).filter(CompetitorModel.market == market).all()
+    results = []
+    all_complete = True
+    for item in items:
+        status = check_competitor_completeness(item)
+        if not status["is_complete"]:
+            all_complete = False
+        results.append({
+            "id": item.id,
+            "brand": item.brand,
+            "model": item.model,
+            "is_complete": status["is_complete"],
+            "missing_fields": status["missing_fields"],
+        })
+    return {
+        "market": market,
+        "all_complete": all_complete,
+        "total": len(items),
+        "details": results,
+    }
+
+
+# ── 对标查询 ──────────────────────────────────────────────────────
+
+@router.get("/competitors/benchmark")
+def benchmark_competitors(
+    market: str = Query(..., description="目标市场（必填），如'越南'"),
+    db: Session = Depends(get_db),
+) -> dict:
+    """对标查询：返回指定市场下所有竞品的对比数据"""
+    items = (
+        db.query(CompetitorModel)
+        .filter(CompetitorModel.market == market)
+        .order_by(CompetitorModel.brand, CompetitorModel.model)
+        .all()
+    )
+    return {
+        "market": market,
+        "competitors": [_serialize(it) for it in items],
+        "param_names": get_param_names(market),
+    }
+
 @router.get("/competitors/{cid}")
 def get_competitor(
     cid: int,
@@ -631,59 +684,6 @@ def get_competitor_history(
             for v in versions
         ],
     }
-
-
-# ── 完整性校验端点 ────────────────────────────────────────────────
-
-@router.get("/competitors/check-completeness")
-def check_completeness(
-    market: str = Query(..., description="目标市场"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    """检查指定市场所有竞品数据的完整性"""
-    items = db.query(CompetitorModel).filter(CompetitorModel.market == market).all()
-    results = []
-    all_complete = True
-    for item in items:
-        status = check_competitor_completeness(item)
-        if not status["is_complete"]:
-            all_complete = False
-        results.append({
-            "id": item.id,
-            "brand": item.brand,
-            "model": item.model,
-            "is_complete": status["is_complete"],
-            "missing_fields": status["missing_fields"],
-        })
-    return {
-        "market": market,
-        "all_complete": all_complete,
-        "total": len(items),
-        "details": results,
-    }
-
-
-# ── 对标查询 ──────────────────────────────────────────────────────
-
-@router.get("/competitors/benchmark")
-def benchmark_competitors(
-    market: str = Query(..., description="目标市场（必填），如'越南'"),
-    db: Session = Depends(get_db),
-) -> dict:
-    """对标查询：返回指定市场下所有竞品的对比数据"""
-    items = (
-        db.query(CompetitorModel)
-        .filter(CompetitorModel.market == market)
-        .order_by(CompetitorModel.brand, CompetitorModel.model)
-        .all()
-    )
-    return {
-        "market": market,
-        "competitors": [_serialize(it) for it in items],
-        "param_names": get_param_names(market),
-    }
-
 
 # ══════════════════════════════════════════════════
 # 市场认证要求 CRUD

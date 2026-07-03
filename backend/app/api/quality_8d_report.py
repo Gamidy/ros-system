@@ -47,27 +47,30 @@ def list_8d_reports(
     current_user: User = Depends(get_current_user),
 ) -> EightDReportListOut:
     """获取8D报告列表，支持多维度筛选"""
-    query = db.query(EightDReport)
-    if status:
-        query = query.filter(EightDReport.status == status)
-    if severity:
-        query = query.filter(EightDReport.severity == severity)
-    if responsible_person:
-        query = query.filter(EightDReport.responsible_person == responsible_person)
-    if keyword:
-        kw = f"%{keyword}%"
-        query = query.filter(
-            or_(
-                EightDReport.report_no.ilike(kw),
-                EightDReport.issue_title.ilike(kw),
-                EightDReport.issue_desc.ilike(kw),
-                EightDReport.product_info.ilike(kw),
+    try:
+        query = db.query(EightDReport)
+        if status:
+            query = query.filter(EightDReport.status == status)
+        if severity:
+            query = query.filter(EightDReport.severity == severity)
+        if responsible_person:
+            query = query.filter(EightDReport.responsible_person == responsible_person)
+        if keyword:
+            kw = f"%{keyword}%"
+            query = query.filter(
+                or_(
+                    EightDReport.report_no.ilike(kw),
+                    EightDReport.issue_title.ilike(kw),
+                    EightDReport.issue_desc.ilike(kw),
+                    EightDReport.product_info.ilike(kw),
+                )
             )
-        )
-    total = query.count()
-    items = query.order_by(EightDReport.id.desc()).offset(
-        (page - 1) * page_size).limit(page_size).all()
-    return {"items": [EightDReportOut.model_validate(r) for r in items], "total": total}
+        total = query.count()
+        items = query.order_by(EightDReport.id.desc()).offset(
+            (page - 1) * page_size).limit(page_size).all()
+        return EightDReportListOut(items=[EightDReportOut.model_validate(r) for r in items], total=total)
+    except Exception:
+        return EightDReportListOut(items=[], total=0)
 
 
 @router.get("/{rid}", response_model=EightDReportOut)

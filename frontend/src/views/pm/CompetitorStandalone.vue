@@ -61,7 +61,7 @@
           clearable
           @change="fetchData"
         >
-          <el-option v-for="t in productTypes" :key="t" :label="t" :value="t" />
+          <el-option v-for="t in productTypes" :key="t" :label="productTypeLabels[t] || t" :value="t" />
         </el-select>
       </div>
       <div class="filter-item">
@@ -243,7 +243,7 @@
           <el-col :span="6">
             <el-form-item label="产品类型" prop="product_type">
               <el-select v-model="form.product_type" placeholder="选择类型" style="width:100%">
-                <el-option v-for="t in productTypes" :key="t" :label="t" :value="t" />
+                <el-option v-for="t in productTypes" :key="t" :label="productTypeLabels[t] || t" :value="t" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -353,14 +353,24 @@
 
         <el-divider content-position="left">📷 外观外形</el-divider>
         <div class="image-urls-editor">
-          <div v-for="(img, ii) in form.imageUrls" :key="ii" class="image-url-row">
-            <el-input v-model="img.label" placeholder="标签（如正面、室内机）" style="width:120px;margin-right:8px" size="small" />
-            <el-input v-model="img.url" placeholder="图片URL" style="flex:1;margin-right:8px" size="small" />
-            <el-button type="danger" size="small" @click="form.imageUrls.splice(ii, 1)">✕</el-button>
-          </div>
-          <el-button type="primary" size="small" @click="form.imageUrls.push({label: '', url: ''})" style="margin-top:8px">
-            + 添加图片
-          </el-button>
+          <el-upload
+            :action="uploadAction"
+            :headers="uploadHeaders"
+            list-type="picture-card"
+            :file-list="form.imageUrls.map((u: any, i: number) => ({...u, uid: i, name: u.label || '图片' + (i+1)}))"
+            :on-success="onUploadSuccess"
+            :on-remove="onUploadRemove"
+            :before-upload="beforeUpload"
+            :limit="9"
+          >
+            <el-icon><Plus /></el-icon>
+            <template #file="{ file }">
+              <div class="upload-card-with-label">
+                <img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+                <span class="upload-card-label">{{ getImageLabel(file.url) }}</span>
+              </div>
+            </template>
+          </el-upload>
         </div>
 
         <!-- ══════════ 市场专有参数（动态） ══════════ -->
@@ -649,6 +659,9 @@ const exportLoading = ref(false)
 const capacities = ['9000BTU', '12000BTU', '18000BTU', '24000BTU']
 const energyRatings = ['3星', '4星', '5星', 'A+', 'A++', 'A+++']
 const productTypes = ['split_wall']
+const productTypeLabels: Record<string, string> = {
+  split_wall: '分体壁挂',
+}
 const brandPresets = ['AUX', 'TCL', 'Midea', 'Gree', 'Haier', 'Hisense', 'Chigo']
 
 const selectedMarket = ref('')
@@ -1080,6 +1093,46 @@ const defaultForm = () => ({
 })
 
 const form = ref<CompetitorFormData>(defaultForm())
+
+// ── 图片上传 ──
+const token = localStorage.getItem('token') || ''
+const uploadAction = computed(() => '/api/upload/image')
+const uploadHeaders = computed(() => ({
+  Authorization: `Bearer ${token}`,
+}))
+
+function onUploadSuccess(response: { url: string }, _file: unknown, _fileList: unknown) {
+  if (response?.url) {
+    form.value.imageUrls.push({ label: '', url: response.url })
+    ElMessage.success('图片上传成功')
+  }
+}
+
+function onUploadRemove(_file: { url: string; uid: number }, _fileList: unknown) {
+  if (_file?.url) {
+    const idx = form.value.imageUrls.findIndex((u) => u.url === _file.url)
+    if (idx !== -1) form.value.imageUrls.splice(idx, 1)
+  }
+}
+
+function beforeUpload(file: File) {
+  const isImage = file.type.startsWith('image/')
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件')
+    return false
+  }
+  if (!isLt10M) {
+    ElMessage.error('图片大小不能超过 10MB')
+    return false
+  }
+  return true
+}
+
+function getImageLabel(url: string): string {
+  const found = form.value.imageUrls.find((u) => u.url === url)
+  return found?.label || '外观'
+}
 
 // 所有必填字段的校验规则
 const formRules: FormRules = {

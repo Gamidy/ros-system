@@ -33,15 +33,15 @@ class MarketCertification(Base):
 
 
 class MarketCompressor(Base):
-    """市场压缩机信息表（国家级压缩机厂家/型号配置）"""
+    """市场关键元器件限制信息表（国家级元器件品牌/结构限制配置）"""
     __tablename__ = "market_compressors"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     market_code = Column(String(20), nullable=False, index=True, comment="关联市场代码")
-    manufacturer = Column(String(100), nullable=False, comment="压缩机制造商")
-    model = Column(String(100), nullable=True, comment="压缩机型号")
-    capacity_range = Column(String(50), nullable=True, comment="适用冷量段")
-    notes = Column(String(500), nullable=True, comment="备注")
+    manufacturer = Column(String(100), nullable=False, comment="元器件类别（压缩机/风机/换热器/电控板等）")
+    model = Column(String(100), nullable=True, comment="限制类型（不接受品牌/不接受结构/特殊要求）")
+    capacity_range = Column(String(50), nullable=True, comment="受限对象（品牌名/结构描述）")
+    notes = Column(String(500), nullable=True, comment="详细说明）")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 

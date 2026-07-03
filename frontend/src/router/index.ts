@@ -122,7 +122,7 @@ const router = createRouter({
           path: 'certifications',
           name: 'Certifications',
           component: () => import('../views/certifications/CertHub.vue'),
-          meta: { title: '认证管理' },
+          meta: { title: '认证管理 - 已废弃', deprecated: true, redirect: '/s2/dashboard' },
         },
         // S2 认证中心路由
         {

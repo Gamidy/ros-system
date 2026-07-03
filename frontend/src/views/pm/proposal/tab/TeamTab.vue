@@ -28,7 +28,7 @@
       <el-table-column label="序号" width="50" prop="seq" />
       <el-table-column label="项目角色" width="130">
         <template #default="{ row, $index }">
-          <el-select v-model="row.role" filterable allow-create size="small" style="width:120px" @change="() => onRoleChange(row, $index)">
+          <el-select v-model="row.role_name" filterable allow-create size="small" style="width:120px" @change="() => onRoleChange(row, $index)">
             <el-option v-for="r in roles" :key="r.value" :label="r.label" :value="r.value" />
           </el-select>
         </template>
@@ -100,7 +100,7 @@ import api from '../../../../api'
 
 interface Slot { slot_id: number; user_id: number | null; full_name: string; department: string }
 interface Row {
-  role: string; sysPosition: string; headcount: number; slots: Slot[]
+  role_name: string; sysPosition: string; headcount: number; slots: Slot[]
   user_id: number | null; full_name: string; department: string
   responsibility: string; superior_id: number | null; seq: number
   _deptManual: boolean; _deptFailed: boolean
@@ -157,10 +157,10 @@ function sysPositions(role: string): string[] {
 }
 
 function mkSlot(id: number): Slot { return { slot_id: id, user_id: null, full_name: '', department: '' } }
-function mkRow(role: string, hc: number, resp: string, seq: number): Row {
+function mkRow(roleName: string, hc: number, resp: string, seq: number): Row {
   const slots: Slot[] = []
   for (let i = 1; i <= hc; i++) slots.push(mkSlot(i))
-  return { role, sysPosition: '', headcount: hc, slots, user_id: null, full_name: '', department: '', responsibility: resp, superior_id: null, seq, _deptManual: false, _deptFailed: false }
+  return { role_name: roleName, sysPosition: '', headcount: hc, slots, user_id: null, full_name: '', department: '', responsibility: resp, superior_id: null, seq, _deptManual: false, _deptFailed: false }
 }
 
 function isAssigned(uid: number, skip: number): boolean {
@@ -183,7 +183,7 @@ const summary = computed(() => {
     const hc = r.headcount || 1; t += hc
     const ra = hc <= 1 ? (r.user_id != null ? 1 : 0) : r.slots.filter(s => s.user_id != null).length
     a += ra
-    const e = rs.get(r.role) || { t: 0, a: 0 }; e.t += hc; e.a += ra; rs.set(r.role, e)
+    const e = rs.get(r.role_name) || { t: 0, a: 0 }; e.t += hc; e.a += ra; rs.set(r.role_name, e)
   })
   return { total: t, assigned: a, unassigned: t - a, roleStats: Array.from(rs.entries()).map(([role, v]) => ({ role, total: v.t, assigned: v.a })) }
 })
@@ -196,7 +196,7 @@ async function autoDept(uid: number): Promise<string> {
 }
 
 function syncLeader() {
-  const lr = teamTable.find(r => r.role === '项目经理' || r.role === '项目负责人')
+  const lr = teamTable.find(r => r.role_name === '项目经理' || r.role_name === '项目负责人')
   if (!lr) { emit('leader-change', null); return }
   emit('leader-change', lr.headcount <= 1 ? lr.user_id : (lr.slots[0]?.user_id ?? null))
 }
@@ -205,7 +205,7 @@ function emitUpdate() { emit('update', { team_members: JSON.stringify(serialize(
 
 function serialize() {
   return teamTable.map(t => ({
-    role: t.role, sysPosition: t.sysPosition, headcount: t.headcount || 1,
+    role_name: t.role_name, sysPosition: t.sysPosition, headcount: t.headcount || 1,
     user_id: t.headcount <= 1 ? t.user_id : null, full_name: t.full_name || '', department: t.department || '',
     responsibility: t.responsibility || '', superior_id: t.superior_id, seq: t.seq || 0,
     slots: t.slots.map(s => ({ slot_id: s.slot_id, user_id: s.user_id, full_name: s.full_name || '', department: s.department || '' })),
@@ -219,7 +219,7 @@ function restore(json: string) {
     if (!Array.isArray(arr) || arr.length === 0) return
     teamTable.length = 0
     arr.forEach((item: any) => {
-      const r = mkRow(item.role || '', item.headcount || 1, item.responsibility || '', item.seq || teamTable.length + 1)
+      const r = mkRow(item.role_name || '', item.headcount || 1, item.responsibility || '', item.seq || teamTable.length + 1)
       r.sysPosition = item.sysPosition || ''; r.superior_id = item.superior_id ?? null
       if (item.headcount <= 1 || !item.slots) {
         r.user_id = item.user_id ?? null; r.full_name = item.full_name || ''; r.department = item.department || ''
@@ -232,7 +232,7 @@ function restore(json: string) {
 }
 
 function onRoleChange(row: Row, _i: number) {
-  const sp = sysPositions(row.role)
+  const sp = sysPositions(row.role_name)
   if (sp.length > 0 && !sp.includes(row.sysPosition)) row.sysPosition = sp[0]
   emitUpdate()
 }

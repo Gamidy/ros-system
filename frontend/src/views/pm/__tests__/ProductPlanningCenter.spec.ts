@@ -75,23 +75,23 @@ describe('ProductPlanningCenter — Workspace Merge', () => {
 
   it('存在 activeTab 状态变量', () => {
     const wrapper = createWrapper()
-    expect(wrapper.vm.activeTab).toBeDefined()
+    expect((wrapper.vm as Record<string, unknown>).activeTab).toBeDefined()
   })
 
   it('默认 activeTab 为 plans', () => {
     const wrapper = createWrapper()
-    expect(wrapper.vm.activeTab).toBe('plans')
+    expect((wrapper.vm as Record<string, unknown>).activeTab).toBe('plans')
   })
 
   it('保留 filterStatus 原有状态变量', () => {
     const wrapper = createWrapper()
-    expect(wrapper.vm.filterStatus).toBeDefined()
+    expect((wrapper.vm as Record<string, unknown>).filterStatus).toBeDefined()
   })
 
   it('存在 fetchStatistics 和 fetchRoadmap 方法', () => {
     const wrapper = createWrapper()
-    expect(typeof wrapper.vm.fetchStatistics).toBe('function')
-    expect(typeof wrapper.vm.fetchRoadmap).toBe('function')
+    expect(typeof (wrapper.vm as Record<string, unknown>).fetchStatistics).toBe('function')
+    expect(typeof (wrapper.vm as Record<string, unknown>).fetchRoadmap).toBe('function')
   })
 
   it('挂载时调用 GET /product-plans', async () => {

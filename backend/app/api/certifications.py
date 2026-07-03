@@ -186,7 +186,7 @@ def update_issue(
     return {"ok": True, "status": issue.status}
 
 
-# ═══════════════ ECR 变更请求 ═══════════════
+# ═══════════════ ECR 变更请求（⚠️ 已废弃 — 请使用 /api/ecr 端点） ═══════════════
 
 @router.get("/ecrs", response_model=list[ECROut])
 def list_ecrs(

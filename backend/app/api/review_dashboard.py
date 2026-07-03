@@ -89,11 +89,11 @@ def get_review_summary(
 
     if start_month:
         review_base = review_base.filter(
-            func.date_format(ProductPlanReview.review_date, "%Y-%m") >= start_month
+            func.strftime("%Y-%m", ProductPlanReview.review_date) >= start_month
         )
     if end_month:
         review_base = review_base.filter(
-            func.date_format(ProductPlanReview.review_date, "%Y-%m") <= end_month
+            func.strftime("%Y-%m", ProductPlanReview.review_date) <= end_month
         )
 
     # ── 1. 评分分布 ──
@@ -119,7 +119,7 @@ def get_review_summary(
     month_rows = (
         review_base
         .with_entities(
-            func.date_format(ProductPlanReview.review_date, "%Y-%m").label("month"),
+            func.strftime("%Y-%m", ProductPlanReview.review_date).label("month"),
             func.avg(ProductPlanReview.rating).label("avg_rating"),
             func.count(ProductPlanReview.id).label("count"),
         )
@@ -158,11 +158,11 @@ def get_review_summary(
     filtered_plan_base = plan_base
     if start_month:
         filtered_plan_base = filtered_plan_base.filter(
-            func.date_format(ProductPlan.created_at, "%Y-%m") >= start_month
+            func.strftime("%Y-%m", ProductPlan.created_at) >= start_month
         )
     if end_month:
         filtered_plan_base = filtered_plan_base.filter(
-            func.date_format(ProductPlan.created_at, "%Y-%m") <= end_month
+            func.strftime("%Y-%m", ProductPlan.created_at) <= end_month
         )
 
     total_plans = filtered_plan_base.count()

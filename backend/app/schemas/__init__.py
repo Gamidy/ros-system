@@ -360,3 +360,12 @@ from .ci_v2 import (
     PredictionOutcomeOut,
     ModelWeightsOut,
 )
+
+# ═══════════════ 经营分析看板 ═══════════════
+from .business import (
+    BusinessAnalysisResponse,
+    ProductionSalesPillar,
+    FinancialControlPillar,
+    GrowthEnginePillar,
+    EfficiencyMetricsPillar,
+)

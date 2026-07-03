@@ -27,7 +27,7 @@ router = APIRouter(prefix="/products", tags=["产品主线"])
 
 
 # ══════════════════════════════════════════════════
-# Market 字典管理（必须在 Product 单个查询前注册，避免 /markets 被 /{pid} 捕获）
+# Market 字典管理（⚠️ 已废弃 — 请使用 /api/pm/markets 端点）
 # ══════════════════════════════════════════════════
 
 @router.get("/markets", response_model=list[MarketOut])

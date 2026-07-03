@@ -388,33 +388,39 @@ def dashboard_summary(
     role: Optional[str] = Query(None, description="角色视图: pm/rd/quality/management, 默认使用当前用户角色"),
 ) -> DashboardResponse:
     """驾驶舱多层聚合仪表盘 — 按角色视图展示"""
-    today = date.today()
+    try:
+        today = date.today()
 
-    # 确定角色视图
-    raw_role = (role or current_user.role).lower()
-    role_view = _get_role_view(raw_role)
+        # 确定角色视图
+        raw_role = (role or current_user.role).lower()
+        role_view = _get_role_view(raw_role)
 
-    # 构建各层数据
-    layer1 = _build_layer1(db)
-    layer2 = _build_layer2(db, today)
-    layer3 = _build_layer3(db)
-    layer4 = _build_layer4(db)
+        # 构建各层数据
+        layer1 = _build_layer1(db)
+        layer2 = _build_layer2(db, today)
+        layer3 = _build_layer3(db)
+        layer4 = _build_layer4(db)
 
-    # 角色化视图数据
-    pm_competitor_summary, rd_bom_summary, quality_cert_summary = _get_role_specific_data(
-        db, role_view,
-    )
+        # 角色化视图数据
+        pm_competitor_summary, rd_bom_summary, quality_cert_summary = _get_role_specific_data(
+            db, role_view,
+        )
 
-    return DashboardResponse(
-        layer1_system_health=layer1,
-        layer2_project_ops=layer2,
-        layer3_penetration=layer3,
-        layer4_ac_metrics=layer4,
-        role_view=role_view,
-        pm_competitor_summary=pm_competitor_summary,
-        rd_bom_summary=rd_bom_summary,
-        quality_cert_summary=quality_cert_summary,
-    )
+        return DashboardResponse(
+            layer1_system_health=layer1,
+            layer2_project_ops=layer2,
+            layer3_penetration=layer3,
+            layer4_ac_metrics=layer4,
+            role_view=role_view,
+            pm_competitor_summary=pm_competitor_summary,
+            rd_bom_summary=rd_bom_summary,
+            quality_cert_summary=quality_cert_summary,
+        )
+    except Exception as exc:
+        logger.exception("Dashboard summary 构建失败: %s", exc)
+        return DashboardResponse(
+            role_view=_get_role_view((role or "").lower()) if role else "management",
+        )
 
 
 # ═══════════════ KPI卡片明细数据钻取 [D3-2] ═══════════════
@@ -719,3 +725,192 @@ def get_role_view(
     if role not in _ROLE_WIDGETS:
         raise HTTPException(status_code=400, detail=f"未知角色: {role}")
     return {"role": role, "widgets": _ROLE_WIDGETS[role]}
+
+
+# ═══════════════ 经营分析看板（美的经营分析会体系参考） ═══════════════
+
+from app.schemas.business import (
+    BusinessAnalysisResponse,
+    ProductionSalesPillar,
+    FinancialControlPillar,
+    GrowthEnginePillar,
+    EfficiencyMetricsPillar,
+)
+from app.models.bom import BOM, BOMItem
+from app.models.purchase import PurchaseOrder, Supplier
+from app.models.product import Market
+from app.models.certification import CertificationProject
+from app.models.competitor import CompetitorModel as Competitor
+from app.models.product_plan import ProductPlan, ProductPlanStage
+
+
+def _build_production_sales(db: Session) -> ProductionSalesPillar:
+    """产销协同维度"""
+    # 项目管道
+    total_projects = db.query(func.count(Project.id)).filter(Project.is_deleted == False).scalar() or 0
+    running_projects = db.query(func.count(Project.id)).filter(Project.status == "running", Project.is_deleted == False).scalar() or 0
+    completed_projects = db.query(func.count(Project.id)).filter(Project.status == "completed", Project.is_deleted == False).scalar() or 0
+    today = date.today()
+    overdue_projects = (
+        db.query(func.count(Project.id))
+        .filter(
+            Project.is_deleted == False,
+            Project.target_end_date.isnot(None),
+            Project.target_end_date < today,
+            Project.status != "completed",
+        )
+        .scalar() or 0
+    )
+    # 产品策划管道
+    total_plans = db.query(func.count(ProductPlan.id)).scalar() or 0
+    draft_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.DRAFT).scalar() or 0
+    costing_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.COSTING).scalar() or 0
+    released_plans = db.query(func.count(ProductPlan.id)).filter(ProductPlan.status == ProductPlanStage.RELEASED).scalar() or 0
+    # BOM/物料
+    total_boms = db.query(func.count(BOM.id)).scalar() or 0
+    total_parts = db.query(func.count(BOMItem.id)).scalar() or 0
+    # 转化率
+    plan_to_project_rate = round((completed_projects / max(total_plans, 1)) * 100, 1)
+
+    return ProductionSalesPillar(
+        total_projects=total_projects,
+        running_projects=running_projects,
+        completed_projects=completed_projects,
+        overdue_projects=overdue_projects,
+        total_plans=total_plans,
+        draft_plans=draft_plans,
+        costing_plans=costing_plans,
+        released_plans=released_plans,
+        total_boms=total_boms,
+        total_parts=total_parts,
+        plan_to_project_rate=plan_to_project_rate,
+    )
+
+
+def _build_financial_control(db: Session) -> FinancialControlPillar:
+    """财务管控维度"""
+    total_purchase_orders = db.query(func.count(PurchaseOrder.id)).scalar() or 0
+    pending_purchase_orders = db.query(func.count(PurchaseOrder.id)).filter(PurchaseOrder.status == "pending_approval").scalar() or 0
+    total_amount = db.query(func.sum(PurchaseOrder.total_amount)).scalar() or 0.0
+    total_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.is_deleted == 0).scalar() or 0
+    active_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.status == "active", Supplier.is_deleted == 0).scalar() or 0
+    # 成本核算
+    try:
+        from app.models.product_plan_subs import ProjectCostItem
+        cost_orders = db.query(func.count(ProjectCostItem.id)).scalar() or 0
+    except Exception:
+        cost_orders = 0
+    try:
+        from app.models.certification import CostAccountingPeriod
+        cost_periods = db.query(func.count(CostAccountingPeriod.id)).scalar() or 0
+    except Exception:
+        cost_periods = 0
+
+    return FinancialControlPillar(
+        total_purchase_orders=total_purchase_orders,
+        pending_purchase_orders=pending_purchase_orders,
+        total_purchase_amount=round(total_amount, 2),
+        total_suppliers=total_suppliers,
+        active_suppliers=active_suppliers,
+        cost_accounting_periods=cost_periods,
+        cost_orders_count=cost_orders,
+        cost_execution_rate=0.0,
+        cost_overrun_alerts=0,
+    )
+
+
+def _build_growth_engine(db: Session) -> GrowthEnginePillar:
+    """增长引擎维度"""
+    total_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true").scalar() or 0
+    r32_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true", Market.refrigerant == "R32").scalar() or 0
+    r410a_markets = db.query(func.count(Market.code)).filter(Market.is_active == "true", Market.refrigerant == "R410A").scalar() or 0
+    total_competitors = db.query(func.count(Competitor.id)).scalar() or 0
+    from sqlalchemy import text as sa_text
+    competitor_markets = db.execute(sa_text("SELECT COUNT(DISTINCT market) FROM competitors")).scalar() or 0
+    total_cert_projects = db.query(func.count(CertificationProject.id)).scalar() or 0
+    cert_in_progress = db.query(func.count(CertificationProject.id)).filter(CertificationProject.status == "in_progress").scalar() or 0
+    total_products = db.query(func.count(Product.id)).scalar() or 0
+    total_versions = db.query(func.count(Version.id)).scalar() or 0
+
+    return GrowthEnginePillar(
+        total_markets=total_markets,
+        r32_markets=r32_markets,
+        r410a_markets=r410a_markets,
+        total_competitors=total_competitors,
+        competitor_markets_count=competitor_markets,
+        total_cert_projects=total_cert_projects,
+        cert_projects_in_progress=cert_in_progress,
+        total_products=total_products,
+        total_versions=total_versions,
+    )
+
+
+def _build_efficiency(db: Session) -> EfficiencyMetricsPillar:
+    """效率指标维度"""
+    # 项目按时率
+    active_count = db.query(func.count(Project.id)).filter(Project.status == "running", Project.is_deleted == False).scalar() or 1
+    on_time_count = (
+        db.query(func.count(Project.id))
+        .filter(
+            Project.is_deleted == False,
+            Project.actual_end_date.isnot(None),
+            Project.target_end_date.isnot(None),
+            Project.actual_end_date <= Project.target_end_date,
+        )
+        .scalar() or 0
+    )
+    on_time_rate = round((on_time_count / active_count) * 100, 1) if active_count > 0 else 0.0
+    # 测试通过率
+    from app.models.test import TestResult
+    total_results = db.query(func.count(TestResult.id)).filter(TestResult.is_pass.isnot(None)).scalar() or 0
+    pass_results = db.query(func.count(TestResult.id)).filter(TestResult.is_pass == True).scalar() or 0
+    test_pass_rate = round((pass_results / max(total_results, 1)) * 100, 1) if total_results > 0 else 0.0
+    # 问题关闭率
+    from app.models.test import QualityIssue
+    total_issues = db.query(func.count(QualityIssue.id)).scalar() or 0
+    closed_issues = db.query(func.count(QualityIssue.id)).filter(QualityIssue.status == "closed").scalar() or 0
+    issue_close_rate = round((closed_issues / max(total_issues, 1)) * 100, 1) if total_issues > 0 else 0.0
+    # 门控通过率
+    gate_total = db.query(func.count(ProjectGate.id)).scalar() or 1
+    gate_passed = db.query(func.count(ProjectGate.id)).filter(ProjectGate.status == "passed").scalar() or 0
+    phase_gate_pass_rate = round((gate_passed / max(gate_total, 1)) * 100, 1)
+    # 预警
+    from app.models.alert import Alert
+    total_alerts = db.query(func.count(Alert.id)).filter(Alert.is_resolved == False).scalar() or 0
+    overdue_alerts = db.query(func.count(Alert.id)).filter(Alert.is_resolved == False, Alert.level == 1).scalar() or 0
+
+    return EfficiencyMetricsPillar(
+        on_time_rate=on_time_rate,
+        avg_project_duration_days=0.0,
+        test_pass_rate=test_pass_rate,
+        issue_close_rate=issue_close_rate,
+        phase_gate_pass_rate=phase_gate_pass_rate,
+        alert_count=total_alerts,
+        overdue_alert_count=overdue_alerts,
+    )
+
+
+@router.get("/business-analysis", response_model=BusinessAnalysisResponse)
+def get_business_analysis(
+    db: Session = Depends(get_db),
+    _=Depends(require_menu("dashboard")),
+) -> BusinessAnalysisResponse:
+    """
+    经营分析看板 — 参考美的经营分析会体系
+
+    四维聚合：
+    - 产销协同（T+3产销）
+    - 财务管控（老虎管控）
+    - 增长引擎（ToB+海外+新市场）
+    - 效率指标（AI提效+数字化）
+    """
+    try:
+        return BusinessAnalysisResponse(
+            production_sales=_build_production_sales(db),
+            financial_control=_build_financial_control(db),
+            growth_engine=_build_growth_engine(db),
+            efficiency=_build_efficiency(db),
+        )
+    except Exception as exc:
+        logger.exception("经营分析看板构建失败: %s", exc)
+        return BusinessAnalysisResponse()

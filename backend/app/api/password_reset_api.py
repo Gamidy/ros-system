@@ -21,36 +21,9 @@ router = APIRouter(prefix="/auth", tags=["认证"])
 RESET_TOKEN_EXPIRE_HOURS = 24
 
 
-@router.post("/forgot-password")
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)) -> dict:
-    """忘记密码 — 通过用户名发起重置
-
-    不暴露用户是否存在，总是返回相同消息。
-    如果用户存在，生成重置令牌并持久化到数据库。
-    """
-    # 总是返回相同的消息，不暴露用户是否存在
-    message = {"message": "如果用户存在，重置链接已生成"}
-
-    user = db.query(User).filter(User.username == req.username).first()
-    if not user:
-        return message
-
-    # 生成唯一令牌
-    token_str = str(uuid.uuid4()) + str(uuid.uuid4()).replace("-", "")
-
-    # 计算过期时间
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=RESET_TOKEN_EXPIRE_HOURS)
-
-    reset_token = PasswordResetToken(
-        user_id=user.id,
-        token=token_str,
-        expires_at=expires_at,
-        used=False,
-    )
-    db.add(reset_token)
-    db.commit()
-
-    return message
+# 已废弃 — forgot_password 移至 auth.py
+# 前端使用 /auth/forgot-password（auth.py）带 email 参数
+# 此文件保留 verify-reset-token 和 admin-reset-password
 
 
 @router.post("/verify-reset-token")

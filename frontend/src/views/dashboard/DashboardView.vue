@@ -53,6 +53,15 @@
       </div>
     </div>
 
+    <!-- ═══════════ 经营分析看板（参考美的经营分析会体系）管理层专享 ═══════════ -->
+    <BusinessAnalysisView
+      v-if="roleView === 'management'"
+      :data="bizData"
+      :loading="bizLoading"
+      :error="bizError"
+      @refresh="fetchBusinessAnalysis"
+    />
+
     <!-- ═══════════ 策划KPI卡片行 (PM + 管理层) ═══════════ -->
     <section v-if="roleView === 'pm' || roleView === 'management'" class="dashboard-section">
       <div class="section-header">
@@ -1009,6 +1018,7 @@ import { useWebSocket } from '../../composables/useWebSocket'
 import type { WebSocketMessage } from '../../composables/useWebSocket'
 import { useResponsive } from '../../composables/useResponsive'
 import LazyLoad from '../../components/LazyLoad.vue'
+import BusinessAnalysisView from './BusinessAnalysisView.vue'
 
 interface PlanNode {
   id: string | number
@@ -1369,6 +1379,33 @@ const qualityIssues = computed<QualityIssuesData>(() => {
   }
 })
 
+// ── 经营分析看板数据 ──
+const bizData = ref({})
+const bizLoading = ref(false)
+const bizError = ref(false)
+
+interface BizResponse {
+  production_sales?: Record<string, number>
+  financial_control?: Record<string, number>
+  growth_engine?: Record<string, number>
+  efficiency?: Record<string, number>
+}
+
+async function fetchBusinessAnalysis() {
+  bizLoading.value = true
+  bizError.value = false
+  try {
+    const res = await api.get('/dashboard/business-analysis')
+    bizData.value = res.data as BizResponse
+  } catch {
+    console.warn('[Dashboard] fetchBusinessAnalysis failed')
+    bizError.value = true
+    bizData.value = {}
+  } finally {
+    bizLoading.value = false
+  }
+}
+
 function certStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     pending: '待处理',
@@ -1622,6 +1659,7 @@ function refreshAll() {
   fetchProductPlanSummary()
   fetchBiCharts()
   fetchAlertsSummary()
+  fetchBusinessAnalysis()
 }
 
 function drillDown(key: string) {
@@ -1761,6 +1799,7 @@ onMounted(() => {
   fetchProductPlanSummary()
   fetchBiCharts()
   fetchAlertsSummary()
+  fetchBusinessAnalysis()
   setupWsDashboardRefresh()
 })
 </script>

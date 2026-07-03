@@ -263,7 +263,9 @@ async function saveProgram() {
 }
 
 async function saveProject() {
-  try { await api.post('/projects', pjForm.value); ElMessage.success('项目创建成功，M1~M9已自动生成'); showProjectDialog.value = false; pjForm.value = { ...pjForm.value, code: '', name: '' }; await fetchAll() } catch {}
+  try { await api.post('/projects', pjForm.value); ElMessage.success('项目创建成功，M1~M9已自动生成'); showProjectDialog.value = false; pjForm.value = { ...pjForm.value, code: '', name: '' }; await fetchAll() } catch (e: any) {
+    ElMessage.error(e?.response?.data?.detail || '创建项目失败，请检查必填字段')
+  }
 }
 
 async function openProjectDetail(row: Record<string, unknown>) {

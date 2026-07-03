@@ -148,20 +148,20 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="能效标准细分">
+            <el-form-item label="能效标准细分" required>
               <el-input v-model="form.energy_standard_detail" placeholder="如: 2025新标准/MEPS 3级" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="国家标准编号">
+            <el-form-item label="国家标准编号" required>
               <el-input v-model="form.national_standard" placeholder="如: GB/T 7725" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :span="8">
-            <el-form-item label="制热标准代码">
-              <el-select v-model="form.heating_energy_standard" placeholder="选择制热标准" clearable style="width:100%">
+            <el-form-item label="制热标准代码" required>
+              <el-select v-model="form.heating_energy_standard" placeholder="选择制热标准" style="width:100%">
                 <el-option label="COP" value="COP" />
                 <el-option label="SCOP" value="SCOP" />
                 <el-option label="HSPF" value="HSPF" />
@@ -170,13 +170,13 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="制热显示名称">
+            <el-form-item label="制热显示名称" required>
               <el-input v-model="form.heating_energy_label" placeholder="如: COP/HSPF/SCOP" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="制热单位">
-              <el-select v-model="form.heating_energy_unit" placeholder="选择制热单位" clearable style="width:100%">
+            <el-form-item label="制热单位" required>
+              <el-select v-model="form.heating_energy_unit" placeholder="选择制热单位" style="width:100%">
                 <el-option label="W/W" value="W/W" />
               </el-select>
             </el-form-item>
@@ -295,16 +295,16 @@
       </template>
     </el-dialog>
 
-    <!-- 关键元器件管理弹窗 -->
-    <el-dialog v-model="compDialogVisible" :title="`关键元器件的特殊要求 - ${compMarketName}`" width="700px" :close-on-click-modal="false">
+    <!-- 关键元器件限制信息弹窗 -->
+    <el-dialog v-model="compDialogVisible" :title="`关键元器件限制信息 - ${compMarketName}`" width="700px" :close-on-click-modal="false">
       <div class="toolbar" style="margin-bottom:12px">
-        <el-button type="primary" size="small" @click="openAddComp">新增元器件</el-button>
+        <el-button type="primary" size="small" @click="openAddComp">新增限制记录</el-button>
       </div>
       <el-table :data="compressors" border size="small" style="width:100%">
-        <el-table-column prop="manufacturer" label="制造商" width="130" />
-        <el-table-column prop="model" label="型号" min-width="150" />
-        <el-table-column prop="capacity_range" label="适用冷量段" width="120" />
-        <el-table-column prop="notes" label="备注" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="manufacturer" label="元器件类别" width="130" />
+        <el-table-column prop="model" label="限制类型" min-width="120" />
+        <el-table-column prop="capacity_range" label="受限对象" width="120" />
+        <el-table-column prop="notes" label="详细说明" min-width="150" show-overflow-tooltip />
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" link @click="openEditComp(row)">编辑</el-button>
@@ -317,19 +317,19 @@
       </template>
     </el-dialog>
 
-    <!-- 关键元器件编辑子弹窗 -->
-    <el-dialog v-model="compEditVisible" :title="editingCompId ? '编辑元器件' : '新增元器件'" width="500px" :close-on-click-modal="false">
+    <!-- 关键元器件限制编辑子弹窗 -->
+    <el-dialog v-model="compEditVisible" :title="editingCompId ? '编辑限制记录' : '新增限制记录'" width="500px" :close-on-click-modal="false">
       <el-form :model="compForm" label-width="100px" size="small">
-        <el-form-item label="制造商" prop="manufacturer">
-          <el-input v-model="compForm.manufacturer" placeholder="如: 海立/GMCC/Gree" />
+        <el-form-item label="元器件类别" prop="manufacturer">
+          <el-input v-model="compForm.manufacturer" placeholder="如: 压缩机/风机/换热器/电控板" />
         </el-form-item>
-        <el-form-item label="型号">
-          <el-input v-model="compForm.model" placeholder="如: DA89X1C-03FZ" />
+        <el-form-item label="限制类型">
+          <el-input v-model="compForm.model" placeholder="如: 不接受品牌/不接受结构/特殊要求" />
         </el-form-item>
-        <el-form-item label="适用冷量段">
-          <el-input v-model="compForm.capacity_range" placeholder="如: 09K/12K" />
+        <el-form-item label="受限对象">
+          <el-input v-model="compForm.capacity_range" placeholder="如: 格力/涡旋式/铝制换热器" />
         </el-form-item>
-        <el-form-item label="备注">
+        <el-form-item label="详细说明">
           <el-input v-model="compForm.notes" type="textarea" :rows="2" />
         </el-form-item>
       </el-form>
@@ -403,8 +403,8 @@ interface MarketForm {
   energy_standard: string
   energy_label: string
   energy_unit: string
-  energy_standard_detail: string | null
-  national_standard: string | null
+  energy_standard_detail: string
+  national_standard: string
   voltage_freq: string | null
   min_voltage: number | null
   cooling_max_temp: number | null
@@ -412,9 +412,9 @@ interface MarketForm {
   structure_type: string | null
   main_selling_model: string | null
   refrigerant: string | null
-  heating_energy_standard: string | null
-  heating_energy_label: string | null
-  heating_energy_unit: string | null
+  heating_energy_standard: string
+  heating_energy_label: string
+  heating_energy_unit: string
 }
 
 interface CertForm {
@@ -439,13 +439,13 @@ const saving = ref(false)
 const form = ref<MarketForm>({
   code: '', name: '', region: '',
   energy_standard: 'eer', energy_label: 'EER', energy_unit: 'W/W',
-  energy_standard_detail: null, national_standard: null,
+  energy_standard_detail: '', national_standard: '',
   voltage_freq: null, min_voltage: null, cooling_max_temp: null, heating_min_temp: null,
   structure_type: null, main_selling_model: null,
   refrigerant: null,
-  heating_energy_standard: null,
-  heating_energy_label: null,
-  heating_energy_unit: null,
+  heating_energy_standard: '',
+  heating_energy_label: '',
+  heating_energy_unit: '',
 })
 
 // ── 认证管理 ──
@@ -555,13 +555,13 @@ function openAddDialog() {
   form.value = {
     code: '', name: '', region: '',
     energy_standard: 'eer', energy_label: 'EER', energy_unit: 'W/W',
-    energy_standard_detail: null, national_standard: null, min_voltage: null,
+    energy_standard_detail: '', national_standard: '', min_voltage: null,
     voltage_freq: null, cooling_max_temp: null, heating_min_temp: null,
     structure_type: null, main_selling_model: null,
     refrigerant: null,
-    heating_energy_standard: null,
-    heating_energy_label: null,
-    heating_energy_unit: null,
+    heating_energy_standard: '',
+    heating_energy_label: '',
+    heating_energy_unit: '',
   }
   dialogVisible.value = true
 }
@@ -575,8 +575,8 @@ function openEditDialog(item: MarketItem) {
     energy_standard: item.energy_standard,
     energy_label: item.energy_label,
     energy_unit: item.energy_unit,
-    energy_standard_detail: item.energy_standard_detail ?? null,
-    national_standard: item.national_standard ?? null,
+    energy_standard_detail: item.energy_standard_detail ?? '',
+    national_standard: item.national_standard ?? '',
     voltage_freq: item.voltage_freq ?? null,
     min_voltage: item.min_voltage ?? null,
     cooling_max_temp: item.cooling_max_temp ?? null,
@@ -584,9 +584,9 @@ function openEditDialog(item: MarketItem) {
     structure_type: item.structure_type ?? null,
     main_selling_model: item.main_selling_model ?? null,
     refrigerant: item.refrigerant ?? null,
-    heating_energy_standard: item.heating_energy_standard ?? null,
-    heating_energy_label: item.heating_energy_label ?? null,
-    heating_energy_unit: item.heating_energy_unit ?? null,
+    heating_energy_standard: item.heating_energy_standard ?? '',
+    heating_energy_label: item.heating_energy_label ?? '',
+    heating_energy_unit: item.heating_energy_unit ?? '',
   }
   dialogVisible.value = true
 }
@@ -610,6 +610,26 @@ async function handleSave() {
   }
   if (!form.value.energy_unit) {
     ElMessage.warning('请选择能效单位')
+    return
+  }
+  if (!form.value.energy_standard_detail) {
+    ElMessage.warning('请填写能效标准细分')
+    return
+  }
+  if (!form.value.national_standard) {
+    ElMessage.warning('请填写国家标准编号')
+    return
+  }
+  if (!form.value.heating_energy_standard) {
+    ElMessage.warning('请选择制热标准代码')
+    return
+  }
+  if (!form.value.heating_energy_label) {
+    ElMessage.warning('请填写制热显示名称')
+    return
+  }
+  if (!form.value.heating_energy_unit) {
+    ElMessage.warning('请选择制热单位')
     return
   }
   if (!form.value.voltage_freq) {

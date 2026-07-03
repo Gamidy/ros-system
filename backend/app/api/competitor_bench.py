@@ -1,3 +1,8 @@
+"""
+⚠️ 已废弃 — 功能合并到 competitor.py
+此文件的 benchmark 端点与 competitor.py 完全重复，
+请使用 competitor.py 中的 /competitors/benchmark 端点。
+"""
 """竞品对标查询 API — 独立路由，无认证依赖"""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -29,9 +34,6 @@ def _serialize(item: CompetitorModel) -> dict:
         "brand": item.brand,
         "model": item.model,
         "market": item.market,
-        "product_type": item.product_type,
-        "cooling_capacity": item.cooling_capacity,
-        "energy_rating": item.energy_rating,
         "cooling_w": item.cooling_w,
         "heating_w": item.heating_w,
         "eer": item.eer,
@@ -43,7 +45,7 @@ def _serialize(item: CompetitorModel) -> dict:
         "outdoor_size_mm": item.outdoor_size_mm,
         "factory_price": item.factory_price,
         "launch_year": item.launch_year,
-        "notes": item.notes,
+        "energy_rating": item.energy_rating,
     }
 
 
@@ -52,7 +54,7 @@ def benchmark_competitors(
     market: str = Query(..., description="目标市场（必填），如'越南'"),
     db: Session = Depends(get_db),
 ) -> dict:
-    """对标查询：返回指定市场下所有竞品的对比数据（无需登录）"""
+    """对标查询：返回指定市场下所有竞品的对比数据"""
     items = (
         db.query(CompetitorModel)
         .filter(CompetitorModel.market == market)

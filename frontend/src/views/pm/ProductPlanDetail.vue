@@ -124,7 +124,7 @@
 
 <!-- 成本核算 -->
 <el-tab-pane label="成本核算" name="costingNew">
-<div class="tab-toolbar"><el-button size="small" type="primary" @click="showCostDialog = true">+ 添加成本</el-button></div>
+<div class="tab-toolbar"><el-button size="small" type="primary" @click="showCostBreakdown = true">📊 成本分解</el-button></div>
 <el-table :data="costs" stripe border size="small" empty-text="暂无成本数据">
 <el-table-column prop="item_name" label="成本项" min-width="120" />
 <el-table-column prop="cost_type" label="类型" width="80"><template #default="{ row }"><el-tag size="small">{{ row.cost_type }}</el-tag></template></el-table-column>
@@ -490,7 +490,7 @@
 <el-table-column prop="target_value" label="目标" width="80" />
 <el-table-column prop="actual_value" label="实际" width="80" />
 </el-table>
-<el-button size="small" type="primary" @click="showCostDialog = true">+ 添加</el-button>
+<el-button size="small" type="primary" @click="showCostBreakdown = true">📊 成本分解</el-button>
 <!-- @deprecated 历史明细（移动端精简版） -->
 <div v-if="initiationCosts" class="history-costs-mobile" style="margin-top:16px;padding:12px;background:#fafafa;border-radius:6px;border:1px solid #ebeef5;">
   <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#909399">📜 历史明细（立项旧数据）</div>
@@ -580,18 +580,8 @@
 </template>
 </template>
 
-<!-- 成本弹窗 -->
-<el-dialog v-model="showCostDialog" title="添加成本" width="450px" :close-on-click-modal="false">
-<el-form :model="costForm" label-width="100" size="small">
-<el-form-item label="成本项"><el-input v-model="costForm.item_name" /></el-form-item>
-<el-form-item label="类型"><el-select v-model="costForm.cost_type"><el-option label="目标成本" value="target" /><el-option label="实际成本" value="actual" /><el-option label="估算" value="estimate" /></el-select></el-form-item>
-<el-form-item label="目标值"><el-input-number v-model="costForm.target_value" :min="0" :precision="2" style="width:200px" /></el-form-item>
-<el-form-item label="实际值"><el-input-number v-model="costForm.actual_value" :min="0" :precision="2" style="width:200px" /></el-form-item>
-<el-form-item label="币种"><el-input v-model="costForm.currency" placeholder="CNY" /></el-form-item>
-<el-form-item label="备注"><el-input v-model="costForm.remark" type="textarea" :rows="2" /></el-form-item>
-</el-form>
-<template #footer><el-button @click="showCostDialog = false">取消</el-button><el-button type="primary" @click="addCost" :loading="addingCost">添加</el-button></template>
-</el-dialog>
+<!-- 成本分解弹窗 -->
+<CostBreakdownDialog v-model="showCostBreakdown" :plan-id="planId" @saved="onCostSaved" />
 
 <!-- 团队弹窗 -->
 <el-dialog v-model="showTeamDialog" :title="teamDialogMode === 'add' ? '添加成员' : '编辑成员'" width="450px" :close-on-click-modal="false">
@@ -632,6 +622,7 @@ import api from '../../api'
 import * as planAPI from '../../api/productPlan'
 import type { TeamMemberPayload, MarketOption, ValidationError, PlanTemplateItem } from '../../api/productPlan'
 import ReviewPanel from './ReviewPanel.vue'
+import CostBreakdownDialog from './CostBreakdownDialog.vue'
 import { useSubTableProgress } from '../../composables/useSubTableProgress'
 import { STAGE_LABELS, STAGE_TAGS } from './shared/constants'
 
@@ -905,11 +896,11 @@ const marketEnergyMap = computed(() => {
   }
   return map
 })
-const costForm = ref({ item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' })
-const showCostDialog = ref(false)
-const addingCost = ref(false)
+const showCostBreakdown = ref(false)
 const approvalComment = ref('')
 const submittingApproval = ref(false)
+
+const fetchPlanLoading_teamTab = ref(false)
 const approving = ref(false)
 const rejecting = ref(false)
 const withdrawing = ref(false)
@@ -1268,13 +1259,9 @@ function goCompetitor() {
 }
 
 // ── 成本 ──
-async function addCost() {
-addingCost.value = true
-try { await api.post(`/product-plans/${planId}/costs`, costForm.value); ElMessage.success('成本添加成功'); showCostDialog.value = false; costForm.value = { item_name: '', cost_type: 'target', target_value: 0, actual_value: 0, currency: 'CNY', remark: '' }; await fetchPlan(); setSubTableDone('costingNew', true) } catch (e: unknown) {
-const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
-ElMessage.error(_err || '操作失败，请重试')
-}
-finally { addingCost.value = false }
+function onCostSaved() {
+  fetchPlan()
+  setSubTableDone('costingNew', true)
 }
 async function deleteCost(row: CostItem) {
 try { await ElMessageBox.confirm(`确定删除「${row.item_name}」?`, '确认', { type: 'warning' }); await api.delete(`/product-plans/${planId}/costs/${row.id}`); ElMessage.success('已删除'); await fetchPlan(); setSubTableDone('costingNew', costs.value.length > 0) } catch (e: unknown) {
@@ -1388,9 +1375,12 @@ const isApprovalStage = computed(() => plan.value?.status === 'project_init')
 const canWithdraw = computed(() => plan.value && !['draft', 'project_init', 'released'].includes(plan.value.status))
 
 async function advancePlan() {
-try { await api.post(`/product-plans/${planId}/advance`); ElMessage.success('流程已推进'); await fetchPlan() } catch (e: unknown) {
-const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : (e instanceof Error ? e.message : null)
-ElMessage.error(_err || '操作失败，请重试')
+try { await api.post(`/product-plans/${planId}/advance`, {}); ElMessage.success('流程已推进'); await fetchPlan() } catch (e: unknown) {
+// 错误已在 axios 拦截器中显示，此处仅做 fallback
+const _err = e && typeof e === 'object' && 'response' in e ? (e as {response?: {data?: {detail?: string}}}).response?.data?.detail : null
+if (!_err && e instanceof Error && e.message !== 'Request failed with status code 400') {
+  ElMessage.error('操作失败，请重试')
+}
 }
 }
 async function approvePlan() {

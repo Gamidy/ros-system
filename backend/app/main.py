@@ -9,7 +9,7 @@ from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.xss_protection import XSSProtectionMiddleware
 from app.api import knowledge
-from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, product_plan_subs, admin_config, pm_config, pm_accessory, competitor, competitor_bench, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks, task_deps, project_templates, time_entries, task_comments, project_reviews, knowledge_base
+from app.api import auth, products, bom, projects, tests, certifications, alerts, dashboard, purchases, approvals, pm_workspace, pm_statistics, pm_roadmap, product_plan, product_plan_subs, admin_config, pm_config, pm_accessory, competitor, admin_role_templates, admin_role_mappings, admin_cost_configs, pm_proposal_api, rd_panel, state_machine_api, event_timeline, risk_dashboard, admin_tenant, webhooks, task_deps, project_templates, time_entries, task_comments, project_reviews, knowledge_base
 from app.api import product_plan_crud, product_plan_workflow_api, product_plan_versions
 from app.api import markets
 from app.api import verification_requirements, prototypes, test_executions, gate_rules, target_markets
@@ -32,6 +32,7 @@ from app.api import event_logs
 from app.api import product_plan_review
 from app.api import improvement_task_api
 from app.api import review_templates
+from app.api import review_dashboard
 from app.api import plan_templates
 from app.api import notification_test_api
 from app.api import notification_grouping_api
@@ -48,6 +49,7 @@ from app.api import quality_complaint, purchase_supplier_eval
 from app.api import inventory
 from app.api import inventory_count
 from app.api import inventory_alert
+from app.api import upload
 from app.api import inventory_bin
 from app.api import purchase_return
 from app.models import system_config  # ensure table created
@@ -188,6 +190,7 @@ app.include_router(password_reset_api.router, prefix="/api")
 app.include_router(product_plan_review.router, prefix="/api")
 app.include_router(improvement_task_api.router)
 app.include_router(review_templates.router, prefix="/api")
+app.include_router(review_dashboard.router)
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")
 app.include_router(purchases.router, prefix="/api")
@@ -216,7 +219,6 @@ app.include_router(product_plan_versions.router, prefix="/api/product-plans")
 app.include_router(product_plan_subs.router, prefix="/api")
 app.include_router(pm_config.router, prefix="/api")
 app.include_router(pm_accessory.router, prefix="/api")
-app.include_router(competitor_bench.router, prefix="/api")
 app.include_router(competitor.router, prefix="/api")
 app.include_router(markets.router, prefix="/api")
 app.include_router(competitor_crawl_admin.router)
@@ -275,6 +277,16 @@ app.include_router(competitor_import_export.router)
 # ── 标准监控 ──
 app.include_router(standard_query_api.router)
 app.include_router(standard_admin_api.router)
+
+# ── 图片上传 ──
+app.include_router(upload.router, prefix="/api")
+
+# ── 上传文件静态服务 ──
+from fastapi.staticfiles import StaticFiles
+import os
+uploads_dir = "/app/static/uploads"
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 _celery_thread = None
 
