@@ -4,7 +4,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, text, case
+from sqlalchemy import func, text, case, Integer
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -123,10 +123,8 @@ def bi_planning(
     # 用 SQL 窗口函数：approval_requests.created_at 到审批记录的 decided_at
     approval_times = (
         db.query(
-            func.timestampdiff(
-                text("HOUR"),
-                ApprovalRequest.created_at,
-                func.max(ApprovalRecord.decided_at),
+            (
+                (func.julianday(func.max(ApprovalRecord.decided_at)) - func.julianday(ApprovalRequest.created_at)) * 24
             ).label("duration_hours"),
         )
         .join(ApprovalRecord, ApprovalRecord.request_id == ApprovalRequest.id)
@@ -247,13 +245,13 @@ def bi_projects(
         .with_entities(
             ProjectGate.gate_code,
             func.avg(
-                func.datediff(ProjectGate.actual_date, ProjectGate.planned_date)
+                func.cast(func.julianday(ProjectGate.actual_date) - func.julianday(ProjectGate.planned_date), Integer)
             ).label("avg_stay_days"),
             func.min(
-                func.datediff(ProjectGate.actual_date, ProjectGate.planned_date)
+                func.cast(func.julianday(ProjectGate.actual_date) - func.julianday(ProjectGate.planned_date), Integer)
             ).label("min_stay_days"),
             func.max(
-                func.datediff(ProjectGate.actual_date, ProjectGate.planned_date)
+                func.cast(func.julianday(ProjectGate.actual_date) - func.julianday(ProjectGate.planned_date), Integer)
             ).label("max_stay_days"),
         )
         .filter(
@@ -550,10 +548,8 @@ def bi_planning_approval(
     """审批时效统计"""
     approval_times = (
         db.query(
-            func.timestampdiff(
-                text("HOUR"),
-                ApprovalRequest.created_at,
-                func.max(ApprovalRecord.decided_at),
+            (
+                (func.julianday(func.max(ApprovalRecord.decided_at)) - func.julianday(ApprovalRequest.created_at)) * 24
             ).label("duration_hours"),
         )
         .join(ApprovalRecord, ApprovalRecord.request_id == ApprovalRequest.id)
