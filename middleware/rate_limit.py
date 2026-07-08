@@ -51,6 +51,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return len(store[bucket_key]) <= limit
 
     async def dispatch(self, request: Request, call_next):
+        # === 临时取消限流 — 2026-08-08 到期恢复 ===
+        # 一个月内（2026-07-08 ~ 2026-08-08）暂停所有限流限制
+        # 到期后删除此 return 即可恢复限流
+        return await call_next(request)
+
         # 豁免路径直接放行
         if request.url.path in EXEMPT_PATHS:
             return await call_next(request)
