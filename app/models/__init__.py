@@ -1,0 +1,219 @@
+"""模型初始化"""
+from app.models.user import User
+from app.models.organization import Organization, OrganizationMember
+from app.models.product import Platform, Product, Version, Market, ManufacturingVariant
+from app.models.bom import PartCategory, Part, PartAVL, BOM, BOMItem
+from app.models.project import Program, Project, ProjectGate, Milestone, Task, Risk
+from app.models.project_review import ProjectReview
+from app.models.quality_8d_report import EightDReport
+from app.models.quality_iqc import IQCRecord, IQCItem
+from app.models.purchase_rfq import RFQ, RFQQuotation
+from app.models.process_sop import SOP, ProcessRoute
+from app.models.quality_complaint import CustomerComplaint
+from app.models.purchase_supplier_eval import SupplierEvaluation
+from app.models.test import TestRequest, TestResult, MQVerification, Certification, Prototype, QualityIssue, ECR, ECN
+from app.models.alert import AlertRule, Alert, Notification
+from app.models.webhook import WebhookDeliveryLog
+from app.models.webhook_subscription import WebhookSubscription
+from app.models.approval import ApprovalChain, ApprovalStep, ApprovalRequest, ApprovalRecord
+from app.models.purchase import PurchaseOrder, PurchaseOrderItem, Supplier
+from app.models.audit import AuditLog
+from app.models.pm_config import CertStandard, PerfDefault, MarketCertification, MarketCompressor
+from app.models.pm_accessory import AccessoryDefault, FeatureDefault
+from app.models.competitor import CompetitorModel
+from app.models.competitor_version import CompetitorVersion
+from app.models.alert import Alert, AlertRule
+from app.models.team_role_template import TeamRoleTemplate
+from app.models.role_position_mapping import RolePositionMapping
+from app.models.material_component_template import MaterialComponentTemplate
+from app.models.capacity_unit_cost import CapacityUnitCost
+from app.models.indirect_cost_config import IndirectCostConfig
+from app.models.trial_qty_config import TrialQtyConfig
+from app.models.annual_plan import AnnualPlan
+from app.models.product_plan import ProductPlan, Cost, ProductPlanProjectLink, ProductPlanStage, CostType, BOMType, ProductRequirement, ProductPlanReview, ProductPlanHistory
+from app.models.event_log import EventLog
+from app.models.event_store import EventStore
+from app.models.verification_requirement import VerificationRequirement
+from app.models.test_execution import TestExecution
+from app.models.gate_rule import GateRule, GateRuleItem, GateEvalRecord
+from app.models.target_market import TargetMarket, RequiredTest, RequiredCertification, RequiredStandard
+from app.models.certification import (
+    CertificationRequirement,
+    CertificationProject,
+    CertificationSample,
+    CertificationExecution,
+    CertificationResult,
+    Certificate,
+    CertificateVersion,
+)
+from app.models.change_impact import ChangeImpactRule, ChangeImpactRecord
+from app.models.cert_gate_rule import CertificationGateRule
+from app.models.cert_auto_gen import CertAutoGenLog
+from app.models.notification_channel import NotificationChannel
+from app.models.notification_log import NotificationLog
+from app.models.user_notification_pref import UserNotificationPref
+from app.models.notification_grouping import NotificationCategory, NotificationDoNotDisturb
+from app.models.notification_read import NotificationReadStatus
+from app.models.ecr_eco import ECRAttachment, ECRRequest, ECO, ECOItem
+from app.models.safety import (
+    SafetyStandard, SafetyInspectionItem,
+    SupplierSafetyQualification, SupplierSafetyAuditRecord,
+)
+from app.models.manufacturability import (
+    DFMChecklist, DFMReport, DFMReportItem, DFMScoreWeight,
+)
+from app.models.outsource import (
+    OutsourcePartner, OutsourceOrder, OutsourceOrderItem,
+    OutsourceQualityRecord, OutsourceQualityFile,
+)
+from app.models.product_plan_subs import (
+    ProductPlanInitiation, ProductPlanMarket,
+    ProductPlanTechSpec, ProductPlanTeam,
+)
+from app.models.cost_accounting import (
+    CostAccountingPeriod, CostAccountingSheet, CostAccountingItem,
+    LaborRateConfig, ProductLaborCost,
+    OverheadAllocationRule, ProductOverheadCost,
+)
+from app.models.cost_alert_rule import CostAlertRule, AlertEvent
+from app.models.ai_config import AIConfig
+from app.models.ai_call_log import AICallLog
+from app.models.password_reset import PasswordResetToken
+from app.models.workflow_transition_spec import WorkflowTransitionSpec
+from app.models.plan_validation import ValidationRule
+from app.models.plan_template import PlanTemplate
+from app.models.review_template import ReviewTemplate
+from app.models.improvement_task import ImprovementTask, TaskPriority, TaskStatus
+from app.models.standard import StandardRegion, StandardCategory, Standard, StandardCrawl
+from app.models.competitor_crawl import CompetitorCrawl
+from app.models.competitor_search_term import CompetitorSearchTerm
+from app.models.market_param_config import MarketParamConfig
+from app.models.ci_v2_feedback import PredictionOutcome, ModelWeightSnapshot
+from app.models.quality_8d_report import EightDReport
+from app.models.inventory_snapshot import InventorySnapshot
+from app.models.ai_agent import AIAgent
+from app.models.delivery_record import DeliveryRecord
+from app.models.financial_snapshot import FinancialSnapshot
+from app.models.revenue_channel import RevenueByChannel
+
+__all__ = [
+    "User",
+    "Organization", "OrganizationMember",
+    "Platform", "Product", "Version", "Market", "ManufacturingVariant",
+    "PartCategory", "Part", "PartAVL", "BOM", "BOMItem",
+    "Program", "Project", "ProjectGate", "Milestone", "Task", "Risk",
+    "TestRequest", "TestResult", "MQVerification", "Certification", "Prototype", "QualityIssue", "ECR", "ECN",
+    "AlertRule", "Alert", "Notification",
+    "WebhookSubscription", "WebhookDeliveryLog",
+    "ApprovalChain", "ApprovalStep", "ApprovalRequest", "ApprovalRecord",
+    "PurchaseOrder", "PurchaseOrderItem", "Supplier",
+    "AuditLog",
+    "CertStandard", "PerfDefault", "MarketCertification", "MarketCompressor",
+    "CompetitorModel",
+    "CompetitorVersion",
+    "AccessoryDefault", "FeatureDefault",
+    "TeamRoleTemplate",
+    "RolePositionMapping",
+    "MaterialComponentTemplate",
+    "CapacityUnitCost",
+    "IndirectCostConfig",
+    "TrialQtyConfig",
+    "AnnualPlan",
+    "ProductPlan", "Cost", "ProductPlanProjectLink", "ProductPlanStage", "CostType", "BOMType",
+    "ProductRequirement",
+    "VerificationRequirement",
+    "TestExecution",
+    "GateRule", "GateRuleItem", "GateEvalRecord",
+    "TargetMarket", "RequiredTest", "RequiredCertification", "RequiredStandard",
+    "CertificationRequirement",
+    "CertificationProject",
+    "CertificationSample",
+    "CertificationExecution",
+    "CertificationResult",
+    "Certificate",
+    "CertificateVersion",
+    "ChangeImpactRule",
+    "ChangeImpactRecord",
+    "CertificationGateRule",
+    "CertAutoGenLog",
+    "NotificationChannel",
+    "NotificationLog",
+    "UserNotificationPref",
+    "NotificationCategory",
+    "NotificationDoNotDisturb",
+    "NotificationReadStatus",
+    "ECRAttachment",
+    "ECRRequest",
+    "ECO",
+    "ECOItem",
+    "SafetyStandard",
+    "SafetyInspectionItem",
+    "SupplierSafetyQualification",
+    "SupplierSafetyAuditRecord",
+    "DFMChecklist",
+    "DFMReport",
+    "DFMReportItem",
+    "DFMScoreWeight",
+    "OutsourcePartner",
+    "OutsourceOrder",
+    "OutsourceOrderItem",
+    "OutsourceQualityRecord",
+    "OutsourceQualityFile",
+
+    # product plan subs
+    "ProductPlanInitiation",
+    "ProductPlanMarket",
+    "ProductPlanTechSpec",
+    "ProductPlanTeam",
+
+    # cost accounting
+    "CostAccountingPeriod",
+    "CostAccountingSheet",
+    "CostAccountingItem",
+    "LaborRateConfig",
+    "ProductLaborCost",
+    "OverheadAllocationRule",
+    "ProductOverheadCost",
+    # cost alert
+    "CostAlertRule",
+    "AlertEvent",
+    # ai
+    "AIConfig",
+    "AICallLog",
+    "PasswordResetToken",
+    "WorkflowTransitionSpec",
+    "ValidationRule",
+    "PlanTemplate",
+    "ReviewTemplate",
+    "ProductPlanReview",
+    "ProductPlanHistory",
+    "ImprovementTask",
+    "TaskPriority",
+    "TaskStatus",
+    # standard monitoring
+    "StandardRegion",
+    "StandardCategory",
+    "Standard",
+    "StandardCrawl",
+    # competitor crawler
+    "CompetitorCrawl",
+    "CompetitorSearchTerm",
+    "MarketParamConfig",
+    "PredictionOutcome",
+    "ModelWeightSnapshot",
+    "EventStore",
+    # 8D报告管理
+    "EightDReport",
+    # 库存快照
+    "InventorySnapshot",
+    # AI 智能体
+    "AIAgent",
+    # 降本记录
+    "CostSaving",
+    # 交付记录
+    "DeliveryRecord",
+    # 财务快照
+    "FinancialSnapshot",
+    # 收入渠道
+    "RevenueByChannel",
+]

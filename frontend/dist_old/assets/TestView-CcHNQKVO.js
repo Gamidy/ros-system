@@ -1,0 +1,1 @@
+import{A as e,B as t,L as n,N as r}from"./index-T4C7ekig.js";var i={style:{padding:`40px`,background:`yellow`}},a=n({__name:`TestView`,setup(n){return console.log(`TEST COMPONENT LOADED`),(n,a)=>(t(),r(`div`,i,[...a[0]||=[e(`h1`,null,`TEST COMPONENT - WORKING!`,-1),e(`p`,null,`If you see this, the router and rendering work.`,-1)]]))}});export{a as default};

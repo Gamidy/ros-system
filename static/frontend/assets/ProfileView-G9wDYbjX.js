@@ -1,0 +1,1 @@
+import{B as e,d as t,m as n,x as r}from"./runtime-core.esm-bundler-CqWVJJtF.js";import{s as i}from"./index-Ck6m0kKg.js";var a={class:`profile-view`},o=i(r({__name:`ProfileView`,setup(r){return(r,i)=>(e(),n(`div`,a,[...i[0]||=[t(`h2`,null,`个人中心`,-1),t(`p`,{class:`placeholder-text`},`个人中心页面（待实现）`,-1)]]))}}),[[`__scopeId`,`data-v-81babf3b`]]);export{o as default};

@@ -1,0 +1,243 @@
+"""项目管理模型: Program → Project(T/A/B/C) → M1~M9 Gate → Task + 风险 + 里程碑"""
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Date, Boolean, func
+from sqlalchemy.orm import relationship
+from app.core.database import Base
+
+
+class Program(Base):
+    """项目群 — 上层容器"""
+    __tablename__ = "programs"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    code = Column(String(50), unique=True, index=True, nullable=False, comment="项目群编号")
+    name = Column(String(200), nullable=False, comment="项目群名称，如'2027海外新品计划'")
+    description = Column(Text, nullable=True,  # description)
+    status = Column(String(20), default="active", comment="active/completed/cancelled")
+    start_date = Column(Date, nullable=True,  # start_date)
+    end_date = Column(Date, nullable=True,  # end_date)
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(,  # updated_at)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+
+    projects = relationship("Project", back_populates="program")
+
+
+class Project(Base):
+    """项目 — 基本管理单元"""
+    __tablename__ = "projects"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    code = Column(String(50), unique=True, index=True, nullable=False, comment="项目编号")
+    name = Column(String(200), nullable=False, unique=True, comment="项目名称")
+    # 归属
+    program_id = Column(Integer, ForeignKey("programs.id"), nullable=True, comment="归属Program")
+    product_code = Column(String(50), nullable=True, comment="关联产品编码")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    # L1: 项目等级 T/A/B/C
+    project_class = Column(String(10), nullable=False, comment="T级/A级/B级/C级")
+    # L2: 项目场景
+    source = Column(String(50), nullable=True, comment="来源: 年度规划/客户需求/品质整改/研发降本/供应链二供/工艺提效/法规升级")
+    source_category = Column(String(30), nullable=True, comment="归类: product_creation/product_optimization")
+    # L3: 开发模块 (JSON数组: ["结构","系统","电控"])
+    dev_modules = Column(String(200), nullable=True, comment="开发模块JSON")
+    # L4: 变更影响 (JSON数组: ["性能","安全","认证","市场"])
+    change_impacts = Column(String(200), nullable=True, comment="变更影响JSON")
+    # 生命周期
+    status = Column(String(20), default="planning", comment="planning/running/completed/paused/cancelled")
+    start_date = Column(Date, nullable=True,  # start_date)
+    target_end_date = Column(Date, nullable=True,  # target_end_date)
+    actual_end_date = Column(Date, nullable=True,  # actual_end_date)
+    # 关键路径
+    critical_path = Column(String(200), nullable=True, comment="T项目关键路径: 结构优先")
+    # 管理信息
+    owner = Column(String(50), nullable=True, comment="项目经理")
+    leader_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="项目负责人(用户ID)")
+    description = Column(Text, nullable=True,  # description)
+    # 产品经理业务字段
+    market_policy = Column(String(200), nullable=True, comment="市场政策背景")
+    annual_planning_ref = Column(String(100), nullable=True, comment="年度规划关联")
+    budget = Column(Integer, nullable=True, comment="项目预算(元)")
+    # 关联产品策划（DB 向后兼容，请使用 ProductPlanProjectLink）
+    product_plan_id = Column(String(36), nullable=True, comment='关联产品策划ID')
+    # Draft 机制
+    is_draft = Column(Boolean, default=True, nullable=False, comment="是否草稿")
+    approval_status = Column(String(20), default="pending", nullable=True, comment="审批状态: pending/approved/rejected")
+    is_deleted = Column(Boolean, default=False, nullable=False, comment="软删除标记")
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(,  # updated_at)
+
+    program = relationship("Program", back_populates="projects")
+    gates = relationship("ProjectGate", back_populates="project", cascade="all, delete-orphan")
+    milestones = relationship("Milestone", back_populates="project", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    risks = relationship("Risk", back_populates="project", cascade="all, delete-orphan")
+    verification_requirements = relationship("VerificationRequirement", back_populates="project",
+                                              foreign_keys="VerificationRequirement.project_id")
+    prototypes = relationship("Prototype", back_populates="project",
+                               foreign_keys="Prototype.project_id")
+    product_plan_links = relationship("ProductPlanProjectLink", back_populates="project", cascade="all, delete-orphan")
+
+
+class ProjectGate(Base):
+    """M1-M9 Gate 节点"""
+    __tablename__ = "project_gates"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False,  # project_id)
+    gate_code = Column(String(10), nullable=False, comment="M1~M9")
+    gate_name = Column(String(100), nullable=False, comment="Gate名称")
+    seq = Column(Integer, nullable=False, comment="排序 1-9")
+    # 决策层
+    decision_level = Column(String(20), nullable=True, comment="总经理/项目经理 决策层")
+    decider = Column(String(50), nullable=True, comment="决策人")
+    # 状态
+    status = Column(String(20), default="pending", comment="pending/passed/failed/skipped")
+    planned_date = Column(Date, nullable=True,  # planned_date)
+    actual_date = Column(Date, nullable=True,  # actual_date)
+    # 点亮条件 (JSON: 客观达成条件列表)
+    pass_conditions = Column(Text, nullable=True, comment="点亮条件JSON")
+    # 决策记录
+    decision = Column(Text, nullable=True, comment="决策记录")
+    reviewer = Column(String(50), nullable=True,  # reviewer)
+    # 特殊标记
+    is_high_risk_zone = Column(Boolean, default=False, comment="M4-M6高风险区标记")
+    is_hidden = Column(Boolean, default=False, comment="M5A隐藏节点")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(,  # updated_at)
+
+    project = relationship("Project", back_populates="gates")
+
+
+class Milestone(Base):
+    """里程碑节点 — 与Task自动联动"""
+    __tablename__ = "milestones"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False,  # project_id)
+    name = Column(String(200), nullable=False,  # name)
+    planned_date = Column(Date, nullable=True,  # planned_date)
+    actual_date = Column(Date, nullable=True,  # actual_date)
+    status = Column(String(20), default="pending", comment="pending/achieved/delayed")
+    # 点亮条件
+    conditions = Column(Text, nullable=True, comment="点亮条件JSON")
+    # 关联Gate
+    gate_code = Column(String(10), nullable=True, comment="关联M1~M9")
+    # 依赖链: 里程碑延期传导
+    depends_on_milestone_id = Column(Integer, ForeignKey("milestones.id"), nullable=True, comment="依赖的上游里程碑")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+
+    project = relationship("Project", back_populates="milestones")
+    depends_on = relationship("Milestone", remote_side=[id], backref="downstream_milestones")
+
+
+class Task(Base):
+    """项目任务"""
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False,  # project_id)
+    milestone_id = Column(Integer, ForeignKey("milestones.id"), nullable=True, comment="关联里程碑")
+    parent_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True, comment="父任务ID(WBS层级)")
+    title = Column(String(200), nullable=False,  # title)
+    assignee = Column(String(50), nullable=True,  # assignee)
+    status = Column(String(20), default="todo", comment="todo/in_progress/done/blocked")
+    priority = Column(String(10), default="medium", comment="low/medium/high/urgent")
+    planned_date = Column(Date, nullable=True,  # planned_date)
+    due_date = Column(Date, nullable=True,  # due_date)
+    actual_date = Column(Date, nullable=True,  # actual_date)
+    description = Column(Text, nullable=True,  # description)
+    sort_order = Column(Integer, default=0, comment="同级排序")
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(,  # updated_at)
+
+    project = relationship("Project", back_populates="tasks")
+    milestone = relationship("Milestone")
+    parent = relationship("Task", remote_side=[id], backref="children")
+
+
+class Risk(Base):
+    """项目风险追踪"""
+    __tablename__ = "risks"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False,  # project_id)
+    title = Column(String(200), nullable=False,  # title)
+    risk_level = Column(String(10), default="B", comment="A级(阻塞)/B级(影响)/C级(轻微)")
+    risk_source = Column(String(50), nullable=True, comment="来源: 模具/物料/认证/人员/外部")
+    probability = Column(String(10), default="medium", comment="low/medium/high")
+    impact = Column(String(10), default="medium", comment="low/medium/high")
+    mitigation = Column(Text, nullable=True, comment="缓解措施")
+    status = Column(String(20), default="open", comment="open/monitoring/resolved")
+    raised_by = Column(String(50), nullable=True,  # raised_by)
+    resolved_at = Column(Date, nullable=True,  # resolved_at)
+    # ---- 多租户 ----
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, comment="所属组织ID")
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(,  # updated_at)
+
+    project = relationship("Project", back_populates="risks")
+
+
+class TaskDependency(Base):
+    """任务依赖关系"""
+    __tablename__ = "task_dependencies"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, comment="当前任务")
+    depends_on_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, comment="依赖的前置任务")
+    dep_type = Column(String(20), default="finish_to_start", comment="finish_to_start/start_to_start/finish_to_finish")
+    lag_days = Column(Integer, default=0, comment="滞后天数")
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+
+    task = relationship("Task", foreign_keys=[task_id], backref="dependencies_out")
+    depends_on = relationship("Task", foreign_keys=[depends_on_task_id], backref="dependencies_in")
+
+
+class ProjectTemplate(Base):
+    """项目模板 — 快速立项模板"""
+    __tablename__ = "project_templates"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    name = Column(String(200), nullable=False, comment="模板名称")
+    description = Column(Text, nullable=True,  # description)
+    project_class = Column(String(10), default="C", comment="默认项目等级")
+    template_data = Column(Text, nullable=True, comment="模板JSON: gates+tasks+milestones")
+    is_active = Column(Boolean, default=True,  # is_active)
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(,  # updated_at)
+
+
+class TimeEntry(Base):
+    """任务工时记录"""
+    __tablename__ = "time_entries"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False,  # task_id)
+    user_name = Column(String(50), nullable=True, comment="记录人")
+    hours = Column(Integer, default=0, comment="工时(小时)")
+    entry_date = Column(Date, nullable=False, comment="工作日期")
+    description = Column(Text, nullable=True,  # description)
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+
+    task = relationship("Task", backref="time_entries")
+
+
+class TaskComment(Base):
+    """任务评论"""
+    __tablename__ = "task_comments"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True,  # id)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False,  # task_id)
+    author = Column(String(50), nullable=True,  # author)
+    content = Column(Text, nullable=False,  # content)
+    created_at = Column(DateTime, server_default=func.now(,  # created_at)
+
+    task = relationship("Task", backref="comments")

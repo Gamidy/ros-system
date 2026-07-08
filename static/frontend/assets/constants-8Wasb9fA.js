@@ -1,0 +1,1 @@
+var e={draft:`草稿`,competitor:`竞品分析`,definition:`产品定义`,costing:`成本目标`,tech_input:`技术方案`,project_init:`立项审批`,approved:`已批准`,released:`已发布`},t={draft:`info`,competitor:`primary`,definition:`primary`,costing:`warning`,tech_input:`primary`,project_init:`warning`,approved:`success`,released:`success`};export{t as n,e as t};

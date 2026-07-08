@@ -1,0 +1,157 @@
+{
+  "phase": "P3",
+  "title": "成本核算Tab数据充实+冷量联动成本重算框架 & 全场景PM浏览器回归验证",
+  "phase_tasks": [
+    {
+      "id": "t1",
+      "title": "后端system_config种子数据完善：补充所有成本参数key-value默认值",
+      "domain_tags": ["python", "fastapi", "sqlalchemy"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "description": "现状：admin_config.py的DEFAULTS字典已有proto_unit_cost/mfg_cost_threshold/indirect_cost/capacity_unit_cost_map等键，但test_unit_price/mfg_cost_threshold等缺少完整映射。需补全所有成本参数种子数据并通过/api/admin/config/batch写入DB。",
+      "files": ["backend/app/api/admin_config.py", "backend/app/models/system_config.py"],
+      "acceptance": "GET /api/admin/config/public 返回完整成本参数；冷量段7K/9K/12K/18K/24K均有单元成本映射"
+    },
+    {
+      "id": "t2",
+      "title": "前端systemConfig加载时机优化：确保成本计算computed在所有watch之前拿到最新配置",
+      "domain_tags": ["vue3", "typescript"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "description": "现状：fetchSystemConfig()在onMounted中异步调用，但watch-computed中的cost计算可能在config加载前执行，导致fallback硬编码值被使用。需调整为：onMounted中先await fetchSystemConfig()再初始化其他数据，或使用Promise.all确保顺序。",
+      "files": ["frontend/src/views/pm/PMWorkspace.vue"],
+      "acceptance": "页面首次加载时成本计算使用的参数均来自后端config，非硬编码fallback"
+    },
+    {
+      "id": "t3",
+      "title": "冷量联动成本重算框架：制造费用(≤12K/＞12K)自动联动显示",
+      "domain_tags": ["vue3", "typescript", "fastapi"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "description": "现状：manufacturingCost computed已实现capacity_range→费用查表逻辑（从systemConfig.mfg_cost_threshold读取阈值），但计算结果显示在\"制造费用+人工(￥)\"字段中，未单独区分制造费用。需在成本核算Tab经济指标区块新增一行展示\"制造费用(￥)\"独立计算值，并与capacity_range选择联动。",
+      "files": ["frontend/src/views/pm/PMWorkspace.vue"],
+      "acceptance": "切换capacity_range后，制造费用自动更新（7K→50元，18K→60元）；数值来自后端config"
+    },
+    {
+      "id": "t4",
+      "title": "冷量联动成本重算框架：样机单套费用按冷量段自动查表",
+      "domain_tags": ["vue3", "typescript", "fastapi"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "description": "现状：prototypeUnitCost computed已实现capacity_range→unit_cost查表（从systemConfig.capacity_unit_cost_map读取），protoCostTable的unit_cost通过watch联动更新。需验证并完善：确保7K→750/9K→950/12K→1050/18K→1420/24K→1780的映射正确，客户样机1.2倍系数生效。",
+      "files": ["frontend/src/views/pm/PMWorkspace.vue"],
+      "acceptance": "选择不同冷量段后，样机单套费用自动更新为正确的万元值（0.075/0.095/0.105/0.142/0.178），客户样机为1.2倍"
+    },
+    {
+      "id": "t5",
+      "title": "核心性能参数表制冷量目标值自动填充增强",
+      "domain_tags": ["vue3", "typescript", "python"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "description": "现状：capacity_range watch已自动设置corePerfTable[0].target_value=coldVoltage并计算BTU→W基准值（line 1758-1775）。需增强：1)同时更新制热量行(HSPF)的目标值；2)市场驱动的能效等级/CSPF自动填充；3)电压频率自动同步。确保\"自动填充\"状态可见（source=auto标记）。",
+      "files": ["frontend/src/views/pm/PMWorkspace.vue", "backend/app/api/pm_proposal_utils.py"],
+      "acceptance": "选择能力段后，制冷量(W)/制热量(W)/电压频率/制冷剂行自动填充；auto来源标记正确显示"
+    },
+    {
+      "id": "t6",
+      "title": "跨Tab watch联动增强：Tab1能力段/制冷剂变化→Tab3成本核算自动重算触发",
+      "domain_tags": ["vue3", "typescript"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "description": "现状：已有多个watch联动（capacity_range→manufacturingCost/prototypeUnitCost/corePerfTable, refrigerant→corePerfTable），但dev_cost_items中的母公司联动行(budget)仅在moldCostTotal/certCostTotal/laborCostTotal等子表total变化时更新。需新增：当capacity_range变化时，触发devCostTable全量重算（包括说明行refreshDevCostRemarks），并确保Tab3成本核算Tab的一致性。",
+      "files": ["frontend/src/views/pm/PMWorkspace.vue"],
+      "acceptance": "在Tab1修改能力段后切换到Tab3，成本核算数据已全部更新；不再显示旧数据"
+    },
+    {
+      "id": "t7",
+      "title": "后端冷量成本配置API专项端点：GET /api/pm/capacity-cost-config",
+      "domain_tags": ["python", "fastapi", "sqlalchemy"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "description": "现状：成本参数分散在system_config的多个key中（mfg_cost_threshold/capacity_unit_cost_map/test_unit_price/indirect_cost），前端需多次解析JSON。需新增专用API端点：根据capacity_range参数返回该冷量段对应的完整成本配置（制造费用/样机单价/测试单价/间接成本），单一source of truth。",
+      "files": ["backend/app/api/pm_workspace.py", "backend/app/models/capacity_unit_cost.py"],
+      "acceptance": "GET /api/pm/capacity-cost-config?capacity_range=12K 返回 {manufacturing_cost:50, proto_unit_cost:0.105, test_unit_price:0.11, indirect_cost:5000}"
+    },
+    {
+      "id": "t8",
+      "title": "成本核算Tab数据充实：测试费用单价从后端config加载",
+      "domain_tags": ["vue3", "typescript", "fastapi"],
+      "risk_level": "low",
+      "estimated_complexity": 2,
+      "description": "现状：testCostTable的unit_price硬编码为0.11万元（line 1401-1405）。需改为从systemConfig.test_unit_price加载，支持管理员后台调整。",
+      "files": ["frontend/src/views/pm/PMWorkspace.vue", "backend/app/api/admin_config.py"],
+      "acceptance": "测试费用单价可后台修改并实时生效；前端不再硬编码"
+    },
+    {
+      "id": "t9",
+      "title": "Tab1「目标BOM成本」「年销量预测」双向可见验证完善",
+      "domain_tags": ["vue3", "typescript"],
+      "risk_level": "low",
+      "estimated_complexity": 1,
+      "description": "现状：Tab1已有只读字段显示bom_cost_target和annual_sales_forecast（line 332-349），值来源projectForm。需验证：Tab3成本核算修改这些字段后Tab1自动同步；补充数值格式化（万元/元转换）、placeholder文案优化。",
+      "files": ["frontend/src/views/pm/PMWorkspace.vue"],
+      "acceptance": "Tab3修改目标BOM成本和年销量预测后切换回Tab1，值已同步且格式正确"
+    },
+    {
+      "id": "t10",
+      "title": "增量提交与部署：P3-1前后端代码集成部署到云服务器",
+      "domain_tags": ["devops", "nginx", "ssh"],
+      "risk_level": "high",
+      "estimated_complexity": 5,
+      "description": "按小增量提交原则（每次≤200行），分批提交：第1批-后端config种子数据；第2批-新增API端点；第3批-前端config加载优化；第4批-冷量联动框架完善。每批部署到139.196.15.52（后端restart uvicorn + 前端dist同步到nginx）。",
+      "files": ["所有变更文件"],
+      "acceptance": "云端https://139.196.15.52可访问，成本联动功能正常，无500/404错误"
+    },
+    {
+      "id": "t11",
+      "title": "P3-2: AppleScript+Safari全场景PM浏览器回归验证脚本开发",
+      "domain_tags": ["applescript", "testing", "browser"],
+      "risk_level": "high",
+      "estimated_complexity": 5,
+      "description": "编写AppleScript脚本驱动Safari，按验证路径执行：1)HTTPS访问并登录；2)验证三栏布局(年度规划/产品立项/我的项目)；3)产品立项抽屉逐Tab验证(4个Tab)；4)竞品对标组件(选择市场→过滤→数据矩阵)；5)年度规划CRUD；6)保存草稿→提交立项→审批流；7)console检查JS错误/404/空白页。每步截图并断言。",
+      "files": ["scripts/p3_browser_regression.applescript"],
+      "acceptance": "脚本可完整执行所有验证步骤，输出测试报告（通过/失败/截图路径）"
+    },
+    {
+      "id": "t12",
+      "title": "P3-2: 全场景手动回归验证执行与问题记录",
+      "domain_tags": ["testing", "qa"],
+      "risk_level": "medium",
+      "estimated_complexity": 3,
+      "description": "运行AppleScript验证脚本，人工复核关键步骤（登录/竞品对标数据/审批流状态），记录所有异常（JS错误/布局错乱/数据不一致/性能问题），生成回归测试报告。对发现的问题打tag分类（P3-blocker/P3-minor/known-issue）。",
+      "files": ["docs/p3_regression_report.md"],
+      "acceptance": "输出完整的回归测试报告，列出所有通过/失败项，blocker为0方可进入P4"
+    }
+  ],
+  "reasoning": "P3阶段分析：\n\n【现状评估】\n1. 后端系统配置体系已完整建立：admin_config.py有DEFAULTS字典含所有成本key，/api/admin/config/public端点返回PUBLIC_KEYS，system_config表支持key-value存储\n2. 前端成本计算框架已有60%完成度：manufacturingCost/prototypeUnitCost computed已实现capacity_range→查表逻辑，protoCostTable unit_cost watch联动已完成，Tab1只读字段目标BOM成本+年销量预测已存在\n3. 核心缺失：(a)后端config种子数据未持久化到DB(仅内存DEFAULTS)；(b)前端config加载顺序问题可能使用fallback值；(c)缺少统一的冷量成本配置API；(d)测试费用硬编码；(e)跨Tab成本重算触发未覆盖所有场景；(f)P3-2浏览器验证需从零开发\n\n【任务分配原则】\n- t1/t7 后端优先：数据库seed和API端点是前端工作的基础\n- t2/t3/t4/t5/t6 前端联动核心：computed/watch增强，依赖t1/t7完成\n- t8/t9 前端收尾：数据绑定的补充和验证\n- t10 部署：分4批增量提交，每批≤200行，先seed→API→前端优化→联动完善\n- t11/t12 验证：AppleScript开发与手动回归并行，P3-1完成后执行\n\n【风险标注】\n- t2(中): config加载时序在异步环境下容易出错\n- t6(中): 跨Tab watch连锁反应可能导致无限循环，需加debounce/防抖\n- t10(高): 云端部署涉及多文件同步+服务重启，需原子化操作\n- t11(高): AppleScript+Safari JS交互不稳定，Safari安全策略可能限制\n\n【复杂度说明】(1-5分制)\n1=单文件纯前端调整\n2=前后端简单联动\n3=跨组件watch/computed链\n4=新增API+数据库+前端三端联动\n5=部署编排+自动化测试+多步骤验证",
+  "executor_recommendations": {
+    "t1": "AI-C（后端专家，FastAPI+SQLAlchemy config seed）",
+    "t2": "AI-B（前端专家，Vue3生命周期+异步时序优化）",
+    "t3": "AI-B（前端专家，computed增强+模板修改）",
+    "t4": "AI-B（前端专家，computed验证+watch完善）",
+    "t5": "AI-A（全栈，前后端联动：pm_proposal_utils.py+PMWorkspace.vue）",
+    "t6": "AI-B（前端专家，watch链增强+防抖处理）",
+    "t7": "AI-C（后端专家，FastAPI新端点+capacity_unit_cost表查询）",
+    "t8": "AI-B（前端专家，硬编码替换+config数据绑定）",
+    "t9": "AI-B（前端专家，模板微调+格式化）",
+    "t10": "AI-A（全栈，SSH部署+git增量提交+服务重启编排）",
+    "t11": "AI-A（全栈，AppleScript+Safari JS自动化+截图）",
+    "t12": "AI-A（全栈，测试执行+问题分类+报告输出）"
+  },
+  "estimated_total_hours": "40-52小时（约5-7个工作日）",
+  "dependency_graph": {
+    "layer1_parallel": ["t1", "t11"],
+    "layer2_after_t1": ["t2", "t3", "t4", "t7"],
+    "layer3_after_t2_t3_t4": ["t5", "t6", "t8"],
+    "layer4_after_all_frontend": ["t9", "t10"],
+    "layer5_after_t10_t11": ["t12"]
+  },
+  "file_impact_summary": {
+    "backend/app/api/admin_config.py": "补全DEFAULTS字典的test_unit_price等键值，确保capacity_unit_cost_map覆盖7K/9K/12K/18K/24K",
+    "backend/app/api/pm_workspace.py": "新增GET /api/pm/capacity-cost-config端点",
+    "backend/app/models/capacity_unit_cost.py": "可能需添加批量查询方法",
+    "frontend/src/views/pm/PMWorkspace.vue": "核心变更文件：config加载时序优化、computed增强、watch防抖、模板字段调整",
+    "scripts/p3_browser_regression.applescript": "新建：Safari自动化验证脚本",
+    "docs/p3_regression_report.md": "新建：回归测试报告模板"
+  }
+}

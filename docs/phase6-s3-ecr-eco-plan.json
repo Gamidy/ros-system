@@ -1,0 +1,623 @@
+{
+  "phase": "Phase 6 S3 — ECR/ECO 工程变更控制模块",
+  "status": "planned",
+  "business_context": "补齐数字主线变更控制环节: VR → Prototype → TestCenter → CertCenter → ECR/ECO → MassProduction",
+  "current_state": {
+    "legacy_models": {
+      "ecr": {
+        "location": "backend/app/models/test.py (class ECR, line 209)",
+        "table": "ecrs",
+        "status": "有模型+前端视图, 无后端API路由",
+        "fields": "ecr_no, title, product_code, change_type, trigger, status(draft/submitted/approved/rejected/implemented), description, impact_analysis, submitted_by, approved_by"
+      },
+      "ecn": {
+        "location": "backend/app/models/test.py (class ECN, line 230)",
+        "table": "ecns",
+        "status": "有模型, 简版前端视图, 无后端API路由",
+        "fields": "ecn_no, ecr_id, title, product_code, change_scope, bom_changes(JSON), cdf_impact, certification_impact, status, effective_date"
+      }
+    },
+    "existing_schemas": "ECRCreate, ECROut, ECNCreate, ECNOut in schemas/__init__.py lines 804-839",
+    "existing_frontend": "views/changes/ChangesView.vue (tabs: ECR + ECN, calls /certifications/ecrs and /certifications/ecns which have no backend routes)",
+    "existing_s2_change_impact": "ChangeImpactRecord has ecr_id field (nullable, already reserved for future ECR integration)",
+    "approval_system": "ApprovalChain → ApprovalStep → ApprovalRequest (supports request_type='ecr') → ApprovalRecord"
+  },
+  "design_decisions": [
+    "创建全新的 models/ecr_eco.py, 用新表 ecr_requests / ecos / eco_items / ecr_attachments, 不与旧 ecrs/ecns 表冲突",
+    "旧 ECR/ECN 模型(test.py)保持不动, 后续可作为数据迁移源, 新 API 不再使用旧表",
+    "ECN→ECO: 用 Engineering Change Order 替代 Engineering Change Notice, 增加明细项(ECOItem)和完整状态机",
+    "状态机使用 Python Enum + 代码内校验, 不依赖额外状态机库, 复用现有的 state_machine_api.py 模式",
+    "审批流复用现有的 approval_chains + approval_requests, ECR 提交时自动创建 ApprovalRequest, 审批通过后自动推进 ECR→APPROVED",
+    "ECO 批准后的 BOM 更新采用事件驱动: ECO VERIFIED→EFFECTIVE 时触发 service 层 on_eco_effective()",
+    "变更影响分析复用 S2 ChangeImpactRule/Record, ECR 创建时可启动影响分析"
+  ],
+  "phase_tasks": [
+    {
+      "id": "s3-t1",
+      "title": "ECR/ECO 领域枚举 + 数据模型",
+      "domain_tags": ["python", "fastapi", "models", "ecr", "eco", "enums"],
+      "risk_level": "medium",
+      "estimated_complexity": 7,
+      "effort_days": 2,
+      "details": {
+        "description": "Define all enums and SQLAlchemy models for the ECR/ECO module",
+        "files_to_create_or_modify": [
+          "backend/app/core/enums.py (add ECRStatus, ECOStatus, ECRType, ECRUrgency, ECOChangeType, ECOObjectType)",
+          "backend/app/models/ecr_eco.py (new file: ECRAttachment, ECRRequest, ECO, ECOItem)"
+        ],
+        "enums": {
+          "ECRStatus": "DRAFT, SUBMITTED, REVIEWING, APPROVED, REJECTED, CONVERTED",
+          "ECOStatus": "DRAFT, IMPLEMENTING, VERIFIED, EFFECTIVE, CLOSED, CANCELLED",
+          "ECRType": "DESIGN_CHANGE(设计变更), MATERIAL_CHANGE(物料变更), PROCESS_CHANGE(工艺变更), CERT_CHANGE(认证变更), STANDARD_CHANGE(标准变更), BOM_CHANGE(BOM变更), OTHER(其他)",
+          "ECRUrgency": "EMERGENCY(紧急), HIGH(高), MEDIUM(中), LOW(低)",
+          "ECOChangeType": "ADD(新增), MODIFY(修改), REPLACE(替换), DELETE(删除), DISABLE(禁用)",
+          "ECOObjectType": "PART(物料), BOM(BOM), DOCUMENT(文档), CERTIFICATION(认证), PROCESS(工艺), OTHER(其他)"
+        },
+        "models": {
+          "ECRAttachment": {
+            "table": "ecr_attachments",
+            "fields": "id, ecr_id(FK), file_name, file_path, file_type, file_size, uploaded_by, created_at"
+          },
+          "ECRRequest": {
+            "table": "ecr_requests",
+            "fields": "id, code(varchar 50 unique), title, ecr_type(enum), reason(text), urgency(enum), affected_products(JSON), affected_documents(JSON), description(text), status(ECRStatus), workflow_id(int nullable, FK→approval_requests), submitter_id(int FK→users), submitter_name, reviewer_id(int nullable), reviewed_at(datetime nullable), rejection_reason(text nullable), org_id(int FK→organizations), created_at, updated_at"
+          },
+          "ECO": {
+            "table": "ecos",
+            "fields": "id, code(varchar 50 unique), ecr_id(int FK→ecr_requests nullable), title, change_summary(text), implementation_plan(text nullable), effective_date(date nullable), status(ECOStatus), created_by(int FK→users), verified_by(int nullable), verified_at(datetime nullable), closed_by(int nullable), closed_at(datetime nullable), org_id, created_at, updated_at"
+          },
+          "ECOItem": {
+            "table": "eco_items",
+            "fields": "id, eco_id(int FK→ecos), seq(int), change_type(ECOChangeType), object_type(ECOObjectType), object_id(int), object_code(varchar 100), object_name(varchar 200), old_value(text nullable), new_value(text nullable), description(text nullable), org_id, created_at"
+          }
+        },
+        "relationships": "ECRRequest.attachments→ECRAttachment, ECRRequest.eco→ECO, ECO.items→ECOItem, ECO.ecr→ECRRequest, ECO.items→ECOItem",
+        "notes": "ECRRequest.code 自动生成格式: ECR-{YYYYMMDD}-{4位序号}, ECO.code 自动生成格式: ECO-{YYYYMMDD}-{4位序号}"
+      }
+    },
+    {
+      "id": "s3-t2",
+      "title": "ECR/ECO Pydantic Schema 定义",
+      "domain_tags": ["python", "fastapi", "schemas", "pydantic"],
+      "risk_level": "low",
+      "estimated_complexity": 4,
+      "effort_days": 1,
+      "details": {
+        "description": "Define Pydantic request/response schemas for ECR and ECO in schemas/__init__.py",
+        "files_to_modify": ["backend/app/schemas/__init__.py"],
+        "schemas": {
+          "ECRCreate": "code(自动), title, ecr_type, reason, urgency, affected_products(Optional[str]), affected_documents(Optional[str]), description(Optional), submitter_name",
+          "ECRUpdate": "title(Optional), reason(Optional), urgency(Optional), affected_products(Optional), affected_documents(Optional), description(Optional)",
+          "ECROut": "all create fields + id, code, status, submitter_id, submitter_name, created_at, updated_at, attachment_count(int)",
+          "ECRDetailOut": "ECROut + attachments(list[ECRAttachmentOut]), eco_info(Optional[ECOSummaryOut])",
+          "ECRAttachmentOut": "id, ecr_id, file_name, file_path, file_type, file_size, uploaded_by, created_at",
+          "ECOCreate": "title, change_summary, implementation_plan(Optional), effective_date(Optional), items(list[ECOItemCreate])",
+          "ECOUpdate": "change_summary(Optional), implementation_plan(Optional), effective_date(Optional)",
+          "ECOOut": "all create fields + id, code, ecr_id, status, created_by, verified_by, verified_at, closed_by, closed_at, org_id, created_at, updated_at",
+          "ECODetailOut": "ECOOut + items(list[ECOItemOut]), ecr_info(Optional[ECRSummaryOut])",
+          "ECOItemCreate": "change_type, object_type, object_id, object_code(Optional), object_name(Optional), old_value(Optional), new_value(Optional), description(Optional)",
+          "ECOItemUpdate": "object_code(Optional), object_name(Optional), old_value(Optional), new_value(Optional), description(Optional)",
+          "ECOItemOut": "ECOItemCreate + id, eco_id, seq, created_at",
+          "ECRSummaryOut": "id, code, title, ecr_type, status, submitter_name, created_at",
+          "ECOSummaryOut": "id, code, title, status, effective_date, created_at",
+          "ECODashboardItem": "id, code, title, status, effective_date, change_type_counts(dict), item_count(int), ecr_code(Optional), ecr_title(Optional), created_at"
+        }
+      }
+    },
+    {
+      "id": "s3-t3",
+      "title": "ECR 后端 API 模块",
+      "domain_tags": ["python", "fastapi", "api", "ecr", "crud"],
+      "risk_level": "high",
+      "estimated_complexity": 8,
+      "effort_days": 3,
+      "details": {
+        "description": "Create complete ECR API routes with state machine transitions and attachment support",
+        "files_to_create": ["backend/app/api/ecr.py"],
+        "endpoints": [
+          "POST /api/ecr — 创建ECR(状态DRAFT)",
+          "GET /api/ecr — 列表查询(支持筛选: status, ecr_type, urgency, submitter, date_range, keyword; 排序: created_at desc)",
+          "GET /api/ecr/{ecr_id} — ECR详情(含附件列表+关联ECO信息)",
+          "PUT /api/ecr/{ecr_id} — 更新ECR(仅DRAFT状态允许)",
+          "DELETE /api/ecr/{ecr_id} — 删除ECR(仅DRAFT状态)",
+          "POST /api/ecr/{ecr_id}/submit — 提交审批(DRAFT→SUBMITTED, 同时创建ApprovalRequest)",
+          "POST /api/ecr/{ecr_id}/withdraw — 撤回审批(SUBMITTED→DRAFT, 关闭ApprovalRequest)",
+          "POST /api/ecr/{ecr_id}/review — 开始评审(SUBMITTED→REVIEWING)",
+          "POST /api/ecr/{ecr_id}/approve — 批准(REVIEWING→APPROVED, 更新ApprovalRequest)",
+          "POST /api/ecr/{ecr_id}/reject — 驳回(REVIEWING/SUBMITTED→REJECTED, 填写驳回原因)",
+          "POST /api/ecr/{ecr_id}/convert — 转为ECO(APPROVED→CONVERTED, 创建对应的ECO草稿)",
+          "POST /api/ecr/{ecr_id}/attachments — 上传附件(multipart/form-data)",
+          "DELETE /api/ecr/{ecr_id}/attachments/{att_id} — 删除附件"
+        ],
+        "state_transition_rules": {
+          "DRAFT": ["SUBMITTED"],
+          "SUBMITTED": ["REVIEWING", "REJECTED", "DRAFT(waitdraw)"],
+          "REVIEWING": ["APPROVED", "REJECTED"],
+          "APPROVED": ["CONVERTED"],
+          "REJECTED": ["DRAFT(重新提交)", "SUBMITTED"],
+          "CONVERTED": []
+        },
+        "approval_integration": {
+          "on_submit": "创建ApprovalRequest(request_type='ecr', request_id=ecr.id, chain_id=从配置获取ECR审批链)",
+          "on_approve": "approvals.py 回调中自动调用 ECR approve API",
+          "chain_config": "使用现有 approval_chains 表, code='ecr_approval', 预配置步骤: [提交人上级审批→rd_director审批→quality_engineer审批]"
+        },
+        "permissions": "require_menu('changes'), 创建时获取当前用户作为submitter"
+      }
+    },
+    {
+      "id": "s3-t4",
+      "title": "ECO 后端 API 模块",
+      "domain_tags": ["python", "fastapi", "api", "eco", "crud"],
+      "risk_level": "high",
+      "estimated_complexity": 8,
+      "effort_days": 3,
+      "details": {
+        "description": "Create complete ECO API routes with full state machine, item management, and change dashboard",
+        "files_to_create": ["backend/app/api/eco.py"],
+        "endpoints": [
+          "POST /api/eco — 创建ECO(可直接创建或从ECR转换, DRAFT状态)",
+          "GET /api/eco — 列表查询(支持筛选: status, date_range, keyword; 排序: created_at desc)",
+          "GET /api/eco/{eco_id} — ECO详情(含明细项列表+关联ECR信息)",
+          "PUT /api/eco/{eco_id} — 更新ECO(仅DRAFT状态允许)",
+          "DELETE /api/eco/{eco_id} — 删除ECO(仅DRAFT)",
+          "POST /api/eco/{eco_id}/implement — 开始实施(DRAFT→IMPLEMENTING)",
+          "POST /api/eco/{eco_id}/verify — 验证通过(IMPLEMENTING→VERIFIED, 记录verify_user/verify_time)",
+          "POST /api/eco/{eco_id}/effective — 生效(VERIFIED→EFFECTIVE, 触发BOM更新on_eco_effective())",
+          "POST /api/eco/{eco_id}/close — 关闭(EFFECTIVE→CLOSED)",
+          "POST /api/eco/{eco_id}/cancel — 取消(任意状态→CANCELLED)",
+          "POST /api/eco/{eco_id}/items — 新增明细项",
+          "PUT /api/eco/{eco_id}/items/{item_id} — 更新明细项",
+          "DELETE /api/eco/{eco_id}/items/{item_id} — 删除明细项",
+          "GET /api/eco/changes — ECO变更看板(聚合数据: 按状态统计, 按类型分布, 本月新增, 待验证等)"
+        ],
+        "state_transition_rules": {
+          "DRAFT": ["IMPLEMENTING"],
+          "IMPLEMENTING": ["VERIFIED", "CANCELLED"],
+          "VERIFIED": ["EFFECTIVE", "CANCELLED"],
+          "EFFECTIVE": ["CLOSED"],
+          "CLOSED": [],
+          "CANCELLED": []
+        },
+        "eco_changes_dashboard": {
+          "endpoint": "GET /api/eco/changes",
+          "response": {
+            "status_summary": {"draft": 5, "implementing": 3, "verified": 2, "effective": 10, "closed": 20, "cancelled": 1},
+            "type_distribution": {"ADD": 8, "MODIFY": 15, "REPLACE": 4, "DELETE": 2, "DISABLE": 1},
+            "this_month_new": 7,
+            "pending_verification": 2,
+            "recent_changes": [{"id": 1, "code": "ECO-20260625-0001", "title": "...", "status": "implementing", "created_at": "..."}]
+          }
+        },
+        "permissions": "require_menu('changes')"
+      }
+    },
+    {
+      "id": "s3-t5",
+      "title": "审批工作流集成",
+      "domain_tags": ["python", "fastapi", "approval", "integration"],
+      "risk_level": "medium",
+      "estimated_complexity": 5,
+      "effort_days": 1.5,
+      "details": {
+        "description": "Integrate ECR with the existing approval system (approval_chains + approval_requests)",
+        "files_to_modify": ["backend/app/api/approvals.py", "backend/app/api/ecr.py"],
+        "workflow": {
+          "ecr_approval_chain": {
+            "code": "ecr_approval",
+            "name": "ECR审批链",
+            "steps": [
+              {"seq": 1, "role": "rd_director", "name": "研发总监审批", "step_type": "sequential"},
+              {"seq": 2, "role": "quality_engineer", "name": "品质工程师会签", "step_type": "sequential"},
+              {"seq": 3, "role": "module_manager", "name": "模块经理会签", "step_type": "sequential"}
+            ]
+          },
+          "auto_approval_chain_setup": "启动时或首次使用时自动创建 ecr_approval 审批链(如果不存在)",
+          "submit_flow": "POST /api/ecr/{id}/submit → 创建 ApprovalRequest(request_type='ecr', request_id=ecr.id) → ECR.status→SUBMITTED",
+          "approve_callback": "ApprovalRequest 被逐步骤审批, 最终全部通过后触发 ECR status→APPROVED",
+          "reject_callback": "任一审批人驳回 → ECR status→REJECTED, 记录 rejection_reason",
+          "extend_approval_request_type": "将 request_type 正则扩展以包含 'ecr' (当前已支持, pattern='^(ecr|purchase|register|proposal)$')"
+        }
+      }
+    },
+    {
+      "id": "s3-t6",
+      "title": "菜单注册 + 权限配置",
+      "domain_tags": ["python", "permissions", "rbac"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "effort_days": 0.5,
+      "details": {
+        "description": "Register ECR/ECO menus and paths in the RBAC permission system",
+        "files_to_modify": [
+          "backend/app/core/permissions.py"
+        ],
+        "changes": {
+          "ALL_MENUS": "Add 'ecr' and 'eco' entries (these are sub-menus under the existing 'changes' parent menu)",
+          "MENU_PATH_MAP": "Add 'ecr' → '/ecr', 'eco' → '/eco'",
+          "API_MENU_MAP": "Add 'ecr' → 'changes', 'eco' → 'changes'",
+          "ROLE_MENU_MAP": "Add 'ecr'/'eco' to all roles that currently have 'changes' (rd_director, systems_engineer, structural_engineer, electrical_control_engineer, electrical_engineer, quality_engineer, process_engineer, project_admin, module_manager*, security_officer, engineer)",
+          "frontend_types/roles.ts": "Add '/ecr' and '/eco' to relevant menu items if sidebar integration needed"
+        },
+        "note": "The 'changes' menu already exists as the parent for change management. ECR/ECO are sub-pages under it."
+      }
+    },
+    {
+      "id": "s3-t7",
+      "title": "前端 API 层 (TypeScript)",
+      "domain_tags": ["typescript", "frontend", "api", "axios"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "effort_days": 0.5,
+      "details": {
+        "description": "Create TypeScript API modules for ECR and ECO endpoints",
+        "files_to_create": [
+          "frontend/src/api/ecr.ts",
+          "frontend/src/api/eco.ts"
+        ],
+        "api_functions": {
+          "ecr.ts": [
+            "fetchECRs(params): GET /api/ecr",
+            "fetchECR(id): GET /api/ecr/{id}",
+            "createECR(data): POST /api/ecr",
+            "updateECR(id, data): PUT /api/ecr/{id}",
+            "deleteECR(id): DELETE /api/ecr/{id}",
+            "submitECR(id): POST /api/ecr/{id}/submit",
+            "withdrawECR(id): POST /api/ecr/{id}/withdraw",
+            "reviewECR(id): POST /api/ecr/{id}/review",
+            "approveECR(id): POST /api/ecr/{id}/approve",
+            "rejectECR(id, reason): POST /api/ecr/{id}/reject",
+            "convertToECO(id): POST /api/ecr/{id}/convert",
+            "uploadAttachment(ecrId, file): POST /api/ecr/{ecrId}/attachments",
+            "deleteAttachment(ecrId, attId): DELETE /api/ecr/{ecrId}/attachments/{attId}"
+          ],
+          "eco.ts": [
+            "fetchECOs(params): GET /api/eco",
+            "fetchECO(id): GET /api/eco/{id}",
+            "createECO(data): POST /api/eco",
+            "updateECO(id, data): PUT /api/eco/{id}",
+            "deleteECO(id): DELETE /api/eco/{id}",
+            "implementECO(id): POST /api/eco/{id}/implement",
+            "verifyECO(id): POST /api/eco/{id}/verify",
+            "effectiveECO(id): POST /api/eco/{id}/effective",
+            "closeECO(id): POST /api/eco/{id}/close",
+            "cancelECO(id): POST /api/eco/{id}/cancel",
+            "addECOItem(ecoId, data): POST /api/eco/{ecoId}/items",
+            "updateECOItem(ecoId, itemId, data): PUT /api/eco/{ecoId}/items/{itemId}",
+            "deleteECOItem(ecoId, itemId): DELETE /api/eco/{ecoId}/items/{itemId}",
+            "fetchChangeDashboard(): GET /api/eco/changes"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s3-t8",
+      "title": "前端 ECR 列表 + 详情视图",
+      "domain_tags": ["vue3", "element-plus", "typescript", "frontend", "ecr"],
+      "risk_level": "high",
+      "estimated_complexity": 7,
+      "effort_days": 2.5,
+      "details": {
+        "description": "Build ECR list view and detail page with full CRUD, status transitions, attachments, and approval integration",
+        "files_to_create": [
+          "frontend/src/views/changes/ECRListView.vue (列表页: 表格+筛选+搜索+分页+新建按钮)",
+          "frontend/src/views/changes/ECRDetailView.vue (详情页: 基本信息+状态时间线+附件列表+关联ECO+操作按钮)"
+        ],
+        "features": {
+          "ECRListView": [
+            "el-table 展示: 编号, 标题, 类型, 紧急度, 状态(彩色tag), 提交人, 创建时间",
+            "筛选栏: 状态, 类型, 紧急度, 日期范围, 关键字搜索",
+            "新建按钮 → 弹出对话框(标题/类型/原因/紧急度/影响产品/影响文件/描述)",
+            "点击行 → 跳转详情页 /ecr/{id}",
+            "分页支持",
+            "批量操作(可选): 批量提交"
+          ],
+          "ECRDetailView": [
+            "顶部: ECR编号 + 状态标签 + 操作按钮(提交/撤回/批准/驳回/转ECO)",
+            "基本信息卡片: 类型, 紧急度, 影响产品(JSON渲染为标签), 提交人, 创建/更新时间",
+            "原因描述卡片: 变更原因与详细描述",
+            "附件列表卡片: 上传/下载/删除",
+            "状态时间线: 使用 el-timeline 展示变更历史",
+            "关联ECO: 如果有已转换的ECO, 显示链接",
+            "审批信息: 当前审批步骤/状态(若处于审批流程中)",
+            "按钮权限根据当前状态动态控制: DRAFT→显示[提交], SUBMITTED→显示[撤回][审批操作], APPROVED→显示[转ECO], etc."
+          ]
+        },
+        "note": "This replaces the existing ChangesView.vue 'ECR' tab with a standalone page."
+      }
+    },
+    {
+      "id": "s3-t9",
+      "title": "前端 ECO 列表 + 详情 + 看板视图",
+      "domain_tags": ["vue3", "element-plus", "typescript", "frontend", "eco"],
+      "risk_level": "high",
+      "estimated_complexity": 8,
+      "effort_days": 3,
+      "details": {
+        "description": "Build ECO list view, detail page with item management, and change dashboard",
+        "files_to_create": [
+          "frontend/src/views/changes/ECOListView.vue (列表页)",
+          "frontend/src/views/changes/ECODetailView.vue (详情页+明细项管理)",
+          "frontend/src/views/changes/ECOChDashboard.vue (变更看板)"
+        ],
+        "features": {
+          "ECOListView": [
+            "el-table: 编号, 标题, 状态(implementing/verified等彩色tag), 关联ECR, 生效日期, 创建人, 创建时间",
+            "筛选: 状态, 日期范围, 关键字",
+            "新建ECO按钮(可选择从已批准的ECR转换, 或直接创建)",
+            "行点击跳转 /eco/{id}"
+          ],
+          "ECODetailView": [
+            "顶部: ECO编号 + 状态 + 操作按钮(实施/验证/生效/关闭/取消)",
+            "基本信息: 关联ECR链接, 变更摘要, 实施方案, 生效日期",
+            "明细项表格: el-table editable, 字段: 序号, 变更类型(新增/修改/替换/删除), 对象类型(物料/BOM/文档/认证), 对象编码, 对象名称, 原值, 新值, 描述",
+            "明细项CRUD: 行内编辑或弹出对话框, 新增/修改/删除",
+            "状态流时间线",
+            "关联ECR信息卡片(如果有)",
+            "按钮状态控制: DRAFT→[实施], IMPLEMENTING→[验证], VERIFIED→[生效], EFFECTIVE→[关闭], 任意→[取消]"
+          ],
+          "ECOChDashboard": [
+            "统计卡片: 本月新增, 进行中, 待验证, 已生效, 本月关闭",
+            "状态分布饼图/环图(使用 ECharts 或 el-progress)",
+            "变更类型分布柱状图",
+            "最近变更列表(最近10条)",
+            "实现方式: 调用 GET /api/eco/changes"
+          ]
+        },
+        "note": "This replaces the existing ChangesView.vue 'ECN' tab with a more powerful ECO module."
+      }
+    },
+    {
+      "id": "s3-t10",
+      "title": "前端路由更新 + 侧边栏",
+      "domain_tags": ["vue-router", "frontend", "typescript"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "effort_days": 0.5,
+      "details": {
+        "description": "Add ECR/ECO routes to frontend router and update sidebar navigation",
+        "files_to_modify": [
+          "frontend/src/router/index.ts",
+          "frontend/src/types/roles.ts (optional, for menu icon/label updates)"
+        ],
+        "routes_to_add": [
+          {
+            "path": "ecr",
+            "name": "ECRList",
+            "component": "import('../views/changes/ECRListView.vue')",
+            "meta": {"title": "ECR变更申请", "menu": "changes"}
+          },
+          {
+            "path": "ecr/:id",
+            "name": "ECRDetail",
+            "component": "import('../views/changes/ECRDetailView.vue')",
+            "meta": {"title": "ECR详情", "menu": "changes"}
+          },
+          {
+            "path": "eco",
+            "name": "ECOList",
+            "component": "import('../views/changes/ECOListView.vue')",
+            "meta": {"title": "ECO变更指令", "menu": "changes"}
+          },
+          {
+            "path": "eco/:id",
+            "name": "ECODetail",
+            "component": "import('../views/changes/ECODetailView.vue')",
+            "meta": {"title": "ECO详情", "menu": "changes"}
+          },
+          {
+            "path": "eco/changes",
+            "name": "ECOChDashboard",
+            "component": "import('../views/changes/ECOChDashboard.vue')",
+            "meta": {"title": "变更看板", "menu": "changes"}
+          }
+        ],
+        "sidebar_update": "Optionally update ALL_MENUS in roles.ts to add sub-items under /changes, or keep the existing /changes route redirect to a tabbed page that includes ECR/ECO/Dashboard tabs",
+        "legacy_route": "Keep the existing /changes route but consider redirecting it to /ecr or a combined overview page"
+      }
+    },
+    {
+      "id": "s3-t11",
+      "title": "BOM 联动集成 (ECO→BOM 自动更新)",
+      "domain_tags": ["python", "fastapi", "bom", "integration", "service"],
+      "risk_level": "medium",
+      "estimated_complexity": 5,
+      "effort_days": 1.5,
+      "details": {
+        "description": "When ECO becomes effective, automatically update related BOM/Parts based on ECO items",
+        "files_to_create": ["backend/app/services/eco_bom_service.py"],
+        "files_to_modify": ["backend/app/api/eco.py"],
+        "implementation": {
+          "on_eco_effective": {
+            "trigger": "在 POST /api/eco/{id}/effective 中调用",
+            "logic": [
+              "遍历 ECO 的所有 ECOItem",
+              "对于 object_type='PART' 的项: 更新 Part 表的对应字段(old_value→new_value)",
+              "对于 object_type='BOM' 的项: 更新 BOM/BOMItem 表",
+              "对于 object_type='DOCUMENT' 的项: 创建文档版本记录",
+              "记录审计日志: AuditLog(entity_type='ECO', entity_id=eco_id, action='effective')",
+              "支持事务回滚: 任一操作失败则整体回滚, ECO 状态回退至 VERIFIED"
+            ],
+            "rollback": "如果 BOM 更新失败, ECO 保持在 VERIFIED 状态, 记录错误日志"
+          }
+        }
+      }
+    },
+    {
+      "id": "s3-t12",
+      "title": "S2 变更影响分析集成",
+      "domain_tags": ["python", "fastapi", "s2", "change_impact", "integration"],
+      "risk_level": "medium",
+      "estimated_complexity": 4,
+      "effort_days": 1,
+      "details": {
+        "description": "Link ECR with existing S2 ChangeImpactRule/Record system for automated impact analysis",
+        "files_to_modify": [
+          "backend/app/api/ecr.py",
+          "backend/app/models/change_impact.py (optional: enhance relationships)",
+          "frontend/src/views/changes/ECRDetailView.vue (add impact analysis section)"
+        ],
+        "integration_points": {
+          "ecr_create": "创建 ECR 时, 如果 affected_products 包含已有关联变更影响记录, 显示链接",
+          "ecr_detail": "在 ECR 详情页展示关联的 ChangeImpactRecord 列表(如有)",
+          "impact_analysis_trigger": "ECR 提交后可触发重新运行 S2 变更影响分析(调用 s2_change_impact API)",
+          "data_linkage": "ChangeImpactRecord.ecr_id 字段已预留, 用于关联 ECR 请求",
+          "visualization": "在 ECR 详情页增加「认证影响分析」卡片, 展示受影响的认证类型和影响等级"
+        }
+      }
+    },
+    {
+      "id": "s3-t13",
+      "title": "模块注册 + 数据迁移脚本 + 文档",
+      "domain_tags": ["python", "deployment", "migration", "docs"],
+      "risk_level": "low",
+      "estimated_complexity": 3,
+      "effort_days": 1,
+      "details": {
+        "description": "Register new API modules, create database migration, update models/__init__.py, and write migration script from old ECR/ECN tables",
+        "files_to_modify": [
+          "backend/app/api/__init__.py (add s3_ecr, s3_eco imports)",
+          "backend/app/models/__init__.py (add ECRRequest, ECO, ECOItem, ECRAttachment imports)"
+        ],
+        "registration": {
+          "api_init": "Add 's3_ecr' and 's3_eco' modules to both the import block and __all__ in api/__init__.py",
+          "models_init": "Add 'ECRRequest', 'ECO', 'ECOItem', 'ECRAttachment' imports"
+        },
+        "migration": {
+          "type": "Manual SQL script or Alembic migration",
+          "new_tables": [
+            "CREATE TABLE ecr_requests (...)",
+            "CREATE TABLE ecos (...)",
+            "CREATE TABLE eco_items (...)",
+            "CREATE TABLE ecr_attachments (...)"
+          ],
+          "data_migration_optional": "如果要将旧 ecrs/ecns 数据迁移到新表, 提供可选脚本",
+          "approval_chain_seed": "INSERT INTO approval_chains (code, name, description) VALUES ('ecr_approval', 'ECR审批链', 'ECR工程变更审批流程')"
+        },
+        "documentation": "Update API docs (auto-generated by FastAPI Swagger), add module description in project docs"
+      }
+    }
+  ],
+  "execution_order": [
+    "s3-t1", "s3-t2", "s3-t3", "s3-t4", "s3-t5", "s3-t6",
+    "s3-t13", "s3-t7", "s3-t8", "s3-t9", "s3-t10",
+    "s3-t11", "s3-t12"
+  ],
+  "reasoning": "执行顺序基于严格的依赖关系: (1) 先定义枚举+数据模型(s3-t1), 因为其他所有任务都依赖模型定义; (2) 然后创建 Pydantic Schema(s3-t2), 因为 API 路由需要 Schema 做请求/响应验证; (3) 核心 API 模块(s3-t3, s3-t4)优先开发, 它们是前后端的数据通道; (4) 审批集成(s3-t5)紧随 ECR API 之后, 因为 approve/reject 状态流转依赖审批系统; (5) 权限配置(s3-t6)在 API 开发之后, 确保路由存在后再注册; (6) 模块注册+迁移(s3-t13)在 API 开发完成后, 确保所有模块可被框架发现; (7) 前端 API 层(s3-t7)在后端 API 稳定后开发; (8) 前端视图(s3-t8, s3-t9, s3-t10)依赖前端 API 和路由定义; (9) BOM 集成(s3-t11)和 S2 集成(s3-t12)放在最后, 因为它们依赖 ECO/ECR API 的稳定, 且变更风险较高, 需要在核心功能验证后再接入。总计约 13 个任务, 预估 20 人天工作量。",
+  "risk_assessment": {
+    "overall_risk": "medium",
+    "risk_factors": [
+      {
+        "factor": "新模型与旧 ECR/ECN 模型共存的数据一致性问题",
+        "severity": "medium",
+        "mitigation": "新表使用独立表名(ecr_requests/ecos), 旧表(ecrs/ecns)保持不动。可选迁移脚本将旧数据导入新表后废弃旧表。"
+      },
+      {
+        "factor": "审批流集成复杂度",
+        "severity": "medium",
+        "mitigation": "复用现有 approval_requests 表的 request_type='ecr' 模式, 已有 ApprovalRequestCreate 支持该 pattern。只需要配置审批链步骤即可。"
+      },
+      {
+        "factor": "BOM 自动更新的数据一致性风险",
+        "severity": "high",
+        "mitigation": "使用事务包裹所有 BOM 更新操作, 失败时整体回滚并保持 ECO 在 VERIFIED 状态。实现 Saga 补偿事务模式。"
+      },
+      {
+        "factor": "前端状态机按钮逻辑复杂",
+        "severity": "medium",
+        "mitigation": "前端使用状态-动作映射表统一管理按钮可见性, 后端返回 allowed_actions 列表辅助前端判断。"
+      },
+      {
+        "factor": "现有 ChangesView.vue 的平滑替换",
+        "severity": "low",
+        "mitigation": "保留旧视图文件, 新增独立视图文件。路由使用新路径 /ecr 和 /eco, 旧 /changes 可重定向到 /ecr 或保留为组合页面。"
+      }
+    ],
+    "estimated_total_effort_days": 20,
+    "recommended_parallel_tracks": [
+      ["s3-t1(模型)", "s3-t6(权限)"],
+      ["s3-t3(ECR API)", "s3-t4(ECO API)"],
+      ["s3-t8(ECR视图)", "s3-t9(ECO视图)"],
+      ["s3-t11(BOM集成)", "s3-t12(S2集成)"]
+    ],
+    "critical_path": "s3-t1 → s3-t2 → s3-t3 → s3-t5 → s3-t7 → s3-t8, s3-t10 (ECR 核心链路)"
+  },
+  "file_manifest": {
+    "files_to_create": [
+      "backend/app/models/ecr_eco.py",
+      "backend/app/api/ecr.py",
+      "backend/app/api/eco.py",
+      "backend/app/services/eco_bom_service.py",
+      "frontend/src/api/ecr.ts",
+      "frontend/src/api/eco.ts",
+      "frontend/src/views/changes/ECRListView.vue",
+      "frontend/src/views/changes/ECRDetailView.vue",
+      "frontend/src/views/changes/ECOListView.vue",
+      "frontend/src/views/changes/ECODetailView.vue",
+      "frontend/src/views/changes/ECOChDashboard.vue"
+    ],
+    "files_to_modify": [
+      "backend/app/core/enums.py (add ECR/ECO enums)",
+      "backend/app/schemas/__init__.py (add schemas)",
+      "backend/app/api/__init__.py (register new modules)",
+      "backend/app/models/__init__.py (register new models)",
+      "backend/app/core/permissions.py (register menus, paths)",
+      "backend/app/api/approvals.py (optional: extend for ECR auto-approval callback)",
+      "frontend/src/router/index.ts (add routes)",
+      "frontend/src/types/roles.ts (optional)"
+    ]
+  },
+  "api_endpoint_summary": {
+    "prefix_ecr": "/api/ecr",
+    "prefix_eco": "/api/eco",
+    "total_new_endpoints": 27,
+    "ecr_endpoints": [
+      "POST   /api/ecr",
+      "GET    /api/ecr",
+      "GET    /api/ecr/{ecr_id}",
+      "PUT    /api/ecr/{ecr_id}",
+      "DELETE /api/ecr/{ecr_id}",
+      "POST   /api/ecr/{ecr_id}/submit",
+      "POST   /api/ecr/{ecr_id}/withdraw",
+      "POST   /api/ecr/{ecr_id}/review",
+      "POST   /api/ecr/{ecr_id}/approve",
+      "POST   /api/ecr/{ecr_id}/reject",
+      "POST   /api/ecr/{ecr_id}/convert",
+      "POST   /api/ecr/{ecr_id}/attachments",
+      "DELETE /api/ecr/{ecr_id}/attachments/{att_id}"
+    ],
+    "eco_endpoints": [
+      "POST   /api/eco",
+      "GET    /api/eco",
+      "GET    /api/eco/{eco_id}",
+      "PUT    /api/eco/{eco_id}",
+      "DELETE /api/eco/{eco_id}",
+      "POST   /api/eco/{eco_id}/implement",
+      "POST   /api/eco/{eco_id}/verify",
+      "POST   /api/eco/{eco_id}/effective",
+      "POST   /api/eco/{eco_id}/close",
+      "POST   /api/eco/{eco_id}/cancel",
+      "POST   /api/eco/{eco_id}/items",
+      "PUT    /api/eco/{eco_id}/items/{item_id}",
+      "DELETE /api/eco/{eco_id}/items/{item_id}",
+      "GET    /api/eco/changes"
+    ]
+  },
+  "frontend_route_summary": {
+    "new_routes": [
+      "/ecr",
+      "/ecr/:id",
+      "/eco",
+      "/eco/:id",
+      "/eco/changes"
+    ],
+    "existing_route_to_update": "/changes (保持或重定向到 /ecr)"
+  },
+  "integration_checklist": {
+    "approvals": "复用 approval_requests(request_type='ecr'), 需配置 ecr_approval 审批链",
+    "bom": "ECO VERIFIED→EFFECTIVE 时触发 eco_bom_service.on_eco_effective()",
+    "s2_change_impact": "ECRDetailView 展示关联的 ChangeImpactRecord, ecr_id 字段已预留",
+    "permissions": "使用现有的 require_menu('changes') 保护 API, 新增 ecr/eco 子菜单入口",
+    "existing_frontend": "保留 ChangesView.vue 作为向后兼容, 新增独立 ECR/ECO 视图"
+  }
+}

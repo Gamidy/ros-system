@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI API Key 设置</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; }
+.container { max-width: 600px; margin: 80px auto; padding: 20px; }
+.card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px; }
+h1 { font-size: 22px; margin-bottom: 24px; color: #1a1a1a; }
+.form-group { margin-bottom: 20px; }
+label { display: block; margin-bottom: 6px; font-size: 14px; color: #666; }
+input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; outline: none; transition: border .2s; }
+input:focus { border-color: #409eff; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 20px; border-radius: 6px; font-size: 14px; border: none; cursor: pointer; transition: all .2s; }
+.btn-primary { background: #409eff; color: #fff; }
+.btn-primary:hover { background: #66b1ff; }
+.btn-danger { background: #f56c6c; color: #fff; }
+.btn-danger:hover { background: #f89898; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.status-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+.status-ok { background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
+.status-no { background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; }
+.msg { padding: 10px 14px; border-radius: 6px; margin-top: 16px; font-size: 13px; display: none; }
+.msg-success { display: block; background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
+.msg-error { display: block; background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; }
+.hint { font-size: 12px; color: #999; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>🔑 AI API Key 设置</h1>
+    <div id="statusBar" class="status-bar status-no">
+      <span id="statusIcon">⚪</span>
+      <span id="statusText">正在检查状态...</span>
+    </div>
+    <div class="form-group">
+      <label>API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="输入您的 AI API Key">
+      <div class="hint">用于调用 AI 模型服务（如 DeepSeek、OpenAI 等）</div>
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button class="btn btn-primary" id="saveBtn" onclick="saveKey()">保存</button>
+      <button class="btn btn-danger" id="deleteBtn" onclick="deleteKey()">删除</button>
+    </div>
+    <div id="msg" class="msg"></div>
+  </div>
+</div>
+<script>
+const API = "/api/admin/ai-key";
+let status = { configured: false };
+
+async function getToken() {
+  const t = localStorage.getItem("token");
+  if (t) return t;
+  return "";
+}
+
+async function checkStatus() {
+  try {
+    const token = await getToken();
+    const res = await fetch(API, { headers: { Authorization: "Bearer " + token } });
+    if (res.ok) status = await res.json();
+    else if (res.status === 401) { showMsg("请先登录系统", "error"); return; }
+    updateUI();
+  } catch(e) { showMsg("无法连接服务器", "error"); }
+}
+
+function updateUI() {
+  const bar = document.getElementById("statusBar");
+  const icon = document.getElementById("statusIcon");
+  const text = document.getElementById("statusText");
+  if (status.configured) {
+    bar.className = "status-bar status-ok";
+    icon.textContent = "✅";
+    text.textContent = "已配置 (" + (status.key_prefix || "***") + ")";
+  } else {
+    bar.className = "status-bar status-no";
+    icon.textContent = "⚪";
+    text.textContent = "未配置";
+  }
+}
+
+async function saveKey() {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  if (!key) { showMsg("请输入 API Key", "error"); return; }
+  const token = await getToken();
+  document.getElementById("saveBtn").disabled = true;
+  try {
+    const res = await fetch(API, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ key })
+    });
+    if (res.ok) {
+      showMsg("API Key 已保存", "success");
+      document.getElementById("apiKeyInput").value = "";
+      await checkStatus();
+    } else {
+      const d = await res.json();
+      showMsg(d.detail || "保存失败", "error");
+    }
+  } catch(e) { showMsg("请求失败", "error"); }
+  document.getElementById("saveBtn").disabled = false;
+}
+
+async function deleteKey() {
+  if (!confirm("确定删除 API Key？")) return;
+  const token = await getToken();
+  document.getElementById("deleteBtn").disabled = true;
+  try {
+    const res = await fetch(API, { method: "DELETE", headers: { Authorization: "Bearer " + token } });
+    if (res.ok) {
+      showMsg("API Key 已删除", "success");
+      await checkStatus();
+    } else showMsg("删除失败", "error");
+  } catch(e) { showMsg("请求失败", "error"); }
+  document.getElementById("deleteBtn").disabled = false;
+}
+
+function showMsg(text, type) {
+  const msg = document.getElementById("msg");
+  msg.textContent = text;
+  msg.className = "msg msg-" + type;
+  setTimeout(() => { msg.className = "msg"; }, 3000);
+}
+
+checkStatus();
+</script>
+</body>
+</html>
