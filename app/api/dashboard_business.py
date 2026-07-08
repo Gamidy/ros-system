@@ -59,20 +59,20 @@ def _build_production_sales(db: Session) -> ProductionSalesPillar:
             avg_days = db.query(func.avg(DeliveryRecord.cycle_days)).scalar()
             avg_delivery_cycle_days = round(avg_days, 1) if avg_days else None
         except Exception:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             avg_delivery_cycle_days = None
         try:
             inv = db.query(func.avg(InventorySnapshot.turnover_rate)).scalar()
             inventory_turnover_rate = round(inv, 1) if inv else None
         except Exception:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             inventory_turnover_rate = None
         try:
             total_deliveries = db.query(func.count(DeliveryRecord.id)).scalar() or 0
             on_time_deliveries = db.query(func.count(DeliveryRecord.id)).filter(DeliveryRecord.on_time == True).scalar() or 0
             otd_rate = round((on_time_deliveries / max(total_deliveries, 1)) * 100, 1) if total_deliveries > 0 else None
         except Exception:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             otd_rate = None
         return ProductionSalesPillar(
             total_projects=total_projects, running_projects=running_projects,
@@ -86,7 +86,7 @@ def _build_production_sales(db: Session) -> ProductionSalesPillar:
             on_time_delivery_rate=otd_rate,
         )
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return ProductionSalesPillar()
 
 
@@ -102,13 +102,13 @@ def _build_financial_control(db: Session) -> FinancialControlPillar:
             from app.models.product_plan_subs import ProjectCostItem
             cost_orders = db.query(func.count(ProjectCostItem.id)).scalar() or 0
         except Exception:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             cost_orders = 0
         try:
             from app.models.certification import CostAccountingPeriod
             cost_periods = db.query(func.count(CostAccountingPeriod.id)).scalar() or 0
         except Exception:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             cost_periods = 0
         return FinancialControlPillar(
             total_purchase_orders=total_purchase_orders,
@@ -119,7 +119,7 @@ def _build_financial_control(db: Session) -> FinancialControlPillar:
             cost_execution_rate=0.0, cost_overrun_alerts=0,
         )
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return FinancialControlPillar()
 
 
@@ -161,7 +161,7 @@ def _build_growth_engine(db: Session) -> GrowthEnginePillar:
             total_products=total_products, total_versions=total_versions,
         )
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return GrowthEnginePillar()
 
 
@@ -218,7 +218,7 @@ def _build_efficiency(db: Session) -> EfficiencyMetricsPillar:
             alert_count=total_alerts, overdue_alert_count=overdue_alerts,
         )
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return EfficiencyMetricsPillar()
 
 

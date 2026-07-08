@@ -113,7 +113,7 @@ def on_test_done_with_ng(test_id: int, request_no: str, ng_count: int, **kwargs)
             )
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("on_test_done_with_ng 处理失败: %s", e)
     finally:
@@ -168,7 +168,7 @@ def on_alert_overdue_found(alert_id: int, target_type: str, target_id: int, **kw
         )
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("on_alert_overdue_found 处理失败: %s", e)
     finally:
@@ -318,7 +318,7 @@ def _on_safety_alert(**kwargs):
         db.commit()
         logger.info("safety alert notification created: alert_id=%s", alert_id)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("_on_safety_alert 失败: %s", e)
     finally:
@@ -343,7 +343,7 @@ def _on_purchase_approved(**kwargs):
         db.commit()
         logger.info("purchase approved notification: order_id=%s", order_id)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("_on_purchase_approved 失败: %s", e)
     finally:
@@ -436,7 +436,7 @@ def on_review_to_knowledge(review_id: str = "", product_plan_id: str = "", **kwa
         db.commit()
         logger.info("review knowledge created: review_id=%s, knowledge_id=%s", review_id, knowledge.id)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("on_review_to_knowledge 失败: %s", e)
     finally:
@@ -468,7 +468,7 @@ def on_improvement_to_knowledge(improvement_id: str = "", title: str = "", **kwa
         db.commit()
         logger.info("improvement knowledge created: improvement_id=%s", improvement_id)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("on_improvement_to_knowledge 失败: %s", e)
     finally:
@@ -565,7 +565,7 @@ def on_plan_side_effect(**kwargs):
         logger.info("plan side_effect 完成: plan_id=%s, stage=%s", plan_id, new_stage)
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("on_plan_side_effect 处理失败: %s", e)
     finally:

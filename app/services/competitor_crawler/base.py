@@ -231,7 +231,7 @@ class BaseCompetitorCrawler(abc.ABC):
                     db.add(crawl_log)
                     db.commit()
                 except Exception:
-                    logger.exception(f"unexpected: {e}")
+                    logger.exception("unexpected error")
                     db.rollback()
 
         return stats

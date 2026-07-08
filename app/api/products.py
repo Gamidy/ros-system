@@ -181,7 +181,7 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db), _=Depends
         db.commit()
         db.refresh(p)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"产品创建失败: {e}")
         raise

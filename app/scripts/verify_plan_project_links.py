@@ -285,7 +285,7 @@ def main():
         print_report(plan_results, project_results, legacy_results, repair_results)
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         print(f"\n❌ 检查过程中发生错误: {e}")
         db.rollback()
         sys.exit(1)

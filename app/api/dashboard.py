@@ -88,7 +88,7 @@ def _build_layer1(db: Session) -> Layer1SystemHealth:
             product_status_distribution=product_status_distribution,
         )
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return Layer1SystemHealth(
             total_platforms=0, total_products=0, total_versions=0,
             active_projects=0, product_status_distribution={},
@@ -121,7 +121,7 @@ def _build_layer2_stats(db: Session, today: date) -> tuple[int, float, int]:
         )
         return project_count, on_time_rate, overdue_count
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return 0, 0.0, 0
 
 
@@ -137,7 +137,7 @@ def _build_recent_projects(db: Session) -> list[RecentProjectSummary]:
         return [RecentProjectSummary(id=r[0], code=r[1], name=r[2], status=r[3],
                 project_class=r[4], target_end_date=r[5], owner=r[6]) for r in rows]
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return []
 
 
@@ -156,7 +156,7 @@ def _build_layer2_extra(db: Session) -> tuple[dict[str, int], int]:
         )
         return project_status_distribution, pending_approvals_count
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return {}, 0
 
 
@@ -173,7 +173,7 @@ def _build_layer2(db: Session, today: date) -> Layer2ProjectOps:
             project_status_distribution=project_status_distribution,
         )
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return Layer2ProjectOps(
             project_count=0, on_time_rate=0.0, overdue_count=0,
             pending_approvals_count=0, recent_projects=[],
@@ -206,7 +206,7 @@ def _build_penetration_product(db: Session, product_code: str) -> tuple:
             )
         return product, platform_obj, versions_list
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return None, None, []
 
 
@@ -222,7 +222,7 @@ def _build_penetration_gates(db: Session, project_id: int) -> list[dict]:
                  "actual_date": g.actual_date.isoformat() if g.actual_date else None}
                 for g in gates_rows]
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return []
 
 
@@ -252,7 +252,7 @@ def _build_layer3(db: Session) -> Optional[dict]:
         gates_list = _build_penetration_gates(db, project.id)
         return _assemble_layer3(project, product, platform_obj, versions_list, gates_list)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return None
 
 
@@ -277,7 +277,7 @@ def _build_phase_progress(db: Session) -> tuple[dict[str, float], list[dict]]:
             phase_progress_array.append({"gate_code": code, "total": total, "passed": passed, "rate": rate})
         return phase_progress, phase_progress_array
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return {}, []
 
 
@@ -298,7 +298,7 @@ def _build_layer4(db: Session) -> Layer4ACMetrics:
             total_issues=total_issues, closed_issues=closed_issues,
         )
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return Layer4ACMetrics(
             phase_progress={}, test_pass_rate=0.0, issue_close_rate=0.0,
             cost_execution_rate=0.0, generalization_rate=0.0,

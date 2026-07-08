@@ -175,7 +175,7 @@ def test_connection(
         content = (resp.choices[0].message.content or "").strip()
         logger.info("AI test OK: %s (%dms) reply=%s", config.provider, elapsed_ms, content)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         elapsed_ms = int((time.time() - start) * 1000)
         success = False
         error_msg = str(e)

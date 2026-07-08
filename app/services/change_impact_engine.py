@@ -400,7 +400,7 @@ class ChangeImpactEngine:
         try:
             self.analyze_by_ecr(ecr_id)
         except Exception as e:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             import logging
             logging.getLogger(__name__).exception(
                 "analyze_by_ecr failed for ecr_id=%s: %s", ecr_id, e
@@ -413,7 +413,7 @@ class ChangeImpactEngine:
         try:
             self.analyze_by_eco(eco_id)
         except Exception as e:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             import logging
             logging.getLogger(__name__).exception(
                 "analyze_by_eco failed for eco_id=%s: %s", eco_id, e
@@ -426,7 +426,7 @@ class ChangeImpactEngine:
         try:
             self.analyze_prototype_change(prototype_id)
         except Exception as e:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             import logging
             logging.getLogger(__name__).exception(
                 "analyze_prototype_change failed for prototype_id=%s: %s",

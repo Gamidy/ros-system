@@ -82,7 +82,7 @@ def _log_notification(
         db.add(log)
         db.commit()
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("通知日志记录失败: %s", e)
 

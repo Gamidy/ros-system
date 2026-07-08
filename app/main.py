@@ -168,6 +168,13 @@ app.include_router(dashboard_alerts.router, prefix="/api")
 app.include_router(dashboard_business.router, prefix="/api")
 app.include_router(dashboard_kpi.router, prefix="/api")
 app.include_router(approvals.router, prefix="/api")
+# 复数别名 — 前端 GlobalActionCard 调用 /api/approvals/requests（复数）
+# approvals.router自带prefix=/approval，直接include会变成/approvals/approval/双重路径
+# 正确做法：遍历router.routes，为每个/approval/*路由注册/approvals/*复数别名
+for _route in list(approvals.router.routes):
+    if hasattr(_route, 'path') and _route.path.startswith('/approval'):
+        _plural_path = '/approvals' + _route.path[len('/approval'):]
+        app.add_api_route('/api' + _plural_path, _route.endpoint, methods=_route.methods, include_in_schema=False)
 app.include_router(purchases.router, prefix="/api")
 app.include_router(purchases_supplier.router, prefix="/api")
 app.include_router(purchases_receipt.router, prefix="/api")

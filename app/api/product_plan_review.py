@@ -362,7 +362,7 @@ def create_review(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建复盘失败: {str(e)}")
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建复盘失败: {str(e)}")
 
@@ -389,7 +389,7 @@ def get_review(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"查询复盘失败: {str(e)}")
 
 
@@ -440,7 +440,7 @@ def update_review(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"更新复盘失败: {str(e)}")
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"更新复盘失败: {str(e)}")
 
@@ -458,5 +458,5 @@ def get_auto_variance(
     try:
         return auto_calculate_variance(plan_id, db)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"自动计算偏差失败: {str(e)}")

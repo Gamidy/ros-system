@@ -105,6 +105,6 @@ def scan_and_remind():
         logger.info(f"审批催办扫描完成, 共处理 {len(pending_requests)} 条记录")
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"审批催办扫描异常: {e}")

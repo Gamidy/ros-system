@@ -119,12 +119,12 @@ def audit_stats(
         .group_by(AuditLog.resource_type)
         .all()
     )
-    # 按天统计
-    from sqlalchemy import cast, Date
+    # 按天统计 — 用 func.date() 避免 cast(Date) 在 NULL 值时触发 fromisoformat 崩溃
     by_day = (
-        query.with_entities(cast(AuditLog.created_at, Date), func.count(AuditLog.id))
-        .group_by(cast(AuditLog.created_at, Date))
-        .order_by(cast(AuditLog.created_at, Date))
+        query.filter(AuditLog.created_at.isnot(None))
+        .with_entities(func.date(AuditLog.created_at), func.count(AuditLog.id))
+        .group_by(func.date(AuditLog.created_at))
+        .order_by(func.date(AuditLog.created_at))
         .all()
     )
 

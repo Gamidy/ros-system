@@ -153,7 +153,7 @@ def list_tasks(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"查询改进任务列表失败: {str(e)}")
 
 
@@ -190,7 +190,7 @@ def create_task(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建改进任务失败: {str(e)}")
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建改进任务失败: {str(e)}")
 
@@ -269,7 +269,7 @@ def update_task(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"更新改进任务失败: {str(e)}")
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"更新改进任务失败: {str(e)}")
 
@@ -372,7 +372,7 @@ def list_all_reviews(
             })
         return {"items": items, "total": len(items)}
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"查询复盘列表失败: {str(e)}")
 
 
@@ -463,5 +463,5 @@ def compare_reviews(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"复盘对比查询失败: {str(e)}")

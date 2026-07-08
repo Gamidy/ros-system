@@ -229,7 +229,7 @@ def on_approval_completed(request_id: int, request_type: str, **kwargs):
         )
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("on_approval_completed 处理失败: %s", e, exc_info=True)
     finally:
@@ -282,7 +282,7 @@ def on_proposal_rejected(request_id: int, request_type: str, **kwargs):
         )
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("on_proposal_rejected 处理失败: %s", e, exc_info=True)
     finally:

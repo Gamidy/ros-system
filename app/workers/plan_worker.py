@@ -136,7 +136,7 @@ def process_plan_side_effect(self, plan_id: str, plan_name: str, new_stage: str,
         logger.info("SideEffect done: plan=%s, stage=%s", plan_id, new_stage)
 
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.exception("process_plan_side_effect 失败: plan=%s", plan_id)
         raise self.retry(exc=e)
@@ -171,7 +171,7 @@ def process_store_event(self, event_type: str, event_version: str = "v1",
         )
         db.commit()
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("Async store_event 失败: %s", e)
     finally:

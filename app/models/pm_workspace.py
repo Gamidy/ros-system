@@ -624,7 +624,7 @@ def pm_create_project(
         db.commit()
         db.refresh(p)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 
@@ -775,7 +775,7 @@ def pm_create_draft(
         db.commit()
         db.refresh(p)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 
@@ -924,7 +924,7 @@ def pm_update_draft(
         db.commit()
         db.refresh(p)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 
@@ -1005,7 +1005,7 @@ def pm_submit_draft(
         db.commit()
         db.refresh(p)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 
@@ -1051,7 +1051,7 @@ def pm_update_project(
         db.commit()
         db.refresh(p)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 
@@ -1129,7 +1129,7 @@ def create_planning_item(
         db.commit()
         db.refresh(ap)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 
@@ -1171,7 +1171,7 @@ def update_planning_item(
         db.rollback()
         raise
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 
@@ -1198,7 +1198,7 @@ def delete_planning_item(
         db.delete(ap)
         db.commit()
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise
 

@@ -272,7 +272,7 @@ def create_project(
                 logger.debug(f"ignored: {{e}}")
                 pass
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"项目创建失败: {e}")
         raise

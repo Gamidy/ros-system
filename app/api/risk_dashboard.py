@@ -45,7 +45,7 @@ def dashboard_mq_summary(
     try:
         return get_all_risk_summary()
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"获取物料风险总览失败: {e}")
 
 
@@ -83,7 +83,7 @@ def dashboard_mq_detail(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"获取物料风险详情失败: {e}")
 
 
@@ -112,7 +112,7 @@ def dashboard_mrc_summary(
     try:
         return get_all_mrc_summary()
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"获取制造就绪度总览失败: {e}")
 
 
@@ -152,7 +152,7 @@ def dashboard_mrc_detail(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"获取制造就绪度详情失败: {e}")
 
 
@@ -181,7 +181,7 @@ def dashboard_cdf_summary(
     try:
         return get_cert_dashboard()
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"获取认证看板失败: {e}")
 
 
@@ -215,7 +215,7 @@ def dashboard_cdf_detail(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"获取认证详情失败: {e}")
 
 
@@ -255,7 +255,7 @@ def dashboard_overview(
             "low_risk_count": mq["low_risk_count"],
         }
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         errors.append(f"物料风险: {e}")
         mq_result = {"error": f"获取物料风险总览失败: {e}"}
 
@@ -269,7 +269,7 @@ def dashboard_overview(
             "not_ready_count": mrc["not_ready_count"],
         }
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         errors.append(f"制造就绪度: {e}")
         mrc_result = {"error": f"获取制造就绪度总览失败: {e}"}
 
@@ -282,7 +282,7 @@ def dashboard_overview(
             "average_lead_days": cdf["average_lead_days"],
         }
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         errors.append(f"认证看板: {e}")
         cdf_result = {"error": f"获取认证看板失败: {e}"}
 

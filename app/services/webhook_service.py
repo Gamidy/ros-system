@@ -139,7 +139,7 @@ class WebhookDispatcher:
                 )
 
             except Exception as e:
-                logger.exception(f"unexpected: {e}")
+                logger.exception("unexpected error")
                 last_error = str(e)
                 logger.warning(
                     "Webhook 推送异常 (attempt %d/%d): sub_id=%s, error=%s",
@@ -279,7 +279,7 @@ class WebhookDispatcher:
                 return success
 
             except Exception as e:
-                logger.exception(f"unexpected: {e}")
+                logger.exception("unexpected error")
                 delivery.retry_count = (delivery.retry_count or 0) + 1
                 delivery.success = False
                 delivery.response_body = str(e)[:500]
@@ -363,7 +363,7 @@ class WebhookDispatcher:
                 )
 
             except Exception as e:
-                logger.exception(f"unexpected: {e}")
+                logger.exception("unexpected error")
                 last_error = str(e)
                 logger.warning(
                     "Webhook 测试推送异常 (attempt %d/%d): sub_id=%s, error=%s",

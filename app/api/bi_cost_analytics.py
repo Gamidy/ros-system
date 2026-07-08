@@ -29,7 +29,7 @@ def _redis_client() -> Optional['redis.Redis']:
             _redis_pool = _redis.ConnectionPool(host="127.0.0.1", port=6379, socket_connect_timeout=1, decode_responses=True)
         return _redis.Redis(connection_pool=_redis_pool)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return None
 
 def _cache_get(key: str) -> Optional[str]:
@@ -38,7 +38,7 @@ def _cache_get(key: str) -> Optional[str]:
         r = _redis_client()
         return None if r is None else r.get(key)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return None
 
 def _cache_set(key: str, value: str, ttl: int = CACHE_TTL) -> None:

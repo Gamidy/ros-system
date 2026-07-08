@@ -287,7 +287,7 @@ def create_plan_from_benchmark(
             "params_count": len(core_perf),
         }
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.exception("从竞品对标生成策划失败")
         raise HTTPException(status_code=500, detail=f"生成策划失败: {str(e)}")

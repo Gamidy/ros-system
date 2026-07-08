@@ -450,7 +450,7 @@ def store_event(event_type: str, **kwargs) -> None:
         )
         db.commit()
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("Event Store 写入失败: event_type=%s, error=%s", event_type, e)
     finally:

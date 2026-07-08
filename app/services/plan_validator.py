@@ -110,7 +110,7 @@ def _rule_label(rule: RuleType) -> str:
     try:
         return f"{rule.rule_type}:{rule.target_field}"
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return str(id(rule))
 
 
@@ -314,7 +314,7 @@ def _validate_business_rule(
     try:
         config["fields"] = _parse_target_field(target_field_str)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         config["fields"] = []
 
     passed = fn(plan_data, config)

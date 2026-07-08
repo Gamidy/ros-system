@@ -70,7 +70,7 @@ def list_8d_reports(
             (page - 1) * page_size).limit(page_size).all()
         return EightDReportListOut(items=[EightDReportOut.model_validate(r) for r in items], total=total)
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return EightDReportListOut(items=[], total=0)
 
 

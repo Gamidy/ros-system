@@ -190,7 +190,7 @@ class SagaCoordinator:
                 try:
                     success, step_result = step.action(**ctx)
                 except Exception as e:
-                    logger.exception(f"unexpected: {e}")
+                    logger.exception("unexpected error")
                     success, step_result = False, {"error": str(e)}
 
                 if success:
@@ -219,7 +219,7 @@ class SagaCoordinator:
             return result
 
         except Exception as e:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             result.status = SagaStatus.FAILED
             result.error = str(e)
             result.end_time = time.time()
@@ -266,7 +266,7 @@ class SagaCoordinator:
             try:
                 success, step_result = step.action(**ctx)
             except Exception as e:
-                logger.exception(f"unexpected: {e}")
+                logger.exception("unexpected error")
                 success, step_result = False, {"error": str(e)}
 
             if success:
@@ -341,7 +341,7 @@ class SagaCoordinator:
             else:
                 _handle_step(first_step.name)
         except Exception as e:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             result.status = SagaStatus.FAILED
             result.error = str(e)
             result.end_time = time.time()
@@ -382,7 +382,7 @@ class SagaCoordinator:
                     result.compensation_results[step_name] = False
                     logger.error("Saga compensate FAILED: %s → %s", result.saga_id, step_name)
             except Exception as e:
-                logger.exception(f"unexpected: {e}")
+                logger.exception("unexpected error")
                 result.steps[step_name] = StepStatus.COMPENSATE_FAILED
                 result.compensation_results[step_name] = False
                 logger.exception("Saga compensate error: %s → %s: %s",
@@ -449,7 +449,7 @@ def _action_create_project(plan_id: str, plan_name: str, project_id=None, **kwar
         logger.info("Saga: 项目已创建: id=%s, code=%s, name=%s", project_id, code, plan_name_clean)
         return True, {"project_id": project_id, "project_code": code}
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("Saga action create_project 失败: %s", e)
         return False, {"error": str(e)}
@@ -473,7 +473,7 @@ def _compensate_create_project(project_id: int = None, **kwargs) -> Tuple[bool, 
             logger.info("Saga compensate: 项目 %s 已标记取消", project_id)
         return True, {}
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error("Saga compensate create_project 失败: %s", e)
         return False, {"error": str(e)}
@@ -498,7 +498,7 @@ def _action_create_gate(project_id: int, **kwargs) -> Tuple[bool, dict]:
         db.commit()
         return True, {"gate_code": "G0"}
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         return False, {"error": str(e)}
     finally:
@@ -520,7 +520,7 @@ def _compensate_create_gate(project_id: int = None, **kwargs) -> Tuple[bool, dic
         db.commit()
         return True, {}
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         return False, {"error": str(e)}
     finally:
@@ -545,7 +545,7 @@ def _action_notify_pm(plan_name: str, created_by: str = "system", **kwargs) -> T
         db.commit()
         return True, {}
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         return False, {"error": str(e)}
     finally:

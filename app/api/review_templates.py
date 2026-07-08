@@ -87,7 +87,7 @@ def list_templates(
         templates: list[ReviewTemplate] = query.all()
         return templates
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"查询模板失败: {str(e)}")
 
 
@@ -114,7 +114,7 @@ def create_template(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建模板失败: {str(e)}")
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建模板失败: {str(e)}")
 

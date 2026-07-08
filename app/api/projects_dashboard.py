@@ -169,7 +169,7 @@ def project_cross_module(pid: int, db: Session = Depends(get_db)):
         certs = db.query(Certification).filter(Certification.project_id == pid).order_by(Certification.created_at.desc()).limit(10).all()
         result["certifications"] = [{"id": c.id, "name": c.cert_name, "type": c.cert_type, "status": c.status} for c in certs]
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         result["certifications"] = []
     try:
         from app.models.test import ECR
@@ -177,7 +177,7 @@ def project_cross_module(pid: int, db: Session = Depends(get_db)):
         result["ecrs"] = [{"id": e.id, "title": e.title, "status": e.status,
                            "created_at": str(e.created_at.date()) if e.created_at else None} for e in ecrs]
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         result["ecrs"] = []
     entries = db.query(TimeEntry).join(Task).filter(Task.project_id == pid).all()
     result["total_hours"] = sum(e.hours or 0 for e in entries)

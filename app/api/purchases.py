@@ -122,7 +122,7 @@ def create_order(data: PurchaseOrderCreate, db: Session = Depends(get_db), _=Dep
 
         db.refresh(order)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"采购订单创建失败: {e}")
         raise

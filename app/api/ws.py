@@ -52,19 +52,35 @@ async def websocket_endpoint(websocket: WebSocket):
     """WebSocket 主端点
 
     流程:
-      1. 认证 — 从 query param 解析 JWT token → 查 DB 获取 username
-      2. 注册连接
-      3. 循环接收消息（处理 ping/pong 心跳）
-      4. 断开时清理
+      1. 先 accept — 避免未握手就 close 导致 HTTP 403
+      2. 认证 — 从 query param 解析 JWT token → 查 DB 获取 username
+      3. 注册连接
+      4. 循环接收消息（处理 ping/pong 心跳）
+      5. 断开时清理
     """
-    # ── Step 1: 认证 ──
+    # ── Step 1: 先 accept 握手 ──
+    # 必须在 close 之前 accept，否则 Starlette 返回 HTTP 403
+    # 而非 WebSocket 关闭帧，前端无法区分"认证失败"和"服务器拒绝"
+    await websocket.accept()
+
+    # ── Step 2: 认证 ──
     username = await ws_manager.authenticate(websocket)
     if username is None:
+        # 认证失败：发送错误消息后优雅关闭（前端可据此停止重连）
+        try:
+            await websocket.send_text(json.dumps({
+                "type": "system",
+                "action": "",
+                "payload": {"error": "认证失败", "code": "AUTH_FAILED"},
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }))
+        except Exception:
+            pass
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    # ── Step 2: 注册连接 ──
-    await ws_manager.connect(websocket, username)
+    # ── Step 3: 注册连接 ──
+    ws_manager._register(websocket, username)
 
     try:
         # ── Step 3: 消息循环 ──
@@ -87,7 +103,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     }))
                 except Exception:
-                    logger.exception(f"unexpected: {e}")
+                    logger.exception("unexpected error")
                     break
             else:
                 logger.debug(

@@ -152,7 +152,7 @@ class AIProvider(ABC):
                 error=f"HTTP {e.response.status_code}: {body}" if e.response else str(e),
             )
         except Exception as e:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             elapsed = int((time.monotonic() - start) * 1000)
             logger.exception("AIProvider.chat error")
             return ChatResponse(

@@ -34,8 +34,8 @@ def _redis_client() -> Optional['redis.Redis']:
                 host="127.0.0.1", port=6379, socket_connect_timeout=1, decode_responses=True
             )
         return _redis.Redis(connection_pool=_redis_pool)
-    except Exception:
-        logger.exception(f"unexpected: {e}")
+    except Exception as e:
+        logger.exception(f"_redis_client error: {e}")
         return None
 
 
@@ -47,8 +47,8 @@ def _cache_get(key: str) -> Optional[str]:
             return None
         val: Optional[str] = r.get(key)
         return val
-    except Exception:
-        logger.exception(f"unexpected: {e}")
+    except Exception as e:
+        logger.exception(f"_cache_get error: {e}")
         return None
 
 
@@ -163,7 +163,7 @@ def bi_planning(
     month_rows = (
         plan_base
         .with_entities(
-            func.date_format(ProductPlan.created_at, "%Y-%m").label("month"),
+            func.strftime("%Y-%m", ProductPlan.created_at).label("month"),
             func.count(ProductPlan.id).label("cnt"),
         )
         .group_by(text("month"))
@@ -330,16 +330,16 @@ def bi_trend(
 
     query = (
         db.query(
-            func.date_format(ProductPlan.created_at, "%Y-%m").label("month"),
+            func.strftime("%Y-%m", ProductPlan.created_at).label("month"),
             func.count(ProductPlan.id).label("count"),
         )
         .group_by(text("month"))
         .order_by(text("month"))
     )
     if start_month:
-        query = query.where(func.date_format(ProductPlan.created_at, "%Y-%m") >= start_month)
+        query = query.where(func.strftime("%Y-%m", ProductPlan.created_at) >= start_month)
     if end_month:
-        query = query.where(func.date_format(ProductPlan.created_at, "%Y-%m") <= end_month)
+        query = query.where(func.strftime("%Y-%m", ProductPlan.created_at) <= end_month)
 
     rows = query.all()
     items = [TrendItem(month=row.month, count=row.count) for row in rows]

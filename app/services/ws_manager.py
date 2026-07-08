@@ -105,6 +105,10 @@ class WSConnectionManager:
     async def connect(self, websocket: WebSocket, username: str) -> None:
         """接受 WebSocket 连接并注册"""
         await websocket.accept()
+        self._register(websocket, username)
+
+    def _register(self, websocket: WebSocket, username: str) -> None:
+        """注册已 accept 的连接（不重复 accept）"""
         if username not in self._connections:
             self._connections[username] = []
         self._connections[username].append(websocket)

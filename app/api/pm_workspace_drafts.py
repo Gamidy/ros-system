@@ -159,7 +159,7 @@ def pm_create_draft(
         db.commit()
         db.refresh(p)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"PM工作台草稿项目保存失败: {e}")
         raise
@@ -293,7 +293,7 @@ def pm_update_draft(
         db.commit()
         db.refresh(p)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"PM更新草稿项目失败: {e}")
         raise

@@ -29,7 +29,7 @@ def _safe_iso(dt) -> Optional[str]:
     try:
         return dt.isoformat()
     except Exception:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         return None
 
 
@@ -233,7 +233,7 @@ def replay_plan_events(
         db.rollback()
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.exception("产品计划 %s 重放失败", plan_id)
         raise HTTPException(status_code=500, detail=f"重放失败: {str(e)}")
@@ -308,7 +308,7 @@ def copy_event(
         db.rollback()
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.exception("重新发射事件失败: event_id=%s, plan_id=%s", event_id, plan_id)
         raise HTTPException(status_code=500, detail=f"重新发射事件失败: {str(e)}")

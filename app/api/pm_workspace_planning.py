@@ -63,7 +63,7 @@ def create_planning_item(
         db.commit()
         db.refresh(ap)
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"PM年度规划创建失败: {e}")
         raise
@@ -104,7 +104,7 @@ def update_planning_item(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"PM年度规划更新失败: {e}")
         raise
@@ -130,7 +130,7 @@ def delete_planning_item(
         db.delete(ap)
         db.commit()
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         logger.error(f"PM年度规划删除失败: {e}")
         raise

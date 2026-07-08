@@ -99,7 +99,7 @@ def approve_plan(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         raise HTTPException(status_code=500, detail=f"审批操作失败: {str(e)}")
 
 
@@ -151,7 +151,7 @@ def reject_plan(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"驳回操作失败: {str(e)}")
 
@@ -204,7 +204,7 @@ def withdraw_plan(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"撤回操作失败: {str(e)}")
 
@@ -270,7 +270,7 @@ def set_plan_stage(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"unexpected: {e}")
+        logger.exception("unexpected error")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"设置阶段失败: {str(e)}")
 

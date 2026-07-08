@@ -281,7 +281,7 @@ def import_competitors(
             db.flush()
             created.append(item)
         except Exception as e:
-            logger.exception(f"unexpected: {e}")
+            logger.exception("unexpected error")
             errors.append(f"行 {idx}: 导入失败 — {str(e)}")
 
     if created:
