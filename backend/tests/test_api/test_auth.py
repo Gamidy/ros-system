@@ -1,12 +1,12 @@
 """认证 API 测试 — login / register / me"""
-
 import pytest
 
 
 @pytest.mark.asyncio
-async def test_register(client):
-    resp = await client.post("/api/v1/auth/register", json={
-        "username": "newuser", "password": "testpass123"
+async def test_register(async_client):
+    resp = await async_client.post("/api/v1/auth/register", json={
+        "username": "newuser", "email": "new@test.com",
+        "password": "testpass123",
     })
     assert resp.status_code == 201
     data = resp.json()
@@ -14,38 +14,40 @@ async def test_register(client):
 
 
 @pytest.mark.asyncio
-async def test_login_success(client):
+async def test_login_success(async_client):
     # Register first
-    await client.post("/api/v1/auth/register", json={
-        "username": "testuser", "password": "mypassword"
+    await async_client.post("/api/v1/auth/register", json={
+        "username": "testuser", "email": "tu@test.com",
+        "password": "mypassword",
     })
-    # Login
-    resp = await client.post("/api/v1/auth/token", json={
-        "username": "testuser", "password": "mypassword"
+    # Login (JSON body)
+    resp = await async_client.post("/api/v1/auth/token", json={
+        "username": "testuser", "password": "mypassword",
     })
     assert resp.status_code == 200
     assert "access_token" in resp.json()
 
 
 @pytest.mark.asyncio
-async def test_login_wrong_password(client):
-    await client.post("/api/v1/auth/register", json={
-        "username": "user2", "password": "correct"
+async def test_login_wrong_password(async_client):
+    await async_client.post("/api/v1/auth/register", json={
+        "username": "user2", "email": "u2@test.com",
+        "password": "correct",
     })
-    resp = await client.post("/api/v1/auth/token", json={
-        "username": "user2", "password": "wrong"
+    resp = await async_client.post("/api/v1/auth/token", json={
+        "username": "user2", "password": "wrong",
     })
     assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_me_requires_auth(client, auth_headers):
-    resp = await client.get("/api/v1/auth/me", headers=auth_headers)
+async def test_me_requires_auth(async_client, auth_headers):
+    resp = await async_client.get("/api/v1/auth/me", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["username"] == "testadmin"
 
 
 @pytest.mark.asyncio
-async def test_me_no_auth(client):
-    resp = await client.get("/api/v1/auth/me")
+async def test_me_no_auth(async_client):
+    resp = await async_client.get("/api/v1/auth/me")
     assert resp.status_code == 401

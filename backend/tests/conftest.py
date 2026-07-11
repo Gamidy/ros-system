@@ -1,5 +1,4 @@
-"""测试 fixtures — 数据库会话 + 测试客户端"""
-
+"""测试 fixtures — 数据库会话 + 测试客户端 + 认证头"""
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -28,32 +27,29 @@ async def async_session(async_engine):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def client(async_engine, async_session):
-    """带认证token的HTTP测试客户端"""
-
+async def async_client(async_engine, async_session):
+    """带依赖注入覆盖的HTTP测试客户端"""
     async def override_get_db():
         yield async_session
-
     app.dependency_overrides[get_db] = override_get_db
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-
     app.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture
-async def auth_headers(client):
-    """创建admin用户并返回Bearer token头"""
-    # 注册
-    resp = await client.post("/api/v1/auth/register", json={
-        "username": "testadmin", "email": "admin@test.com", "password": "admin123"
+async def auth_headers(async_client):
+    """创建测试用户并返回 Bearer token 头"""
+    # 注册 (忽略已存在的错误)
+    resp = await async_client.post("/api/v1/auth/register", json={
+        "username": "testadmin", "email": "admin@test.com",
+        "password": "admin123",
     })
-    assert resp.status_code == 201
-    # 登录
-    resp = await client.post("/api/v1/auth/token", json={
-        "username": "testadmin", "password": "admin123"
+    # 登录 (JSON body via LoginRequest Pydantic model)
+    resp = await async_client.post("/api/v1/auth/token", json={
+        "username": "testadmin", "password": "admin123",
     })
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

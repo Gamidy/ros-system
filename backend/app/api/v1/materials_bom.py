@@ -11,7 +11,6 @@ from app.schemas.bom_feature import (
     BOMNodeCreate, BOMNodeRead,
     FeatureFamilyCreate, FeatureFamilyRead, FeatureOptionCreate, FeatureOptionRead,
 )
-from app.models.feature import FeatureOption
 
 materials_router = APIRouter(prefix="/materials", tags=["物料管理"])
 bom_router = APIRouter(prefix="/bom", tags=["BOM管理"])
@@ -75,10 +74,8 @@ async def create_feature(data: FeatureFamilyCreate, db: AsyncSession = Depends(g
     return await feature_family_crud.create(db, obj_in=data.model_dump())
 
 
-@features_router.post("/{family_id}/options", response_model=FeatureOptionRead, status_code=201)
+@features_router.post("/{family_id}/options", response_model=FeatureOptionRead, status_code=status.HTTP_201_CREATED)
 async def add_option(family_id: int, data: FeatureOptionCreate, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
-    opt = FeatureOption(family_id=family_id, **data.model_dump())
-    db.add(opt)
-    await db.flush()
-    await db.refresh(opt)
-    return opt
+    obj_in = data.model_dump()
+    obj_in["family_id"] = family_id
+    return await feature_family_crud.create_option(db, family_id=family_id, obj_in=obj_in)

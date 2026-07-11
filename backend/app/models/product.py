@@ -1,11 +1,18 @@
 """产品层级: Platform → Series → Model + BOM 物料"""
 
-from sqlalchemy import String, Integer, Float, ForeignKey, Text
+from sqlalchemy import String, Integer, Float, ForeignKey, Text, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional
+import enum
 
 from app.database import Base
 from app.models.base import TimestampMixin
+
+
+class ModelStatus(str, enum.Enum):
+    DRAFT = "draft"
+    RELEASED = "released"
+    OBSOLETE = "obsolete"
 
 
 class Platform(Base, TimestampMixin):
@@ -33,7 +40,7 @@ class Series(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)
     platform_id: Mapped[int] = mapped_column(ForeignKey("platforms.id"), nullable=False)
 
-    platform: Mapped["Platform"] = relationship(back_populates="series_list")
+    platform: Mapped["Platform"] = relationship(back_populates="series_list", lazy="selectin")
     models: Mapped[List["Model"]] = relationship(
         "Model", back_populates="series", cascade="all, delete-orphan"
     )
@@ -52,4 +59,4 @@ class Model(Base, TimestampMixin):
     refrigerant: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, comment="冷媒类型(R32/R410A)")
     status: Mapped[str] = mapped_column(String(20), default="draft", comment="draft/released/obsolete")
 
-    series: Mapped["Series"] = relationship(back_populates="models")
+    series: Mapped["Series"] = relationship(back_populates="models", lazy="selectin")

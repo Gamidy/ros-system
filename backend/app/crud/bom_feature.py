@@ -42,6 +42,14 @@ class CRUDFeatureFamily(CRUDBase[FeatureFamily]):
         )
         return result.scalar_one_or_none()
 
+    async def create_option(self, db: AsyncSession, *, family_id: int, obj_in: dict) -> FeatureOption:
+        obj_in["family_id"] = family_id
+        opt = FeatureOption(**obj_in)
+        db.add(opt)
+        await db.flush()
+        await db.refresh(opt)
+        return opt
+
 
 material_crud = CRUDMaterial()
 bom_crud = CRUDBOM()

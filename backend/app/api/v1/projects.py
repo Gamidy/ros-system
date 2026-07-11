@@ -1,7 +1,6 @@
 """项目/WBS/任务/Gate API"""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 
@@ -12,7 +11,7 @@ from app.schemas.project import (
     ProjectCreate, ProjectRead, WBSCreate, WBSRead,
     TaskCreate, TaskRead, GateDecisionInput, GateRead,
 )
-from app.models.project import Gate, PhaseEnum, Task
+from app.models.project import GateDecision, PhaseEnum
 
 project_router = APIRouter(prefix="/projects", tags=["项目管理"])
 wbs_router = APIRouter(prefix="/wbs", tags=["WBS"])
@@ -45,8 +44,11 @@ async def advance_phase(project_id: int, target_phase: str, db: AsyncSession = D
     obj = await project_crud.get(db, project_id)
     if not obj:
         raise HTTPException(status_code=404, detail="项目不存在")
-    if not can_transition(obj.current_phase, target_phase):
-        raise HTTPException(status_code=400, detail=f"不允许从 {obj.current_phase} 转到 {target_phase}")
+    try:
+        if not can_transition(obj.current_phase, target_phase):
+            raise HTTPException(status_code=400, detail=f"不允许从 {obj.current_phase} 转到 {target_phase}")
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"无效的阶段名称: {target_phase}")
     obj.current_phase = target_phase
     await db.flush()
     return {"message": f"阶段切换成功: {target_phase}"}
@@ -63,15 +65,12 @@ async def decide_gate(
     project_id: int, phase: str, data: GateDecisionInput,
     db: AsyncSession = Depends(get_db), user=Depends(get_current_user),
 ):
-    gate = Gate(
-        project_id=project_id, phase=phase, decision=data.decision,
-        comment=data.comment, decided_by_id=user.id,
-        decided_at=datetime.now(timezone.utc),
-    )
-    db.add(gate)
-    await db.flush()
-    await db.refresh(gate)
-    return gate
+    obj_in = {
+        "project_id": project_id, "phase": phase,
+        "decision": data.decision, "comment": data.comment,
+        "decided_by_id": user.id, "decided_at": datetime.now(timezone.utc),
+    }
+    return await gate_crud.create(db, obj_in=obj_in)
 
 
 # ── WBS ──
@@ -88,8 +87,7 @@ async def create_wbs(data: WBSCreate, db: AsyncSession = Depends(get_db), _=Depe
 # ── Tasks ──
 @task_router.get("", response_model=list[TaskRead])
 async def list_tasks(wbs_id: int = Query(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
-    result = await db.execute(select(Task).where(Task.wbs_id == wbs_id))
-    return list(result.scalars().all())
+    return await task_crud.get_by_wbs(db, wbs_id=wbs_id)
 
 
 @task_router.post("", response_model=TaskRead, status_code=201)

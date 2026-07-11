@@ -1,6 +1,6 @@
 """特征族/特征选项模型 — 产品配置化基础"""
 
-from sqlalchemy import String, Integer, Float, ForeignKey, Text
+from sqlalchemy import String, Integer, Float, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional
 
@@ -28,6 +28,9 @@ class FeatureOption(Base, TimestampMixin):
     """特征选项 (如: R32、R410A、220V)"""
 
     __tablename__ = "feature_options"
+    __table_args__ = (
+        UniqueConstraint("family_id", "value", name="uq_family_value"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     family_id: Mapped[int] = mapped_column(ForeignKey("feature_families.id"), nullable=False)

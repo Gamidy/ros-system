@@ -32,6 +32,12 @@ class CRUDTask(CRUDBase[Task]):
     def __init__(self):
         super().__init__(Task)
 
+    async def get_by_wbs(self, db: AsyncSession, *, wbs_id: int) -> List[Task]:
+        result = await db.execute(
+            select(Task).where(Task.wbs_id == wbs_id).order_by(Task.priority)
+        )
+        return list(result.scalars().all())
+
 
 class CRUDGate(CRUDBase[Gate]):
     def __init__(self):

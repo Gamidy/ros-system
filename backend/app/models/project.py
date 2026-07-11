@@ -59,7 +59,8 @@ class WBSNode(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), default="pending")
 
     project: Mapped["Project"] = relationship(back_populates="wbs_nodes")
-    children: Mapped[List["WBSNode"]] = relationship("WBSNode", backref="parent", remote_side=[id], lazy="selectin")
+    parent: Mapped[Optional["WBSNode"]] = relationship("WBSNode", back_populates="children", remote_side=[id])
+    children: Mapped[List["WBSNode"]] = relationship("WBSNode", back_populates="parent", lazy="selectin")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="wbs_node", cascade="all, delete-orphan")
 
 

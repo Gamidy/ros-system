@@ -13,4 +13,6 @@ __all__ = [
     "Platform", "Series", "Model",
     "Material", "SuperBOMNode",
     "FeatureFamily", "FeatureOption",
+    "Project", "WBSNode", "Task", "Gate",
+    "PhaseEnum", "GateDecision",
 ]

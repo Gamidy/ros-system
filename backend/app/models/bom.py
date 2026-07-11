@@ -40,6 +40,9 @@ class SuperBOMNode(Base, TimestampMixin):
 
     # 关系
     children: Mapped[List["SuperBOMNode"]] = relationship(
-        "SuperBOMNode", backref="parent", remote_side=[id], lazy="selectin"
+        "SuperBOMNode", back_populates="parent", lazy="selectin"
+    )
+    parent: Mapped[Optional["SuperBOMNode"]] = relationship(
+        "SuperBOMNode", back_populates="children", remote_side=[id]
     )
     material: Mapped["Material"] = relationship(lazy="selectin")

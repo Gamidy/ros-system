@@ -17,7 +17,7 @@ async def list_series(db: AsyncSession = Depends(get_db), _=Depends(get_current_
     return await series_crud.get_multi(db)
 
 
-@series_router.post("", response_model=SeriesRead, status_code=201)
+@series_router.post("", response_model=SeriesRead, status_code=status.HTTP_201_CREATED)
 async def create_series(data: SeriesCreate, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     return await series_crud.create(db, obj_in=data.model_dump())
 
@@ -39,7 +39,7 @@ async def list_models(db: AsyncSession = Depends(get_db), _=Depends(get_current_
     return await model_crud.get_multi(db)
 
 
-@model_router.post("", response_model=ModelRead, status_code=201)
+@model_router.post("", response_model=ModelRead, status_code=status.HTTP_201_CREATED)
 async def create_model(data: ModelCreate, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     return await model_crud.create(db, obj_in=data.model_dump())
 
