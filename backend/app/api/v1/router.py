@@ -1,7 +1,7 @@
 """API v1 路由聚合"""
 
 from fastapi import APIRouter
-from app.api.v1 import auth, users, platforms, series_models, materials_bom, projects, ecr, eco
+from app.api.v1 import auth, users, platforms, series_models, materials_bom, projects, ecr, eco, config_engine
 
 v1_router = APIRouter(prefix="/api/v1")
 
@@ -18,3 +18,4 @@ v1_router.include_router(projects.wbs_router)
 v1_router.include_router(projects.task_router)
 v1_router.include_router(ecr.router)
 v1_router.include_router(eco.router)
+v1_router.include_router(config_engine.router)
