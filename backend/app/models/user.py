@@ -1,6 +1,6 @@
 """用户、角色、用户-角色关联表"""
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
 from typing import List, Optional

@@ -100,8 +100,8 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     async def __call__(self, user: User = Depends(get_current_user)):
-        user_roles = {ur.role.name for ur in user.user_roles} if user.user_roles else set()
-        if not user_roles.intersection(self.allowed_roles):
+        role_names = {r.name for r in user.roles} if user.roles else set()
+        if not role_names.intersection(self.allowed_roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="权限不足",

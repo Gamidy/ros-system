@@ -1,6 +1,6 @@
 """产品层级: Platform → Series → Model + BOM 物料"""
 
-from sqlalchemy import String, Integer, Float, ForeignKey, Text, Enum as SAEnum
+from sqlalchemy import String, Integer, Float, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional
 import enum
