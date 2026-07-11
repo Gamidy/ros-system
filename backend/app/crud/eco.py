@@ -1,5 +1,6 @@
-"""Phase 2 — ECO CRUD: 工程变更指令数据访问层"""
+"""Phase 2 — ECO CRUD: 工程变更指令数据访问层（集成状态机 + 竞态安全编号）"""
 
+import secrets
 import logging
 from datetime import datetime, timezone
 from typing import Optional, List
@@ -10,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.ecr_eco import ECO, ECOItem, ECRRequest
 from app.core.enums import ECOStatus, ECRStatus
+from app.services.state_machine import assert_transition, TransitionError
 
 logger = logging.getLogger(__name__)
 
@@ -21,20 +23,11 @@ class ECOCrud:
         self.model = ECO
 
     async def _gen_code(self, db: AsyncSession) -> str:
-        """生成 ECO 编号: ECO-YYYYMMDD-XXXX"""
-        today = datetime.now(timezone.utc).strftime("%Y%m%d")
-        prefix = f"ECO-{today}-"
-        result = await db.execute(
-            select(func.max(self.model.code)).where(
-                self.model.code.like(f"{prefix}%")
-            )
-        )
-        max_code = result.scalar()
-        if max_code:
-            seq = int(max_code.split("-")[-1]) + 1
-        else:
-            seq = 1
-        return f"{prefix}{seq:04d}"
+        """生成 ECO 编号: ECO-YYYYMMDD-HHMMSS-XXXX（随机后缀，消除竞态）"""
+        now = datetime.now(timezone.utc)
+        ts = now.strftime("%Y%m%d-%H%M%S")
+        suffix = secrets.token_hex(3)[:4].upper()
+        return f"ECO-{ts}-{suffix}"
 
     async def create(self, db: AsyncSession, *, data: dict, created_by: int,
                      ecr: ECRRequest = None) -> ECO:
@@ -55,7 +48,6 @@ class ECOCrud:
         items_data = data.get("items") or []
         for item_data in items_data:
             eco_item = ECOItem(
-                eco_id=None,  # 将在 flush 后关联
                 seq=item_data.get("seq", 0),
                 change_type=item_data["change_type"],
                 object_type=item_data["object_type"],
@@ -123,9 +115,8 @@ class ECOCrud:
         return eco
 
     async def start_implementing(self, db: AsyncSession, eco: ECO) -> ECO:
-        """开始实施: DRAFT → IMPLEMENTING"""
-        if eco.status != ECOStatus.DRAFT.value:
-            raise ValueError(f"只有 draft 状态可以开始实施，当前状态: {eco.status}")
+        """开始实施: DRAFT → IMPLEMENTING（通过状态机校验）"""
+        assert_transition("ECO", eco.status, ECOStatus.IMPLEMENTING.value)
         eco.status = ECOStatus.IMPLEMENTING.value
         await db.flush()
         await db.refresh(eco)
@@ -134,9 +125,8 @@ class ECOCrud:
 
     async def verify(self, db: AsyncSession, eco: ECO,
                      verified_by: int) -> ECO:
-        """验证: IMPLEMENTING → VERIFIED"""
-        if eco.status != ECOStatus.IMPLEMENTING.value:
-            raise ValueError(f"只有 implementing 状态可以验证，当前状态: {eco.status}")
+        """验证: IMPLEMENTING → VERIFIED（通过状态机校验）"""
+        assert_transition("ECO", eco.status, ECOStatus.VERIFIED.value)
         eco.status = ECOStatus.VERIFIED.value
         eco.verified_by = verified_by
         eco.verified_at = datetime.now(timezone.utc)
@@ -146,9 +136,8 @@ class ECOCrud:
         return eco
 
     async def make_effective(self, db: AsyncSession, eco: ECO) -> ECO:
-        """生效: VERIFIED → EFFECTIVE"""
-        if eco.status != ECOStatus.VERIFIED.value:
-            raise ValueError(f"只有 verified 状态可以生效，当前状态: {eco.status}")
+        """生效: VERIFIED → EFFECTIVE（通过状态机校验）"""
+        assert_transition("ECO", eco.status, ECOStatus.EFFECTIVE.value)
         eco.status = ECOStatus.EFFECTIVE.value
         await db.flush()
         await db.refresh(eco)
@@ -157,9 +146,8 @@ class ECOCrud:
 
     async def close(self, db: AsyncSession, eco: ECO,
                     closed_by: int) -> ECO:
-        """关闭: EFFECTIVE → CLOSED"""
-        if eco.status != ECOStatus.EFFECTIVE.value:
-            raise ValueError(f"只有 effective 状态可以关闭，当前状态: {eco.status}")
+        """关闭: EFFECTIVE → CLOSED（通过状态机校验）"""
+        assert_transition("ECO", eco.status, ECOStatus.CLOSED.value)
         eco.status = ECOStatus.CLOSED.value
         eco.closed_by = closed_by
         eco.closed_at = datetime.now(timezone.utc)
@@ -169,9 +157,8 @@ class ECOCrud:
         return eco
 
     async def cancel(self, db: AsyncSession, eco: ECO) -> ECO:
-        """取消 ECO（任意非终态）"""
-        if eco.status in {ECOStatus.CLOSED.value, ECOStatus.CANCELLED.value}:
-            raise ValueError(f"终态 ECO 不可取消，当前状态: {eco.status}")
+        """取消 ECO（通过状态机校验，任意非终态可取消）"""
+        assert_transition("ECO", eco.status, ECOStatus.CANCELLED.value)
         eco.status = ECOStatus.CANCELLED.value
         await db.flush()
         await db.refresh(eco)

@@ -19,8 +19,8 @@ class TestStateMachine:
 
     def test_ecr_transitions(self):
         assert "submitted" in get_valid_transitions("ECR", "draft")
-        assert "approved" in get_valid_transitions("ECR", "reviewing")
-        assert "rejected" in get_valid_transitions("ECR", "reviewing")
+        assert "approved" in get_valid_transitions("ECR", "submitted")
+        assert "rejected" in get_valid_transitions("ECR", "submitted")
 
     def test_eco_transitions(self):
         assert "implementing" in get_valid_transitions("ECO", "draft")

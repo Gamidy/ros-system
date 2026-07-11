@@ -39,8 +39,7 @@ _TRANSITIONS: Dict[str, Dict[str, List[str]]] = {
     # ── ECR ───────────────────────────────────────
     "ECR": {
         "draft": ["submitted"],
-        "submitted": ["reviewing"],
-        "reviewing": ["approved", "rejected"],
+        "submitted": ["approved", "rejected"],
         "approved": ["converted"],
         "rejected": [],
         "converted": [],

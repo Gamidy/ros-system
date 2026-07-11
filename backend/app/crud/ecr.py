@@ -1,5 +1,6 @@
-"""Phase 2 — ECR CRUD: 工程变更申请数据访问层"""
+"""Phase 2 — ECR CRUD: 工程变更申请数据访问层（集成状态机 + 竞态安全编号）"""
 
+import secrets
 import logging
 from datetime import datetime, timezone
 from typing import Optional, List
@@ -10,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.ecr_eco import ECRRequest
 from app.core.enums import ECRStatus
+from app.services.state_machine import assert_transition, TransitionError
 
 logger = logging.getLogger(__name__)
 
@@ -21,20 +23,11 @@ class ECRCrud:
         self.model = ECRRequest
 
     async def _gen_code(self, db: AsyncSession) -> str:
-        """生成 ECR 编号: ECR-YYYYMMDD-XXXX"""
-        today = datetime.now(timezone.utc).strftime("%Y%m%d")
-        prefix = f"ECR-{today}-"
-        result = await db.execute(
-            select(func.max(self.model.code)).where(
-                self.model.code.like(f"{prefix}%")
-            )
-        )
-        max_code = result.scalar()
-        if max_code:
-            seq = int(max_code.split("-")[-1]) + 1
-        else:
-            seq = 1
-        return f"{prefix}{seq:04d}"
+        """生成 ECR 编号: ECR-YYYYMMDD-HHMMSS-XXXX（随机后缀，消除竞态）"""
+        now = datetime.now(timezone.utc)
+        ts = now.strftime("%Y%m%d-%H%M%S")
+        suffix = secrets.token_hex(3)[:4].upper()
+        return f"ECR-{ts}-{suffix}"
 
     async def create(self, db: AsyncSession, *, data: dict, submitter_id: int,
                      submitter_name: str = None) -> ECRRequest:
@@ -108,9 +101,8 @@ class ECRCrud:
         return ecr
 
     async def submit(self, db: AsyncSession, ecr: ECRRequest) -> ECRRequest:
-        """提交 ECR: DRAFT → SUBMITTED"""
-        if ecr.status != ECRStatus.DRAFT.value:
-            raise ValueError(f"只有 draft 状态可以提交，当前状态: {ecr.status}")
+        """提交 ECR: DRAFT → SUBMITTED（通过状态机校验）"""
+        assert_transition("ECR", ecr.status, ECRStatus.SUBMITTED.value)
         ecr.status = ECRStatus.SUBMITTED.value
         await db.flush()
         await db.refresh(ecr)
@@ -119,25 +111,26 @@ class ECRCrud:
 
     async def review(self, db: AsyncSession, ecr: ECRRequest, action: str,
                      reviewer_id: int, rejection_reason: str = None) -> ECRRequest:
-        """审批 ECR: SUBMITTED → REVIEWING → APPROVED/REJECTED"""
-        if ecr.status not in {ECRStatus.SUBMITTED.value, ECRStatus.REVIEWING.value}:
-            raise ValueError(
-                f"只有 submitted/reviewing 状态可以审批，当前状态: {ecr.status}"
-            )
+        """审批 ECR: submitted → approved / submitted → rejected（通过状态机校验）"""
+        target_status = (
+            ECRStatus.APPROVED.value if action == "approve"
+            else ECRStatus.REJECTED.value if action == "reject"
+            else None
+        )
+        if target_status is None:
+            raise ValueError(f"无效的审批操作: {action}")
+
+        assert_transition("ECR", ecr.status, target_status)
 
         ecr.reviewer_id = reviewer_id
         ecr.reviewed_at = datetime.now(timezone.utc)
-
+        ecr.status = target_status
         if action == "approve":
-            ecr.status = ECRStatus.APPROVED.value
             ecr.rejection_reason = None
             logger.info("ECR 已通过: %s", ecr.code)
-        elif action == "reject":
-            ecr.status = ECRStatus.REJECTED.value
+        else:
             ecr.rejection_reason = rejection_reason or "未提供驳回原因"
             logger.info("ECR 已驳回: %s, 原因: %s", ecr.code, ecr.rejection_reason)
-        else:
-            raise ValueError(f"无效的审批操作: {action}")
 
         await db.flush()
         await db.refresh(ecr)

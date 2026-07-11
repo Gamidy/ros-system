@@ -27,8 +27,9 @@ async function handleLogin() {
   try {
     await auth.login(username.value, password.value)
     router.push('/dashboard')
-  } catch {
-    ElMessage.error('登录失败')
+  } catch (e: any) {
+    const msg = e?.response?.data?.detail || e?.message || '登录失败'
+    ElMessage.error(msg)
   } finally { loading.value = false }
 }
 </script>

@@ -11,6 +11,8 @@
         <el-menu-item index="/materials"><el-icon><Box /></el-icon><span>物料管理</span></el-menu-item>
         <el-menu-item index="/bom"><el-icon><Connection /></el-icon><span>BOM管理</span></el-menu-item>
         <el-menu-item index="/projects"><el-icon><Folder /></el-icon><span>项目管理</span></el-menu-item>
+        <el-menu-item index="/ecr"><el-icon><Document /></el-icon><span>ECR变更</span></el-menu-item>
+        <el-menu-item index="/eco"><el-icon><Checked /></el-icon><span>ECO指令</span></el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
