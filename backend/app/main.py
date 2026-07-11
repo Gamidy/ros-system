@@ -12,6 +12,11 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.core.security import setup_logging
 from app.api.v1.router import v1_router
+from app.middleware.security import (
+    SecurityHeadersMiddleware,
+    XSSProtectionMiddleware,
+    csrf_middleware,
+)
 
 setup_logging()
 
@@ -41,8 +46,17 @@ app.add_middleware(
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
+
+# Security Headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CSRF Protection (纵深防护)
+app.middleware("http")(csrf_middleware)
+
+# XSS Protection (仅 state-changing 请求)
+app.add_middleware(XSSProtectionMiddleware)
 
 # 全局异常处理器
 @app.exception_handler(RateLimitExceeded)
