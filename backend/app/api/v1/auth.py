@@ -14,6 +14,7 @@ router = APIRouter(prefix="/auth", tags=["认证"])
 
 
 @router.post("/token", response_model=Token)
+@router.post("/login", response_model=Token)  # 别名：兼容旧前端
 async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await user_crud.authenticate(db, username=data.username, password=data.password)
     if not user:

@@ -69,6 +69,11 @@ async def global_exception_handler(request, exc):
 # 路由
 app.include_router(v1_router)
 
+# 全局 OPTIONS 处理 — 避免 CORS 预检 400
+@app.options("/{rest_of_path:path}")
+async def preflight_handler():
+    return JSONResponse(content={"detail": "OK"}, status_code=200)
+
 # 健康检查
 @app.get("/health")
 async def health():
