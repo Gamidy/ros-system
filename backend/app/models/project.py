@@ -37,7 +37,7 @@ class Project(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     code: Mapped[str] = mapped_column(String(30), unique=True, nullable=False, index=True)
     model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("models.id"), nullable=True)
-    current_phase: Mapped[str] = mapped_column(String(20), default=PhaseEnum.NPR)
+    current_phase: Mapped[str] = mapped_column(SAEnum(PhaseEnum), default=PhaseEnum.NPR)
     status: Mapped[str] = mapped_column(String(20), default="active")
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
@@ -89,8 +89,8 @@ class Gate(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    phase: Mapped[str] = mapped_column(String(20), nullable=False)
-    decision: Mapped[str] = mapped_column(String(20), default=GateDecision.PENDING)
+    phase: Mapped[str] = mapped_column(SAEnum(PhaseEnum), nullable=False)
+    decision: Mapped[str] = mapped_column(SAEnum(GateDecision), default=GateDecision.PENDING)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     decided_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     decided_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
