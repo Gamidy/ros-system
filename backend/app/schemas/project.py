@@ -9,6 +9,7 @@ class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     code: str = Field(min_length=1, max_length=30)
     model_id: Optional[int] = None
+    project_class: str = Field(default="T", pattern="^(T|A|B|C)$")
     description: Optional[str] = None
 
 
@@ -18,6 +19,7 @@ class ProjectRead(BaseModel):
     code: str
     model_id: Optional[int] = None
     current_phase: str
+    project_class: str = "T"
     status: str
     description: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -74,7 +76,11 @@ class GateDecisionInput(BaseModel):
 class GateRead(BaseModel):
     id: int
     project_id: int
-    phase: str
+    phase: Optional[str] = None
+    gate_code: Optional[str] = None
+    gate_name: Optional[str] = None
+    seq: int = 0
+    status: str = "pending"
     decision: str
     comment: Optional[str] = None
     decided_at: Optional[datetime] = None

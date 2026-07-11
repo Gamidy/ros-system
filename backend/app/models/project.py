@@ -38,6 +38,7 @@ class Project(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(String(30), unique=True, nullable=False, index=True)
     model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("models.id"), nullable=True)
     current_phase: Mapped[str] = mapped_column(SAEnum(PhaseEnum), default=PhaseEnum.NPR)
+    project_class: Mapped[str] = mapped_column(String(5), default="T", comment="T/A/B/C")
     status: Mapped[str] = mapped_column(String(20), default="active")
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
@@ -89,7 +90,11 @@ class Gate(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    phase: Mapped[str] = mapped_column(SAEnum(PhaseEnum), nullable=False)
+    phase: Mapped[Optional[str]] = mapped_column(SAEnum(PhaseEnum), nullable=True)
+    gate_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, comment="M1~M9")
+    gate_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    seq: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="pending", comment="pending/passed/failed")
     decision: Mapped[str] = mapped_column(SAEnum(GateDecision), default=GateDecision.PENDING)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     decided_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)

@@ -59,19 +59,27 @@ class TestGateDecisions:
             "name": "Gate Test", "code": "PRJ-GATE-001",
         }, headers=auth_headers)
         pid = resp.json()["id"]
+        # 获取自动生成的 Gates
+        resp = await async_client.get(f"/api/v1/projects/{pid}/gates", headers=auth_headers)
+        gates = resp.json()
+        m1 = next(g for g in gates if g["gate_code"] == "M1")
         resp = await async_client.post(
-            f"/api/v1/projects/{pid}/gates/npr/decide", json={
-                "decision": "go", "comment": "NPR评审通过",
+            f"/api/v1/projects/{pid}/gates/{m1['id']}/decision", json={
+                "decision": "go", "comment": "M1评审通过",
             }, headers=auth_headers)
-        assert resp.status_code == 201
-        assert resp.json()["decision"] == "go"
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "passed"
 
     async def test_get_project_gates(self, async_client, auth_headers):
         resp = await async_client.post("/api/v1/projects", json={
             "name": "Gates List", "code": "PRJ-GATES-001",
         }, headers=auth_headers)
         pid = resp.json()["id"]
-        await async_client.post(f"/api/v1/projects/{pid}/gates/npr/decide", json={
+        # 先通过 M1
+        resp = await async_client.get(f"/api/v1/projects/{pid}/gates", headers=auth_headers)
+        gates = resp.json()
+        m1 = next(g for g in gates if g["gate_code"] == "M1")
+        await async_client.post(f"/api/v1/projects/{pid}/gates/{m1['id']}/decision", json={
             "decision": "go", "comment": "OK",
         }, headers=auth_headers)
         resp = await async_client.get(f"/api/v1/projects/{pid}/gates", headers=auth_headers)

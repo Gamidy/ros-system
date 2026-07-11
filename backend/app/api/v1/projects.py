@@ -1,7 +1,8 @@
-"""项目/WBS/任务/Gate API"""
+"""项目/WBS/任务/Gate API — P1增强: Gate模板 + 前置校验"""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import datetime, timezone
 
 from app.database import get_db
@@ -11,14 +12,48 @@ from app.schemas.project import (
     ProjectCreate, ProjectRead, WBSCreate, WBSRead,
     TaskCreate, TaskRead, GateDecisionInput, GateRead,
 )
-from app.models.project import GateDecision, PhaseEnum
+from app.models.project import GateDecision, PhaseEnum, Project, Gate
 
 project_router = APIRouter(prefix="/projects", tags=["项目管理"])
 wbs_router = APIRouter(prefix="/wbs", tags=["WBS"])
 task_router = APIRouter(prefix="/tasks", tags=["任务卡"])
 
+# ═══════════════════════════════════════════════
+# Gate Templates — 参考 ROS 设计
+# ═══════════════════════════════════════════════
 
-# ── Projects ──
+GATE_TEMPLATE_TA = [
+    {"gate_code": "M1",  "gate_name": "需求与概念评审", "seq": 1},
+    {"gate_code": "M2",  "gate_name": "方案与计划评审", "seq": 2},
+    {"gate_code": "M3",  "gate_name": "详细设计评审",   "seq": 3},
+    {"gate_code": "M4",  "gate_name": "样机与验证",     "seq": 4},
+    {"gate_code": "M5",  "gate_name": "小批试产",       "seq": 5},
+    {"gate_code": "M6",  "gate_name": "量产准备",       "seq": 7},
+    {"gate_code": "M7",  "gate_name": "量产评审",       "seq": 8},
+    {"gate_code": "M8",  "gate_name": "市场发布",       "seq": 9},
+    {"gate_code": "M9",  "gate_name": "项目结项",       "seq": 10},
+]
+
+GATE_TEMPLATE_B = [
+    {"gate_code": "M2", "gate_name": "方案与计划评审", "seq": 2},
+    {"gate_code": "M3", "gate_name": "详细设计评审",   "seq": 3},
+    {"gate_code": "M6", "gate_name": "量产准备",       "seq": 7},
+    {"gate_code": "M7", "gate_name": "量产评审",       "seq": 8},
+    {"gate_code": "M8", "gate_name": "市场发布",       "seq": 9},
+]
+
+GATE_TEMPLATE_C = [
+    {"gate_code": "M2", "gate_name": "方案与计划评审", "seq": 2},
+    {"gate_code": "M3", "gate_name": "详细设计评审",   "seq": 3},
+    {"gate_code": "M6", "gate_name": "量产准备",       "seq": 7},
+]
+
+GATE_TEMPLATES = {"T": GATE_TEMPLATE_TA, "A": GATE_TEMPLATE_TA, "B": GATE_TEMPLATE_B, "C": GATE_TEMPLATE_C}
+
+# ═══════════════════════════════════════════════
+# Projects
+# ═══════════════════════════════════════════════
+
 @project_router.get("", response_model=list[ProjectRead])
 async def list_projects(db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     return await project_crud.get_multi(db)
@@ -28,7 +63,27 @@ async def list_projects(db: AsyncSession = Depends(get_db), _=Depends(get_curren
 async def create_project(data: ProjectCreate, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     obj_in = data.model_dump()
     obj_in["current_phase"] = PhaseEnum.NPR
-    return await project_crud.create(db, obj_in=obj_in)
+    project_class = obj_in.get("project_class", "T")
+
+    project = Project(**obj_in)
+    db.add(project)
+    await db.flush()
+
+    # 自动生成 Gate 模板
+    template = GATE_TEMPLATES.get(project_class, GATE_TEMPLATE_TA)
+    for gate_def in template:
+        gate = Gate(
+            project_id=project.id,
+            gate_code=gate_def["gate_code"],
+            gate_name=gate_def["gate_name"],
+            seq=gate_def["seq"],
+            status="pending",
+        )
+        db.add(gate)
+
+    await db.commit()
+    await db.refresh(project)
+    return project
 
 
 @project_router.get("/{project_id}", response_model=ProjectRead)
@@ -54,26 +109,54 @@ async def advance_phase(project_id: int, target_phase: str, db: AsyncSession = D
     return {"message": f"阶段切换成功: {target_phase}"}
 
 
-# ── Gates ──
+# ═══════════════════════════════════════════════
+# Gates — P1增强: 前置Gate校验
+# ═══════════════════════════════════════════════
+
 @project_router.get("/{project_id}/gates", response_model=list[GateRead])
 async def get_project_gates(project_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     return await gate_crud.get_by_project(db, project_id=project_id)
 
 
-@project_router.post("/{project_id}/gates/{phase}/decide", response_model=GateRead, status_code=201)
+@project_router.post("/{project_id}/gates/{gate_id}/decision", response_model=GateRead)
 async def decide_gate(
-    project_id: int, phase: str, data: GateDecisionInput,
+    project_id: int, gate_id: int, data: GateDecisionInput,
     db: AsyncSession = Depends(get_db), user=Depends(get_current_user),
 ):
-    obj_in = {
-        "project_id": project_id, "phase": phase,
-        "decision": data.decision, "comment": data.comment,
-        "decided_by_id": user.id, "decided_at": datetime.now(timezone.utc),
-    }
-    return await gate_crud.create(db, obj_in=obj_in)
+    # 获取当前 Gate
+    result = await db.execute(select(Gate).where(Gate.id == gate_id, Gate.project_id == project_id))
+    gate = result.scalar_one_or_none()
+    if not gate:
+        raise HTTPException(404, "Gate 不存在")
+    if gate.status != "pending":
+        raise HTTPException(400, f"Gate 当前状态为 {gate.status}，不可重复决策")
+
+    # 前置 Gate 校验: 查找 seq 小于当前 Gate 的 Gate，检查是否都 passed
+    predecessors = await db.execute(
+        select(Gate).where(Gate.project_id == project_id, Gate.seq < gate.seq).order_by(Gate.seq)
+    )
+    for pred in predecessors.scalars().all():
+        if pred.status != "passed":
+            raise HTTPException(
+                400,
+                f"前置 Gate {pred.gate_code} ({pred.gate_name}) 未通过，无法决策 {gate.gate_code}",
+            )
+
+    gate.status = "passed" if data.decision == "go" else "failed"
+    gate.decision = data.decision
+    gate.comment = data.comment
+    gate.decided_by_id = user.id
+    gate.decided_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(gate)
+    return gate
 
 
-# ── WBS ──
+# ═══════════════════════════════════════════════
+# WBS
+# ═══════════════════════════════════════════════
+
 @wbs_router.get("", response_model=list[WBSRead])
 async def list_wbs(project_id: int = Query(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     return await wbs_crud.get_tree(db, project_id=project_id)
@@ -84,7 +167,10 @@ async def create_wbs(data: WBSCreate, db: AsyncSession = Depends(get_db), _=Depe
     return await wbs_crud.create(db, obj_in=data.model_dump())
 
 
-# ── Tasks ──
+# ═══════════════════════════════════════════════
+# Tasks
+# ═══════════════════════════════════════════════
+
 @task_router.get("", response_model=list[TaskRead])
 async def list_tasks(wbs_id: int = Query(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     return await task_crud.get_by_wbs(db, wbs_id=wbs_id)
