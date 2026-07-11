@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.core.security import create_access_token, get_current_user
+from app.core.security import create_access_token, get_current_user, oauth2_scheme
+from app.core.token_blacklist import blacklist_token
 from app.crud.user import user_crud
 from app.models.user import Role
 from app.schemas.user import LoginRequest, UserCreate, UserRead, Token
@@ -34,3 +35,10 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserRead)
 async def get_me(user=Depends(get_current_user)):
     return user
+
+
+@router.post("/logout")
+async def logout(token: str = Depends(oauth2_scheme)):
+    """登出 — 将 token 加入黑名单使其立即失效"""
+    blacklist_token(token)
+    return {"message": "已登出"}

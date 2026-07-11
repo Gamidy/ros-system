@@ -18,7 +18,8 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = res.data
   }
 
-  function logout() {
+  async function logout() {
+    try { await api.post('/auth/logout') } catch { /* 即使失败也清理本地状态 */ }
     token.value = ''
     user.value = null
     localStorage.removeItem('token')
