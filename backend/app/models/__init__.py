@@ -6,6 +6,7 @@ from app.models.product import Platform, Series, Model
 from app.models.bom import Material, SuperBOMNode
 from app.models.feature import FeatureFamily, FeatureOption
 from app.models.project import Project, WBSNode, Task, Gate, PhaseEnum, GateDecision
+from app.models.ecr_eco import ECRAttachment, ECRRequest, ECO, ECOItem
 
 __all__ = [
     "Base", "TimestampMixin",
@@ -15,4 +16,5 @@ __all__ = [
     "FeatureFamily", "FeatureOption",
     "Project", "WBSNode", "Task", "Gate",
     "PhaseEnum", "GateDecision",
+    "ECRAttachment", "ECRRequest", "ECO", "ECOItem",
 ]
