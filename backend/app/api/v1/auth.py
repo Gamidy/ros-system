@@ -1,9 +1,7 @@
 """认证 API — POST /api/v1/auth/token"""
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import select
 
 from app.database import get_db
@@ -13,12 +11,10 @@ from app.models.user import Role
 from app.schemas.user import LoginRequest, UserCreate, UserRead, Token
 
 router = APIRouter(prefix="/auth", tags=["认证"])
-login_limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/token", response_model=Token)
-@login_limiter.limit("200/minute")
-async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await user_crud.authenticate(db, username=data.username, password=data.password)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")

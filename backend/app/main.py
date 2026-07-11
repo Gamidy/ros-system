@@ -5,9 +5,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.core.security import setup_logging
@@ -19,8 +16,6 @@ from app.middleware.security import (
 )
 
 setup_logging()
-
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 
 @asynccontextmanager
@@ -59,12 +54,6 @@ app.middleware("http")(csrf_middleware)
 app.add_middleware(XSSProtectionMiddleware)
 
 # 全局异常处理器
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(
-        status_code=429,
-        content={"detail": "请求过于频繁，请稍后再试"},
-    )
 
 
 @app.exception_handler(Exception)
@@ -79,7 +68,6 @@ async def global_exception_handler(request, exc):
 
 # 路由
 app.include_router(v1_router)
-app.state.limiter = limiter
 
 # 健康检查
 @app.get("/health")
