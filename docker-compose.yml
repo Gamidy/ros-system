@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: plm_dev_2026
       POSTGRES_DB: plm
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -33,7 +33,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://plm:plm_dev_2026@db:5432/plm
-      - SECRET_KEY=plm-dev-secret-key-change-in-production
+      - SECRET_KEY=${SECRET_KEY:-dev-auto-generated-key-not-for-production}
       - ENV=development
       - DEBUG=true
     depends_on:

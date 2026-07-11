@@ -6,22 +6,22 @@ const router = createRouter({
     {
       path: '/login',
       name: 'Login',
-      component: () => import('./views/LoginView.vue'),
+      component: () => import('../views/LoginView.vue'),
       meta: { public: true }
     },
     {
       path: '/',
-      component: () => import('./layout/AppLayout.vue'),
+      component: () => import('../layout/AppLayout.vue'),
       redirect: '/dashboard',
       children: [
-        { path: 'dashboard', name: 'Dashboard', component: () => import('./views/DashboardView.vue'), meta: { title: '驾驶舱' } },
-        { path: 'platforms', name: 'Platforms', component: () => import('./views/PlatformList.vue'), meta: { title: '产品平台' } },
-        { path: 'series', name: 'Series', component: () => import('./views/SeriesList.vue'), meta: { title: '产品系列' } },
-        { path: 'models', name: 'Models', component: () => import('./views/ModelList.vue'), meta: { title: '产品型号' } },
-        { path: 'materials', name: 'Materials', component: () => import('./views/MaterialList.vue'), meta: { title: '物料管理' } },
-        { path: 'bom', name: 'BOM', component: () => import('./views/BOMView.vue'), meta: { title: 'BOM管理' } },
-        { path: 'projects', name: 'Projects', component: () => import('./views/ProjectList.vue'), meta: { title: '项目管理' } },
-        { path: 'projects/:id', name: 'ProjectDetail', component: () => import('./views/ProjectDetail.vue'), meta: { title: '项目详情' } }
+        { path: 'dashboard', name: 'Dashboard', component: () => import('../views/DashboardView.vue'), meta: { title: '驾驶舱' } },
+        { path: 'platforms', name: 'Platforms', component: () => import('../views/PlatformList.vue'), meta: { title: '产品平台' } },
+        { path: 'series', name: 'Series', component: () => import('../views/SeriesList.vue'), meta: { title: '产品系列' } },
+        { path: 'models', name: 'Models', component: () => import('../views/ModelList.vue'), meta: { title: '产品型号' } },
+        { path: 'materials', name: 'Materials', component: () => import('../views/MaterialList.vue'), meta: { title: '物料管理' } },
+        { path: 'bom', name: 'BOM', component: () => import('../views/BOMView.vue'), meta: { title: 'BOM管理' } },
+        { path: 'projects', name: 'Projects', component: () => import('../views/ProjectList.vue'), meta: { title: '项目管理' } },
+        { path: 'projects/:id', name: 'ProjectDetail', component: () => import('../views/ProjectDetail.vue'), meta: { title: '项目详情' } }
       ]
     }
   ]
