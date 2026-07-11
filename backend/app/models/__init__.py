@@ -5,7 +5,7 @@ from app.models.user import User, Role, user_roles
 from app.models.product import Platform, Series, Model
 from app.models.bom import Material, SuperBOMNode
 from app.models.feature import FeatureFamily, FeatureOption
-from app.models.project import Project, WBSNode, Task, Gate
+from app.models.project import Project, WBSNode, Task, Gate, PhaseEnum, GateDecision
 
 __all__ = [
     "Base", "TimestampMixin",
