@@ -1,10 +1,10 @@
-"""Phase 2 — ECR/ECO 工程变更模型
+"""Phase 2 — ECR/ECO 工程变更模型（继承 TimestampMixin）
 
 ECR = Engineering Change Request（工程变更申请）
 ECO = Engineering Change Order（工程变更指令）
 
 状态机:
-  ECR: DRAFT → SUBMITTED → REVIEWING → APPROVED/REJECTED → CONVERTED
+  ECR: DRAFT → SUBMITTED → APPROVED/REJECTED → CONVERTED
   ECO: DRAFT → IMPLEMENTING → VERIFIED → EFFECTIVE → CLOSED/CANCELLED
 
 关联:
@@ -20,13 +20,14 @@ from sqlalchemy import Integer, String, Text, DateTime, ForeignKey, Date, JSON, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.models.base import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.user import User  # noqa: F401
 
 
 class ECRAttachment(Base):
-    """ECR 附件"""
+    """ECR 附件（仅 created_at，无需混入 TimestampMixin）"""
     __tablename__ = "ecr_attachments"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
@@ -41,7 +42,7 @@ class ECRAttachment(Base):
     ecr: Mapped["ECRRequest"] = relationship(back_populates="attachments", lazy="selectin")
 
 
-class ECRRequest(Base):
+class ECRRequest(Base, TimestampMixin):
     """工程变更申请"""
     __tablename__ = "ecr_requests"
 
@@ -60,10 +61,6 @@ class ECRRequest(Base):
     reviewer_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now()
-    )
 
     # 关系
     submitter: Mapped["User"] = relationship(foreign_keys=[submitter_id], lazy="selectin")
@@ -74,7 +71,7 @@ class ECRRequest(Base):
     eco: Mapped[Optional["ECO"]] = relationship(back_populates="ecr", uselist=False, lazy="selectin")
 
 
-class ECO(Base):
+class ECO(Base, TimestampMixin):
     """工程变更指令"""
     __tablename__ = "ecos"
 
@@ -91,10 +88,6 @@ class ECO(Base):
     verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     closed_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now()
-    )
 
     # 关系
     ecr: Mapped[Optional["ECRRequest"]] = relationship(back_populates="eco", lazy="selectin")
@@ -106,7 +99,7 @@ class ECO(Base):
 
 
 class ECOItem(Base):
-    """ECO 明细项"""
+    """ECO 明细项（仅 created_at，无需混入 TimestampMixin）"""
     __tablename__ = "eco_items"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)

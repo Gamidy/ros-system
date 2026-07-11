@@ -1,13 +1,15 @@
-"""P0 — 配置引擎 API: ConfigGroup + ConfigRule + 校验"""
+"""P0 — 配置引擎 API: ConfigGroup + ConfigRule + 校验（关联表升级）"""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.config_rule import ConfigGroup, ConfigRule
+from app.models.feature import FeatureFamily
 from app.schemas.config_engine import (
     ConfigGroupCreate, ConfigGroupOut,
     ConfigRuleCreate, ConfigRuleOut,
@@ -16,12 +18,25 @@ from app.schemas.config_engine import (
 
 router = APIRouter(prefix="/config", tags=["配置引擎"])
 
+
 # ── ConfigGroup ────────────────────────────
 
 @router.post("/groups", response_model=ConfigGroupOut, status_code=201)
 async def create_group(data: ConfigGroupCreate, db: AsyncSession = Depends(get_db),
                        _: User = Depends(get_current_user)):
-    group = ConfigGroup(**data.model_dump())
+    group = ConfigGroup(
+        name=data.name,
+        series_id=data.series_id,
+    )
+
+    # 绑定特征族（关联表）
+    if data.family_ids:
+        result = await db.execute(
+            select(FeatureFamily).where(FeatureFamily.id.in_(data.family_ids))
+        )
+        families = list(result.scalars().all())
+        group.families = families
+
     db.add(group)
     await db.commit()
     await db.refresh(group)
@@ -31,7 +46,9 @@ async def create_group(data: ConfigGroupCreate, db: AsyncSession = Depends(get_d
 @router.get("/groups", response_model=list[ConfigGroupOut])
 async def list_groups(db: AsyncSession = Depends(get_db),
                       _: User = Depends(get_current_user)):
-    result = await db.execute(select(ConfigGroup))
+    result = await db.execute(
+        select(ConfigGroup).options(selectinload(ConfigGroup.families))
+    )
     return list(result.scalars().all())
 
 

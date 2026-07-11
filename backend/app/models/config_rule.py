@@ -1,6 +1,6 @@
-"""P0 — 产品配置模型: 配置规则 + 配置组 + SKU 服务"""
+"""P0 — 产品配置模型: 配置规则 + 配置组（关联表升级）"""
 
-from sqlalchemy import String, Integer, ForeignKey, Text
+from sqlalchemy import String, Integer, ForeignKey, Text, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional, TYPE_CHECKING
 
@@ -8,8 +8,17 @@ from app.database import Base
 from app.models.base import TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models.feature import FeatureOption
+    from app.models.feature import FeatureOption, FeatureFamily
     from app.models.product import Series
+
+
+# ── ConfigGroup ↔ FeatureFamily 多对多关联表 ──
+config_group_families = Table(
+    "config_group_families",
+    Base.metadata,
+    Column("config_group_id", Integer, ForeignKey("config_groups.id", ondelete="CASCADE"), primary_key=True),
+    Column("family_id", Integer, ForeignKey("feature_families.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class ConfigGroup(Base, TimestampMixin):
@@ -22,9 +31,16 @@ class ConfigGroup(Base, TimestampMixin):
     series_id: Mapped[int] = mapped_column(
         ForeignKey("series.id"), nullable=False, comment="所属产品系列"
     )
-    family_ids: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="逗号分隔的特征族ID列表"
+
+    # 关联表替代逗号分隔字符串
+    families: Mapped[List["FeatureFamily"]] = relationship(
+        "FeatureFamily", secondary=config_group_families, lazy="selectin"
     )
+
+    @property
+    def family_ids(self) -> List[int]:
+        """计算属性：返回关联的特征族 ID 列表"""
+        return [f.id for f in self.families] if self.families else []
 
     rules: Mapped[List["ConfigRule"]] = relationship(
         "ConfigRule", back_populates="group", cascade="all, delete-orphan", lazy="selectin"

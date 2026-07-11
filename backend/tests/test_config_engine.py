@@ -13,7 +13,7 @@ class TestConfigRuleModel:
         resp = await async_client.post("/api/v1/config/groups", json={
             "name": "R32变频配置组",
             "series_id": 1,
-            "family_ids": "1,2,3",
+            "family_ids": [1, 2, 3],
         }, headers=auth_headers)
         assert resp.status_code == 201
         data = resp.json()

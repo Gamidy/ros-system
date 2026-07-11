@@ -1,4 +1,4 @@
-"""P0 — 配置引擎 Schemas"""
+"""P0 — 配置引擎 Schemas（关联表升级）"""
 
 from datetime import datetime
 from typing import Optional, List
@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field
 class ConfigGroupCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     series_id: int
-    family_ids: Optional[str] = None
+    family_ids: Optional[List[int]] = None  # 改为 int 列表
 
 
 class ConfigGroupOut(BaseModel):
     id: int
     name: str
     series_id: int
-    family_ids: Optional[str] = None
+    family_ids: List[int] = []
     created_at: datetime
 
     model_config = {"from_attributes": True}
